@@ -14,7 +14,7 @@ export default withNuxt(
         semi: true,
         quotes: 'single',
       },
-      ignores: ['./src/github/schema.docs.graphql', '**/migrations/*'],
+      ignores: ['./src/github/schema.docs.graphql', '**/migrations/*', 'TRAVEL_FEATURE.md'],
     },
     {
       rules: {
@@ -42,7 +42,7 @@ export default withNuxt(
           'error',
           {
             case: 'kebabCase',
-            ignore: ['README.md', 'CLAUDE.md'],
+            ignore: ['README.md', 'CLAUDE.md', 'TRAVEL_FEATURE.md'],
           },
         ],
       },
