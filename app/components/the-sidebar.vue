@@ -43,12 +43,13 @@ const items: NavigationMenuItem[][] = [[{
     :ui="{ footer: 'border-t border-default' }"
   >
     <template #header="{ collapsed }">
-      <Logo v-if="!collapsed" class="h-5 w-auto shrink-0" />
-      <UIcon
-        v-else
-        name="i-simple-icons-nuxtdotjs"
-        class="size-5 text-primary mx-auto"
-      />
+      <Logo class="w-auto shrink-0 mx-auto" />
+      <h1
+        v-if="!collapsed"
+        class="text-center text-lg font-semibold"
+      >
+        Viajeros Ligeros
+      </h1>
     </template>
 
     <template #default="{ collapsed }">
