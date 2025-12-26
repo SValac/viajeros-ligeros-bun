@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FormSubmitEvent } from '#ui/types';
+import type { FormSubmitEvent, SelectItem } from '#ui/types';
 
 import { z } from 'zod';
 
@@ -15,7 +15,7 @@ const { travel = null } = defineProps<Props>();
 // Emits
 const emit = defineEmits<{
   submit: [data: TravelFormData];
-  cancel: [];
+  cancel: [close: boolean];
 }>();
 
 // Schema de validación Zod
@@ -68,7 +68,7 @@ const initialState = computed((): Schema => {
 const state = ref<Schema>({ ...initialState.value });
 
 // Opciones de estado para el select
-const estadoOptions = [
+const estadoOptions: SelectItem[] = [
   { value: 'pendiente', label: 'Pendiente' },
   { value: 'confirmado', label: 'Confirmado' },
   { value: 'en-curso', label: 'En Curso' },
@@ -97,7 +97,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 }
 
 function onCancel() {
-  emit('cancel');
+  emit('cancel', true);
 }
 </script>
 
@@ -109,7 +109,7 @@ function onCancel() {
     @submit="onSubmit"
   >
     <!-- Destino -->
-    <UFormGroup
+    <UFormField
       label="Destino"
       name="destino"
       required
@@ -119,10 +119,10 @@ function onCancel() {
         placeholder="París, Francia"
         icon="i-lucide-map-pin"
       />
-    </UFormGroup>
+    </UFormField>
 
     <!-- Cliente -->
-    <UFormGroup
+    <UFormField
       label="Cliente"
       name="cliente"
       required
@@ -132,11 +132,11 @@ function onCancel() {
         placeholder="Nombre completo del cliente"
         icon="i-lucide-user"
       />
-    </UFormGroup>
+    </UFormField>
 
     <!-- Fechas (Grid 2 columnas) -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <UFormGroup
+      <UFormField
         label="Fecha Inicio"
         name="fechaInicio"
         required
@@ -146,9 +146,9 @@ function onCancel() {
           type="date"
           icon="i-lucide-calendar"
         />
-      </UFormGroup>
+      </UFormField>
 
-      <UFormGroup
+      <UFormField
         label="Fecha Fin"
         name="fechaFin"
         required
@@ -158,12 +158,12 @@ function onCancel() {
           type="date"
           icon="i-lucide-calendar"
         />
-      </UFormGroup>
+      </UFormField>
     </div>
 
     <!-- Precio y Estado (Grid 2 columnas) -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <UFormGroup
+      <UFormField
         label="Precio (EUR)"
         name="precio"
         required
@@ -176,23 +176,23 @@ function onCancel() {
           icon="i-lucide-euro"
           placeholder="0.00"
         />
-      </UFormGroup>
+      </UFormField>
 
-      <UFormGroup
+      <UFormField
         label="Estado"
         name="estado"
         required
       >
         <USelect
           v-model="state.estado"
-          :options="estadoOptions"
-          icon="i-lucide-status"
+          :items="estadoOptions"
+          icon="i-lucide-circle-dot"
         />
-      </UFormGroup>
+      </UFormField>
     </div>
 
     <!-- Descripción -->
-    <UFormGroup
+    <UFormField
       label="Descripción"
       name="descripcion"
       required
@@ -202,10 +202,10 @@ function onCancel() {
         placeholder="Describe el viaje, actividades incluidas, etc."
         :rows="3"
       />
-    </UFormGroup>
+    </UFormField>
 
     <!-- URL Imagen -->
-    <UFormGroup
+    <UFormField
       label="URL de Imagen"
       name="imagenUrl"
     >
@@ -215,10 +215,10 @@ function onCancel() {
         placeholder="https://example.com/image.jpg"
         icon="i-lucide-image"
       />
-    </UFormGroup>
+    </UFormField>
 
     <!-- Notas Internas -->
-    <UFormGroup
+    <UFormField
       label="Notas Internas"
       name="notasInternas"
       description="Información privada solo para el equipo"
@@ -228,7 +228,7 @@ function onCancel() {
         placeholder="Preferencias del cliente, observaciones especiales..."
         :rows="2"
       />
-    </UFormGroup>
+    </UFormField>
 
     <!-- Botones de acción -->
     <div class="flex justify-end gap-3 pt-4">
