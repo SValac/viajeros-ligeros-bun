@@ -220,7 +220,7 @@ const columns: TableColumn<Travel>[] = [
     id: 'actions',
     header: 'Acciones',
     cell: ({ row }) => {
-      return h(resolveComponent('UDropdown'), {
+      return h(resolveComponent('UDropdownMenu'), {
         items: getRowActions(row.original),
         popper: { placement: 'bottom-end' },
       }, () => h(resolveComponent('UButton'), {
@@ -252,7 +252,9 @@ onMounted(() => {
       </div>
       <!-- Modal de formulario -->
       <UModal
-        v-model="isFormModalOpen"
+        v-model:open="isFormModalOpen"
+        :title="editingTravel ? 'Editar Viaje' : 'Nuevo Viaje'"
+        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
         class="sm:max-w-2xl"
       >
         <UButton
@@ -264,12 +266,6 @@ onMounted(() => {
         </UButton>
         <template #body>
           <UCard>
-            <template #header>
-              <h3 class="text-lg font-semibold">
-                {{ editingTravel ? 'Editar Viaje' : 'Nuevo Viaje' }}
-              </h3>
-            </template>
-
             <TravelForm
               :travel="editingTravel"
               @submit="handleFormSubmit"
