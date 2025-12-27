@@ -173,7 +173,7 @@ function onCancel() {
           type="number"
           min="0"
           step="0.01"
-          icon="i-lucide-euro"
+          icon="i-lucide-dollar-sign"
           placeholder="0.00"
         />
       </UFormField>
