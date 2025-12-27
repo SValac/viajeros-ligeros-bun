@@ -74,6 +74,8 @@ function openCreateModal() {
 function openEditModal(travel: Travel) {
   editingTravel.value = travel;
   isFormModalOpen.value = true;
+  console.log('click open');
+  console.log('click', travel);
 }
 
 function closeModal() {
@@ -136,7 +138,7 @@ function getRowActions(travel: Travel) {
       {
         label: 'Ver detalles',
         icon: 'i-lucide-eye',
-        click: () => {
+        onSelect: () => {
           toast.add({
             title: 'Próximamente',
             description: 'Vista de detalles en desarrollo',
@@ -147,14 +149,14 @@ function getRowActions(travel: Travel) {
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
-        click: () => openEditModal(travel),
+        onSelect: () => openEditModal(travel),
       },
     ],
     [
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
-        click: () => handleDelete(travel),
+        onSelect: () => handleDelete(travel),
       },
     ],
   ];
