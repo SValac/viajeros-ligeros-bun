@@ -67,6 +67,10 @@ const initialState = computed((): Schema => {
 
 const state = ref<Schema>({ ...initialState.value });
 
+// Estado para itinerario y servicios (separados del schema Zod)
+const itinerario = ref(travel?.itinerario || []);
+const servicios = ref(travel?.servicios || []);
+
 // Opciones de estado para el select
 const estadoOptions: SelectItem[] = [
   { value: 'pendiente', label: 'Pendiente' },
@@ -85,8 +89,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     const formData: TravelFormData = {
       ...event.data,
-      itinerario: travel?.itinerario || [],
-      servicios: travel?.servicios || [],
+      itinerario: itinerario.value,
+      servicios: servicios.value,
     };
 
     emit('submit', formData);
@@ -229,6 +233,18 @@ function onCancel() {
         :rows="2"
       />
     </UFormField>
+
+    <!-- Itinerario del Viaje -->
+    <USeparator label="Itinerario del Viaje" />
+    <TravelActivityList
+      v-model="itinerario"
+      :fecha-inicio="state.fechaInicio"
+      :fecha-fin="state.fechaFin"
+    />
+
+    <!-- Servicios Incluidos -->
+    <USeparator label="Servicios Incluidos" />
+    <TravelServiceList v-model="servicios" />
 
     <!-- Botones de acción -->
     <div class="flex justify-end gap-3 pt-4">
