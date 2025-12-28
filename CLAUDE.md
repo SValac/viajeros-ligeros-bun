@@ -84,3 +84,9 @@ Uses **@antfu/eslint-config** with the following rules:
 ## TypeScript
 
 Uses Nuxt's TypeScript configuration system with references to generated configs in .nuxt/ directory. Run `bun run typecheck` to validate types.
+
+## Project Documentation
+
+- **ARCHITECTURE_PLAN.md** - Complete architectural plan created by software-architect agent with 4 implementation phases, data flows, validations, and technical considerations
+- **TRAVEL_FEATURE.md** - Implementation status for Feature 1: Create Travel (Phases 1-2 completed)
+- **FEATURE_ITINERARY_SERVICES.md** - Implementation plan for Feature 2: Itinerary and Services Management (Phase 3 - In Planning)
