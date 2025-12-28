@@ -3,7 +3,7 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Travel, TravelFormData, TravelStatus } from '~/types/travel';
+import type { Travel, TravelStatus } from '~/types/travel';
 
 definePageMeta({
   name: 'travels-dashboard',
@@ -12,10 +12,7 @@ definePageMeta({
 // Store
 const travelsStore = useTravelsStore();
 const toast = useToast();
-
-// Estado local
-const isFormModalOpen = ref(false);
-const editingTravel = ref<Travel | null>(null);
+const router = useRouter();
 
 // Computed
 const travels = computed(() => travelsStore.allTravels);
@@ -65,56 +62,13 @@ function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
-// Acciones del formulario
-function openCreateModal() {
-  editingTravel.value = null;
-  isFormModalOpen.value = true;
+// Navegación
+function navigateToCreate() {
+  router.push('/travels/new');
 }
 
-function openEditModal(travel: Travel) {
-  editingTravel.value = travel;
-  isFormModalOpen.value = true;
-  console.log('click open');
-  console.log('click', travel);
-}
-
-function closeModal() {
-  isFormModalOpen.value = false;
-  editingTravel.value = null;
-}
-
-function handleFormSubmit(data: TravelFormData) {
-  try {
-    if (editingTravel.value) {
-      // Actualizar viaje existente
-      const success = travelsStore.updateTravel(editingTravel.value.id, data);
-      if (success) {
-        toast.add({
-          title: 'Viaje actualizado',
-          description: `${data.destino} se actualizó correctamente`,
-          color: 'primary',
-        });
-        closeModal();
-      }
-    }
-    else {
-      // Crear nuevo viaje
-      travelsStore.addTravel(data);
-      toast.add({
-        title: 'Viaje creado',
-        description: `${data.destino} se creó correctamente`,
-        color: 'primary',
-      });
-      closeModal();
-    }
-  }
-  catch {
-    toast.add({
-      title: 'Error',
-      description: 'Ocurrió un error al guardar el viaje',
-      color: 'error',
-    });
-  }
+function navigateToEdit(travelId: string) {
+  router.push(`/travels/${travelId}/edit`);
 }
 
 function handleDelete(travel: Travel) {
@@ -149,7 +103,7 @@ function getRowActions(travel: Travel) {
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
-        onSelect: () => openEditModal(travel),
+        onSelect: () => navigateToEdit(travel.id),
       },
     ],
     [
@@ -252,30 +206,13 @@ onMounted(() => {
           Administra todos los viajes de la agencia
         </p>
       </div>
-      <!-- Modal de formulario -->
-      <UModal
-        v-model:open="isFormModalOpen"
-        :title="editingTravel ? 'Editar Viaje' : 'Nuevo Viaje'"
-        description="Lorem ipsum dolor sit amet, consectetur adipiscing elit."
-        class="sm:max-w-2xl"
+      <UButton
+        icon="i-lucide-plus"
+        size="lg"
+        @click="navigateToCreate"
       >
-        <UButton
-          icon="i-lucide-plus"
-          size="lg"
-          @click="openCreateModal"
-        >
-          Nuevo Viaje
-        </UButton>
-        <template #body>
-          <UCard>
-            <TravelForm
-              :travel="editingTravel"
-              @submit="handleFormSubmit"
-              @cancel="closeModal"
-            />
-          </UCard>
-        </template>
-      </UModal>
+        Nuevo Viaje
+      </UButton>
     </div>
 
     <!-- Estadísticas -->
@@ -368,7 +305,7 @@ onMounted(() => {
         </p>
         <UButton
           icon="i-lucide-plus"
-          @click="openCreateModal"
+          @click="navigateToCreate"
         >
           Crear Primer Viaje
         </UButton>
