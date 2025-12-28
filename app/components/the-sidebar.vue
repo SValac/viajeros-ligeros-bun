@@ -2,26 +2,26 @@
 import type { NavigationMenuItem } from '@nuxt/ui';
 
 const items: NavigationMenuItem[][] = [[{
-  label: 'Home',
+  label: 'Inicio',
   icon: 'i-lucide-house',
   to: '/',
 }, {
-  label: 'Travels',
+  label: 'Viajes',
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
 }, {
-  label: 'Contacts',
+  label: 'Contactos',
   icon: 'i-lucide-users',
 }, {
-  label: 'Providers',
+  label: 'Proveedores',
   icon: 'i-lucide-handshake',
   defaultOpen: true,
   children: [{
-    label: 'General',
+    label: 'Hospedaje',
   }, {
-    label: 'Members',
+    label: 'Transporte',
   }, {
-    label: 'Notifications',
+    label: 'Guías',
   }],
 }], [{
   label: 'Feedback',
