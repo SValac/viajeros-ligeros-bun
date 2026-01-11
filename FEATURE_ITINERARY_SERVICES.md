@@ -592,10 +592,107 @@ El modal se volvió muy largo con las secciones de itinerario y servicios. Se de
 
 ---
 
+## 12. FEATURE 3: PÁGINA DE DETALLES - ✅ COMPLETADA
+
+### Estado: ✅ IMPLEMENTACIÓN COMPLETADA
+
+**Fecha de completación**: 2026-01-11
+
+### Archivo Creado
+
+**`/app/pages/travels/[id]/index.vue`** - Página completa de visualización de detalles del viaje
+
+### Características Implementadas
+
+#### 1. Hero Section con Información Principal
+- ✅ Imagen destacada del destino (si existe)
+- ✅ Título con icono de ubicación
+- ✅ Badge de estado con colores semánticos
+- ✅ Descripción completa del viaje
+- ✅ Grid de información clave: Cliente, Duración, Precio Total
+
+#### 2. Sección de Fechas
+- ✅ Fecha de inicio y fin formateadas en español
+- ✅ Layout en grid de 2 columnas
+- ✅ Cards con elevación visual
+
+#### 3. Timeline de Itinerario
+- ✅ Vista de timeline vertical con líneas conectoras
+- ✅ Dots visuales para cada actividad
+- ✅ Cards por actividad mostrando:
+  - Badge con número de día
+  - Hora de la actividad (opcional)
+  - Título y descripción
+  - Ubicación con icono (opcional)
+- ✅ Estado vacío informativo cuando no hay actividades
+
+#### 4. Sección de Servicios
+- ✅ Grid de 2 columnas responsive
+- ✅ Iconos check/x para incluido/no incluido
+- ✅ Cards con:
+  - Nombre del servicio
+  - Descripción (opcional)
+  - Estado con colores diferenciados
+- ✅ Estado vacío informativo cuando no hay servicios
+
+#### 5. Notas Internas
+- ✅ Sección visible solo si existen notas
+- ✅ Preserva formato con whitespace-pre-wrap
+- ✅ Card con fondo elevado
+
+#### 6. Header de Acciones
+- ✅ Botón "Volver" al dashboard
+- ✅ Botón "Editar" que navega a `/travels/[id]/edit`
+- ✅ Botón "Eliminar" con confirmación y feedback
+
+#### 7. Footer con Metadata
+- ✅ Fecha de creación formateada
+- ✅ Fecha de última actualización formateada
+- ✅ Iconos de calendario
+
+### Funcionalidades Técnicas
+
+- ✅ Redireccionamiento automático al dashboard si el viaje no existe
+- ✅ Toast de error si el viaje no se encuentra
+- ✅ Cálculo automático de duración del viaje en días
+- ✅ Formato de moneda en EUR (es-ES)
+- ✅ Formato de fechas en español
+- ✅ TypeScript fuertemente tipado
+- ✅ Composables de Nuxt (useRoute, useRouter, useToast)
+- ✅ Reactive data con computed properties
+
+### Integración con Dashboard
+
+**Archivo modificado**: `/app/pages/travels/dashboard.vue`
+
+- ✅ Actualizada la acción "Ver detalles" para navegar a `/travels/[id]`
+- ✅ Eliminado el toast placeholder "Próximamente"
+
+### Commits Creados
+
+1. **`949e28c`** - `feat(pages): add travel details page with comprehensive view`
+2. **`30c64c9`** - `feat(pages): update dashboard navigation to details page`
+
+### Verificaciones
+
+- ✅ TypeScript typecheck: Pasando
+- ✅ ESLint: Pasando
+- ✅ Navegación desde dashboard funcional
+- ✅ Todos los estados visuales (con/sin datos) implementados
+
+### Ruta Funcional
+
+**URL**: `/travels/[id]` donde `[id]` es el UUID del viaje
+
+**Ejemplo**: `/travels/abc123-def456-...`
+
+---
+
 ## Notas Finales
 
 - Esta feature completa los campos del modelo `Travel` que estaban sin UI
-- Después de esta feature, el sistema podrá gestionar viajes con itinerarios y servicios completos
-- La siguiente feature será "Vista de Detalles del Viaje" para visualizar toda la información
+- El sistema ahora permite gestionar viajes con itinerarios y servicios completos
+- ✅ **COMPLETADO**: Vista de Detalles del Viaje para visualizar toda la información
+- La siguiente feature sugerida es "Exportación de Datos" (PDF/CSV)
 - No se modifica el store de Pinia (ya soporta estos campos)
 - No se modifican los tipos TypeScript (ya están definidos)
