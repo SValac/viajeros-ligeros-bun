@@ -8,13 +8,14 @@ Esta carpeta contiene toda la documentación arquitectónica y de features del p
 docs/
 ├── README.md                    # Este archivo
 ├── ARCHITECTURE_PLAN.md         # Plan arquitectónico general del sistema
-├── CLAUDE.md                    # Convenciones y guías para Claude Code
 └── features/                    # Documentación de features
     ├── [FEATURE-ACTUAL].md      # Feature en desarrollo (NO en subcarpetas)
     ├── completed/               # Features implementadas y completadas
     │   ├── travel-feature.md
     │   └── feature-itinerary-services.md
     └── pending/                 # Features planificadas pero no iniciadas
+
+CLAUDE.md                        # En RAÍZ del proyecto (requerido por Claude Code)
 ```
 
 ## Convención de Organización
@@ -63,13 +64,15 @@ Plan arquitectónico completo del sistema con:
 - Flujos de datos
 - Fases de implementación
 
-### CLAUDE.md
+### CLAUDE.md (en raíz del proyecto)
 Guía de convenciones del proyecto para Claude Code:
 - Comandos de desarrollo
 - Arquitectura del proyecto
 - Estilo de código (ESLint)
 - Git workflow
 - Módulos configurados
+
+**Nota importante**: Este archivo debe estar en la raíz del proyecto porque Claude Code lo busca automáticamente ahí.
 
 ## Nomenclatura de Archivos
 
