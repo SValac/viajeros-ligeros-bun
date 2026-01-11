@@ -92,13 +92,7 @@ function getRowActions(travel: Travel) {
       {
         label: 'Ver detalles',
         icon: 'i-lucide-eye',
-        onSelect: () => {
-          toast.add({
-            title: 'Próximamente',
-            description: 'Vista de detalles en desarrollo',
-            color: 'secondary',
-          });
-        },
+        onSelect: () => router.push(`/travels/${travel.id}`),
       },
       {
         label: 'Editar',
