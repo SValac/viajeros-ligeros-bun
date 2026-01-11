@@ -168,7 +168,7 @@ function onCancel() {
     <!-- Precio y Estado (Grid 2 columnas) -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
       <UFormField
-        label="Precio (EUR)"
+        label="Precio (MX)"
         name="precio"
         required
       >

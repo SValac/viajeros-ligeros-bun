@@ -44,7 +44,7 @@ function getStatusLabel(status: TravelStatus): string {
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return date.toLocaleDateString('es-ES', {
+  return date.toLocaleDateString('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
@@ -52,9 +52,9 @@ function formatDate(dateString: string): string {
 }
 
 function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-ES', {
+  return new Intl.NumberFormat('es-MX', {
     style: 'currency',
-    currency: 'EUR',
+    currency: 'MEX',
   }).format(amount);
 }
 
