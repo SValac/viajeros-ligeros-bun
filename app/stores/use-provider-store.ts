@@ -120,6 +120,11 @@ export const useProviderStore = defineStore('providers', () => {
         nombre: 'Guías Expertos México',
         categoria: 'guias',
         descripcion: 'Guías certificados con amplia experiencia en turismo cultural',
+        ubicacion: {
+          ciudad: 'Ciudad de México',
+          estado: 'CDMX',
+          pais: 'México',
+        },
         contacto: {
           nombre: 'Juan Pérez',
           telefono: '+52 55 1234 5678',
@@ -132,6 +137,11 @@ export const useProviderStore = defineStore('providers', () => {
         nombre: 'Transportes Turísticos del Norte',
         categoria: 'transporte',
         descripcion: 'Flota de vehículos modernos para grupos de hasta 50 personas',
+        ubicacion: {
+          ciudad: 'Monterrey',
+          estado: 'Nuevo León',
+          pais: 'México',
+        },
         contacto: {
           nombre: 'María González',
           telefono: '+52 81 9876 5432',
@@ -143,6 +153,11 @@ export const useProviderStore = defineStore('providers', () => {
         nombre: 'Hotel Paradise Beach',
         categoria: 'hospedaje',
         descripcion: 'Hotel 5 estrellas frente al mar con spa y restaurante gourmet',
+        ubicacion: {
+          ciudad: 'Cancún',
+          estado: 'Quintana Roo',
+          pais: 'México',
+        },
         contacto: {
           nombre: 'Carlos Ramírez',
           telefono: '+52 998 123 4567',
@@ -155,6 +170,11 @@ export const useProviderStore = defineStore('providers', () => {
         nombre: 'Autobuses Primera Clase',
         categoria: 'operadores-autobus',
         descripcion: 'Servicio de autobuses de lujo con WiFi y entretenimiento a bordo',
+        ubicacion: {
+          ciudad: 'Guadalajara',
+          estado: 'Jalisco',
+          pais: 'México',
+        },
         contacto: {
           nombre: 'Roberto Silva',
           telefono: '+52 33 8765 4321',
@@ -166,6 +186,11 @@ export const useProviderStore = defineStore('providers', () => {
         nombre: 'Restaurante La Tradición',
         categoria: 'comidas',
         descripcion: 'Cocina mexicana tradicional con menús personalizados para grupos',
+        ubicacion: {
+          ciudad: 'Ciudad de México',
+          estado: 'CDMX',
+          pais: 'México',
+        },
         contacto: {
           nombre: 'Ana Martínez',
           telefono: '+52 55 2345 6789',
@@ -178,6 +203,11 @@ export const useProviderStore = defineStore('providers', () => {
         nombre: 'Seguros Viajero Seguro',
         categoria: 'otros',
         descripcion: 'Seguros de viaje con cobertura internacional',
+        ubicacion: {
+          ciudad: 'Ciudad de México',
+          estado: 'CDMX',
+          pais: 'México',
+        },
         contacto: {
           telefono: '+52 55 5555 1234',
           email: 'contacto@viajeroseguro.com',

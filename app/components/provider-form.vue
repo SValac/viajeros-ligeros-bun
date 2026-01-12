@@ -36,6 +36,20 @@ const schema = z.object({
     .optional()
     .or(z.literal('')),
 
+  ubicacion: z.object({
+    ciudad: z.string()
+      .min(1, 'La ciudad es requerida')
+      .max(100, 'Máximo 100 caracteres'),
+
+    estado: z.string()
+      .min(1, 'El estado/provincia es requerido')
+      .max(100, 'Máximo 100 caracteres'),
+
+    pais: z.string()
+      .min(1, 'El país es requerido')
+      .max(100, 'Máximo 100 caracteres'),
+  }),
+
   contacto: z.object({
     nombre: z.string()
       .max(100, 'Máximo 100 caracteres')
@@ -68,6 +82,11 @@ const state = ref<Schema>({
   nombre: props.provider?.nombre || '',
   categoria: props.provider?.categoria || 'otros',
   descripcion: props.provider?.descripcion || '',
+  ubicacion: {
+    ciudad: props.provider?.ubicacion?.ciudad || '',
+    estado: props.provider?.ubicacion?.estado || '',
+    pais: props.provider?.ubicacion?.pais || '',
+  },
   contacto: {
     nombre: props.provider?.contacto?.nombre || '',
     telefono: props.provider?.contacto?.telefono || '',
@@ -143,8 +162,46 @@ function onCancel() {
       />
     </UFormField>
 
+    <!-- Ubicación -->
+    <USeparator label="Ubicación" />
+
+    <div class="grid grid-cols-3 gap-4">
+      <UFormField
+        label="Ciudad"
+        name="ubicacion.ciudad"
+        required
+      >
+        <UInput
+          v-model="state.ubicacion.ciudad"
+          placeholder="Ciudad de México"
+        />
+      </UFormField>
+
+      <UFormField
+        label="Estado/Provincia"
+        name="ubicacion.estado"
+        required
+      >
+        <UInput
+          v-model="state.ubicacion.estado"
+          placeholder="CDMX"
+        />
+      </UFormField>
+
+      <UFormField
+        label="País"
+        name="ubicacion.pais"
+        required
+      >
+        <UInput
+          v-model="state.ubicacion.pais"
+          placeholder="México"
+        />
+      </UFormField>
+    </div>
+
     <!-- Información de Contacto -->
-    <UDivider label="Información de Contacto" />
+    <USeparator label="Información de Contacto" />
 
     <UFormField
       label="Nombre de Contacto"
@@ -192,7 +249,7 @@ function onCancel() {
     </UFormField>
 
     <!-- Estado -->
-    <UDivider label="Estado" />
+    <USeparator label="Estado" />
 
     <UFormField
       name="activo"
