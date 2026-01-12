@@ -96,14 +96,14 @@ const state = ref<Schema>({
   activo: props.provider?.activo ?? true,
 });
 
-// Opciones de categoría con iconos
+// Opciones de categoría
 const categoriaOptions = [
-  { label: 'Guías', value: 'guias', icon: 'i-lucide-user-search' },
-  { label: 'Transporte', value: 'transporte', icon: 'i-lucide-car' },
-  { label: 'Hospedaje', value: 'hospedaje', icon: 'i-lucide-hotel' },
-  { label: 'Operadores de Autobús', value: 'operadores-autobus', icon: 'i-lucide-bus' },
-  { label: 'Comidas', value: 'comidas', icon: 'i-lucide-utensils' },
-  { label: 'Otros', value: 'otros', icon: 'i-lucide-package' },
+  { value: 'guias', label: 'Guías' },
+  { value: 'transporte', label: 'Transporte' },
+  { value: 'hospedaje', label: 'Hospedaje' },
+  { value: 'operadores-autobus', label: 'Operadores de Autobús' },
+  { value: 'comidas', label: 'Comidas' },
+  { value: 'otros', label: 'Otros' },
 ];
 
 // Handlers
@@ -146,7 +146,7 @@ function onCancel() {
     >
       <USelect
         v-model="state.categoria"
-        :options="categoriaOptions"
+        :items="categoriaOptions"
         placeholder="Seleccionar categoría"
       />
     </UFormField>
