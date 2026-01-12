@@ -8,6 +8,7 @@ import type {
   ProviderCategory,
   ProviderContact,
   ProviderFormData,
+  ProviderLocation,
 } from '~/types/provider';
 
 definePageMeta({
@@ -62,6 +63,11 @@ function getCategoryIcon(categoria: ProviderCategory): string {
     'otros': 'i-lucide-package',
   };
   return icons[categoria] || 'i-lucide-package';
+}
+
+function formatLocation(ubicacion: ProviderLocation): string {
+  const parts = [ubicacion.ciudad, ubicacion.estado, ubicacion.pais];
+  return parts.join(', ');
 }
 
 // Acciones del formulario
@@ -150,19 +156,19 @@ function getRowActions(provider: Provider) {
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
-        click: () => openEditModal(provider),
+        onSelect: () => openEditModal(provider),
       },
       {
         label: provider.activo ? 'Desactivar' : 'Activar',
         icon: provider.activo ? 'i-lucide-eye-off' : 'i-lucide-eye',
-        click: () => handleToggleStatus(provider),
+        onSelect: () => handleToggleStatus(provider),
       },
     ],
     [
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
-        click: () => handleDelete(provider),
+        onSelect: () => handleDelete(provider),
       },
     ],
   ];
@@ -179,6 +185,17 @@ const columns: TableColumn<Provider>[] = [
           class: `${getCategoryIcon(row.original.categoria)} w-4 h-4 text-gray-400`,
         }),
         h('span', { class: 'font-medium' }, row.getValue('nombre')),
+      ]);
+    },
+  },
+  {
+    accessorKey: 'ubicacion',
+    header: 'Ubicación',
+    cell: ({ row }) => {
+      const ubicacion = row.getValue('ubicacion') as ProviderLocation;
+      return h('div', { class: 'flex items-center gap-2' }, [
+        h('span', { class: 'i-lucide-map-pin w-3 h-3 text-gray-400' }),
+        h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatLocation(ubicacion)),
       ]);
     },
   },
@@ -247,10 +264,9 @@ const columns: TableColumn<Provider>[] = [
     header: 'Acciones',
     cell: ({ row }) => {
       return h(
-        resolveComponent('UDropdown'),
+        resolveComponent('UDropdownMenu'),
         {
           items: getRowActions(row.original),
-          popper: { placement: 'bottom-end' },
         },
         () =>
           h(resolveComponent('UButton'), {
@@ -419,6 +435,7 @@ onMounted(() => {
     <UModal
       v-model:open="isFormModalOpen"
       :title="editingProvider ? 'Editar Proveedor' : 'Nuevo Proveedor'"
+      :description="`Complete los campos para ${editingProvider ? 'editar' : 'crear'} el proveedor.` "
       class="sm:max-w-2xl"
     >
       <template #body>
