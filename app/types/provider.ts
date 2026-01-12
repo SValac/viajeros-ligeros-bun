@@ -15,12 +15,20 @@ export type ProviderContact = {
   notas?: string;
 };
 
+// Location information for provider
+export type ProviderLocation = {
+  ciudad: string;
+  estado: string;
+  pais: string;
+};
+
 // Main provider model
 export type Provider = {
   id: string;
   nombre: string;
   categoria: ProviderCategory;
   descripcion?: string;
+  ubicacion: ProviderLocation;
   contacto: ProviderContact;
   activo: boolean; // Soft delete / active status
   createdAt: string;
