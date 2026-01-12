@@ -15,14 +15,7 @@ const items: NavigationMenuItem[][] = [[{
 }, {
   label: 'Proveedores',
   icon: 'i-lucide-handshake',
-  defaultOpen: true,
-  children: [{
-    label: 'Hospedaje',
-  }, {
-    label: 'Transporte',
-  }, {
-    label: 'Guías',
-  }],
+  to: { name: 'providers-dashboard' },
 }], [{
   label: 'Feedback',
   icon: 'i-lucide-message-circle',
