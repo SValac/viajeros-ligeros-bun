@@ -15,7 +15,36 @@ const items: NavigationMenuItem[][] = [[{
 }, {
   label: 'Proveedores',
   icon: 'i-lucide-handshake',
-  to: { name: 'providers-dashboard' },
+  defaultOpen: true,
+  children: [{
+    label: 'Todos',
+    icon: 'i-lucide-list',
+    to: { name: 'providers-dashboard' },
+  }, {
+    label: 'Guías',
+    icon: 'i-lucide-user-search',
+    to: '/providers/guias',
+  }, {
+    label: 'Transportes',
+    icon: 'i-lucide-car',
+    to: '/providers/transporte',
+  }, {
+    label: 'Hospedajes',
+    icon: 'i-lucide-hotel',
+    to: '/providers/hospedaje',
+  }, {
+    label: 'Operadores de Autobús',
+    icon: 'i-lucide-bus',
+    to: '/providers/operadores-autobus',
+  }, {
+    label: 'Comidas',
+    icon: 'i-lucide-utensils',
+    to: '/providers/comidas',
+  }, {
+    label: 'Otros',
+    icon: 'i-lucide-package',
+    to: '/providers/otros',
+  }],
 }], [{
   label: 'Feedback',
   icon: 'i-lucide-message-circle',
