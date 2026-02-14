@@ -21,17 +21,8 @@ const editingService = ref<TravelService | null>(null);
 // Toast para feedback
 const toast = useToast();
 
-// Servicios predefinidos comunes
-const COMMON_SERVICES = [
-  { nombre: 'Vuelos ida y vuelta', descripcion: '' },
-  { nombre: 'Hotel', descripcion: '' },
-  { nombre: 'Guía turístico', descripcion: '' },
-  { nombre: 'Transporte local', descripcion: '' },
-  { nombre: 'Desayuno', descripcion: '' },
-  { nombre: 'Seguro de viaje', descripcion: '' },
-  { nombre: 'Visas y permisos', descripcion: '' },
-  { nombre: 'Actividades recreativas', descripcion: '' },
-];
+// Provider store para obtener información de proveedores
+const providerStore = useProviderStore();
 
 // Servicios agrupados
 const serviciosIncluidos = computed(() => {
@@ -42,6 +33,14 @@ const serviciosNoIncluidos = computed(() => {
   return services.value.filter(s => !s.incluido);
 });
 
+// Función para obtener nombre del proveedor
+function getProviderName(providerId?: string): string | null {
+  if (!providerId)
+    return null;
+  const provider = providerStore.getProviderById(providerId);
+  return provider?.nombre || null;
+}
+
 // Handlers
 function openServiceAddModal() {
   editingService.value = null;
@@ -51,37 +50,6 @@ function openServiceAddModal() {
 function openEditModal(service: TravelService) {
   editingService.value = service;
   isServiceModalOpen.value = true;
-}
-
-function quickAddService(commonService: { nombre: string; descripcion: string }) {
-  // Verificar si ya existe un servicio con el mismo nombre
-  const exists = services.value.some(s => s.nombre.toLowerCase() === commonService.nombre.toLowerCase());
-
-  if (exists) {
-    toast.add({
-      title: 'Servicio duplicado',
-      description: 'Este servicio ya existe en la lista',
-      color: 'warning',
-      icon: 'i-lucide-alert-circle',
-    });
-    return;
-  }
-
-  const newService: TravelService = {
-    id: crypto.randomUUID(),
-    nombre: commonService.nombre,
-    descripcion: commonService.descripcion || undefined,
-    incluido: true, // Los servicios quick-add se marcan como incluidos por defecto
-  };
-
-  services.value.push(newService);
-  emit('update:modelValue', services.value);
-
-  toast.add({
-    title: 'Servicio agregado',
-    color: 'success',
-    icon: 'i-lucide-check-circle',
-  });
 }
 
 function handleSubmit(serviceData: Omit<TravelService, 'id'>) {
@@ -181,28 +149,9 @@ function getServiceActions(service: TravelService) {
       <UButton
         icon="i-lucide-plus"
         size="sm"
-        label="Servicio Personalizado"
+        label="Agregar Servicio"
         @click="openServiceAddModal"
       />
-    </div>
-
-    <!-- Servicios comunes (quick-add) -->
-    <div>
-      <div class="text-xs font-medium text-muted mb-2">
-        Servicios Comunes:
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <UButton
-          v-for="commonService in COMMON_SERVICES"
-          :key="commonService.nombre"
-          size="xs"
-          variant="outline"
-          color="neutral"
-          :label="commonService.nombre"
-          icon="i-lucide-plus-circle"
-          @click="quickAddService(commonService)"
-        />
-      </div>
     </div>
 
     <!-- Lista de servicios incluidos -->
@@ -229,6 +178,21 @@ function getServiceActions(service: TravelService) {
                 <!-- Nombre -->
                 <div class="font-medium text-sm">
                   {{ service.nombre }}
+                </div>
+
+                <!-- Proveedor (si está vinculado) -->
+                <div
+                  v-if="service.providerId && getProviderName(service.providerId)"
+                  class="flex items-center gap-1.5"
+                >
+                  <UBadge
+                    color="info"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    <span class="i-lucide-handshake w-3 h-3 mr-1" />
+                    {{ getProviderName(service.providerId) }}
+                  </UBadge>
                 </div>
 
                 <!-- Descripción -->
@@ -281,6 +245,21 @@ function getServiceActions(service: TravelService) {
                   {{ service.nombre }}
                 </div>
 
+                <!-- Proveedor (si está vinculado) -->
+                <div
+                  v-if="service.providerId && getProviderName(service.providerId)"
+                  class="flex items-center gap-1.5"
+                >
+                  <UBadge
+                    color="info"
+                    variant="subtle"
+                    size="xs"
+                  >
+                    <span class="i-lucide-handshake w-3 h-3 mr-1" />
+                    {{ getProviderName(service.providerId) }}
+                  </UBadge>
+                </div>
+
                 <!-- Descripción -->
                 <div
                   v-if="service.descripcion"
@@ -315,7 +294,7 @@ function getServiceActions(service: TravelService) {
         No hay servicios agregados
       </p>
       <p class="text-xs mt-1">
-        Usa los botones de "Servicios Comunes" o agrega uno personalizado
+        Haz clic en "Agregar Servicio" para comenzar
       </p>
     </div>
 

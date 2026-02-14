@@ -17,6 +17,7 @@ export type TravelService = {
   nombre: string;
   descripcion?: string;
   incluido: boolean;
+  providerId?: string; // Vinculación opcional con proveedor
 };
 
 // Modelo principal de viaje
