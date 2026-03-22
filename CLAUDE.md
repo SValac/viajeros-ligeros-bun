@@ -1,107 +1,27 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
 
-## Project Overview
+## Index
 
-This is a Nuxt 4 application for "Viajeros Ligeros" (Light Travelers), using Bun as the package manager and runtime. The app is built with Vue 3, Pinia for state management, Nuxt UI for the component library, and follows a dashboard-based architecture.
+| #   | Section               | File                                                                     |
+| --- | --------------------- | ------------------------------------------------------------------------ |
+| 1   | Project Overview      | [docs/claude/01-project-overview.md](docs/claude/01-project-overview.md) |
+| 2   | Development Commands  | [docs/claude/02-dev-commands.md](docs/claude/02-dev-commands.md)         |
+| 3   | Architecture          | [docs/claude/03-architecture.md](docs/claude/03-architecture.md)         |
+| 4   | Code Style            | [docs/claude/04-code-style.md](docs/claude/04-code-style.md)             |
+| 5   | Git Workflow          | [docs/claude/05-git-workflow.md](docs/claude/05-git-workflow.md)         |
+| 6   | TypeScript            | [docs/claude/06-typescript.md](docs/claude/06-typescript.md)             |
+| 7   | Project Documentation | [docs/claude/07-documentation.md](docs/claude/07-documentation.md)       |
 
-## Development Commands
+---
 
-```bash
-# Install dependencies
-bun install
+## Quick Reference
 
-# Start development server (http://localhost:3000)
-bun run dev
+**Stack**: Nuxt 4 · Vue 3 · Pinia · Nuxt UI · Bun
 
-# Type checking
-bun run typecheck
+**Run dev**: `bun run dev`
+**Lint**: `bun run lint:fix`
+**Typecheck**: `bun run typecheck`
 
-# Linting
-bun run lint
-bun run lint:fix
-
-# Build for production
-bun run build
-
-# Preview production build
-bun run preview
-```
-
-## Architecture
-
-### Application Structure
-
-- **app/** - Main application directory (Nuxt 4 convention)
-  - **app.vue** - Root component wrapping UApp, NuxtLayout, and NuxtPage
-  - **layouts/** - Layout components (currently uses default.vue with dashboard structure)
-  - **pages/** - File-based routing pages
-  - **components/** - Vue components (auto-imported by Nuxt)
-  - **assets/** - Static assets and CSS
-
-### Layout System
-
-The application uses a **dashboard layout pattern** with Nuxt UI components:
-
-- `UDashboardGroup` wraps the entire layout
-- `TheSidebar` component provides collapsible navigation
-- `UDashboardPanel` contains the navbar and main content area
-- Sidebar is resizable and collapsible with navigation menu items
-
-### Component Patterns
-
-- Components use Vue 3 Composition API with `<script setup lang="ts">`
-- Nuxt UI components are prefixed with `U` (e.g., `UButton`, `UDashboardSidebar`)
-- Icons use Iconify notation: `i-{collection}-{name}` (e.g., `i-lucide-house`)
-- The sidebar navigation uses `NavigationMenuItem[][]` type for menu structure
-
-### Modules
-
-Configured Nuxt modules (nuxt.config.ts:5):
-
-- `@pinia/nuxt` - State management
-- `@nuxt/eslint` - ESLint integration
-- `@nuxt/ui` - UI component library
-
-## Code Style
-
-Uses **@antfu/eslint-config** with the following rules:
-
-- **Stylistic**: 2-space indentation, semicolons required, single quotes
-- **Filenames**: kebab-case required (enforced by unicorn/filename-case)
-- **Vue**: Max 2 attributes per line in single-line, 1 per line in multiline
-- **TypeScript**: Use `type` instead of `interface` (ts/consistent-type-definitions)
-- **Imports**: Auto-sorted with perfectionist/sort-imports
-- **Console**: Allowed (no-console is off)
-- **Process.env**: Only NODE_ENV is allowed (node/no-process-env)
-
-## Git Workflow
-
-- **Husky** pre-commit hook runs lint-staged
-- **lint-staged** runs `bun run lint` on all staged files before commit
-
-## TypeScript
-
-Uses Nuxt's TypeScript configuration system with references to generated configs in .nuxt/ directory. Run `bun run typecheck` to validate types.
-
-## Project Documentation
-
-All project documentation is organized in the `docs/` directory:
-
-- **docs/README.md** - Documentation structure and conventions
-- **docs/ARCHITECTURE_PLAN.md** - Complete architectural plan with implementation phases
-- **docs/CLAUDE.md** - This file (project conventions for Claude Code)
-
-### Feature Documentation
-
-Features are organized by status:
-
-- **docs/features/** - Current feature in development
-  - `provider-catalog-feature.md` - Sistema de gestión de catálogo de proveedores (IN PROGRESS)
-
-- **docs/features/completed/** - Completed and merged features
-  - `travel-feature.md` - Feature 1: Sistema de gestión de viajes
-  - `feature-itinerary-services.md` - Features 2-3: Itinerarios, servicios y detalles
-
-- **docs/features/pending/** - Planned but not started features
+**Style**: 2 spaces · semicolons · single quotes · kebab-case files · `type` not `interface`
