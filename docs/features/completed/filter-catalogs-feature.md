@@ -1,9 +1,10 @@
 # Feature: Filtrar Catálogos por Ubicación y Categoría
 
-**Archivo destino:** `docs/features/pending/filter-catalogs-feature.md`
-**Rama activa:** `feature/filter-catalogs-by`
-**Estado:** PENDIENTE
+**Archivo:** `docs/features/completed/filter-catalogs-feature.md`
+**Rama:** `feature/filter-catalogs-by`
+**Estado:** COMPLETADA
 **Fecha de creación del plan:** 2026-03-22
+**Fecha de implementación:** 2026-03-22
 
 ---
 
@@ -519,6 +520,32 @@ Los filtros **no persisten en `localStorage`**. Se mantienen en memoria durante 
 - [ ] Ir de `index` a `/providers/guias` resetea filtros previos
 - [ ] Navegar de `/providers/guias` a `/providers/transporte` actualiza la categoría filtrada
 - [ ] Regresar de `/providers/guias` a `index` limpia el filtro de categoría
+
+---
+
+---
+
+## 11. Notas de Implementación
+
+### Desviaciones del plan original
+
+- **`[categoria].vue` usa filtros locales en lugar del store**: Se descubrió una condición de carrera entre el plugin de persistencia de Pinia y el ciclo de vida del componente. La solución fue usar `localFilters` (ref local) en la página de categoría, combinado con `getProvidersByCategory` directamente, en lugar de depender de `activeFilters` en el store. La categoría siempre se garantiza desde la URL.
+
+- **`activeFilters` excluido del persist**: Se agregó `pick: ['providers']` al plugin de persistencia para evitar que el estado de filtros (UI transitoria) se restaure entre sesiones y cause interferencias.
+
+- **Opciones de ciudad/estado en `[categoria].vue` son locales**: Se computan desde los proveedores de la categoría actual (no del store global), para mostrar solo ubicaciones relevantes a la categoría.
+
+- **`USelect` con `placeholder` en lugar de opción vacía**: Nuxt UI no permite `value: ''` en items de `SelectItem`. Se eliminaron las opciones "Todas las X" y se usa el prop `placeholder` nativo del componente.
+
+### Archivos creados
+- `app/components/provider-filter-bar.vue`
+- `app/components/provider-active-filters.vue`
+
+### Archivos modificados
+- `app/types/provider.ts`
+- `app/stores/use-provider-store.ts`
+- `app/pages/providers/index.vue`
+- `app/pages/providers/[categoria].vue`
 
 ---
 
