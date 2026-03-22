@@ -1,12 +1,13 @@
 import { defineStore } from 'pinia';
 
-import type { Provider, ProviderCategory, ProviderFormData, ProviderUpdateData } from '~/types/provider';
+import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, ProviderUpdateData } from '~/types/provider';
 
 export const useProviderStore = defineStore('providers', () => {
   // State
   const providers = ref<Provider[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const activeFilters = ref<ProviderFilters>({});
 
   // Getters
   const allProviders = computed(() => {
@@ -48,6 +49,59 @@ export const useProviderStore = defineStore('providers', () => {
   const totalProviders = computed(() => {
     return providers.value.filter(p => p.activo).length;
   });
+
+  const filteredProviders = computed(() => {
+    let result = [...providers.value];
+
+    if (activeFilters.value.activo !== undefined) {
+      result = result.filter(p => p.activo === activeFilters.value.activo);
+    }
+    else {
+      result = result.filter(p => p.activo);
+    }
+
+    if (activeFilters.value.categoria) {
+      result = result.filter(p => p.categoria === activeFilters.value.categoria);
+    }
+
+    if (activeFilters.value.ciudad) {
+      result = result.filter(
+        p => p.ubicacion.ciudad.toLowerCase() === activeFilters.value.ciudad!.toLowerCase(),
+      );
+    }
+
+    if (activeFilters.value.estado) {
+      result = result.filter(
+        p => p.ubicacion.estado.toLowerCase() === activeFilters.value.estado!.toLowerCase(),
+      );
+    }
+
+    if (activeFilters.value.searchTerm) {
+      const term = activeFilters.value.searchTerm.toLowerCase();
+      result = result.filter(
+        p =>
+          p.nombre.toLowerCase().includes(term)
+          || p.descripcion?.toLowerCase().includes(term)
+          || p.contacto.nombre?.toLowerCase().includes(term),
+      );
+    }
+
+    return result.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+  });
+
+  const availableCiudades = computed(() =>
+    [...new Set(providers.value.filter(p => p.activo).map(p => p.ubicacion.ciudad))].sort(),
+  );
+
+  const availableEstados = computed(() =>
+    [...new Set(providers.value.filter(p => p.activo).map(p => p.ubicacion.estado))].sort(),
+  );
+
+  const filteredCount = computed(() => filteredProviders.value.length);
+
+  const hasActiveFilters = computed(() =>
+    Object.values(activeFilters.value).some(v => v !== undefined && v !== ''),
+  );
 
   // Actions
   function addProvider(data: ProviderFormData): Provider {
@@ -109,6 +163,25 @@ export const useProviderStore = defineStore('providers', () => {
     }
 
     return updateProvider(id, { activo: !provider.activo });
+  }
+
+  // Filter actions
+  function setFilters(filters: ProviderFilters): void {
+    activeFilters.value = { ...filters };
+  }
+
+  function updateFilter<K extends keyof ProviderFilters>(key: K, value: ProviderFilters[K]): void {
+    activeFilters.value = { ...activeFilters.value, [key]: value };
+  }
+
+  function removeFilter(key: keyof ProviderFilters): void {
+    const updated = { ...activeFilters.value };
+    delete updated[key];
+    activeFilters.value = updated;
+  }
+
+  function clearFilters(): void {
+    activeFilters.value = {};
   }
 
   function loadMockData(): void {
@@ -224,6 +297,7 @@ export const useProviderStore = defineStore('providers', () => {
     providers,
     loading,
     error,
+    activeFilters,
     // Getters
     allProviders,
     activeProviders,
@@ -231,16 +305,26 @@ export const useProviderStore = defineStore('providers', () => {
     getProvidersByCategory,
     statsByCategory,
     totalProviders,
+    filteredProviders,
+    availableCiudades,
+    availableEstados,
+    filteredCount,
+    hasActiveFilters,
     // Actions
     addProvider,
     updateProvider,
     deleteProvider,
     toggleProviderStatus,
     loadMockData,
+    setFilters,
+    updateFilter,
+    removeFilter,
+    clearFilters,
   };
 }, {
   persist: {
     key: 'viajeros-ligeros-providers',
     storage: import.meta.client ? localStorage : undefined,
+    pick: ['providers'],
   },
 });
