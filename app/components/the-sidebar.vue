@@ -95,6 +95,7 @@ const items: NavigationMenuItem[][] = [[{
         :collapsed="collapsed"
         :items="items[0]"
         orientation="vertical"
+        :popover="collapsed"
       />
 
       <UNavigationMenu
