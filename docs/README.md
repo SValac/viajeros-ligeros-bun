@@ -6,8 +6,20 @@ Esta carpeta contiene toda la documentación arquitectónica y de features del p
 
 ```
 docs/
-├── README.md                    # Este archivo
-├── ARCHITECTURE_PLAN.md         # Plan arquitectónico general del sistema
+├── README.md                    # Este archivo (índice general)
+├── ARCHITECTURE_PLAN.md         # Índice de redirección → architecture/
+├── architecture/                # Documentación arquitectónica por sección
+│   ├── README.md                # Índice de arquitectura
+│   ├── 01-types.md              # Tipos TypeScript
+│   ├── 02-store.md              # Pinia store
+│   ├── 03-components.md         # Componentes
+│   ├── 04-data-flow.md          # Flujo de datos y CRUD
+│   ├── 05-validations.md        # Schema Zod y validaciones
+│   ├── 06-ux-ui.md              # Componentes Nuxt UI y feedback
+│   ├── 07-implementation-phases.md  # 4 fases de desarrollo
+│   ├── 08-file-structure.md     # Árbol de archivos del proyecto
+│   ├── 09-dependencies.md       # Paquetes adicionales
+│   └── 10-technical-notes.md    # TypeScript, Vue, performance, a11y
 └── features/                    # Documentación de features
     ├── [FEATURE-ACTUAL].md      # Feature en desarrollo (NO en subcarpetas)
     ├── completed/               # Features implementadas y completadas
@@ -59,13 +71,12 @@ docs/features/pending/[nombre-feature].md
 
 ## Archivos Principales
 
-### ARCHITECTURE_PLAN.md
-Plan arquitectónico completo del sistema con:
-- Estructura de tipos TypeScript
-- Arquitectura de Pinia stores
-- Componentes necesarios
-- Flujos de datos
-- Fases de implementación
+### architecture/ (documentación arquitectónica)
+Plan arquitectónico dividido en secciones independientes. Ver [architecture/README.md](./architecture/README.md) para el índice completo con:
+- Tipos TypeScript, Pinia store, componentes
+- Flujos de datos y CRUD
+- Validaciones, UX/UI, fases de implementación
+- Estructura de archivos, dependencias, notas técnicas
 
 ### CLAUDE.md (en raíz del proyecto)
 Guía de convenciones del proyecto para Claude Code:
