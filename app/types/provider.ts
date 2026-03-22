@@ -48,4 +48,6 @@ export type ProviderFilters = {
   categoria?: ProviderCategory;
   activo?: boolean;
   searchTerm?: string;
+  ciudad?: string;
+  estado?: string;
 };
