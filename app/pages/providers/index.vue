@@ -24,9 +24,14 @@ const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 
 // Computed
-const providers = computed(() => providerStore.allProviders);
+const providers = computed(() => providerStore.filteredProviders);
 const stats = computed(() => providerStore.statsByCategory);
 const total = computed(() => providerStore.totalProviders);
+
+const filters = computed({
+  get: () => providerStore.activeFilters,
+  set: val => providerStore.setFilters(val),
+});
 
 // Funciones auxiliares
 function getCategoryColor(categoria: ProviderCategory): string {
@@ -282,6 +287,7 @@ const columns: TableColumn<Provider>[] = [
 // Lifecycle
 onMounted(() => {
   providerStore.loadMockData();
+  providerStore.clearFilters();
 });
 </script>
 
@@ -407,6 +413,22 @@ onMounted(() => {
       </UCard>
     </div>
 
+    <!-- Filtros -->
+    <div class="space-y-2">
+      <ProviderFilterBar
+        v-model="filters"
+        :available-ciudades="providerStore.availableCiudades"
+        :available-estados="providerStore.availableEstados"
+      />
+      <ProviderActiveFilters
+        :filters="providerStore.activeFilters"
+        :total-count="providerStore.totalProviders"
+        :result-count="providerStore.filteredCount"
+        @remove-filter="providerStore.removeFilter"
+        @clear-all="providerStore.clearFilters"
+      />
+    </div>
+
     <!-- Tabla de proveedores -->
     <UCard>
       <div v-if="providers.length === 0" class="text-center py-12">
@@ -414,15 +436,28 @@ onMounted(() => {
           name="i-lucide-inbox"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
         />
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          No hay proveedores aún
-        </h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">
-          Comienza agregando tu primer proveedor
-        </p>
-        <UButton icon="i-lucide-plus" @click="openCreateModal">
-          Agregar Primer Proveedor
-        </UButton>
+        <template v-if="providerStore.hasActiveFilters">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Sin resultados para los filtros aplicados
+          </h3>
+          <p class="text-gray-500 dark:text-gray-400 mb-4">
+            Intenta con otros criterios de búsqueda
+          </p>
+          <UButton icon="i-lucide-filter-x" @click="providerStore.clearFilters">
+            Limpiar filtros
+          </UButton>
+        </template>
+        <template v-else>
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            No hay proveedores aún
+          </h3>
+          <p class="text-gray-500 dark:text-gray-400 mb-4">
+            Comienza agregando tu primer proveedor
+          </p>
+          <UButton icon="i-lucide-plus" @click="openCreateModal">
+            Agregar Primer Proveedor
+          </UButton>
+        </template>
       </div>
       <UTable
         v-else
