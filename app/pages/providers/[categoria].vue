@@ -3,7 +3,7 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Provider, ProviderCategory, ProviderFormData, ProviderLocation } from '~/types/provider';
+import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, ProviderLocation } from '~/types/provider';
 
 const route = useRoute();
 const toast = useToast();
@@ -18,10 +18,64 @@ const providerStore = useProviderStore();
 const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 
-// Computed - Filter by category
-const providers = computed(() =>
-  providerStore.getProvidersByCategory(categoria.value),
+// Filtros locales (ubicación y búsqueda — la categoría viene de la URL)
+const localFilters = ref<ProviderFilters>({});
+
+// Proveedores de esta categoría con filtros locales aplicados
+const categoryProviders = computed(() => providerStore.getProvidersByCategory(categoria.value));
+
+const providers = computed(() => {
+  let result = [...categoryProviders.value];
+
+  if (localFilters.value.ciudad) {
+    result = result.filter(
+      p => p.ubicacion.ciudad.toLowerCase() === localFilters.value.ciudad!.toLowerCase(),
+    );
+  }
+  if (localFilters.value.estado) {
+    result = result.filter(
+      p => p.ubicacion.estado.toLowerCase() === localFilters.value.estado!.toLowerCase(),
+    );
+  }
+  if (localFilters.value.searchTerm) {
+    const term = localFilters.value.searchTerm.toLowerCase();
+    result = result.filter(
+      p =>
+        p.nombre.toLowerCase().includes(term)
+        || p.descripcion?.toLowerCase().includes(term)
+        || p.contacto.nombre?.toLowerCase().includes(term),
+    );
+  }
+
+  return result;
+});
+
+// Opciones de filtro derivadas solo de la categoría actual
+const availableCiudades = computed(() =>
+  [...new Set(categoryProviders.value.map(p => p.ubicacion.ciudad))].sort(),
 );
+const availableEstados = computed(() =>
+  [...new Set(categoryProviders.value.map(p => p.ubicacion.estado))].sort(),
+);
+
+const hasLocalFilters = computed(() =>
+  Object.values(localFilters.value).some(v => v !== undefined && v !== ''),
+);
+
+function removeLocalFilter(key: keyof ProviderFilters) {
+  const updated = { ...localFilters.value };
+  delete updated[key];
+  localFilters.value = updated;
+}
+
+function clearLocalFilters() {
+  localFilters.value = {};
+}
+
+// Reset local filters when navigating between categories
+watch(categoria, () => {
+  localFilters.value = {};
+});
 
 const categoryInfo = computed(() => {
   const info: Record<ProviderCategory, { label: string; icon: string; color: string }> = {
@@ -242,6 +296,23 @@ definePageMeta({
       </UButton>
     </div>
 
+    <!-- Filtros de ubicación y búsqueda -->
+    <div class="space-y-2">
+      <ProviderFilterBar
+        v-model="localFilters"
+        :available-ciudades="availableCiudades"
+        :available-estados="availableEstados"
+        :show-category-filter="false"
+      />
+      <ProviderActiveFilters
+        :filters="localFilters"
+        :total-count="categoryProviders.length"
+        :result-count="providers.length"
+        @remove-filter="removeLocalFilter"
+        @clear-all="clearLocalFilters"
+      />
+    </div>
+
     <!-- Tabla de proveedores -->
     <UCard>
       <div v-if="providers.length === 0" class="text-center py-12">
@@ -249,18 +320,31 @@ definePageMeta({
           :name="categoryInfo.icon"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
         />
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          No hay proveedores de {{ categoryInfo.label.toLowerCase() }} aún
-        </h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">
-          Comienza agregando tu primer proveedor de esta categoría
-        </p>
-        <UButton
-          icon="i-lucide-plus"
-          @click="openCreateModal"
-        >
-          Agregar Proveedor
-        </UButton>
+        <template v-if="hasLocalFilters">
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            Sin resultados para los filtros aplicados
+          </h3>
+          <p class="text-gray-500 dark:text-gray-400 mb-4">
+            Intenta con otros criterios de búsqueda
+          </p>
+          <UButton icon="i-lucide-filter-x" @click="clearLocalFilters">
+            Limpiar filtros
+          </UButton>
+        </template>
+        <template v-else>
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            No hay proveedores de {{ categoryInfo.label.toLowerCase() }} aún
+          </h3>
+          <p class="text-gray-500 dark:text-gray-400 mb-4">
+            Comienza agregando tu primer proveedor de esta categoría
+          </p>
+          <UButton
+            icon="i-lucide-plus"
+            @click="openCreateModal"
+          >
+            Agregar Proveedor
+          </UButton>
+        </template>
       </div>
       <UTable
         v-else
