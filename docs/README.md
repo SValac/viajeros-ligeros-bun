@@ -12,7 +12,9 @@ docs/
     ├── [FEATURE-ACTUAL].md      # Feature en desarrollo (NO en subcarpetas)
     ├── completed/               # Features implementadas y completadas
     │   ├── travel-feature.md
-    │   └── feature-itinerary-services.md
+    │   ├── feature-itinerary-services.md
+    │   ├── provider-catalog-feature.md
+    │   └── filter-catalogs-feature.md
     └── pending/                 # Features planificadas pero no iniciadas
 
 CLAUDE.md                        # En RAÍZ del proyecto (requerido por Claude Code)
@@ -43,15 +45,16 @@ docs/features/pending/[nombre-feature].md
 ## Estado Actual
 
 ### 🚧 En Desarrollo
-- **provider-catalog-feature.md** - Sistema de gestión de catálogo de proveedores
+- *(ninguna feature activa actualmente)*
 
 ### ✅ Completadas
 - **travel-feature.md** - Feature 1: Sistema de gestión de viajes (CRUD básico)
 - **feature-itinerary-services.md** - Features 2-3: Itinerarios, servicios y página de detalles
+- **provider-catalog-feature.md** - Feature 4: Catálogo de proveedores con CRUD completo
+- **filter-catalogs-feature.md** - Feature 5: Filtrado de catálogos por ubicación y categoría
 
 ### ⏭️ Pendientes
 - Exportación de datos (PDF/CSV)
-- Mejoras del dashboard (búsqueda, filtros, paginación)
 - Analytics y reportes
 
 ## Archivos Principales
@@ -119,4 +122,4 @@ git mv docs/features/[feature-name].md docs/features/pending/
 
 ---
 
-**Última actualización**: 2026-01-11
+**Última actualización**: 2026-03-22
