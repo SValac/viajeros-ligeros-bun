@@ -87,6 +87,21 @@ Uses Nuxt's TypeScript configuration system with references to generated configs
 
 ## Project Documentation
 
-- **ARCHITECTURE_PLAN.md** - Complete architectural plan created by software-architect agent with 4 implementation phases, data flows, validations, and technical considerations
-- **TRAVEL_FEATURE.md** - Implementation status for Feature 1: Create Travel (Phases 1-2 completed)
-- **FEATURE_ITINERARY_SERVICES.md** - Implementation plan for Feature 2: Itinerary and Services Management (Phase 3 - In Planning)
+All project documentation is organized in the `docs/` directory:
+
+- **docs/README.md** - Documentation structure and conventions
+- **docs/ARCHITECTURE_PLAN.md** - Complete architectural plan with implementation phases
+- **docs/CLAUDE.md** - This file (project conventions for Claude Code)
+
+### Feature Documentation
+
+Features are organized by status:
+
+- **docs/features/** - Current feature in development
+  - `provider-catalog-feature.md` - Sistema de gestión de catálogo de proveedores (IN PROGRESS)
+
+- **docs/features/completed/** - Completed and merged features
+  - `travel-feature.md` - Feature 1: Sistema de gestión de viajes
+  - `feature-itinerary-services.md` - Features 2-3: Itinerarios, servicios y detalles
+
+- **docs/features/pending/** - Planned but not started features
