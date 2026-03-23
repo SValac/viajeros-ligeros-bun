@@ -159,9 +159,9 @@ definePageMeta({
                     {{ travel.destino }}
                   </h1>
                 </div>
-                <p class="text-muted">
+                <pre class="text-muted">
                   {{ travel.descripcion }}
-                </p>
+                </pre>
               </div>
 
               <UBadge

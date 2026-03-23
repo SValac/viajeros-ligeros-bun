@@ -25,7 +25,7 @@ const schema = z.object({
   fechaInicio: z.string().min(1, 'Fecha requerida'),
   fechaFin: z.string().min(1, 'Fecha requerida'),
   precio: z.number().min(0, 'Precio debe ser positivo').max(999999, 'Precio máximo: 999,999'),
-  descripcion: z.string().min(10, 'Mínimo 10 caracteres').max(1000, 'Máximo 1000 caracteres'),
+  descripcion: z.string().min(10, 'Mínimo 10 caracteres').max(3000, 'Máximo 1000 caracteres'),
   imagenUrl: z.string().url('URL inválida').optional().or(z.literal('')),
   estado: z.enum(['pendiente', 'confirmado', 'en-curso', 'completado', 'cancelado']),
   notasInternas: z.string().max(500, 'Máximo 500 caracteres').optional(),
