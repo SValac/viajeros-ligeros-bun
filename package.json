@@ -34,6 +34,6 @@
     "typescript": "^5.9.3"
   },
   "lint-staged": {
-    "*": "bun run lint"
+    "*.{js,mjs,cjs,ts,vue}": "eslint --fix"
   }
 }

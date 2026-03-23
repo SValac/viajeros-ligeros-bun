@@ -14,7 +14,7 @@ export default withNuxt(
         semi: true,
         quotes: 'single',
       },
-      ignores: ['./src/github/schema.docs.graphql', '**/migrations/*', 'docs/**/*'],
+      ignores: ['./src/github/schema.docs.graphql', '**/migrations/*', 'docs/**/*', '.agents/**/*', '.claude/**/*'],
     },
     {
       rules: {
