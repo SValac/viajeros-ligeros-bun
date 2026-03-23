@@ -33,9 +33,9 @@ const items: NavigationMenuItem[][] = [[{
     icon: 'i-lucide-hotel',
     to: '/providers/hospedaje',
   }, {
-    label: 'Operadores de Autobús',
+    label: 'Agencias de Autobús',
     icon: 'i-lucide-bus',
-    to: '/providers/operadores-autobus',
+    to: '/providers/agencias-autobus',
   }, {
     label: 'Comidas',
     icon: 'i-lucide-utensils',

@@ -11,6 +11,22 @@ export type TravelActivity = {
   ubicacion?: string;
 };
 
+// Autobús asignado a un viaje
+export type TravelBus = {
+  id: string;
+  busId?: string; // Optional reference to catalog Bus.id
+  providerId: string; // Required - agencias-autobus provider
+  modelo?: string;
+  marca?: string;
+  año?: number;
+  operador1Nombre: string; // Required
+  operador1Telefono: string; // Required
+  operador2Nombre?: string;
+  operador2Telefono?: string;
+  cantidadAsientos: number; // Required
+  precioRenta: number; // Required (may differ from catalog)
+};
+
 // Servicio incluido
 export type TravelService = {
   id: string;
@@ -33,6 +49,7 @@ export type Travel = {
   cliente: string;
   itinerario: TravelActivity[];
   servicios: TravelService[];
+  autobuses: TravelBus[];
   notasInternas?: string;
   createdAt: string;
   updatedAt: string;

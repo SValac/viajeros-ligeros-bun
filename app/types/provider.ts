@@ -3,7 +3,7 @@ export type ProviderCategory
   = 'guias'
     | 'transporte'
     | 'hospedaje'
-    | 'operadores-autobus'
+    | 'agencias-autobus'
     | 'comidas'
     | 'otros';
 

@@ -11,7 +11,7 @@
 
 Implementar un sistema de gestión de catálogo de proveedores que permita:
 
-- Administrar proveedores de servicios (Guías, Transporte, Hospedaje, Operadores de Autobús, Comidas, Otros)
+- Administrar proveedores de servicios (Guías, Transporte, Hospedaje, Agencias de Autobús, Comidas, Otros)
 - Vincular proveedores a servicios de viajes
 - Gestionar información de contacto de proveedores
 - Mantener estado activo/inactivo de proveedores
@@ -35,7 +35,7 @@ export type ProviderCategory =
   | 'guias'
   | 'transporte'
   | 'hospedaje'
-  | 'operadores-autobus'
+  | 'agencias-autobus'
   | 'comidas'
   | 'otros';
 

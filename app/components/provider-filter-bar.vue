@@ -20,7 +20,7 @@ const categoryOptions = [
   { label: 'Guías', value: 'guias' },
   { label: 'Transporte', value: 'transporte' },
   { label: 'Hospedaje', value: 'hospedaje' },
-  { label: 'Operadores de Autobús', value: 'operadores-autobus' },
+  { label: 'Agencias de Autobús', value: 'agencias-autobus' },
   { label: 'Comidas', value: 'comidas' },
   { label: 'Otros', value: 'otros' },
 ];

@@ -18,7 +18,7 @@ const categoryLabels: Record<ProviderCategory, string> = {
   'guias': 'Guías',
   'transporte': 'Transporte',
   'hospedaje': 'Hospedaje',
-  'operadores-autobus': 'Operadores de Autobús',
+  'agencias-autobus': 'Agencias de Autobús',
   'comidas': 'Comidas',
   'otros': 'Otros',
 };
