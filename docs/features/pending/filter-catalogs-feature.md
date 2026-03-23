@@ -14,7 +14,7 @@
 El proyecto cuenta con un sistema de catálogo de proveedores completamente funcional. A continuación se detalla lo existente:
 
 **Tipos (`/app/types/provider.ts`):**
-- `ProviderCategory` — union type con 6 valores: `guias`, `transporte`, `hospedaje`, `operadores-autobus`, `comidas`, `otros`
+- `ProviderCategory` — union type con 6 valores: `guias`, `transporte`, `hospedaje`, `agencias-autobus`, `comidas`, `otros`
 - `ProviderLocation` — objeto con campos `ciudad: string`, `estado: string`, `pais: string` (todos requeridos)
 - `Provider` — modelo principal que ya incluye `ubicacion: ProviderLocation`
 - `ProviderFilters` — tipo declarado pero **sin uso activo en el store ni en las páginas**: `{ categoria?: ProviderCategory; activo?: boolean; searchTerm?: string; }`

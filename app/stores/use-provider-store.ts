@@ -34,7 +34,7 @@ export const useProviderStore = defineStore('providers', () => {
       'guias': 0,
       'transporte': 0,
       'hospedaje': 0,
-      'operadores-autobus': 0,
+      'agencias-autobus': 0,
       'comidas': 0,
       'otros': 0,
     };
@@ -241,7 +241,7 @@ export const useProviderStore = defineStore('providers', () => {
       },
       {
         nombre: 'Autobuses Primera Clase',
-        categoria: 'operadores-autobus',
+        categoria: 'agencias-autobus',
         descripcion: 'Servicio de autobuses de lujo con WiFi y entretenimiento a bordo',
         ubicacion: {
           ciudad: 'Guadalajara',

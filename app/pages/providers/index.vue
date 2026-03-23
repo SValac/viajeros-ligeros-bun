@@ -39,7 +39,7 @@ function getCategoryColor(categoria: ProviderCategory): string {
     'guias': 'blue',
     'transporte': 'purple',
     'hospedaje': 'green',
-    'operadores-autobus': 'orange',
+    'agencias-autobus': 'orange',
     'comidas': 'amber',
     'otros': 'gray',
   };
@@ -51,7 +51,7 @@ function getCategoryLabel(categoria: ProviderCategory): string {
     'guias': 'Guías',
     'transporte': 'Transporte',
     'hospedaje': 'Hospedaje',
-    'operadores-autobus': 'Operadores de Autobús',
+    'agencias-autobus': 'Agencias de Autobús',
     'comidas': 'Comidas',
     'otros': 'Otros',
   };
@@ -63,7 +63,7 @@ function getCategoryIcon(categoria: ProviderCategory): string {
     'guias': 'i-lucide-user-search',
     'transporte': 'i-lucide-car',
     'hospedaje': 'i-lucide-hotel',
-    'operadores-autobus': 'i-lucide-bus',
+    'agencias-autobus': 'i-lucide-bus',
     'comidas': 'i-lucide-utensils',
     'otros': 'i-lucide-package',
   };
@@ -378,7 +378,7 @@ onMounted(() => {
         </div>
       </UCard>
 
-      <!-- Operadores de Autobús -->
+      <!-- Agencias de Autobús -->
       <UCard>
         <div class="flex items-center justify-between">
           <div>
@@ -388,7 +388,7 @@ onMounted(() => {
             <p
               class="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1"
             >
-              {{ stats["operadores-autobus"] }}
+              {{ stats["agencias-autobus"] }}
             </p>
           </div>
           <UIcon name="i-lucide-bus" class="w-10 h-10 text-orange-400" />

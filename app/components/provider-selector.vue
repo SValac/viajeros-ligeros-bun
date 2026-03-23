@@ -25,7 +25,7 @@ const categoryOptions = [
   { value: 'guias', label: 'Guías', icon: 'i-lucide-user-search' },
   { value: 'transporte', label: 'Transporte', icon: 'i-lucide-car' },
   { value: 'hospedaje', label: 'Hospedaje', icon: 'i-lucide-hotel' },
-  { value: 'operadores-autobus', label: 'Operadores de Autobús', icon: 'i-lucide-bus' },
+  { value: 'agencias-autobus', label: 'Agencias de Autobús', icon: 'i-lucide-bus' },
   { value: 'comidas', label: 'Comidas', icon: 'i-lucide-utensils' },
   { value: 'otros', label: 'Otros', icon: 'i-lucide-package' },
 ];
@@ -56,7 +56,7 @@ function getCategoryIcon(categoria: ProviderCategory): string {
     'guias': 'i-lucide-user-search',
     'transporte': 'i-lucide-car',
     'hospedaje': 'i-lucide-hotel',
-    'operadores-autobus': 'i-lucide-bus',
+    'agencias-autobus': 'i-lucide-bus',
     'comidas': 'i-lucide-utensils',
     'otros': 'i-lucide-package',
   };

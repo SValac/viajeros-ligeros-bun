@@ -26,7 +26,7 @@ const schema = z.object({
     'guias',
     'transporte',
     'hospedaje',
-    'operadores-autobus',
+    'agencias-autobus',
     'comidas',
     'otros',
   ]),
@@ -101,7 +101,7 @@ const categoriaOptions = [
   { value: 'guias', label: 'Guías' },
   { value: 'transporte', label: 'Transporte' },
   { value: 'hospedaje', label: 'Hospedaje' },
-  { value: 'operadores-autobus', label: 'Operadores de Autobús' },
+  { value: 'agencias-autobus', label: 'Agencias de Autobús' },
   { value: 'comidas', label: 'Comidas' },
   { value: 'otros', label: 'Otros' },
 ];

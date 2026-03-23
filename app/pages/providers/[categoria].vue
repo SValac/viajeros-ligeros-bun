@@ -82,7 +82,7 @@ const categoryInfo = computed(() => {
     'guias': { label: 'Guías', icon: 'i-lucide-user-search', color: 'blue' },
     'transporte': { label: 'Transportes', icon: 'i-lucide-car', color: 'purple' },
     'hospedaje': { label: 'Hospedajes', icon: 'i-lucide-hotel', color: 'green' },
-    'operadores-autobus': { label: 'Operadores de Autobús', icon: 'i-lucide-bus', color: 'orange' },
+    'agencias-autobus': { label: 'Agencias de Autobús', icon: 'i-lucide-bus', color: 'orange' },
     'comidas': { label: 'Comidas', icon: 'i-lucide-utensils', color: 'amber' },
     'otros': { label: 'Otros', icon: 'i-lucide-package', color: 'gray' },
   };
