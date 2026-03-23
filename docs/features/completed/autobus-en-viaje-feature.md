@@ -1,8 +1,9 @@
 # Feature: Autobuses en Viajes y Catálogo de Unidades
 
-## Estado: 🔄 EN DESARROLLO
+## Estado: ✅ COMPLETADA
 
 **Fecha de inicio**: 2026-03-22
+**Fecha de completación**: 2026-03-22
 **Branch**: `feature/add-atuobus-to-travel`
 
 ---
@@ -298,29 +299,29 @@ En la página `/providers/agencias-autobus`, la lista de proveedores incluye una
 **Objetivo**: Base de datos de autobuses lista.
 
 **Tareas**:
-- [ ] Crear `app/types/bus.ts` con tipos `Bus`, `BusFormData`, `BusUpdateData`
-- [ ] Modificar `app/types/travel.ts` — agregar `TravelBus` y `autobuses: TravelBus[]` en `Travel`
-- [ ] Crear `app/stores/use-bus-store.ts` con CRUD y persistencia
-- [ ] Actualizar `app/stores/use-travel-store.ts` — agregar actions de autobuses y campo en mock data
+- ✅ Crear `app/types/bus.ts` con tipos `Bus`, `BusFormData`, `BusUpdateData`
+- ✅ Modificar `app/types/travel.ts` — agregar `TravelBus` y `autobuses: TravelBus[]` en `Travel`
+- ✅ Crear `app/stores/use-bus-store.ts` con CRUD y persistencia
+- ✅ Actualizar `app/stores/use-travel-store.ts` — agregar actions de autobuses y campo en mock data
 
 ### Fase 2 — Catálogo de unidades en proveedores
 
 **Objetivo**: CRUD de autobuses dentro de agencias-autobus.
 
 **Tareas**:
-- [ ] Crear `app/components/bus-form.vue`
-- [ ] Crear `app/components/bus-list.vue`
-- [ ] Modificar `app/pages/providers/[categoria].vue` — mostrar sección "Unidades" para agencias-autobus
+- ✅ Crear `app/components/bus-form.vue`
+- ✅ Crear `app/components/bus-list.vue`
+- ✅ Modificar `app/pages/providers/[categoria].vue` — mostrar sección "Unidades" para agencias-autobus
 
 ### Fase 3 — Autobuses en viajes
 
 **Objetivo**: Agregar y gestionar autobuses en viajes.
 
 **Tareas**:
-- [ ] Crear `app/components/travel-bus-form.vue` (con selector de proveedor y unidad del catálogo)
-- [ ] Crear `app/components/travel-bus-list.vue`
-- [ ] Modificar `app/pages/travels/[id]/index.vue` — sección "Autobuses" de solo lectura
-- [ ] Modificar `app/pages/travels/[id]/edit.vue` — sección "Autobuses" editable
+- ✅ Crear `app/components/travel-bus-form.vue` (con selector de proveedor y unidad del catálogo)
+- ✅ Crear `app/components/travel-bus-list.vue`
+- ✅ Modificar `app/pages/travels/[id]/index.vue` — sección "Autobuses" de solo lectura
+- ✅ Modificar `app/pages/travels/[id]/edit.vue` — sección "Autobuses" editable
 
 ---
 
@@ -353,5 +354,35 @@ En la página `/providers/agencias-autobus`, la lista de proveedores incluye una
 5. `app/pages/travels/[id]/edit.vue` — sección autobuses (edición)
 
 ---
+
+## 11. RESUMEN DE IMPLEMENTACIÓN
+
+### Archivos creados
+- `app/types/bus.ts`
+- `app/stores/use-bus-store.ts`
+- `app/components/bus-form.vue`
+- `app/components/bus-list.vue`
+- `app/components/travel-bus-form.vue`
+- `app/components/travel-bus-list.vue`
+
+### Archivos modificados
+- `app/types/travel.ts`
+- `app/stores/use-travel-store.ts`
+- `app/components/travel-form.vue`
+- `app/pages/providers/[categoria].vue`
+- `app/pages/travels/[id]/index.vue`
+- `app/pages/travels/[id]/edit.vue`
+
+### Funcionalidades implementadas
+- ✅ Catálogo de unidades por proveedor
+- ✅ CRUD de buses
+- ✅ Selector cascading proveedor→unidad en formulario de viaje
+- ✅ Sync automático al catálogo al agregar bus a viaje
+- ✅ Sección Autobuses en detalle/edición de viaje
+- ✅ Sección Unidades en página de agencias-autobus
+
+### Bugs corregidos
+- `autobuses is not iterable` (datos legacy localStorage)
+- Buses no aparecían en catálogo proveedor (stores desconectados → fix: `addBusToTravel` ahora sincroniza con `useBusStore`)
 
 **Última actualización**: 2026-03-22

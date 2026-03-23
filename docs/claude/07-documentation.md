@@ -36,6 +36,7 @@ Features are organized by status under `docs/features/`:
 - `feature-itinerary-services.md` — Features 2-3: Itinerarios, servicios y detalles
 - `provider-catalog-feature.md` — Feature 4: Catálogo de proveedores
 - `filter-catalogs-feature.md` — Feature 5: Filtrado de catálogos
+- `autobus-en-viaje-feature.md` — Feature 6: Autobuses en viajes y catálogo de unidades
 
 ---
 
