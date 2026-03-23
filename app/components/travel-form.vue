@@ -91,6 +91,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       ...event.data,
       itinerario: itinerario.value,
       servicios: servicios.value,
+      autobuses: travel?.autobuses ?? [],
     };
 
     emit('submit', formData);

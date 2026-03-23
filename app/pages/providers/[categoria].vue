@@ -17,6 +17,7 @@ const providerStore = useProviderStore();
 // Estado local
 const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
+const selectedProviderId = shallowRef<string | undefined>(undefined);
 
 // Filtros locales (ubicación y búsqueda — la categoría viene de la URL)
 const localFilters = ref<ProviderFilters>({});
@@ -72,9 +73,10 @@ function clearLocalFilters() {
   localFilters.value = {};
 }
 
-// Reset local filters when navigating between categories
+// Reset local filters and selected provider when navigating between categories
 watch(categoria, () => {
   localFilters.value = {};
+  selectedProviderId.value = undefined;
 });
 
 const categoryInfo = computed(() => {
@@ -88,6 +90,12 @@ const categoryInfo = computed(() => {
   };
   return info[categoria.value] || info.otros;
 });
+
+const isAgenciasAutobus = computed(() => categoria.value === 'agencias-autobus');
+
+const providerSelectOptions = computed(() =>
+  providers.value.map(p => ({ value: p.id, label: p.nombre })),
+);
 
 // Funciones auxiliares
 function formatLocation(ubicacion: ProviderLocation): string {
@@ -368,5 +376,46 @@ definePageMeta({
         />
       </template>
     </UModal>
+
+    <!-- Sección Unidades: solo para agencias de autobús -->
+    <UCard v-if="isAgenciasAutobus" class="mt-6">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <UIcon name="i-lucide-bus" class="w-5 h-5 text-orange-500" />
+          <h2 class="font-semibold">
+            Unidades por Proveedor
+          </h2>
+        </div>
+      </template>
+
+      <div class="space-y-4">
+        <!-- Selector de proveedor -->
+        <UFormField label="Seleccionar Proveedor">
+          <USelect
+            v-model="selectedProviderId"
+            :items="providerSelectOptions"
+            placeholder="Selecciona un proveedor para ver sus unidades"
+          />
+        </UFormField>
+
+        <!-- Estado: sin proveedores -->
+        <div v-if="providers.length === 0" class="text-center py-6">
+          <p class="text-sm text-muted">
+            No hay proveedores de agencias de autobús activos
+          </p>
+        </div>
+
+        <!-- Estado: sin selección -->
+        <div v-else-if="!selectedProviderId" class="text-center py-6 text-muted">
+          <span class="i-lucide-mouse-pointer-click w-8 h-8 mx-auto mb-2 block" />
+          <p class="text-sm">
+            Selecciona un proveedor para ver y gestionar sus unidades
+          </p>
+        </div>
+
+        <!-- Lista de buses del proveedor -->
+        <BusList v-else :provider-id="selectedProviderId" />
+      </div>
+    </UCard>
   </div>
 </template>

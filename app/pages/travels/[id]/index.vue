@@ -348,6 +348,18 @@ definePageMeta({
           </div>
         </div>
 
+        <!-- Buses Section -->
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <span class="i-lucide-bus w-5 h-5" />
+            Autobuses
+          </h2>
+          <TravelBusList
+            :travel-id="travelId"
+            :editable="false"
+          />
+        </div>
+
         <!-- Internal Notes Section -->
         <div v-if="travel.notasInternas" class="mb-6">
           <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
