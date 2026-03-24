@@ -10,6 +10,10 @@ const items: NavigationMenuItem[][] = [[{
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
 }, {
+  label: 'Viajeros',
+  icon: 'i-lucide-users',
+  to: { name: 'travelers-index' },
+}, {
   label: 'Contactos',
   icon: 'i-lucide-users',
 }, {
