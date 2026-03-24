@@ -37,6 +37,7 @@ Features are organized by status under `docs/features/`:
 - `provider-catalog-feature.md` — Feature 4: Catálogo de proveedores
 - `filter-catalogs-feature.md` — Feature 5: Filtrado de catálogos
 - `autobus-en-viaje-feature.md` — Feature 6: Autobuses en viajes y catálogo de unidades
+- `feature-traveler-module.md` — Feature 7: Módulo de viajeros (CRUD, jerarquía de grupos, filtros)
 
 ---
 
