@@ -11,6 +11,7 @@ definePageMeta({
 });
 
 // Stores
+const router = useRouter();
 const travelerStore = useTravelerStore();
 const travelStore = useTravelsStore();
 const toast = useToast();
@@ -115,6 +116,13 @@ function getRowActions(traveler: Traveler) {
         label: 'Editar',
         icon: 'i-lucide-pencil',
         onSelect: () => openEditModal(traveler),
+      },
+    ],
+    [
+      {
+        label: 'Ver Pagos',
+        icon: 'i-lucide-credit-card',
+        onSelect: () => router.push({ name: 'payments-traveler', params: { id: traveler.id } }),
       },
     ],
     [
