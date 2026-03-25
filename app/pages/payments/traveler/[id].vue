@@ -1,0 +1,307 @@
+<script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui';
+
+import { h } from 'vue';
+
+import type { Payment, PaymentFormData } from '~/types/payment';
+
+definePageMeta({
+  name: 'payments-traveler',
+});
+
+const route = useRoute();
+const router = useRouter();
+const toast = useToast();
+const paymentStore = usePaymentStore();
+const travelStore = useTravelsStore();
+const travelerStore = useTravelerStore();
+
+const travelerId = computed(() => route.params.id as string);
+const traveler = computed(() => travelerStore.getTravelerById(travelerId.value));
+
+watchEffect(() => {
+  if (!traveler.value && travelerId.value) {
+    router.push({ name: 'payments-index' });
+  }
+});
+
+const travelerName = computed(() =>
+  traveler.value ? `${traveler.value.nombre} ${traveler.value.apellido}` : '',
+);
+
+// All travel IDs this traveler has account configs or payments for
+const travelerTravelIds = computed((): string[] => {
+  const paymentTravelIds = paymentStore.getPaymentsByTraveler(travelerId.value).map((p: Payment) => p.travelId);
+  const configuredTravelIds = paymentStore.accountConfigs
+    .filter((c: { travelerId: string; travelId: string }) => c.travelerId === travelerId.value)
+    .map((c: { travelerId: string; travelId: string }) => c.travelId);
+  const enrolledTravelId = traveler.value?.travelId;
+  return [...new Set([...configuredTravelIds, ...paymentTravelIds, ...(enrolledTravelId ? [enrolledTravelId] : [])])];
+});
+
+// Filters
+const dateFrom = ref('');
+const dateTo = ref('');
+const travelFilter = ref<string>('all');
+
+const travelOptions = computed(() => [
+  { label: 'Todos los viajes', value: 'all' },
+  ...travelerTravelIds.value.map((id) => {
+    const t = travelStore.getTravelById(id);
+    return { label: t?.destino ?? id, value: id };
+  }),
+]);
+
+function getTravelName(id: string) {
+  return travelStore.getTravelById(id)?.destino ?? id;
+}
+
+function getTravelPrice(id: string) {
+  return travelStore.getTravelById(id)?.precio ?? 0;
+}
+
+const filteredPayments = computed(() => {
+  return paymentStore.getPaymentsByTraveler(travelerId.value).filter((p: Payment) => {
+    if (travelFilter.value !== 'all' && p.travelId !== travelFilter.value)
+      return false;
+    if (dateFrom.value && p.paymentDate < dateFrom.value)
+      return false;
+    if (dateTo.value && p.paymentDate > dateTo.value)
+      return false;
+    return true;
+  });
+});
+
+// Modals
+const isEditModalOpen = shallowRef(false);
+const editingPayment = shallowRef<Payment | null>(null);
+
+function openEditModal(payment: Payment) {
+  editingPayment.value = payment;
+  isEditModalOpen.value = true;
+}
+
+function closeEditModal() {
+  isEditModalOpen.value = false;
+  editingPayment.value = null;
+}
+
+function handleEditSubmit(data: PaymentFormData) {
+  if (!editingPayment.value)
+    return;
+  paymentStore.updatePayment(editingPayment.value.id, data);
+  toast.add({ title: 'Pago actualizado', color: 'success' });
+  closeEditModal();
+}
+
+function handleDelete(payment: Payment) {
+  // eslint-disable-next-line no-alert
+  if (confirm('¿Eliminar este pago? Esta acción no se puede deshacer.')) {
+    paymentStore.deletePayment(payment.id);
+    toast.add({ title: 'Pago eliminado', color: 'warning' });
+  }
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+}
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('es-MX', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+const paymentTypeLabel: Record<string, string> = {
+  cash: 'Efectivo',
+  transfer: 'Transferencia',
+};
+
+const columns: TableColumn<Payment>[] = [
+  {
+    accessorKey: 'paymentDate',
+    header: 'Fecha',
+    cell: ({ row }) => h('span', { class: 'text-sm' }, formatDate(row.getValue('paymentDate'))),
+  },
+  {
+    accessorKey: 'amount',
+    header: 'Monto',
+    cell: ({ row }) => h('span', { class: 'text-sm font-medium text-success' }, formatCurrency(row.getValue('amount'))),
+  },
+  {
+    accessorKey: 'paymentType',
+    header: 'Tipo',
+    cell: ({ row }) => {
+      const type = row.getValue<string>('paymentType');
+      return h(resolveComponent('UBadge'), { color: type === 'cash' ? 'neutral' : 'info', variant: 'subtle' }, () => paymentTypeLabel[type] ?? type);
+    },
+  },
+  {
+    accessorKey: 'notes',
+    header: 'Notas',
+    cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.getValue('notes') || '—'),
+  },
+  {
+    id: 'actions',
+    header: 'Acciones',
+    cell: ({ row }) => {
+      return h(
+        resolveComponent('UDropdownMenu'),
+        {
+          items: [
+            [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEditModal(row.original) }],
+            [{ label: 'Eliminar', icon: 'i-lucide-trash-2', onSelect: () => handleDelete(row.original) }],
+          ],
+        },
+        () => h(resolveComponent('UButton'), { color: 'neutral', variant: 'ghost', icon: 'i-lucide-more-vertical' }),
+      );
+    },
+  },
+];
+
+const editingSummary = computed(() => {
+  if (!editingPayment.value)
+    return null;
+  const travelPrice = getTravelPrice(editingPayment.value.travelId);
+  return paymentStore.getTravelerPaymentSummary(travelerId.value, editingPayment.value.travelId, travelPrice);
+});
+
+const editMaxAmount = computed(() => {
+  if (!editingSummary.value || !editingPayment.value)
+    return 0;
+  return editingSummary.value.balance + editingPayment.value.amount;
+});
+
+onMounted(() => {
+  travelStore.loadMockData();
+  travelerStore.loadMockData();
+  paymentStore.loadMockData();
+});
+</script>
+
+<template>
+  <div v-if="traveler" class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center gap-3">
+      <UButton
+        icon="i-lucide-arrow-left"
+        variant="ghost"
+        color="neutral"
+        size="sm"
+        @click="router.push({ name: 'payments-index' })"
+      />
+      <div>
+        <h1 class="text-3xl font-bold">
+          {{ travelerName }}
+        </h1>
+        <p class="text-muted mt-0.5">
+          Historial de pagos
+        </p>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="flex flex-wrap gap-3">
+      <USelect
+        v-model="travelFilter"
+        :items="travelOptions"
+        value-key="value"
+        label-key="label"
+        class="w-52"
+      />
+      <UInput
+        v-model="dateFrom"
+        type="date"
+        class="w-44"
+      />
+      <UInput
+        v-model="dateTo"
+        type="date"
+        class="w-44"
+      />
+      <UButton
+        v-if="travelFilter !== 'all' || dateFrom || dateTo"
+        icon="i-lucide-filter-x"
+        variant="ghost"
+        color="neutral"
+        @click="() => { travelFilter = 'all'; dateFrom = ''; dateTo = ''; }"
+      >
+        Limpiar
+      </UButton>
+    </div>
+
+    <!-- Per-travel sections -->
+    <template v-for="id in travelerTravelIds" :key="id">
+      <template v-if="travelFilter === 'all' || travelFilter === id">
+        <div class="space-y-3">
+          <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold flex items-center gap-2">
+              <UIcon name="i-lucide-map-pin" class="w-5 h-5 text-primary" />
+              {{ getTravelName(id) }}
+            </h2>
+            <UButton
+              size="sm"
+              variant="outline"
+              icon="i-lucide-credit-card"
+              @click="router.push({ name: 'payments-travel', params: { id } })"
+            >
+              Ver pagos del viaje
+            </UButton>
+          </div>
+
+          <!-- Summary card -->
+          <PaymentSummaryCard
+            :summary="paymentStore.getTravelerPaymentSummary(travelerId, id, getTravelPrice(id))"
+            :traveler-name="travelerName"
+          />
+
+          <!-- Payment history -->
+          <UCard>
+            <template #header>
+              <span class="text-sm font-medium text-muted">Historial de pagos</span>
+            </template>
+            <div
+              v-if="filteredPayments.filter((p: Payment) => p.travelId === id).length === 0"
+              class="text-center py-8 text-muted"
+            >
+              Sin pagos registrados para este viaje
+            </div>
+            <UTable
+              v-else
+              :columns="columns"
+              :data="filteredPayments.filter((p: Payment) => p.travelId === id)"
+            />
+          </UCard>
+        </div>
+      </template>
+    </template>
+
+    <!-- Empty state -->
+    <div v-if="travelerTravelIds.length === 0" class="text-center py-12">
+      <UIcon name="i-lucide-credit-card" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+      <h3 class="text-lg font-medium mb-2">
+        Sin pagos registrados
+      </h3>
+      <p class="text-muted">
+        Este viajero no tiene pagos ni cuentas configuradas
+      </p>
+    </div>
+
+    <!-- Edit Modal -->
+    <UModal v-model:open="isEditModalOpen" title="Editar pago">
+      <template #body>
+        <PaymentForm
+          v-if="editingPayment"
+          :payment="editingPayment"
+          :traveler-id="travelerId"
+          :travel-id="editingPayment.travelId"
+          :max-amount="editMaxAmount"
+          @submit="handleEditSubmit"
+          @cancel="closeEditModal"
+        />
+      </template>
+    </UModal>
+  </div>
+</template>

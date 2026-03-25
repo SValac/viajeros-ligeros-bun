@@ -64,6 +64,9 @@ docs/features/pending/[nombre-feature].md
 - **feature-itinerary-services.md** - Features 2-3: Itinerarios, servicios y página de detalles
 - **provider-catalog-feature.md** - Feature 4: Catálogo de proveedores con CRUD completo
 - **filter-catalogs-feature.md** - Feature 5: Filtrado de catálogos por ubicación y categoría
+- **feature-traveler-module.md** - Feature 6: Módulo de viajeros con grupos y representantes
+- **autobus-en-viaje-feature.md** - Feature 7: Gestión de autobuses por viaje
+- **feature-pagos.md** - Feature 8: Módulo de pagos con abonos, descuentos y saldo por viajero
 
 ### ⏭️ Pendientes
 - Exportación de datos (PDF/CSV)
@@ -133,4 +136,4 @@ git mv docs/features/[feature-name].md docs/features/pending/
 
 ---
 
-**Última actualización**: 2026-03-22
+**Última actualización**: 2026-03-24

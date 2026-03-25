@@ -118,6 +118,13 @@ definePageMeta({
 
         <div class="flex gap-2">
           <UButton
+            icon="i-lucide-credit-card"
+            label="Ver Pagos"
+            variant="outline"
+            color="neutral"
+            @click="router.push({ name: 'payments-travel', params: { id: travel.id } })"
+          />
+          <UButton
             icon="i-lucide-pencil"
             label="Editar"
             variant="outline"
