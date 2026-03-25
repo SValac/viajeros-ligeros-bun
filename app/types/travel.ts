@@ -51,6 +51,10 @@ export type Travel = {
   servicios: TravelService[];
   autobuses: TravelBus[];
   notasInternas?: string;
+  costoTotalOperacion?: number;
+  asientoMinimo?: number;
+  gananciaProyectada?: number;
+  acumuladoViajeros?: number;
   createdAt: string;
   updatedAt: string;
 };
