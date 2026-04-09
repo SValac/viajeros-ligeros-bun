@@ -12,6 +12,10 @@ type Props = {
 
 const { travel = null } = defineProps<Props>();
 
+// Si el viaje tiene cotización activa, el precio es de solo lectura (lo gestiona la cotización)
+const cotizacionStore = useCotizacionStore();
+const tieneCotizacion = computed(() => travel ? cotizacionStore.hasCotizacion(travel.id) : false);
+
 // Emits
 const emit = defineEmits<{
   submit: [data: TravelFormData];
@@ -171,6 +175,7 @@ function onCancel() {
       <UFormField
         label="Precio (MX)"
         name="precio"
+        :description="tieneCotizacion ? 'Gestionado por la cotización del viaje' : undefined"
         required
       >
         <UInput
@@ -180,6 +185,7 @@ function onCancel() {
           step="0.01"
           icon="i-lucide-dollar-sign"
           placeholder="0.00"
+          :disabled="tieneCotizacion"
         />
       </UFormField>
 

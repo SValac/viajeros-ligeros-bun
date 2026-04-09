@@ -11,6 +11,7 @@ definePageMeta({
 
 // Store
 const travelsStore = useTravelsStore();
+const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 const router = useRouter();
 
@@ -54,7 +55,7 @@ function formatDate(dateString: string): string {
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
-    currency: 'MEX',
+    currency: 'MXN',
   }).format(amount);
 }
 
@@ -98,6 +99,11 @@ function getRowActions(travel: Travel) {
         label: 'Editar',
         icon: 'i-lucide-pencil',
         onSelect: () => navigateToEdit(travel.id),
+      },
+      {
+        label: cotizacionStore.hasCotizacion(travel.id) ? 'Ver cotización' : 'Crear cotización',
+        icon: cotizacionStore.hasCotizacion(travel.id) ? 'i-lucide-file-check' : 'i-lucide-file-plus',
+        onSelect: () => router.push({ name: 'travel-cotizacion', params: { id: travel.id } }),
       },
     ],
     [
@@ -164,6 +170,20 @@ const columns: TableColumn<Travel>[] = [
     header: 'Precio',
     cell: ({ row }) => {
       return h('span', { class: 'font-semibold text-gray-900 dark:text-white' }, formatCurrency(row.getValue('precio')));
+    },
+  },
+  {
+    id: 'cotizacion',
+    header: 'Cotización',
+    cell: ({ row }) => {
+      const hasCot = cotizacionStore.hasCotizacion(row.original.id);
+      if (!hasCot) return h('span', { class: 'text-xs text-gray-400' }, '—');
+      return h(resolveComponent('UBadge'), {
+        color: 'success',
+        variant: 'subtle',
+        size: 'xs',
+        icon: 'i-lucide-file-check',
+      }, () => 'Con cotización');
     },
   },
   {

@@ -3,12 +3,14 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const travelsStore = useTravelsStore();
+const cotizacionStore = useCotizacionStore();
 
 // Get travel ID from route params
 const travelId = computed(() => route.params.id as string);
 
 // Get travel data from store
 const travel = computed(() => travelsStore.getTravelById(travelId.value));
+const tieneCotizacion = computed(() => cotizacionStore.hasCotizacion(travelId.value));
 
 // Redirect to dashboard if travel not found
 watchEffect(() => {
@@ -54,9 +56,9 @@ function formatDate(dateString: string) {
 }
 
 function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('es-ES', {
+  return new Intl.NumberFormat('es-MX', {
     style: 'currency',
-    currency: 'EUR',
+    currency: 'MXN',
   }).format(amount);
 }
 
@@ -124,6 +126,22 @@ definePageMeta({
             color="neutral"
             @click="router.push({ name: 'payments-travel', params: { id: travel.id } })"
           />
+          <UButton
+            icon="i-lucide-file-text"
+            variant="outline"
+            :color="tieneCotizacion ? 'success' : 'neutral'"
+            @click="router.push({ name: 'travel-cotizacion', params: { id: travel.id } })"
+          >
+            Cotización
+            <UBadge
+              v-if="tieneCotizacion"
+              label="Con cotización"
+              color="success"
+              variant="subtle"
+              size="xs"
+              class="ml-1"
+            />
+          </UButton>
           <UButton
             icon="i-lucide-pencil"
             label="Editar"
@@ -209,7 +227,7 @@ definePageMeta({
                   Precio Total
                 </div>
                 <div class="flex items-center gap-2">
-                  <span class="i-lucide-euro w-4 h-4 text-muted" />
+                  <span class="i-lucide-dollar-sign w-4 h-4 text-muted" />
                   <span class="font-medium text-lg">
                     {{ formatCurrency(travel.precio) }}
                   </span>
