@@ -19,7 +19,6 @@ const cotizacion = computed(() =>
 );
 
 const puedeConfirmar = computed(() => cotizacionStore.puedeConfirmar(cotizacionId));
-const asientoMinimoCalculado = computed(() => cotizacionStore.getAsientoMinimoCalculado(cotizacionId));
 
 const isConfirmarModalOpen = shallowRef(false);
 const isConfirmando = shallowRef(false);
@@ -30,18 +29,6 @@ function getEstadoColor(estado: string): 'warning' | 'success' {
 
 function getEstadoLabel(estado: string): string {
   return estado === 'confirmada' ? 'Confirmada' : 'Borrador';
-}
-
-function calcularAsientoMinimo() {
-  if (readonly) return;
-  cotizacionStore.updateCotizacion(cotizacionId, {
-    asientoMinimoObjetivo: asientoMinimoCalculado.value,
-  });
-  toast.add({
-    title: 'Asiento mínimo actualizado',
-    description: `Asiento mínimo calculado: ${asientoMinimoCalculado.value}`,
-    color: 'success',
-  });
 }
 
 async function confirmarCotizacion() {
@@ -75,17 +62,6 @@ async function confirmarCotizacion() {
 
     <!-- Acciones -->
     <div class="flex items-center gap-2">
-      <!-- Calcular asiento mínimo -->
-      <UButton
-        icon="i-lucide-calculator"
-        label="Calcular asiento mínimo"
-        variant="outline"
-        color="neutral"
-        size="sm"
-        :disabled="readonly"
-        @click="calcularAsientoMinimo"
-      />
-
       <!-- Confirmar cotización -->
       <UTooltip
         :text="!puedeConfirmar ? 'Todos los proveedores deben estar confirmados' : ''"
