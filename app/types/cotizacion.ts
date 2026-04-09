@@ -15,6 +15,8 @@ export type Cotizacion = {
   updatedAt: string;
 };
 
+export type TipoDivisionCosto = 'minimo' | 'total';
+
 export type CotizacionProveedor = {
   id: string;
   cotizacionId: string;
@@ -23,6 +25,7 @@ export type CotizacionProveedor = {
   observaciones?: string;
   costoTotal: number;
   metodoPago: PaymentType;
+  tipoDivision: TipoDivisionCosto;
   confirmado: boolean;
 };
 

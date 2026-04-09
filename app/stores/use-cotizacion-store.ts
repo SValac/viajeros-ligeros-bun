@@ -47,6 +47,22 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  const getCostoTipoMinimo = computed(() => {
+    return (cotizacionId: string): number => {
+      return proveedoresCotizacion.value
+        .filter(p => p.cotizacionId === cotizacionId && (p.tipoDivision ?? 'minimo') === 'minimo')
+        .reduce((sum, p) => sum + p.costoTotal, 0);
+    };
+  });
+
+  const getCostoTipoTotal = computed(() => {
+    return (cotizacionId: string): number => {
+      return proveedoresCotizacion.value
+        .filter(p => p.cotizacionId === cotizacionId && (p.tipoDivision ?? 'minimo') === 'total')
+        .reduce((sum, p) => sum + p.costoTotal, 0);
+    };
+  });
+
   const getAsientoMinimoCalculado = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
@@ -60,9 +76,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getPrecioAsientoCalculado = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion || cotizacion.asientoMinimoObjetivo === 0) return 0;
-      const costoTotal = getCostoTotal.value(cotizacionId);
-      return Math.ceil(costoTotal / cotizacion.asientoMinimoObjetivo);
+      if (!cotizacion) return 0;
+
+      const costoMinimo = getCostoTipoMinimo.value(cotizacionId);
+      const costoCapacidad = getCostoTipoTotal.value(cotizacionId);
+
+      const parteMinimo = cotizacion.asientoMinimoObjetivo > 0
+        ? costoMinimo / cotizacion.asientoMinimoObjetivo
+        : 0;
+      const parteCapacidad = cotizacion.capacidadAutobus > 0
+        ? costoCapacidad / cotizacion.capacidadAutobus
+        : 0;
+
+      if (parteMinimo === 0 && parteCapacidad === 0) return 0;
+      return Math.ceil(parteMinimo + parteCapacidad);
     };
   });
 
@@ -79,6 +106,24 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return pagosProveedor.value
         .filter(p => p.cotizacionProveedorId === cotizacionProveedorId)
         .reduce((sum, p) => sum + p.monto, 0);
+    };
+  });
+
+  const getCostoPerPersonaProveedor = computed(() => {
+    return (cotizacionProveedorId: string): number => {
+      const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
+      if (!proveedor) return 0;
+
+      const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
+      if (!cotizacion) return 0;
+
+      const tipoDivision = proveedor.tipoDivision ?? 'minimo';
+      const divisor = tipoDivision === 'total'
+        ? cotizacion.capacidadAutobus
+        : cotizacion.asientoMinimoObjetivo;
+
+      if (divisor === 0) return 0;
+      return proveedor.costoTotal / divisor;
     };
   });
 
@@ -408,10 +453,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getProveedoresByCotizacion,
     getPagosByProveedor,
     getCostoTotal,
+    getCostoTipoMinimo,
+    getCostoTipoTotal,
     getAsientoMinimoCalculado,
     getPrecioAsientoCalculado,
     getGananciaProyectada,
     getAnticipadoProveedor,
+    getCostoPerPersonaProveedor,
     getSaldoPendienteProveedor,
     getEstadoPagoProveedor,
     getSaldoTotalPendiente,
