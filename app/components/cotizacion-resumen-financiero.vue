@@ -13,6 +13,8 @@ const cotizacion = computed(() =>
 );
 
 const costoTotal = computed(() => cotizacionStore.getCostoTotal(cotizacionId));
+const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(cotizacionId));
+const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(cotizacionId));
 const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(cotizacionId));
 const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(cotizacionId));
 
@@ -36,6 +38,16 @@ function formatCurrency(amount: number): string {
         <p class="text-2xl font-bold text-error">
           {{ formatCurrency(costoTotal) }}
         </p>
+        <div class="flex flex-wrap gap-2 pt-1">
+          <span class="text-xs text-muted">
+            <span class="font-medium text-blue-500">{{ formatCurrency(costoTipoMinimo) }}</span>
+            ÷ asientos mín.
+          </span>
+          <span class="text-xs text-muted">
+            <span class="font-medium">{{ formatCurrency(costoTipoTotal) }}</span>
+            ÷ cap. bus
+          </span>
+        </div>
       </div>
     </UCard>
 

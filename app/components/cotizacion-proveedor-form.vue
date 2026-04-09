@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { z } from 'zod';
-import type { CotizacionProveedor, CotizacionProveedorFormData } from '~/types/cotizacion';
+import type { CotizacionProveedor, CotizacionProveedorFormData, TipoDivisionCosto } from '~/types/cotizacion';
 
 type Props = {
   cotizacionId: string;
@@ -19,6 +19,7 @@ const schema = z.object({
   descripcionServicio: z.string().min(3, 'Mínimo 3 caracteres').max(200, 'Máximo 200 caracteres'),
   costoTotal: z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0'),
   metodoPago: z.enum(['cash', 'transfer']),
+  tipoDivision: z.enum(['minimo', 'total']),
   observaciones: z.string().max(500, 'Máximo 500 caracteres').optional(),
   confirmado: z.boolean(),
 });
@@ -30,11 +31,17 @@ const metodoPagoOptions = [
   { label: 'Transferencia', value: 'transfer' },
 ];
 
+const tipoDivisionOptions: { label: string; value: TipoDivisionCosto }[] = [
+  { label: 'Asientos mínimos objetivo', value: 'minimo' },
+  { label: 'Capacidad total del bus', value: 'total' },
+];
+
 const state = reactive<Partial<FormSchema>>({
   providerId: proveedorCotizacion?.providerId ?? undefined,
   descripcionServicio: proveedorCotizacion?.descripcionServicio ?? '',
   costoTotal: proveedorCotizacion?.costoTotal ?? undefined,
   metodoPago: proveedorCotizacion?.metodoPago ?? 'cash',
+  tipoDivision: proveedorCotizacion?.tipoDivision ?? 'minimo',
   observaciones: proveedorCotizacion?.observaciones ?? '',
   confirmado: proveedorCotizacion?.confirmado ?? false,
 });
@@ -75,6 +82,15 @@ function onSubmit() {
         v-model.number="state.costoTotal"
         type="number"
         placeholder="0.00"
+        class="w-full"
+      />
+    </UFormField>
+
+    <!-- Dividir entre -->
+    <UFormField label="Dividir entre" name="tipoDivision" required>
+      <USelect
+        v-model="state.tipoDivision"
+        :items="tipoDivisionOptions"
         class="w-full"
       />
     </UFormField>

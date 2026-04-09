@@ -146,6 +146,48 @@ function confirmDeleteProveedor() {
   isDeleteModalOpen.value = false;
   proveedorToDelete.value = null;
 }
+
+function getProveedorActions(proveedor: CotizacionProveedor) {
+  const readActions = [
+    {
+      label: 'Ver historial de pagos',
+      icon: 'i-lucide-receipt',
+      onSelect: () => openHistorial(proveedor),
+    },
+  ];
+
+  if (readonly) return readActions;
+
+  const writeActions = [
+    {
+      label: 'Registrar pago',
+      icon: 'i-lucide-banknote',
+      disabled: cotizacionStore.getSaldoPendienteProveedor(proveedor.id) <= 0,
+      onSelect: () => openRegistrarPago(proveedor),
+    },
+    {
+      label: 'Editar',
+      icon: 'i-lucide-pencil',
+      onSelect: () => openEditProveedor(proveedor),
+    },
+    {
+      label: proveedor.confirmado ? 'Marcar sin confirmar' : 'Marcar como confirmado',
+      icon: proveedor.confirmado ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
+      onSelect: () => handleToggleConfirmado(proveedor),
+    },
+  ];
+
+  const destructiveActions = [
+    {
+      label: 'Eliminar',
+      icon: 'i-lucide-trash-2',
+      color: 'error' as const,
+      onSelect: () => openDeleteConfirm(proveedor),
+    },
+  ];
+
+  return [readActions, writeActions, destructiveActions];
+}
 </script>
 
 <template>
@@ -191,7 +233,9 @@ function confirmDeleteProveedor() {
           <tr class="border-b border-default text-left text-muted">
             <th class="pb-2 pr-4 font-medium">Proveedor</th>
             <th class="pb-2 pr-4 font-medium">Servicio</th>
+            <th class="pb-2 pr-4 font-medium">División</th>
             <th class="pb-2 pr-4 font-medium">Costo Total</th>
+            <th class="pb-2 pr-4 font-medium">Costo/persona</th>
             <th class="pb-2 pr-4 font-medium">Pagado</th>
             <th class="pb-2 pr-4 font-medium">Pendiente</th>
             <th class="pb-2 pr-4 font-medium">Método</th>
@@ -223,8 +267,21 @@ function confirmDeleteProveedor() {
               <span class="truncate block">{{ proveedor.descripcionServicio }}</span>
             </td>
 
+            <!-- División -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="(proveedor.tipoDivision ?? 'minimo') === 'minimo' ? 'Asientos min.' : 'Cap. bus'"
+                :color="(proveedor.tipoDivision ?? 'minimo') === 'minimo' ? 'info' : 'neutral'"
+                variant="subtle"
+                size="xs"
+              />
+            </td>
+
             <!-- Costo Total -->
             <td class="py-3 pr-4 font-medium">{{ formatCurrency(proveedor.costoTotal) }}</td>
+
+            <!-- Costo/persona -->
+            <td class="py-3 pr-4">{{ formatCurrency(cotizacionStore.getCostoPerPersonaProveedor(proveedor.id)) }}</td>
 
             <!-- Pagado -->
             <td class="py-3 pr-4 text-success">
@@ -270,58 +327,14 @@ function confirmDeleteProveedor() {
 
             <!-- Acciones -->
             <td class="py-3">
-              <div class="flex items-center gap-1">
-                <UTooltip text="Ver historial de pagos">
-                  <UButton
-                    icon="i-lucide-receipt"
-                    size="xs"
-                    variant="ghost"
-                    color="neutral"
-                    @click="openHistorial(proveedor)"
-                  />
-                </UTooltip>
-
-                <UTooltip v-if="!readonly" text="Registrar pago">
-                  <UButton
-                    icon="i-lucide-banknote"
-                    size="xs"
-                    variant="ghost"
-                    color="success"
-                    :disabled="cotizacionStore.getSaldoPendienteProveedor(proveedor.id) <= 0"
-                    @click="openRegistrarPago(proveedor)"
-                  />
-                </UTooltip>
-
-                <UTooltip v-if="!readonly" text="Editar">
-                  <UButton
-                    icon="i-lucide-pencil"
-                    size="xs"
-                    variant="ghost"
-                    color="neutral"
-                    @click="openEditProveedor(proveedor)"
-                  />
-                </UTooltip>
-
-                <UTooltip v-if="!readonly" :text="proveedor.confirmado ? 'Marcar sin confirmar' : 'Marcar como confirmado'">
-                  <UButton
-                    :icon="proveedor.confirmado ? 'i-lucide-x-circle' : 'i-lucide-check-circle'"
-                    size="xs"
-                    variant="ghost"
-                    :color="proveedor.confirmado ? 'warning' : 'success'"
-                    @click="handleToggleConfirmado(proveedor)"
-                  />
-                </UTooltip>
-
-                <UTooltip v-if="!readonly" text="Eliminar">
-                  <UButton
-                    icon="i-lucide-trash-2"
-                    size="xs"
-                    variant="ghost"
-                    color="error"
-                    @click="openDeleteConfirm(proveedor)"
-                  />
-                </UTooltip>
-              </div>
+              <UDropdownMenu :items="getProveedorActions(proveedor)">
+                <UButton
+                  icon="i-lucide-more-vertical"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                />
+              </UDropdownMenu>
             </td>
           </tr>
         </tbody>
