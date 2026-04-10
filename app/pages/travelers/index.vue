@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
-import type { ExpandedState, ExpandedStateList } from '@tanstack/vue-table';
+import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
