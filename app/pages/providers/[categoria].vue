@@ -267,7 +267,6 @@ const columns: TableColumn<Provider>[] = [
 
 // Lifecycle
 onMounted(() => {
-  providerStore.loadMockData();
 });
 
 // Set page meta

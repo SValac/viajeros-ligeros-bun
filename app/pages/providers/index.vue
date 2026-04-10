@@ -286,7 +286,6 @@ const columns: TableColumn<Provider>[] = [
 
 // Lifecycle
 onMounted(() => {
-  providerStore.loadMockData();
   providerStore.clearFilters();
 });
 </script>

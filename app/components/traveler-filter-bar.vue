@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { Travel, TravelBus } from '~/types/travel';
-import type { TravelerFilters } from '~/types/traveler';
+import type { Traveler, TravelerFilters } from '~/types/traveler';
 
 type Props = {
   availableTravels: Travel[];
   availableBuses: TravelBus[];
+  representantes?: Traveler[];
 };
 
 const props = defineProps<Props>();
@@ -14,6 +15,13 @@ const filters = defineModel<TravelerFilters>({ default: () => ({}) });
 
 const travelOptions = computed(() =>
   props.availableTravels.map(t => ({ label: t.destino, value: t.id })),
+);
+
+const representanteOptions = computed(() =>
+  (props.representantes ?? []).map(r => ({
+    label: `${r.nombre} ${r.apellido}`,
+    value: r.id,
+  })),
 );
 
 // Filtra los camiones por el viaje seleccionado si hay uno activo
@@ -34,12 +42,16 @@ const busOptions = computed(() => {
 });
 
 function onTravelChange(val: string | undefined) {
-  // Al cambiar de viaje, reseteamos el camión para evitar selección inválida
-  filters.value = { ...filters.value, travelId: val, travelBusId: undefined };
+  // Al cambiar de viaje, reseteamos el camión y representante para evitar selección inválida
+  filters.value = { ...filters.value, travelId: val, travelBusId: undefined, representanteId: undefined };
 }
 
 function onBusChange(val: string | undefined) {
   filters.value = { ...filters.value, travelBusId: val };
+}
+
+function onRepresentanteChange(val: string | undefined) {
+  filters.value = { ...filters.value, representanteId: val };
 }
 
 function clearAll() {
@@ -71,6 +83,17 @@ const hasFilters = computed(() =>
       placeholder="Todos los camiones"
       class="w-52"
       @update:model-value="onBusChange"
+    />
+
+    <USelect
+      v-if="representanteOptions.length > 0"
+      :model-value="filters.representanteId"
+      :items="representanteOptions"
+      value-key="value"
+      label-key="label"
+      placeholder="Todos los grupos"
+      class="w-56"
+      @update:model-value="onRepresentanteChange"
     />
 
     <UButton
