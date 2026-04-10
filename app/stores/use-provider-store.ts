@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 
 import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, ProviderUpdateData } from '~/types/provider';
 
+import { useHotelRoomStore } from './use-hotel-room-store';
+
 export const useProviderStore = defineStore('providers', () => {
   // State
   const providers = ref<Provider[]>([]);
@@ -149,6 +151,10 @@ export const useProviderStore = defineStore('providers', () => {
       error.value = 'Proveedor no encontrado';
       return false;
     }
+
+    // Cascade delete: eliminar datos de habitaciones si el proveedor es de hospedaje
+    const hotelRoomStore = useHotelRoomStore();
+    hotelRoomStore.deleteProviderRooms(id);
 
     providers.value.splice(index, 1);
     error.value = null;
