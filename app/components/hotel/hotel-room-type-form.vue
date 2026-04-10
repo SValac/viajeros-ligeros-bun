@@ -3,7 +3,7 @@ import type { FormSubmitEvent } from '#ui/types';
 
 import { z } from 'zod';
 
-import type { BedConfiguration, HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
+import type { HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
 import { areRoomTypesIdentical } from '~/utils/hotel-room-helpers';
 
@@ -61,7 +61,6 @@ function removeCama(index: number) {
 }
 
 function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
-
   const isDuplicate = props.existingTypes.some(
     existingType =>
       existingType.id !== props.roomType?.id

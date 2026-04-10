@@ -57,7 +57,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     // Si hay filtro de representante, retorna solo ese representante con sus acompañantes
     if (filters.value.representanteId) {
       const rep = base.find(t => t.id === filters.value.representanteId);
-      if (!rep) return [];
+      if (!rep)
+        return [];
       const children = base.filter(t => t.representanteId === rep.id);
       return [{ ...rep, children: children.length > 0 ? children : undefined }];
     }
@@ -72,7 +73,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
     for (const t of base) {
       // Si este viajero es acompañante de alguien, se incluye como child — no como fila raíz
-      if (acompañantesIds.has(t.id)) continue;
+      if (acompañantesIds.has(t.id))
+        continue;
 
       const children = grouped[t.id];
       result.push({

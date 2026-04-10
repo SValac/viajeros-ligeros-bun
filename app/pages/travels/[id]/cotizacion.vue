@@ -58,7 +58,8 @@ const isCrearModalOpen = shallowRef(false);
 
 function handleCrearCotizacion() {
   const result = crearSchema.safeParse(crearState);
-  if (!result.success) return;
+  if (!result.success)
+    return;
 
   cotizacionStore.createCotizacion({
     travelId: travelId.value,
@@ -95,7 +96,8 @@ watch(cotizacion, (c) => {
 }, { immediate: true });
 
 function guardarParametros() {
-  if (!cotizacion.value) return;
+  if (!cotizacion.value)
+    return;
   cotizacionStore.updateCotizacion(cotizacion.value.id, {
     capacidadAutobus: paramsState.capacidadAutobus,
     asientoMinimoObjetivo: paramsState.asientoMinimoObjetivo,
@@ -119,8 +121,12 @@ function guardarParametros() {
             @click="router.push(`/travels/${travelId}`)"
           />
           <div>
-            <h1 class="text-2xl font-bold">Cotización</h1>
-            <p class="text-muted text-sm">{{ travel.destino }}</p>
+            <h1 class="text-2xl font-bold">
+              Cotización
+            </h1>
+            <p class="text-muted text-sm">
+              {{ travel.destino }}
+            </p>
           </div>
         </div>
       </div>
@@ -129,7 +135,9 @@ function guardarParametros() {
       <div v-if="!cotizacion">
         <UCard class="text-center py-12">
           <span class="i-lucide-file-plus w-16 h-16 text-muted mx-auto mb-4 block" />
-          <h2 class="text-xl font-semibold mb-2">Sin cotización</h2>
+          <h2 class="text-xl font-semibold mb-2">
+            Sin cotización
+          </h2>
           <p class="text-muted mb-6">
             Este viaje aún no tiene una cotización. Crea una para gestionar costos de proveedores.
           </p>
@@ -178,16 +186,28 @@ function guardarParametros() {
 
           <div v-if="!editandoParametros" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <p class="text-xs text-muted mb-1">Capacidad Autobús</p>
-              <p class="font-medium">{{ cotizacion.capacidadAutobus }} asientos</p>
+              <p class="text-xs text-muted mb-1">
+                Capacidad Autobús
+              </p>
+              <p class="font-medium">
+                {{ cotizacion.capacidadAutobus }} asientos
+              </p>
             </div>
             <div>
-              <p class="text-xs text-muted mb-1">Asiento Mínimo Objetivo</p>
-              <p class="font-medium">{{ cotizacion.asientoMinimoObjetivo }}</p>
+              <p class="text-xs text-muted mb-1">
+                Asiento Mínimo Objetivo
+              </p>
+              <p class="font-medium">
+                {{ cotizacion.asientoMinimoObjetivo }}
+              </p>
             </div>
             <div>
-              <p class="text-xs text-muted mb-1">Notas</p>
-              <p class="text-sm">{{ cotizacion.notas || '—' }}</p>
+              <p class="text-xs text-muted mb-1">
+                Notas
+              </p>
+              <p class="text-sm">
+                {{ cotizacion.notas || '—' }}
+              </p>
             </div>
           </div>
 
@@ -245,58 +265,66 @@ function guardarParametros() {
         </UCard>
       </template>
     </div>
+    <!-- Modal: crear cotización -->
+    <UModal
+      v-model:open="isCrearModalOpen"
+      title="Crear Cotización"
+      description="Define los parámetros iniciales de la cotización"
+      class="sm:max-w-lg"
+    >
+      <template #body>
+        <UForm
+          :schema="crearSchema"
+          :state="crearState"
+          class="space-y-4"
+          @submit="handleCrearCotizacion"
+        >
+          <UFormField
+            label="Capacidad del Autobús"
+            name="capacidadAutobus"
+            required
+          >
+            <UInput
+              v-model.number="crearState.capacidadAutobus"
+              type="number"
+              placeholder="Ej. 44"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField label="Asiento Mínimo Objetivo" name="asientoMinimoObjetivo">
+            <UInput
+              v-model.number="crearState.asientoMinimoObjetivo"
+              type="number"
+              placeholder="Ej. 30"
+              class="w-full"
+            />
+          </UFormField>
+
+          <UFormField label="Notas" name="notas">
+            <UTextarea
+              v-model="crearState.notas"
+              placeholder="Observaciones sobre esta cotización..."
+              :rows="3"
+              class="w-full"
+            />
+          </UFormField>
+
+          <div class="flex justify-end gap-3 pt-2">
+            <UButton
+              type="button"
+              variant="ghost"
+              color="neutral"
+              label="Cancelar"
+              @click="isCrearModalOpen = false"
+            />
+            <UButton
+              type="submit"
+              label="Crear Cotización"
+            />
+          </div>
+        </UForm>
+      </template>
+    </UModal>
   </div>
-
-  <!-- Modal: crear cotización -->
-  <UModal
-    v-model:open="isCrearModalOpen"
-    title="Crear Cotización"
-    description="Define los parámetros iniciales de la cotización"
-    class="sm:max-w-lg"
-  >
-    <template #body>
-      <UForm :schema="crearSchema" :state="crearState" class="space-y-4" @submit="handleCrearCotizacion">
-        <UFormField label="Capacidad del Autobús" name="capacidadAutobus" required>
-          <UInput
-            v-model.number="crearState.capacidadAutobus"
-            type="number"
-            placeholder="Ej. 44"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField label="Asiento Mínimo Objetivo" name="asientoMinimoObjetivo">
-          <UInput
-            v-model.number="crearState.asientoMinimoObjetivo"
-            type="number"
-            placeholder="Ej. 30"
-            class="w-full"
-          />
-        </UFormField>
-
-        <UFormField label="Notas" name="notas">
-          <UTextarea
-            v-model="crearState.notas"
-            placeholder="Observaciones sobre esta cotización..."
-            :rows="3"
-            class="w-full"
-          />
-        </UFormField>
-
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton
-            type="button"
-            variant="ghost"
-            color="neutral"
-            label="Cancelar"
-            @click="isCrearModalOpen = false"
-          />
-          <UButton
-            type="submit"
-            label="Crear Cotización"
-          />
-        </div>
-      </UForm>
-    </template>
-  </UModal>
 </template>
