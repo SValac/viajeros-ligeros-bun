@@ -67,14 +67,18 @@ function formatCurrency(amount: number): string {
 }
 
 function getEstadoPagoColor(estado: EstadoPagoProveedor): 'warning' | 'info' | 'success' {
-  if (estado === 'pendiente') return 'warning';
-  if (estado === 'anticipo') return 'info';
+  if (estado === 'pendiente')
+    return 'warning';
+  if (estado === 'anticipo')
+    return 'info';
   return 'success';
 }
 
 function getEstadoPagoLabel(estado: EstadoPagoProveedor): string {
-  if (estado === 'pendiente') return 'Pendiente';
-  if (estado === 'anticipo') return 'Anticipo';
+  if (estado === 'pendiente')
+    return 'Pendiente';
+  if (estado === 'anticipo')
+    return 'Anticipo';
   return 'Liquidado';
 }
 
@@ -135,12 +139,14 @@ function handleProveedorSubmit(data: CotizacionProveedorFormData) {
 }
 
 function handleToggleConfirmado(proveedor: CotizacionProveedor) {
-  if (readonly) return;
+  if (readonly)
+    return;
   cotizacionStore.toggleConfirmadoProveedor(proveedor.id);
 }
 
 function confirmDeleteProveedor() {
-  if (!proveedorToDelete.value) return;
+  if (!proveedorToDelete.value)
+    return;
   cotizacionStore.deleteProveedorCotizacion(proveedorToDelete.value.id);
   toast.add({ title: 'Proveedor eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
@@ -156,7 +162,8 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
     },
   ];
 
-  if (readonly) return readActions;
+  if (readonly)
+    return readActions;
 
   const writeActions = [
     {
@@ -195,7 +202,9 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
     <!-- Barra de filtros -->
     <div class="flex flex-wrap gap-3 items-end">
       <div class="flex-1 min-w-32">
-        <p class="text-xs text-muted mb-1">Estado de pago</p>
+        <p class="text-xs text-muted mb-1">
+          Estado de pago
+        </p>
         <USelect
           v-model="filterEstadoPago"
           :items="estadoPagoOptions"
@@ -203,7 +212,9 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
         />
       </div>
       <div class="flex-1 min-w-28">
-        <p class="text-xs text-muted mb-1">Confirmado</p>
+        <p class="text-xs text-muted mb-1">
+          Confirmado
+        </p>
         <USelect
           v-model="filterConfirmado"
           :items="confirmadoOptions"
@@ -211,7 +222,9 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
         />
       </div>
       <div class="flex-1 min-w-32">
-        <p class="text-xs text-muted mb-1">Método de pago</p>
+        <p class="text-xs text-muted mb-1">
+          Método de pago
+        </p>
         <USelect
           v-model="filterMetodoPago"
           :items="metodoPagoOptions"
@@ -231,17 +244,39 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-default text-left text-muted">
-            <th class="pb-2 pr-4 font-medium">Proveedor</th>
-            <th class="pb-2 pr-4 font-medium">Servicio</th>
-            <th class="pb-2 pr-4 font-medium">División</th>
-            <th class="pb-2 pr-4 font-medium">Costo Total</th>
-            <th class="pb-2 pr-4 font-medium">Costo/persona</th>
-            <th class="pb-2 pr-4 font-medium">Pagado</th>
-            <th class="pb-2 pr-4 font-medium">Pendiente</th>
-            <th class="pb-2 pr-4 font-medium">Método</th>
-            <th class="pb-2 pr-4 font-medium">Estado Pago</th>
-            <th class="pb-2 pr-4 font-medium">Confirmado</th>
-            <th class="pb-2 font-medium">Acciones</th>
+            <th class="pb-2 pr-4 font-medium">
+              Proveedor
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Servicio
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              División
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo Total
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo/persona
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pagado
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pendiente
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Método
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Estado Pago
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Confirmado
+            </th>
+            <th class="pb-2 font-medium">
+              Acciones
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -278,10 +313,14 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
             </td>
 
             <!-- Costo Total -->
-            <td class="py-3 pr-4 font-medium">{{ formatCurrency(proveedor.costoTotal) }}</td>
+            <td class="py-3 pr-4 font-medium">
+              {{ formatCurrency(proveedor.costoTotal) }}
+            </td>
 
             <!-- Costo/persona -->
-            <td class="py-3 pr-4">{{ formatCurrency(cotizacionStore.getCostoPerPersonaProveedor(proveedor.id)) }}</td>
+            <td class="py-3 pr-4">
+              {{ formatCurrency(cotizacionStore.getCostoPerPersonaProveedor(proveedor.id)) }}
+            </td>
 
             <!-- Pagado -->
             <td class="py-3 pr-4 text-success">
@@ -344,7 +383,9 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
     <!-- Estado vacío -->
     <div v-else class="py-10 text-center bg-elevated/50 rounded-lg">
       <span class="i-lucide-package-x w-12 h-12 text-muted mx-auto mb-2 block" />
-      <p class="text-muted">No hay proveedores en esta cotización</p>
+      <p class="text-muted">
+        No hay proveedores en esta cotización
+      </p>
       <UButton
         v-if="!readonly"
         variant="ghost"
