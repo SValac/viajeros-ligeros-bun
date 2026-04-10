@@ -120,8 +120,6 @@ watch(() => modelValue, (newValue) => {
 
 // Cargar datos mock y detectar categoría inicial
 onMounted(() => {
-  providerStore.loadMockData();
-
   // Si hay un proveedor inicial, cargar su categoría
   if (modelValue) {
     const provider = providerStore.getProviderById(modelValue);

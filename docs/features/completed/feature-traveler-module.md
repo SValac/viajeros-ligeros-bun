@@ -164,7 +164,6 @@ const filters = ref<TravelerFilters>({});
 - `deleteTraveler(id): void`
 - `setFilters(newFilters: TravelerFilters): void`
 - `clearFilters(): void`
-- `loadMockData(): void` — Carga datos de prueba (solo si el store está vacío)
 
 **Persistencia**:
 ```typescript
@@ -263,7 +262,6 @@ El selector de representante muestra solo viajeros del **mismo viaje y camión**
 2. **Representante**: Solo pueden seleccionarse viajeros del mismo viaje y camión con `esRepresentante: true`.
 3. **Limpieza de `representanteId`**: Al marcar como representante se elimina el `representanteId` para evitar inconsistencias.
 4. **Filtro de camiones**: `traveler-filter-bar` reduce los camiones al viaje seleccionado.
-5. **Mock data**: `loadMockData()` no sobreescribe si ya hay datos en el store.
 
 ---
 

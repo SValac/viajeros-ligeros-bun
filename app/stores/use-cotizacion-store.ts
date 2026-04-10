@@ -8,6 +8,7 @@ import type {
   PagoProveedor,
   PagoProveedorFormData,
 } from '~/types/cotizacion';
+
 import { useTravelsStore } from '~/stores/use-travel-store';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
@@ -66,7 +67,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getAsientoMinimoCalculado = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion || cotizacion.precioAsiento === 0) return 0;
+      if (!cotizacion || cotizacion.precioAsiento === 0)
+        return 0;
       const costoTotal = getCostoTotal.value(cotizacionId);
       return Math.ceil(costoTotal / cotizacion.precioAsiento);
     };
@@ -76,7 +78,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getPrecioAsientoCalculado = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion) return 0;
+      if (!cotizacion)
+        return 0;
 
       const costoMinimo = getCostoTipoMinimo.value(cotizacionId);
       const costoCapacidad = getCostoTipoTotal.value(cotizacionId);
@@ -88,7 +91,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         ? costoCapacidad / cotizacion.capacidadAutobus
         : 0;
 
-      if (parteMinimo === 0 && parteCapacidad === 0) return 0;
+      if (parteMinimo === 0 && parteCapacidad === 0)
+        return 0;
       return Math.ceil(parteMinimo + parteCapacidad);
     };
   });
@@ -96,7 +100,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getGananciaProyectada = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion) return 0;
+      if (!cotizacion)
+        return 0;
       return (cotizacion.capacidadAutobus - cotizacion.asientoMinimoObjetivo) * cotizacion.precioAsiento;
     };
   });
@@ -112,17 +117,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getCostoPerPersonaProveedor = computed(() => {
     return (cotizacionProveedorId: string): number => {
       const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
-      if (!proveedor) return 0;
+      if (!proveedor)
+        return 0;
 
       const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-      if (!cotizacion) return 0;
+      if (!cotizacion)
+        return 0;
 
       const tipoDivision = proveedor.tipoDivision ?? 'minimo';
       const divisor = tipoDivision === 'total'
         ? cotizacion.capacidadAutobus
         : cotizacion.asientoMinimoObjetivo;
 
-      if (divisor === 0) return 0;
+      if (divisor === 0)
+        return 0;
       return proveedor.costoTotal / divisor;
     };
   });
@@ -130,7 +138,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getSaldoPendienteProveedor = computed(() => {
     return (cotizacionProveedorId: string): number => {
       const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
-      if (!proveedor) return 0;
+      if (!proveedor)
+        return 0;
       const anticipado = getAnticipadoProveedor.value(cotizacionProveedorId);
       return proveedor.costoTotal - anticipado;
     };
@@ -139,10 +148,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getEstadoPagoProveedor = computed(() => {
     return (cotizacionProveedorId: string): EstadoPagoProveedor => {
       const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
-      if (!proveedor) return 'pendiente';
+      if (!proveedor)
+        return 'pendiente';
       const anticipado = getAnticipadoProveedor.value(cotizacionProveedorId);
-      if (anticipado <= 0) return 'pendiente';
-      if (anticipado >= proveedor.costoTotal) return 'liquidado';
+      if (anticipado <= 0)
+        return 'pendiente';
+      if (anticipado >= proveedor.costoTotal)
+        return 'liquidado';
       return 'anticipo';
     };
   });
@@ -158,7 +170,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const puedeConfirmar = computed(() => {
     return (cotizacionId: string): boolean => {
       const proveedores = proveedoresCotizacion.value.filter(p => p.cotizacionId === cotizacionId);
-      if (proveedores.length === 0) return false;
+      if (proveedores.length === 0)
+        return false;
       return proveedores.every(p => p.confirmado === true);
     };
   });
@@ -194,11 +207,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Helper interno — recalcula precioAsiento y lo sincroniza a travel.precio
   function _syncPrecioToTravel(cotizacionId: string): void {
     const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-    if (!cotizacion || cotizacion.estado === 'confirmada') return;
-    if (cotizacion.asientoMinimoObjetivo === 0) return;
+    if (!cotizacion || cotizacion.estado === 'confirmada')
+      return;
+    if (cotizacion.asientoMinimoObjetivo === 0)
+      return;
 
     const nuevoPrecio = getPrecioAsientoCalculado.value(cotizacionId);
-    if (nuevoPrecio === 0) return;
+    if (nuevoPrecio === 0)
+      return;
 
     // Actualizar precioAsiento en la cotización directamente (evita recursión)
     const index = cotizaciones.value.findIndex(c => c.id === cotizacionId);
@@ -218,7 +234,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Actions
   function createCotizacion(data: CotizacionFormData): Cotizacion {
     const existing = cotizaciones.value.find(c => c.travelId === data.travelId);
-    if (existing) return existing;
+    if (existing)
+      return existing;
 
     const now = new Date().toISOString();
     const newCotizacion: Cotizacion = {
@@ -241,7 +258,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
 
     const existing = cotizaciones.value[index];
-    if (!existing) return undefined;
+    if (!existing)
+      return undefined;
 
     const updated: Cotizacion = {
       ...existing,
@@ -267,7 +285,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     travelStore: ReturnType<typeof useTravelsStore>,
   ): { success: boolean; error?: string } {
     const cotizacion = cotizaciones.value.find(c => c.id === id);
-    if (!cotizacion) return { success: false, error: 'Cotización no encontrada' };
+    if (!cotizacion)
+      return { success: false, error: 'Cotización no encontrada' };
 
     if (!puedeConfirmar.value(id)) {
       return { success: false, error: 'Todos los proveedores deben estar confirmados' };
@@ -294,8 +313,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   function addProveedorCotizacion(data: CotizacionProveedorFormData): CotizacionProveedor | { error: string } {
     const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
-    if (!cotizacion) return { error: 'Cotización no encontrada' };
-    if (cotizacion.estado === 'confirmada') return { error: 'No se puede modificar una cotización confirmada' };
+    if (!cotizacion)
+      return { error: 'Cotización no encontrada' };
+    if (cotizacion.estado === 'confirmada')
+      return { error: 'No se puede modificar una cotización confirmada' };
 
     const newProveedor: CotizacionProveedor = {
       ...data,
@@ -312,13 +333,16 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     data: Partial<CotizacionProveedorFormData>,
   ): CotizacionProveedor | undefined {
     const index = proveedoresCotizacion.value.findIndex(p => p.id === id);
-    if (index === -1) return undefined;
+    if (index === -1)
+      return undefined;
 
     const existing = proveedoresCotizacion.value[index];
-    if (!existing) return undefined;
+    if (!existing)
+      return undefined;
 
     const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
-    if (cotizacion?.estado === 'confirmada') return undefined;
+    if (cotizacion?.estado === 'confirmada')
+      return undefined;
 
     const updated: CotizacionProveedor = {
       ...existing,
@@ -334,10 +358,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   function deleteProveedorCotizacion(id: string): void {
     const proveedor = proveedoresCotizacion.value.find(p => p.id === id);
-    if (!proveedor) return;
+    if (!proveedor)
+      return;
 
     const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada') return;
+    if (cotizacion?.estado === 'confirmada')
+      return;
 
     const cotizacionId = proveedor.cotizacionId;
     proveedoresCotizacion.value = proveedoresCotizacion.value.filter(p => p.id !== id);
@@ -347,25 +373,31 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   function toggleConfirmadoProveedor(id: string): void {
     const index = proveedoresCotizacion.value.findIndex(p => p.id === id);
-    if (index === -1) return;
+    if (index === -1)
+      return;
 
     const proveedor = proveedoresCotizacion.value[index];
-    if (!proveedor) return;
+    if (!proveedor)
+      return;
 
     const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada') return;
+    if (cotizacion?.estado === 'confirmada')
+      return;
 
     proveedoresCotizacion.value[index] = { ...proveedor, confirmado: !proveedor.confirmado };
   }
 
   function addPagoProveedor(data: PagoProveedorFormData): PagoProveedor | { error: string } {
     const proveedor = proveedoresCotizacion.value.find(p => p.id === data.cotizacionProveedorId);
-    if (!proveedor) return { error: 'Proveedor no encontrado' };
+    if (!proveedor)
+      return { error: 'Proveedor no encontrado' };
 
     const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada') return { error: 'No se puede modificar una cotización confirmada' };
+    if (cotizacion?.estado === 'confirmada')
+      return { error: 'No se puede modificar una cotización confirmada' };
 
-    if (data.monto <= 0) return { error: 'El monto debe ser mayor a 0' };
+    if (data.monto <= 0)
+      return { error: 'El monto debe ser mayor a 0' };
 
     const saldoPendiente = getSaldoPendienteProveedor.value(data.cotizacionProveedorId);
     if (data.monto > saldoPendiente) {
@@ -385,10 +417,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   function updatePagoProveedor(id: string, data: Partial<PagoProveedorFormData>): PagoProveedor | undefined {
     const index = pagosProveedor.value.findIndex(p => p.id === id);
-    if (index === -1) return undefined;
+    if (index === -1)
+      return undefined;
 
     const existing = pagosProveedor.value[index];
-    if (!existing) return undefined;
+    if (!existing)
+      return undefined;
 
     const updated: PagoProveedor = {
       ...existing,
@@ -403,11 +437,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   function deletePagoProveedor(id: string): void {
     const pago = pagosProveedor.value.find(p => p.id === id);
-    if (!pago) return;
+    if (!pago)
+      return;
 
     const proveedor = proveedoresCotizacion.value.find(p => p.id === pago.cotizacionProveedorId);
     const cotizacion = cotizaciones.value.find(c => c.id === proveedor?.cotizacionId);
-    if (cotizacion?.estado === 'confirmada') return;
+    if (cotizacion?.estado === 'confirmada')
+      return;
 
     pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
   }
@@ -418,26 +454,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   function clearFilters(): void {
     filters.value = {};
-  }
-
-  function loadMockData(): void {
-    if (cotizaciones.value.length > 0) return;
-
-    const now = new Date().toISOString();
-
-    const mockCotizacion: Cotizacion = {
-      id: 'cotizacion-mock-1',
-      travelId: 'travel-mock-paris',
-      capacidadAutobus: 44,
-      asientoMinimoObjetivo: 30,
-      precioAsiento: 1850,
-      estado: 'borrador',
-      notas: 'Cotización de prueba para el viaje a París',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    cotizaciones.value.push(mockCotizacion);
   }
 
   return {
@@ -479,7 +495,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     deletePagoProveedor,
     setFilters,
     clearFilters,
-    loadMockData,
   };
 }, {
   persist: {

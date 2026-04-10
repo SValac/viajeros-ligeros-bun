@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
+import type { ExpandedState, ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
 import type { Travel, TravelBus } from '~/types/travel';
-import type { Traveler, TravelerFormData } from '~/types/traveler';
+import type { Traveler, TravelerFormData, TravelerWithChildren } from '~/types/traveler';
 
 definePageMeta({
   name: 'travelers-index',
@@ -19,15 +20,33 @@ const toast = useToast();
 // Estado local
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
+const expanded = ref<ExpandedStateList>({});
 
 // Datos derivados de stores
-const travelers = computed(() => travelerStore.filteredTravelers);
+const travelers = computed(() => travelerStore.filteredGroupedTravelers);
+
+// Mantener siempre expandidos todos los grupos: recalcula y sobreescribe
+// el estado completo cada vez que cambian los datos.
+watchEffect(() => {
+  const newExpanded: ExpandedStateList = {};
+  for (const row of travelers.value) {
+    if (row.children && row.children.length > 0) {
+      newExpanded[row.id] = true;
+    }
+  }
+  expanded.value = newExpanded;
+});
 const total = computed(() => travelerStore.travelers.length);
 
 const allTravels = computed((): Travel[] => travelStore.allTravels);
 
 const allBuses = computed((): TravelBus[] =>
   allTravels.value.flatMap(t => t.autobuses ?? []),
+);
+
+// Representantes disponibles según los filtros actuales (travelId/travelBusId)
+const representantes = computed((): Traveler[] =>
+  travelerStore.filteredTravelers.filter(t => t.esRepresentante),
 );
 
 const filters = computed({
@@ -136,13 +155,35 @@ function getRowActions(traveler: Traveler) {
 }
 
 // Columnas de la tabla
-const columns: TableColumn<Traveler>[] = [
+const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'nombreCompleto',
     header: 'Nombre',
     cell: ({ row }) => {
       const t = row.original;
-      return h('div', { class: 'font-medium' }, `${t.nombre} ${t.apellido}`);
+      const depth = row.depth;
+      const canExpand = row.getCanExpand();
+
+      const nameNode = h('span', { class: 'font-medium' }, `${t.nombre} ${t.apellido}`);
+
+      if (canExpand) {
+        const isExpanded = row.getIsExpanded();
+        const toggleIcon = isExpanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right';
+        const toggleBtn = h(
+          resolveComponent('UButton'),
+          {
+            icon: toggleIcon,
+            variant: 'ghost',
+            color: 'neutral',
+            size: 'xs',
+            class: 'mr-1',
+            onClick: row.getToggleExpandedHandler(),
+          },
+        );
+        return h('div', { class: 'flex items-center', style: `padding-left: ${depth * 1.5}rem` }, [toggleBtn, nameNode]);
+      }
+
+      return h('div', { class: 'flex items-center', style: `padding-left: ${depth * 1.5 + 0.75}rem` }, [nameNode]);
     },
   },
   {
@@ -224,8 +265,6 @@ const columns: TableColumn<Traveler>[] = [
 
 // Lifecycle
 onMounted(() => {
-  travelStore.loadMockData();
-  travelerStore.loadMockData();
   travelerStore.clearFilters();
 });
 </script>
@@ -301,6 +340,7 @@ onMounted(() => {
       v-model="filters"
       :available-travels="allTravels"
       :available-buses="allBuses"
+      :representantes="representantes"
     />
 
     <!-- Tabla de viajeros -->
@@ -310,7 +350,7 @@ onMounted(() => {
           name="i-lucide-inbox"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
         />
-        <template v-if="filters.travelId || filters.travelBusId">
+        <template v-if="filters.travelId || filters.travelBusId || filters.representanteId">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Sin resultados para los filtros aplicados
           </h3>
@@ -335,8 +375,16 @@ onMounted(() => {
       </div>
       <UTable
         v-else
+        v-model:expanded="expanded"
         :columns="columns"
         :data="travelers"
+        :get-sub-rows="(row) => row.children"
+        :ui="{
+          base: 'border-separate border-spacing-0',
+          tbody: '[&>tr]:last:[&>td]:border-b-0',
+          tr: 'group',
+          td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
+        }"
       />
     </UCard>
 

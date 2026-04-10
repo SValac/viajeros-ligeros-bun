@@ -175,9 +175,7 @@ const editMaxAmount = computed(() => {
 });
 
 onMounted(() => {
-  travelStore.loadMockData();
-  travelerStore.loadMockData();
-  paymentStore.loadMockData();
+
 });
 </script>
 

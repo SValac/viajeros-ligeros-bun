@@ -52,7 +52,6 @@ Definir tipos:
 - `updateTravel(id, data)`: Actualizar viaje y timestamp
 - `deleteTravel(id)`: Eliminar viaje
 - `updateTravelStatus(id, status)`: Cambiar solo el estado
-- `loadMockData()`: Cargar 2 viajes de ejemplo (solo si array vacío)
 
 **Persistencia:**
 - Plugin persist con key: 'viajeros-ligeros-travels'
@@ -90,7 +89,6 @@ Definir tipos:
 - `editingTravel: Travel | null`
 
 **Lifecycle:**
-- `onMounted`: Llamar `travelsStore.loadMockData()` para datos de ejemplo
 
 ### 4. Formulario de Viaje
 **Archivo:** `/home/valac/Documents/Projects/Valac/viajeros-ligeros-bun/app/components/travel-form.vue`

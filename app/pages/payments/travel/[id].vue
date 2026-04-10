@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
+import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
 import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
-import type { Traveler } from '~/types/traveler';
+import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
 definePageMeta({
   name: 'payments-travel',
@@ -32,6 +33,8 @@ const enrolledTravelers = computed(() =>
 
 const travelPrice = computed(() => travel.value?.precio ?? 0);
 
+const expanded = ref<ExpandedStateList>({});
+
 // Status filter
 const statusFilter = ref<PaymentStatus | 'all'>('all');
 const statusFilterOptions = [
@@ -41,15 +44,47 @@ const statusFilterOptions = [
   { label: 'Pagado', value: 'paid' },
 ];
 
-const filteredTravelers = computed(() => {
-  return enrolledTravelers.value.filter((t) => {
+const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
+  // Group ALL enrolled travelers by representanteId to preserve the tree structure.
+  // Filtering by status applies only to which representative rows are shown at root level.
+  const all = enrolledTravelers.value;
+  const grouped = Object.groupBy(all, t => t.representanteId ?? '');
+  const acompañantesIds = new Set(
+    all.filter(t => t.representanteId).map(t => t.id),
+  );
+
+  const result: TravelerWithChildren[] = [];
+
+  for (const t of all) {
+    // Acompañantes are embedded as children — skip them as root rows.
+    if (acompañantesIds.has(t.id))
+      continue;
+
+    // Apply status filter at the representative level.
     if (statusFilter.value !== 'all') {
       const summary = paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value);
       if (summary.status !== statusFilter.value)
-        return false;
+        continue;
     }
-    return true;
-  });
+
+    const children = grouped[t.id];
+    result.push({
+      ...t,
+      children: children && children.length > 0 ? children : undefined,
+    });
+  }
+
+  return result;
+});
+
+watchEffect(() => {
+  const newExpanded: ExpandedStateList = {};
+  for (const row of groupedFilteredTravelers.value) {
+    if (row.children && row.children.length > 0) {
+      newExpanded[row.id] = true;
+    }
+  }
+  expanded.value = newExpanded;
 });
 
 // Caja del viaje
@@ -126,13 +161,34 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
   paid: { color: 'success', label: 'Pagado' },
 };
 
-const columns: TableColumn<Traveler>[] = [
+const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'nombre',
     header: 'Nombre',
     cell: ({ row }) => {
-      const t = row.original;
-      return h('div', { class: 'font-medium' }, `${t.nombre} ${t.apellido}`);
+      const depth = row.depth;
+      const traveler = row.original;
+      const nombre = `${traveler.nombre} ${traveler.apellido}`;
+
+      if (row.getCanExpand()) {
+        return h('div', { class: 'flex items-center gap-1' }, [
+          h('button', {
+            onClick: row.getToggleExpandedHandler(),
+            class: 'text-muted hover:text-default',
+          }, [
+            h('span', {
+              class: row.getIsExpanded()
+                ? 'i-lucide-chevron-down w-4 h-4'
+                : 'i-lucide-chevron-right w-4 h-4',
+            }),
+          ]),
+          h('span', { class: 'font-medium' }, nombre),
+        ]);
+      }
+
+      return h('div', {
+        style: `padding-left: ${depth * 1.5 + 0.75}rem`,
+      }, nombre);
     },
   },
   {
@@ -226,9 +282,7 @@ const columns: TableColumn<Traveler>[] = [
 ];
 
 onMounted(() => {
-  travelStore.loadMockData();
-  travelerStore.loadMockData();
-  paymentStore.loadMockData();
+
 });
 </script>
 
@@ -311,7 +365,7 @@ onMounted(() => {
 
     <!-- Travelers table -->
     <UCard>
-      <div v-if="filteredTravelers.length === 0" class="text-center py-12">
+      <div v-if="groupedFilteredTravelers.length === 0" class="text-center py-12">
         <UIcon name="i-lucide-users" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <template v-if="enrolledTravelers.length === 0">
           <h3 class="text-lg font-medium mb-2">
@@ -332,8 +386,16 @@ onMounted(() => {
       </div>
       <UTable
         v-else
+        v-model:expanded="expanded"
         :columns="columns"
-        :data="filteredTravelers"
+        :data="groupedFilteredTravelers"
+        :get-sub-rows="(row) => row.children"
+        :ui="{
+          base: 'border-separate border-spacing-0',
+          tbody: '[&>tr]:last:[&>td]:border-b-0',
+          tr: 'group',
+          td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
+        }"
       />
     </UCard>
 

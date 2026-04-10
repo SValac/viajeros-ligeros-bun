@@ -26,4 +26,10 @@ export type TravelerUpdateData = Partial<TravelerFormData>;
 export type TravelerFilters = {
   travelId?: string;
   travelBusId?: string;
+  representanteId?: string;
+};
+
+// Tipo para viajero con hijos (árbol de representante + acompañantes)
+export type TravelerWithChildren = Traveler & {
+  children?: Traveler[];
 };

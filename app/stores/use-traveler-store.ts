@@ -1,4 +1,4 @@
-import type { Traveler, TravelerFilters, TravelerFormData, TravelerUpdateData } from '~/types/traveler';
+import type { Traveler, TravelerFilters, TravelerFormData, TravelerUpdateData, TravelerWithChildren } from '~/types/traveler';
 
 export const useTravelerStore = defineStore('useTravelerStore', () => {
   // State
@@ -48,6 +48,40 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       }
       return true;
     });
+  });
+
+  const filteredGroupedTravelers = computed((): TravelerWithChildren[] => {
+    // Base: viajeros ya filtrados por travelId y travelBusId
+    const base = filteredTravelers.value;
+
+    // Si hay filtro de representante, retorna solo ese representante con sus acompañantes
+    if (filters.value.representanteId) {
+      const rep = base.find(t => t.id === filters.value.representanteId);
+      if (!rep) return [];
+      const children = base.filter(t => t.representanteId === rep.id);
+      return [{ ...rep, children: children.length > 0 ? children : undefined }];
+    }
+
+    // Agrupar: separar acompañantes (tienen representanteId) de los demás
+    const grouped = Object.groupBy(base, t => t.representanteId ?? '');
+    const acompañantesIds = new Set(
+      base.filter(t => t.representanteId).map(t => t.id),
+    );
+
+    const result: TravelerWithChildren[] = [];
+
+    for (const t of base) {
+      // Si este viajero es acompañante de alguien, se incluye como child — no como fila raíz
+      if (acompañantesIds.has(t.id)) continue;
+
+      const children = grouped[t.id];
+      result.push({
+        ...t,
+        children: children && children.length > 0 ? children : undefined,
+      });
+    }
+
+    return result;
   });
 
   // Actions
@@ -110,123 +144,6 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     filters.value = {};
   }
 
-  function loadMockData(): void {
-    if (travelers.value.length > 0) {
-      return;
-    }
-
-    const mockTravelId = 'travel-mock-001';
-    const mockBusId1 = 'bus-mock-001';
-    const mockBusId2 = 'bus-mock-002';
-
-    const representante1Id = crypto.randomUUID();
-    const representante2Id = crypto.randomUUID();
-
-    const mockTravelers: (TravelerFormData & { id: string })[] = [
-      {
-        id: representante1Id,
-        nombre: 'Alejandro',
-        apellido: 'Torres Medina',
-        telefono: '55-1234-5678',
-        travelId: mockTravelId,
-        travelBusId: mockBusId1,
-        asiento: '1A',
-        puntoAbordaje: 'Plaza de la Constitución',
-        esRepresentante: true,
-      },
-      {
-        id: crypto.randomUUID(),
-        nombre: 'Fernanda',
-        apellido: 'Torres Medina',
-        telefono: '55-1234-5679',
-        travelId: mockTravelId,
-        travelBusId: mockBusId1,
-        asiento: '1B',
-        puntoAbordaje: 'Plaza de la Constitución',
-        esRepresentante: false,
-        representanteId: representante1Id,
-      },
-      {
-        id: crypto.randomUUID(),
-        nombre: 'Marco Antonio',
-        apellido: 'Torres Medina',
-        telefono: '55-1234-5680',
-        travelId: mockTravelId,
-        travelBusId: mockBusId1,
-        asiento: '2A',
-        puntoAbordaje: 'Plaza de la Constitución',
-        esRepresentante: false,
-        representanteId: representante1Id,
-      },
-      {
-        id: representante2Id,
-        nombre: 'Lucía',
-        apellido: 'Ramírez Vega',
-        telefono: '55-9876-5432',
-        travelId: mockTravelId,
-        travelBusId: mockBusId1,
-        asiento: '3A',
-        puntoAbordaje: 'Metro Indios Verdes',
-        esRepresentante: true,
-      },
-      {
-        id: crypto.randomUUID(),
-        nombre: 'Diego',
-        apellido: 'Ramírez Vega',
-        telefono: '55-9876-5433',
-        travelId: mockTravelId,
-        travelBusId: mockBusId1,
-        asiento: '3B',
-        puntoAbordaje: 'Metro Indios Verdes',
-        esRepresentante: false,
-        representanteId: representante2Id,
-      },
-      {
-        id: crypto.randomUUID(),
-        nombre: 'Valentina',
-        apellido: 'Cruz Hernández',
-        telefono: '55-5555-1111',
-        travelId: mockTravelId,
-        travelBusId: mockBusId2,
-        asiento: '1A',
-        puntoAbordaje: 'Glorieta de los Insurgentes',
-        esRepresentante: true,
-      },
-      {
-        id: crypto.randomUUID(),
-        nombre: 'Roberto',
-        apellido: 'Flores Castillo',
-        telefono: '55-5555-2222',
-        travelId: mockTravelId,
-        travelBusId: mockBusId2,
-        asiento: '2A',
-        puntoAbordaje: 'Glorieta de los Insurgentes',
-        esRepresentante: true,
-      },
-      {
-        id: crypto.randomUUID(),
-        nombre: 'Carmen',
-        apellido: 'Morales Jiménez',
-        telefono: '55-5555-3333',
-        travelId: mockTravelId,
-        travelBusId: mockBusId2,
-        asiento: '2B',
-        puntoAbordaje: 'Terminal del Norte',
-        esRepresentante: true,
-      },
-    ];
-
-    const now = new Date().toISOString();
-    mockTravelers.forEach(({ id, ...data }) => {
-      travelers.value.push({
-        ...data,
-        id,
-        createdAt: now,
-        updatedAt: now,
-      });
-    });
-  }
-
   // Retornar todo el API público del store
   return {
     // State
@@ -241,13 +158,13 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     getTravelersByBus,
     getGroupMembers,
     filteredTravelers,
+    filteredGroupedTravelers,
     // Actions
     addTraveler,
     updateTraveler,
     deleteTraveler,
     setFilters,
     clearFilters,
-    loadMockData,
   };
 }, {
   // Persistencia en localStorage

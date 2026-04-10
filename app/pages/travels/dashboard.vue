@@ -177,7 +177,8 @@ const columns: TableColumn<Travel>[] = [
     header: 'Cotización',
     cell: ({ row }) => {
       const hasCot = cotizacionStore.hasCotizacion(row.original.id);
-      if (!hasCot) return h('span', { class: 'text-xs text-gray-400' }, '—');
+      if (!hasCot)
+        return h('span', { class: 'text-xs text-gray-400' }, '—');
       return h(resolveComponent('UBadge'), {
         color: 'success',
         variant: 'subtle',
@@ -204,7 +205,6 @@ const columns: TableColumn<Travel>[] = [
 
 // Lifecycle
 onMounted(() => {
-  travelsStore.loadMockData();
 });
 </script>
 

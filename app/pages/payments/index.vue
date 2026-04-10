@@ -110,9 +110,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
 ];
 
 onMounted(() => {
-  travelStore.loadMockData();
-  travelerStore.loadMockData();
-  paymentStore.loadMockData();
+
 });
 </script>
 

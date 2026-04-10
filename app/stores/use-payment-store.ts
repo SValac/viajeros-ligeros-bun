@@ -233,88 +233,6 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     filters.value = {};
   }
 
-  function loadMockData(): void {
-    if (payments.value.length > 0 || accountConfigs.value.length > 0) {
-      return;
-    }
-
-    const mockTravelId = 'travel-mock-001';
-    const traveler1Id = 'mock-traveler-1';
-    const traveler2Id = 'mock-traveler-2';
-    const traveler3Id = 'mock-traveler-3';
-
-    // Mock account configs
-    const mockConfigs: TravelerAccountConfig[] = [
-      {
-        travelId: mockTravelId,
-        travelerId: traveler1Id,
-        travelerType: 'adult',
-        discount: 200,
-        discountType: 'fixed',
-      },
-      {
-        travelId: mockTravelId,
-        travelerId: traveler2Id,
-        travelerType: 'child',
-        childPrice: 900,
-        discount: 0,
-        discountType: 'fixed',
-      },
-      {
-        travelId: mockTravelId,
-        travelerId: traveler3Id,
-        travelerType: 'adult',
-        discount: 10,
-        discountType: 'percentage',
-      },
-    ];
-
-    mockConfigs.forEach(c => accountConfigs.value.push(c));
-
-    const now = new Date().toISOString();
-    const mockPayments: (PaymentFormData & { id: string })[] = [
-      {
-        id: crypto.randomUUID(),
-        travelId: mockTravelId,
-        travelerId: traveler1Id,
-        amount: 500,
-        paymentDate: '2026-02-15',
-        paymentType: 'cash',
-        notes: 'Anticipo inicial',
-      },
-      {
-        id: crypto.randomUUID(),
-        travelId: mockTravelId,
-        travelerId: traveler1Id,
-        amount: 300,
-        paymentDate: '2026-03-01',
-        paymentType: 'transfer',
-        notes: 'Ref: TRF-001',
-      },
-      {
-        id: crypto.randomUUID(),
-        travelId: mockTravelId,
-        travelerId: traveler2Id,
-        amount: 900,
-        paymentDate: '2026-02-20',
-        paymentType: 'cash',
-      },
-      {
-        id: crypto.randomUUID(),
-        travelId: mockTravelId,
-        travelerId: traveler3Id,
-        amount: 400,
-        paymentDate: '2026-03-05',
-        paymentType: 'transfer',
-        notes: 'Ref: TRF-002',
-      },
-    ];
-
-    mockPayments.forEach(({ id, ...data }) => {
-      payments.value.push({ ...data, id, createdAt: now, updatedAt: now });
-    });
-  }
-
   return {
     // State
     payments,
@@ -339,7 +257,6 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     setAccountConfig,
     setFilters,
     clearFilters,
-    loadMockData,
   };
 }, {
   persist: {
