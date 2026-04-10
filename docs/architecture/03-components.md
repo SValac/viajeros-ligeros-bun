@@ -25,11 +25,6 @@ import type { Travel, TravelStatus } from '~/types/travel';
 const travelsStore = useTravelsStore();
 const toast = useToast();
 
-// Cargar datos mock en desarrollo (solo primera vez)
-onMounted(() => {
-  travelsStore.loadMockData();
-});
-
 // Estado para modal de formulario
 const isFormModalOpen = ref(false);
 const editingTravel = ref<Travel | null>(null);

@@ -336,7 +336,6 @@ La categoría viene fija por la URL, por lo que el filtro de categoría no se mu
 1. Gestionar el ciclo de vida del filtro de categoría:
 ```ts
 onMounted(() => {
-  providerStore.loadMockData();
   providerStore.setFilters({ categoria: categoria.value });
 });
 

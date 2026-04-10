@@ -125,7 +125,6 @@ const error = ref<string | null>(null);
 - `updateProvider(id, data)` - Actualizar proveedor
 - `deleteProvider(id)` - Eliminar proveedor (hard delete)
 - `toggleProviderStatus(id)` - Activar/desactivar
-- `loadMockData()` - Datos de ejemplo
 
 **Persistencia**:
 ```typescript

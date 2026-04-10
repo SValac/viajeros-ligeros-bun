@@ -96,55 +96,6 @@ export const useTravelsStore = defineStore('travels', {
     },
 
     // Cargar datos de ejemplo (útil para desarrollo/demo)
-    loadMockData() {
-      // Solo cargar si no hay datos
-      if (this.travels.length === 0) {
-        const mockTravels: Travel[] = [
-          {
-            id: crypto.randomUUID(),
-            destino: 'París, Francia',
-            fechaInicio: '2025-04-15',
-            fechaFin: '2025-04-22',
-            precio: 1500,
-            descripcion: 'Tour completo por París incluyendo Torre Eiffel, Louvre y Versalles',
-            imagenUrl: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34',
-            estado: 'confirmado',
-            cliente: 'María García',
-            itinerario: [
-              { id: '1', dia: 1, titulo: 'Llegada', descripcion: 'Check-in hotel', hora: '14:00' },
-              { id: '2', dia: 2, titulo: 'Torre Eiffel', descripcion: 'Visita guiada', hora: '10:00' },
-            ],
-            servicios: [
-              { id: '1', nombre: 'Vuelos ida y vuelta', incluido: true },
-              { id: '2', nombre: 'Hotel 4 estrellas', incluido: true },
-              { id: '3', nombre: 'Guía turístico', incluido: true },
-            ],
-            notasInternas: 'Cliente VIP, requiere habitación con vista',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: crypto.randomUUID(),
-            destino: 'Barcelona, España',
-            fechaInicio: '2025-05-10',
-            fechaFin: '2025-05-17',
-            precio: 1200,
-            descripcion: 'Experiencia gastronómica y cultural en Barcelona',
-            imagenUrl: 'https://images.unsplash.com/photo-1583422409516-2895a77efded',
-            estado: 'pendiente',
-            cliente: 'Juan Pérez',
-            itinerario: [],
-            servicios: [
-              { id: '1', nombre: 'Vuelos', incluido: true },
-              { id: '2', nombre: 'Hotel boutique', incluido: true },
-            ],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ];
-        this.travels = mockTravels;
-      }
-    },
   },
 
   // Persistencia en localStorage

@@ -137,7 +137,6 @@ const filters = ref<PaymentFilters>({});
 - `deletePayment(id): void`
 - `setAccountConfig(config): void` — upsert
 - `setFilters / clearFilters`
-- `loadMockData(): void`
 
 **Persistencia**:
 ```typescript
@@ -239,7 +238,6 @@ Badge de estado: `pending` → warning · `partial` → info · `paid` → succe
 4. **Descuento**: Por viajero dentro de un viaje específico (no global). Monto fijo o porcentaje.
 5. **Estado derivado**: Calculado en el getter, no almacenado en BD.
 6. **Eliminación con confirmación**: `confirm()` explícito antes de borrar.
-7. **Mock data**: `loadMockData()` no sobreescribe si ya hay datos.
 
 ---
 
