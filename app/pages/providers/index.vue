@@ -465,7 +465,7 @@ onMounted(() => {
       />
     </UCard>
 
-    <!-- Modal de formulario -->
+    <!-- Modal de formulario de proveedor -->
     <UModal
       v-model:open="isFormModalOpen"
       :title="editingProvider ? 'Editar Proveedor' : 'Nuevo Proveedor'"
@@ -480,5 +480,6 @@ onMounted(() => {
         />
       </template>
     </UModal>
+
   </div>
 </template>
