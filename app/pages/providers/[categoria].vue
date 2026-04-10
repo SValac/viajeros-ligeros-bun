@@ -18,6 +18,8 @@ const providerStore = useProviderStore();
 const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 const selectedProviderId = shallowRef<string | undefined>(undefined);
+const isRoomsManagerOpen = ref(false);
+const selectedHospedajeProvider = ref<Provider | null>(null);
 
 // Filtros locales (ubicación y búsqueda — la categoría viene de la URL)
 const localFilters = ref<ProviderFilters>({});
@@ -73,10 +75,22 @@ function clearLocalFilters() {
   localFilters.value = {};
 }
 
+function openRoomsManager(provider: Provider) {
+  selectedHospedajeProvider.value = provider;
+  isRoomsManagerOpen.value = true;
+}
+
+function closeRoomsManager() {
+  isRoomsManagerOpen.value = false;
+  selectedHospedajeProvider.value = null;
+}
+
 // Reset local filters and selected provider when navigating between categories
 watch(categoria, () => {
   localFilters.value = {};
   selectedProviderId.value = undefined;
+  isRoomsManagerOpen.value = false;
+  selectedHospedajeProvider.value = null;
 });
 
 const categoryInfo = computed(() => {
@@ -92,6 +106,7 @@ const categoryInfo = computed(() => {
 });
 
 const isAgenciasAutobus = computed(() => categoria.value === 'agencias-autobus');
+const isHospedaje = computed(() => categoria.value === 'hospedaje');
 
 const providerSelectOptions = computed(() =>
   providers.value.map(p => ({ value: p.id, label: p.nombre })),
@@ -182,7 +197,7 @@ function handleToggleStatus(provider: Provider) {
 
 // Acciones de la fila
 function getRowActions(provider: Provider) {
-  return [
+  const actions: { label: string; icon: string; onSelect: () => void }[][] = [
     [
       {
         label: 'Editar',
@@ -203,6 +218,16 @@ function getRowActions(provider: Provider) {
       },
     ],
   ];
+
+  if (isHospedaje.value && actions[0]) {
+    actions[0].unshift({
+      label: 'Gestionar Habitaciones',
+      icon: 'i-lucide-bed',
+      onSelect: () => openRoomsManager(provider),
+    });
+  }
+
+  return actions;
 }
 
 // Columnas de la tabla
@@ -250,6 +275,14 @@ const columns: TableColumn<Provider>[] = [
       return h('span', { class: 'text-sm' }, email);
     },
   },
+  ...(isHospedaje.value
+    ? [{
+        id: 'habitaciones',
+        header: 'Habitaciones',
+        cell: ({ row }: { row: { original: Provider } }) =>
+          h(resolveComponent('HotelRoomsSummary'), { providerId: row.original.id }),
+      }]
+    : []),
   {
     id: 'actions',
     header: 'Acciones',
@@ -372,6 +405,21 @@ definePageMeta({
           :provider="editingProvider"
           @submit="handleFormSubmit"
           @cancel="closeModal"
+        />
+      </template>
+    </UModal>
+
+    <!-- Modal de gestión de habitaciones -->
+    <UModal
+      v-model:open="isRoomsManagerOpen"
+      title="Gestión de Habitaciones"
+      class="sm:max-w-4xl"
+    >
+      <template #body>
+        <HotelRoomsManager
+          v-if="selectedHospedajeProvider"
+          :provider="selectedHospedajeProvider"
+          @close="closeRoomsManager"
         />
       </template>
     </UModal>
