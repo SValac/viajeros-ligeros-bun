@@ -1,485 +1,139 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
-
-import { h } from 'vue';
-
-import type {
-  Provider,
-  ProviderCategory,
-  ProviderContact,
-  ProviderFormData,
-  ProviderLocation,
-} from '~/types/provider';
+import type { ProviderCategory } from '~/types/provider';
 
 definePageMeta({
   name: 'providers-dashboard',
 });
 
-// Store
 const providerStore = useProviderStore();
-const toast = useToast();
 
-// Estado local
-const isFormModalOpen = ref(false);
-const editingProvider = ref<Provider | null>(null);
-
-// Computed
-const providers = computed(() => providerStore.filteredProviders);
 const stats = computed(() => providerStore.statsByCategory);
 const total = computed(() => providerStore.totalProviders);
 
-const filters = computed({
-  get: () => providerStore.activeFilters,
-  set: val => providerStore.setFilters(val),
-});
+type CategoryInfo = {
+  key: ProviderCategory;
+  label: string;
+  icon: string;
+  color: string;
+  textColor: string;
+  iconColor: string;
+  route: string;
+};
 
-// Funciones auxiliares
-function getCategoryColor(categoria: ProviderCategory): string {
-  const colors: Record<ProviderCategory, string> = {
-    'guias': 'blue',
-    'transporte': 'purple',
-    'hospedaje': 'green',
-    'agencias-autobus': 'orange',
-    'comidas': 'amber',
-    'otros': 'gray',
-  };
-  return colors[categoria] || 'gray';
-}
-
-function getCategoryLabel(categoria: ProviderCategory): string {
-  const labels: Record<ProviderCategory, string> = {
-    'guias': 'Guías',
-    'transporte': 'Transporte',
-    'hospedaje': 'Hospedaje',
-    'agencias-autobus': 'Agencias de Autobús',
-    'comidas': 'Comidas',
-    'otros': 'Otros',
-  };
-  return labels[categoria] || categoria;
-}
-
-function getCategoryIcon(categoria: ProviderCategory): string {
-  const icons: Record<ProviderCategory, string> = {
-    'guias': 'i-lucide-user-search',
-    'transporte': 'i-lucide-car',
-    'hospedaje': 'i-lucide-hotel',
-    'agencias-autobus': 'i-lucide-bus',
-    'comidas': 'i-lucide-utensils',
-    'otros': 'i-lucide-package',
-  };
-  return icons[categoria] || 'i-lucide-package';
-}
-
-function formatLocation(ubicacion: ProviderLocation): string {
-  const parts = [ubicacion.ciudad, ubicacion.estado, ubicacion.pais];
-  return parts.join(', ');
-}
-
-// Acciones del formulario
-function openCreateModal() {
-  editingProvider.value = null;
-  isFormModalOpen.value = true;
-}
-
-function openEditModal(provider: Provider) {
-  editingProvider.value = provider;
-  isFormModalOpen.value = true;
-}
-
-function closeModal() {
-  isFormModalOpen.value = false;
-  editingProvider.value = null;
-}
-
-function handleFormSubmit(data: ProviderFormData) {
-  try {
-    if (editingProvider.value) {
-      // Actualizar proveedor existente
-      const success = providerStore.updateProvider(
-        editingProvider.value.id,
-        data,
-      );
-      if (success) {
-        toast.add({
-          title: 'Proveedor actualizado',
-          description: `${data.nombre} se actualizó correctamente`,
-          color: 'primary',
-        });
-        closeModal();
-      }
-    }
-    else {
-      // Crear nuevo proveedor
-      providerStore.addProvider(data);
-      toast.add({
-        title: 'Proveedor creado',
-        description: `${data.nombre} se creó correctamente`,
-        color: 'primary',
-      });
-      closeModal();
-    }
-  }
-  catch {
-    toast.add({
-      title: 'Error',
-      description: 'Ocurrió un error al guardar el proveedor',
-      color: 'error',
-    });
-  }
-}
-
-function handleDelete(provider: Provider) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar el proveedor ${provider.nombre}?`)) {
-    const success = providerStore.deleteProvider(provider.id);
-    if (success) {
-      toast.add({
-        title: 'Proveedor eliminado',
-        description: `${provider.nombre} se eliminó correctamente`,
-        color: 'warning',
-      });
-    }
-  }
-}
-
-function handleToggleStatus(provider: Provider) {
-  const success = providerStore.toggleProviderStatus(provider.id);
-  if (success) {
-    const newStatus = !provider.activo;
-    toast.add({
-      title: 'Estado actualizado',
-      description: `${provider.nombre} ahora está ${newStatus ? 'activo' : 'inactivo'}`,
-      color: 'primary',
-    });
-  }
-}
-
-// Acciones de la fila
-function getRowActions(provider: Provider) {
-  return [
-    [
-      {
-        label: 'Editar',
-        icon: 'i-lucide-pencil',
-        onSelect: () => openEditModal(provider),
-      },
-      {
-        label: provider.activo ? 'Desactivar' : 'Activar',
-        icon: provider.activo ? 'i-lucide-eye-off' : 'i-lucide-eye',
-        onSelect: () => handleToggleStatus(provider),
-      },
-    ],
-    [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        onSelect: () => handleDelete(provider),
-      },
-    ],
-  ];
-}
-
-// Columnas de la tabla
-const columns: TableColumn<Provider>[] = [
+const categories: CategoryInfo[] = [
   {
-    accessorKey: 'nombre',
-    header: 'Nombre',
-    cell: ({ row }) => {
-      return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', {
-          class: `${getCategoryIcon(row.original.categoria)} w-4 h-4 text-gray-400`,
-        }),
-        h('span', { class: 'font-medium' }, row.getValue('nombre')),
-      ]);
-    },
+    key: 'guias',
+    label: 'Guías',
+    icon: 'i-lucide-user-search',
+    color: 'blue',
+    textColor: 'text-blue-600 dark:text-blue-400',
+    iconColor: 'text-blue-400',
+    route: '/providers/guides',
   },
   {
-    accessorKey: 'ubicacion',
-    header: 'Ubicación',
-    cell: ({ row }) => {
-      const ubicacion = row.getValue('ubicacion') as ProviderLocation;
-      return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-map-pin w-3 h-3 text-gray-400' }),
-        h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatLocation(ubicacion)),
-      ]);
-    },
+    key: 'transporte',
+    label: 'Transporte',
+    icon: 'i-lucide-car',
+    color: 'purple',
+    textColor: 'text-purple-600 dark:text-purple-400',
+    iconColor: 'text-purple-400',
+    route: '/providers/transportation',
   },
   {
-    accessorKey: 'categoria',
-    header: 'Categoría',
-    cell: ({ row }) => {
-      const categoria = row.getValue('categoria') as ProviderCategory;
-      return h(
-        resolveComponent('UBadge'),
-        {
-          color: getCategoryColor(categoria),
-          variant: 'subtle',
-        },
-        () => getCategoryLabel(categoria),
-      );
-    },
+    key: 'hospedaje',
+    label: 'Hospedaje',
+    icon: 'i-lucide-hotel',
+    color: 'green',
+    textColor: 'text-green-600 dark:text-green-400',
+    iconColor: 'text-green-400',
+    route: '/providers/accommodation',
   },
   {
-    accessorKey: 'contacto',
-    header: 'Contacto',
-    cell: ({ row }) => {
-      const contacto = row.getValue('contacto') as ProviderContact;
-      const elements = [];
-
-      if (contacto.nombre) {
-        elements.push(h('div', { class: 'text-sm' }, contacto.nombre));
-      }
-      if (contacto.telefono) {
-        elements.push(
-          h('div', { class: 'text-xs text-gray-500' }, contacto.telefono),
-        );
-      }
-      if (contacto.email) {
-        elements.push(
-          h('div', { class: 'text-xs text-gray-500' }, contacto.email),
-        );
-      }
-
-      if (elements.length === 0) {
-        elements.push(
-          h('span', { class: 'text-sm text-gray-400' }, 'Sin contacto'),
-        );
-      }
-
-      return h('div', { class: 'space-y-0.5' }, elements);
-    },
+    key: 'agencias-autobus',
+    label: 'Agencias de Autobús',
+    icon: 'i-lucide-bus',
+    color: 'orange',
+    textColor: 'text-orange-600 dark:text-orange-400',
+    iconColor: 'text-orange-400',
+    route: '/providers/bus-agencies',
   },
   {
-    accessorKey: 'activo',
-    header: 'Estado',
-    cell: ({ row }) => {
-      const activo = row.getValue('activo') as boolean;
-      return h(
-        resolveComponent('UBadge'),
-        {
-          color: activo ? 'green' : 'gray',
-          variant: 'subtle',
-        },
-        () => (activo ? 'Activo' : 'Inactivo'),
-      );
-    },
+    key: 'comidas',
+    label: 'Comidas',
+    icon: 'i-lucide-utensils',
+    color: 'amber',
+    textColor: 'text-amber-600 dark:text-amber-400',
+    iconColor: 'text-amber-400',
+    route: '/providers/food-services',
   },
   {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(
-        resolveComponent('UDropdownMenu'),
-        {
-          items: getRowActions(row.original),
-        },
-        () =>
-          h(resolveComponent('UButton'), {
-            color: 'neutral',
-            variant: 'ghost',
-            icon: 'i-lucide-more-vertical',
-          }),
-      );
-    },
+    key: 'otros',
+    label: 'Otros',
+    icon: 'i-lucide-package',
+    color: 'gray',
+    textColor: 'text-gray-600 dark:text-gray-400',
+    iconColor: 'text-gray-400',
+    route: '/providers/other',
   },
 ];
-
-// Lifecycle
-onMounted(() => {
-  providerStore.clearFilters();
-});
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Gestión de Proveedores
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
-          Administra el catálogo de proveedores de servicios
-        </p>
-      </div>
-      <UButton
-        icon="i-lucide-plus"
-        size="lg"
-        @click="openCreateModal"
-      >
-        Nuevo Proveedor
-      </UButton>
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+        Gestión de Proveedores
+      </h1>
+      <p class="text-gray-500 dark:text-gray-400 mt-1">
+        Administra el catálogo de proveedores de servicios
+      </p>
     </div>
 
-    <!-- Estadísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <!-- Total -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Total Proveedores
-            </p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-              {{ total }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-handshake" class="w-10 h-10 text-gray-400" />
-        </div>
-      </UCard>
-
-      <!-- Guías -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Guías
-            </p>
-            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-              {{ stats.guias }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-user-search" class="w-10 h-10 text-blue-400" />
-        </div>
-      </UCard>
-
-      <!-- Transporte -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Transporte
-            </p>
-            <p
-              class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1"
-            >
-              {{ stats.transporte }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-car" class="w-10 h-10 text-purple-400" />
-        </div>
-      </UCard>
-
-      <!-- Hospedaje -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Hospedaje
-            </p>
-            <p
-              class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1"
-            >
-              {{ stats.hospedaje }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-hotel" class="w-10 h-10 text-green-400" />
-        </div>
-      </UCard>
-
-      <!-- Agencias de Autobús -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Operadores
-            </p>
-            <p
-              class="text-2xl font-bold text-orange-600 dark:text-orange-400 mt-1"
-            >
-              {{ stats["agencias-autobus"] }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-bus" class="w-10 h-10 text-orange-400" />
-        </div>
-      </UCard>
-
-      <!-- Comidas -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Comidas
-            </p>
-            <p
-              class="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1"
-            >
-              {{ stats.comidas }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-utensils" class="w-10 h-10 text-amber-400" />
-        </div>
-      </UCard>
-    </div>
-
-    <!-- Filtros -->
-    <div class="space-y-2">
-      <ProviderFilterBar
-        v-model="filters"
-        :available-ciudades="providerStore.availableCiudades"
-        :available-estados="providerStore.availableEstados"
-      />
-      <ProviderActiveFilters
-        :filters="providerStore.activeFilters"
-        :total-count="providerStore.totalProviders"
-        :result-count="providerStore.filteredCount"
-        @remove-filter="providerStore.removeFilter"
-        @clear-all="providerStore.clearFilters"
-      />
-    </div>
-
-    <!-- Tabla de proveedores -->
+    <!-- Resumen total -->
     <UCard>
-      <div v-if="providers.length === 0" class="text-center py-12">
-        <UIcon
-          name="i-lucide-inbox"
-          class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
-        />
-        <template v-if="providerStore.hasActiveFilters">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Sin resultados para los filtros aplicados
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Intenta con otros criterios de búsqueda
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="text-sm text-gray-500 dark:text-gray-400">
+            Total Proveedores Activos
           </p>
-          <UButton icon="i-lucide-filter-x" @click="providerStore.clearFilters">
-            Limpiar filtros
-          </UButton>
-        </template>
-        <template v-else>
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No hay proveedores aún
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Comienza agregando tu primer proveedor
+          <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">
+            {{ total }}
           </p>
-          <UButton icon="i-lucide-plus" @click="openCreateModal">
-            Agregar Primer Proveedor
-          </UButton>
-        </template>
+        </div>
+        <UIcon name="i-lucide-handshake" class="w-12 h-12 text-gray-300 dark:text-gray-600" />
       </div>
-      <UTable
-        v-else
-        :columns="columns"
-        :data="providers"
-      />
     </UCard>
 
-    <!-- Modal de formulario de proveedor -->
-    <UModal
-      v-model:open="isFormModalOpen"
-      :title="editingProvider ? 'Editar Proveedor' : 'Nuevo Proveedor'"
-      :description="`Complete los campos para ${editingProvider ? 'editar' : 'crear'} el proveedor.` "
-      class="sm:max-w-2xl"
-    >
-      <template #body>
-        <ProviderForm
-          :provider="editingProvider"
-          @submit="handleFormSubmit"
-          @cancel="closeModal"
-        />
-      </template>
-    </UModal>
-
+    <!-- Categorías -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <NuxtLink
+        v-for="cat in categories"
+        :key="cat.key"
+        :to="cat.route"
+        class="block"
+      >
+        <UCard class="hover:ring-2 hover:ring-primary-500 dark:hover:ring-primary-400 transition-shadow cursor-pointer">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">
+                {{ cat.label }}
+              </p>
+              <p class="text-2xl font-bold mt-1" :class="cat.textColor">
+                {{ stats[cat.key] }}
+              </p>
+              <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                {{ stats[cat.key] === 1 ? 'proveedor' : 'proveedores' }}
+              </p>
+            </div>
+            <UIcon
+              :name="cat.icon"
+              class="w-10 h-10"
+              :class="cat.iconColor"
+            />
+          </div>
+        </UCard>
+      </NuxtLink>
+    </div>
   </div>
 </template>

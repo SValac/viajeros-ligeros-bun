@@ -7,7 +7,7 @@ type Props = {
 const { cotizacionId, readonly } = defineProps<Props>();
 
 const emit = defineEmits<{
-  'cotizacion-confirmada': [];
+  cotizacionConfirmada: [];
 }>();
 
 const cotizacionStore = useCotizacionStore();
@@ -39,7 +39,7 @@ async function confirmarCotizacion() {
 
   if (result.success) {
     toast.add({ title: 'Cotización confirmada', color: 'success' });
-    emit('cotizacion-confirmada');
+    emit('cotizacionConfirmada');
   }
   else {
     toast.add({ title: 'Error al confirmar', description: result.error, color: 'error' });
@@ -51,7 +51,9 @@ async function confirmarCotizacion() {
   <div class="flex flex-wrap items-center justify-between gap-3">
     <!-- Estado badge -->
     <div class="flex items-center gap-2">
-      <h2 class="text-lg font-semibold">Cotización</h2>
+      <h2 class="text-lg font-semibold">
+        Cotización
+      </h2>
       <UBadge
         v-if="cotizacion"
         :label="getEstadoLabel(cotizacion.estado)"

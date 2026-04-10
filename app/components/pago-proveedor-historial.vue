@@ -73,7 +73,8 @@ function handleSubmit(data: PagoProveedorFormData) {
 }
 
 function confirmDelete() {
-  if (!pagoToDelete.value) return;
+  if (!pagoToDelete.value)
+    return;
   cotizacionStore.deletePagoProveedor(pagoToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
@@ -107,12 +108,24 @@ function confirmDelete() {
         <table class="w-full text-sm">
           <thead>
             <tr class="border-b border-default text-left text-muted">
-              <th class="pb-2 pr-4 font-medium">Fecha</th>
-              <th class="pb-2 pr-4 font-medium">Concepto</th>
-              <th class="pb-2 pr-4 font-medium">Tipo</th>
-              <th class="pb-2 pr-4 font-medium">Monto</th>
-              <th class="pb-2 pr-4 font-medium">Notas</th>
-              <th v-if="!readonly" class="pb-2 font-medium">Acciones</th>
+              <th class="pb-2 pr-4 font-medium">
+                Fecha
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Concepto
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Tipo
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Monto
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Notas
+              </th>
+              <th v-if="!readonly" class="pb-2 font-medium">
+                Acciones
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -121,8 +134,12 @@ function confirmDelete() {
               :key="pago.id"
               class="border-b border-default/50 hover:bg-elevated/50"
             >
-              <td class="py-2 pr-4">{{ formatDate(pago.fechaPago) }}</td>
-              <td class="py-2 pr-4">{{ pago.concepto || '—' }}</td>
+              <td class="py-2 pr-4">
+                {{ formatDate(pago.fechaPago) }}
+              </td>
+              <td class="py-2 pr-4">
+                {{ pago.concepto || '—' }}
+              </td>
               <td class="py-2 pr-4">
                 <UBadge
                   :label="pago.tipoPago === 'cash' ? 'Efectivo' : 'Transferencia'"
@@ -131,8 +148,12 @@ function confirmDelete() {
                   size="xs"
                 />
               </td>
-              <td class="py-2 pr-4 font-medium">{{ formatCurrency(pago.monto) }}</td>
-              <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">{{ pago.notas || '—' }}</td>
+              <td class="py-2 pr-4 font-medium">
+                {{ formatCurrency(pago.monto) }}
+              </td>
+              <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
+                {{ pago.notas || '—' }}
+              </td>
               <td v-if="!readonly" class="py-2">
                 <div class="flex items-center gap-1">
                   <UButton
@@ -160,7 +181,9 @@ function confirmDelete() {
     <!-- Estado vacío -->
     <div v-else class="py-8 text-center bg-elevated/50 rounded-lg">
       <span class="i-lucide-receipt-x w-10 h-10 text-muted mx-auto mb-2 block" />
-      <p class="text-muted text-sm">No hay pagos registrados</p>
+      <p class="text-muted text-sm">
+        No hay pagos registrados
+      </p>
       <UButton
         v-if="!readonly"
         size="xs"

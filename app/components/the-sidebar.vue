@@ -31,27 +31,27 @@ const items: NavigationMenuItem[][] = [[{
   }, {
     label: 'Guías',
     icon: 'i-lucide-user-search',
-    to: '/providers/guias',
+    to: '/providers/guides',
   }, {
     label: 'Transportes',
     icon: 'i-lucide-car',
-    to: '/providers/transporte',
+    to: '/providers/transportation',
   }, {
     label: 'Hospedajes',
     icon: 'i-lucide-hotel',
-    to: '/providers/hospedaje',
+    to: '/providers/accommodation',
   }, {
     label: 'Agencias de Autobús',
     icon: 'i-lucide-bus',
-    to: '/providers/agencias-autobus',
+    to: '/providers/bus-agencies',
   }, {
     label: 'Comidas',
     icon: 'i-lucide-utensils',
-    to: '/providers/comidas',
+    to: '/providers/food-services',
   }, {
     label: 'Otros',
     icon: 'i-lucide-package',
-    to: '/providers/otros',
+    to: '/providers/other',
   }],
 }], [{
   label: 'Feedback',

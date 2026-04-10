@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { z } from 'zod';
+
 import type { CotizacionProveedor, CotizacionProveedorFormData, TipoDivisionCosto } from '~/types/cotizacion';
 
 type Props = {
@@ -48,7 +49,8 @@ const state = reactive<Partial<FormSchema>>({
 
 function onSubmit() {
   const result = schema.safeParse(state);
-  if (!result.success) return;
+  if (!result.success)
+    return;
 
   const data: CotizacionProveedorFormData = {
     ...result.data,
@@ -61,14 +63,27 @@ function onSubmit() {
 </script>
 
 <template>
-  <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+  <UForm
+    :schema="schema"
+    :state="state"
+    class="space-y-4"
+    @submit="onSubmit"
+  >
     <!-- Proveedor -->
-    <UFormField label="Proveedor" name="providerId" required>
+    <UFormField
+      label="Proveedor"
+      name="providerId"
+      required
+    >
       <ProviderSelector v-model="state.providerId" />
     </UFormField>
 
     <!-- Descripción del Servicio -->
-    <UFormField label="Descripción del Servicio" name="descripcionServicio" required>
+    <UFormField
+      label="Descripción del Servicio"
+      name="descripcionServicio"
+      required
+    >
       <UInput
         v-model="state.descripcionServicio"
         placeholder="Ej. Servicio de transporte Ciudad de México - Puebla"
@@ -77,7 +92,11 @@ function onSubmit() {
     </UFormField>
 
     <!-- Costo Total -->
-    <UFormField label="Costo Total" name="costoTotal" required>
+    <UFormField
+      label="Costo Total"
+      name="costoTotal"
+      required
+    >
       <UInput
         v-model.number="state.costoTotal"
         type="number"
@@ -87,7 +106,11 @@ function onSubmit() {
     </UFormField>
 
     <!-- Dividir entre -->
-    <UFormField label="Dividir entre" name="tipoDivision" required>
+    <UFormField
+      label="Dividir entre"
+      name="tipoDivision"
+      required
+    >
       <USelect
         v-model="state.tipoDivision"
         :items="tipoDivisionOptions"
@@ -96,7 +119,11 @@ function onSubmit() {
     </UFormField>
 
     <!-- Método de Pago -->
-    <UFormField label="Método de Pago" name="metodoPago" required>
+    <UFormField
+      label="Método de Pago"
+      name="metodoPago"
+      required
+    >
       <USelect
         v-model="state.metodoPago"
         :items="metodoPagoOptions"

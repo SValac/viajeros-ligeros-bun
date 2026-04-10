@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { z } from 'zod';
+
 import type { PagoProveedor, PagoProveedorFormData } from '~/types/cotizacion';
 
 type Props = {
@@ -58,7 +59,8 @@ function formatCurrency(amount: number): string {
 
 function onSubmit() {
   const result = schema.value.safeParse(state);
-  if (!result.success) return;
+  if (!result.success)
+    return;
 
   const data: PagoProveedorFormData = {
     ...result.data,
@@ -71,9 +73,18 @@ function onSubmit() {
 </script>
 
 <template>
-  <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+  <UForm
+    :schema="schema"
+    :state="state"
+    class="space-y-4"
+    @submit="onSubmit"
+  >
     <!-- Monto -->
-    <UFormField label="Monto" name="monto" required>
+    <UFormField
+      label="Monto"
+      name="monto"
+      required
+    >
       <UInput
         v-model.number="state.monto"
         type="number"
@@ -88,7 +99,11 @@ function onSubmit() {
     </UFormField>
 
     <!-- Fecha de Pago -->
-    <UFormField label="Fecha de Pago" name="fechaPago" required>
+    <UFormField
+      label="Fecha de Pago"
+      name="fechaPago"
+      required
+    >
       <UInput
         v-model="state.fechaPago"
         type="date"
@@ -97,7 +112,11 @@ function onSubmit() {
     </UFormField>
 
     <!-- Tipo de Pago -->
-    <UFormField label="Tipo de Pago" name="tipoPago" required>
+    <UFormField
+      label="Tipo de Pago"
+      name="tipoPago"
+      required
+    >
       <USelect
         v-model="state.tipoPago"
         :items="tipoPagoOptions"

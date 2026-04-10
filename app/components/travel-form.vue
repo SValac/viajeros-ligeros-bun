@@ -12,18 +12,17 @@ type Props = {
 
 const { travel = null } = defineProps<Props>();
 
+// Emits
+const emit = defineEmits<{
+  submit: [data: TravelFormData];
+  cancel: [close: boolean];
+}>();
 // Si el viaje tiene cotización activa, el precio es de solo lectura (lo gestiona la cotización)
 const cotizacionStore = useCotizacionStore();
 const tieneCotizacion = computed(() => travel ? cotizacionStore.hasCotizacion(travel.id) : false);
 
 // El precio solo se muestra en modo edición; en creación lo gestiona la cotización
 const mostrarPrecio = computed(() => travel !== null);
-
-// Emits
-const emit = defineEmits<{
-  submit: [data: TravelFormData];
-  cancel: [close: boolean];
-}>();
 
 // Schema de validación Zod
 const schema = z.object({
