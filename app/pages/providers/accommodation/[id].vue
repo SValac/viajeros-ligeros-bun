@@ -134,7 +134,11 @@ function handleDelete() {
               ],
             ]"
           >
-            <UButton icon="i-lucide-more-vertical" variant="ghost" color="neutral" />
+            <UButton
+              icon="i-lucide-more-vertical"
+              variant="ghost"
+              color="neutral"
+            />
           </UDropdownMenu>
         </div>
       </div>

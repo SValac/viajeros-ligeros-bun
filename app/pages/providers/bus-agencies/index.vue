@@ -203,6 +203,17 @@ const columns: TableColumn<Provider>[] = [
     },
   },
   {
+    accessorKey: 'activo',
+    header: 'Estado',
+    cell: ({ row }) => {
+      const activo = row.getValue('activo') as boolean;
+      return h(resolveComponent('UBadge'), {
+        variant: 'subtle',
+        color: activo ? 'primary' : 'warning',
+      }, activo ? 'Activo' : 'Inactivo');
+    },
+  },
+  {
     id: 'actions',
     header: 'Acciones',
     cell: ({ row }) =>

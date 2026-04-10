@@ -28,7 +28,7 @@ export const useProviderStore = defineStore('providers', () => {
 
   const getProvidersByCategory = computed(() => {
     return (categoria: ProviderCategory) =>
-      providers.value.filter(p => p.categoria === categoria && p.activo);
+      providers.value.filter(p => p.categoria === categoria);
   });
 
   const statsByCategory = computed(() => {
