@@ -9,13 +9,13 @@ definePageMeta({
   name: 'providers-bus-agencies',
 });
 
+const router = useRouter();
 const providerStore = useProviderStore();
 const toast = useToast();
 
 const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 const localFilters = ref<ProviderFilters>({});
-const selectedProviderId = shallowRef<string | undefined>(undefined);
 
 const categoryProviders = computed(() => providerStore.getProvidersByCategory('agencias-autobus'));
 
@@ -54,10 +54,6 @@ const availableEstados = computed(() =>
 
 const hasLocalFilters = computed(() =>
   Object.values(localFilters.value).some(v => v !== undefined && v !== ''),
-);
-
-const providerSelectOptions = computed(() =>
-  providers.value.map(p => ({ value: p.id, label: p.nombre })),
 );
 
 function removeLocalFilter(key: keyof ProviderFilters) {
@@ -103,7 +99,7 @@ function handleFormSubmit(data: ProviderFormData) {
     }
   }
   catch {
-    toast.add({ title: 'Error', description: 'Ocurrió un error al guardar el proveedor', color: 'error' });
+    toast.add({ title: 'Error', description: 'Ocurrió un error al guardar la agencia', color: 'error' });
   }
 }
 
@@ -112,9 +108,6 @@ function handleDelete(provider: Provider) {
   if (confirm(`¿Estás seguro de eliminar ${provider.nombre}?`)) {
     const success = providerStore.deleteProvider(provider.id);
     if (success) {
-      if (selectedProviderId.value === provider.id) {
-        selectedProviderId.value = undefined;
-      }
       toast.add({ title: 'Agencia eliminada', description: `${provider.nombre} se eliminó correctamente`, color: 'warning' });
     }
   }
@@ -135,6 +128,11 @@ function handleToggleStatus(provider: Provider) {
 function getRowActions(provider: Provider) {
   return [
     [
+      {
+        label: 'Ver detalles',
+        icon: 'i-lucide-arrow-right',
+        onSelect: () => router.push(`/providers/bus-agencies/${provider.id}`),
+      },
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
@@ -165,8 +163,11 @@ const columns: TableColumn<Provider>[] = [
     accessorKey: 'nombre',
     header: 'Nombre',
     cell: ({ row }) =>
-      h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-bus w-4 h-4 text-gray-400' }),
+      h(resolveComponent('NuxtLink'), {
+        to: `/providers/bus-agencies/${row.original.id}`,
+        class: 'flex items-center gap-2 hover:text-primary-500 transition-colors group',
+      }, () => [
+        h('span', { class: 'i-lucide-bus w-4 h-4 text-gray-400 group-hover:text-primary-400' }),
         h('span', { class: 'font-medium' }, row.getValue('nombre')),
       ]),
   },
@@ -286,43 +287,6 @@ const columns: TableColumn<Provider>[] = [
         :columns="columns"
         :data="providers"
       />
-    </UCard>
-
-    <!-- Unidades por agencia -->
-    <UCard>
-      <template #header>
-        <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-bus" class="w-5 h-5 text-orange-500" />
-          <h2 class="font-semibold">
-            Unidades por Agencia
-          </h2>
-        </div>
-      </template>
-
-      <div class="space-y-4">
-        <UFormField label="Seleccionar Agencia">
-          <USelect
-            v-model="selectedProviderId"
-            :items="providerSelectOptions"
-            placeholder="Selecciona una agencia para ver sus unidades"
-          />
-        </UFormField>
-
-        <div v-if="providers.length === 0" class="text-center py-6">
-          <p class="text-sm text-muted">
-            No hay agencias de autobús activas
-          </p>
-        </div>
-
-        <div v-else-if="!selectedProviderId" class="text-center py-6 text-muted">
-          <span class="i-lucide-mouse-pointer-click w-8 h-8 mx-auto mb-2 block" />
-          <p class="text-sm">
-            Selecciona una agencia para ver y gestionar sus unidades
-          </p>
-        </div>
-
-        <BusList v-else :provider-id="selectedProviderId" />
-      </div>
     </UCard>
 
     <UModal

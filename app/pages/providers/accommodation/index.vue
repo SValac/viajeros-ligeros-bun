@@ -9,17 +9,14 @@ definePageMeta({
   name: 'providers-accommodation',
 });
 
+const router = useRouter();
 const providerStore = useProviderStore();
 const toast = useToast();
 
-// Estado local
 const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
-const isRoomsManagerOpen = ref(false);
-const selectedProvider = ref<Provider | null>(null);
 const localFilters = ref<ProviderFilters>({});
 
-// Proveedores de hospedaje con filtros locales
 const categoryProviders = computed(() => providerStore.getProvidersByCategory('hospedaje'));
 
 const providers = computed(() => {
@@ -69,7 +66,6 @@ function clearLocalFilters() {
   localFilters.value = {};
 }
 
-// Acciones del formulario
 function openCreateModal() {
   editingProvider.value = null;
   isFormModalOpen.value = true;
@@ -85,16 +81,6 @@ function closeModal() {
   editingProvider.value = null;
 }
 
-function openRoomsManager(provider: Provider) {
-  selectedProvider.value = provider;
-  isRoomsManagerOpen.value = true;
-}
-
-function closeRoomsManager() {
-  isRoomsManagerOpen.value = false;
-  selectedProvider.value = null;
-}
-
 function handleFormSubmit(data: ProviderFormData) {
   try {
     data.categoria = 'hospedaje';
@@ -102,30 +88,18 @@ function handleFormSubmit(data: ProviderFormData) {
     if (editingProvider.value) {
       const success = providerStore.updateProvider(editingProvider.value.id, data);
       if (success) {
-        toast.add({
-          title: 'Proveedor actualizado',
-          description: `${data.nombre} se actualizó correctamente`,
-          color: 'primary',
-        });
+        toast.add({ title: 'Proveedor actualizado', description: `${data.nombre} se actualizó correctamente`, color: 'primary' });
         closeModal();
       }
     }
     else {
       providerStore.addProvider(data);
-      toast.add({
-        title: 'Proveedor creado',
-        description: `${data.nombre} se creó correctamente`,
-        color: 'primary',
-      });
+      toast.add({ title: 'Proveedor creado', description: `${data.nombre} se creó correctamente`, color: 'primary' });
       closeModal();
     }
   }
   catch {
-    toast.add({
-      title: 'Error',
-      description: 'Ocurrió un error al guardar el proveedor',
-      color: 'error',
-    });
+    toast.add({ title: 'Error', description: 'Ocurrió un error al guardar el proveedor', color: 'error' });
   }
 }
 
@@ -134,11 +108,7 @@ function handleDelete(provider: Provider) {
   if (confirm(`¿Estás seguro de eliminar ${provider.nombre}?`)) {
     const success = providerStore.deleteProvider(provider.id);
     if (success) {
-      toast.add({
-        title: 'Proveedor eliminado',
-        description: `${provider.nombre} se eliminó correctamente`,
-        color: 'warning',
-      });
+      toast.add({ title: 'Proveedor eliminado', description: `${provider.nombre} se eliminó correctamente`, color: 'warning' });
     }
   }
 }
@@ -159,9 +129,9 @@ function getRowActions(provider: Provider) {
   return [
     [
       {
-        label: 'Gestionar Habitaciones',
-        icon: 'i-lucide-bed',
-        onSelect: () => openRoomsManager(provider),
+        label: 'Ver detalles',
+        icon: 'i-lucide-arrow-right',
+        onSelect: () => router.push(`/providers/accommodation/${provider.id}`),
       },
       {
         label: 'Editar',
@@ -193,8 +163,11 @@ const columns: TableColumn<Provider>[] = [
     accessorKey: 'nombre',
     header: 'Nombre',
     cell: ({ row }) =>
-      h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-hotel w-4 h-4 text-gray-400' }),
+      h(resolveComponent('NuxtLink'), {
+        to: `/providers/accommodation/${row.original.id}`,
+        class: 'flex items-center gap-2 hover:text-primary-500 transition-colors group',
+      }, () => [
+        h('span', { class: 'i-lucide-hotel w-4 h-4 text-gray-400 group-hover:text-primary-400' }),
         h('span', { class: 'font-medium' }, row.getValue('nombre')),
       ]),
   },
@@ -242,7 +215,6 @@ const columns: TableColumn<Provider>[] = [
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
     <div class="flex justify-between items-center">
       <div class="flex items-center gap-4">
         <UIcon name="i-lucide-hotel" class="w-10 h-10 text-green-500" />
@@ -264,7 +236,6 @@ const columns: TableColumn<Provider>[] = [
       </UButton>
     </div>
 
-    <!-- Filtros -->
     <div class="space-y-2">
       <ProviderFilterBar
         v-model="localFilters"
@@ -281,13 +252,9 @@ const columns: TableColumn<Provider>[] = [
       />
     </div>
 
-    <!-- Tabla -->
     <UCard>
       <div v-if="providers.length === 0" class="text-center py-12">
-        <UIcon
-          name="i-lucide-hotel"
-          class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
-        />
+        <UIcon name="i-lucide-hotel" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <template v-if="hasLocalFilters">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Sin resultados para los filtros aplicados
@@ -318,7 +285,6 @@ const columns: TableColumn<Provider>[] = [
       />
     </UCard>
 
-    <!-- Modal de formulario -->
     <UModal
       v-model:open="isFormModalOpen"
       :title="editingProvider ? 'Editar Hospedaje' : 'Nuevo Hospedaje'"
@@ -330,21 +296,6 @@ const columns: TableColumn<Provider>[] = [
           :provider="editingProvider"
           @submit="handleFormSubmit"
           @cancel="closeModal"
-        />
-      </template>
-    </UModal>
-
-    <!-- Modal de gestión de habitaciones -->
-    <UModal
-      v-model:open="isRoomsManagerOpen"
-      title="Gestión de Habitaciones"
-      class="sm:max-w-4xl"
-    >
-      <template #body>
-        <HotelRoomsManager
-          v-if="selectedProvider"
-          :provider="selectedProvider"
-          @close="closeRoomsManager"
         />
       </template>
     </UModal>
