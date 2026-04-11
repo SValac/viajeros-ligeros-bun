@@ -55,6 +55,7 @@ const crearState = reactive<CrearFormSchema>({
 });
 
 const isCrearModalOpen = shallowRef(false);
+const isAgregarHospedajeModalOpen = shallowRef(false);
 
 function handleCrearCotizacion() {
   const result = crearSchema.safeParse(crearState);
@@ -105,6 +106,10 @@ function guardarParametros() {
   });
   editandoParametros.value = false;
   toast.add({ title: 'Parámetros actualizados', color: 'success' });
+}
+
+function handleHospedajeAgregado() {
+  // No hace nada extra, el modal se cierra desde el componente
 }
 </script>
 
@@ -263,6 +268,37 @@ function guardarParametros() {
             :readonly="readonly"
           />
         </UCard>
+
+        <!-- Hospedaje -->
+        <UCard>
+          <template #header>
+            <div class="flex items-center justify-between w-full">
+              <h2 class="font-semibold flex items-center gap-2">
+                <span class="i-lucide-door-open w-5 h-5 text-muted" />
+                Hospedaje
+              </h2>
+              <UButton
+                v-if="!readonly"
+                icon="i-lucide-plus"
+                size="xs"
+                label="Agregar Hospedaje"
+                @click="isAgregarHospedajeModalOpen = true"
+              />
+            </div>
+          </template>
+          <div class="space-y-6">
+            <!-- Tabla de hospedajes -->
+            <CotizacionHospedajeTabla
+              :cotizacion-id="cotizacion.id"
+              :readonly="readonly"
+            />
+
+            <!-- Resumen de hospedajes -->
+            <CotizacionHospedajeResumen
+              :cotizacion-id="cotizacion.id"
+            />
+          </div>
+        </UCard>
       </template>
     </div>
     <!-- Modal: crear cotización -->
@@ -326,5 +362,14 @@ function guardarParametros() {
         </UForm>
       </template>
     </UModal>
+
+    <!-- Modal: agregar hospedaje -->
+    <CotizacionHospedajeForm
+      v-if="cotizacion"
+      :open="isAgregarHospedajeModalOpen"
+      :cotizacion-id="cotizacion.id"
+      @update:open="(v) => isAgregarHospedajeModalOpen = v"
+      @hospedaje-agregado="handleHospedajeAgregado"
+    />
   </div>
 </template>

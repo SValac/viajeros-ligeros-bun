@@ -49,3 +49,36 @@ export type CotizacionProveedorFilters = {
   confirmado?: boolean | 'todos';
   metodoPago?: PaymentType | 'todos';
 };
+
+// ============================================================================
+// Hospedaje (Hotel) Types
+// ============================================================================
+
+export type CotizacionHospedajeDetalleHabitacion = {
+  id: string;
+  habitacionTipoId: string;
+  cantidad: number;
+  precioPorNoche: number;
+  ocupacionMaxima: number;
+  costoPorPersona?: number; // precioPorNoche / ocupacionMaxima (calculado)
+  costoTotal?: number; // precioPorNoche * cantidad * noches (calculado en context)
+};
+
+export type CotizacionHospedaje = {
+  id: string;
+  cotizacionId: string;
+  providerId: string; // ID del proveedor (hotel)
+  cantidadNoches: number;
+  detalles: CotizacionHospedajeDetalleHabitacion[];
+  costoTotal: number; // Suma de todos los costos de habitaciones
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CotizacionHospedajeFormData = Omit<CotizacionHospedaje, 'id' | 'costoTotal' | 'createdAt' | 'updatedAt'> & {
+  id?: string;
+};
+
+export type CotizacionHospedajeDetalleFormData = Omit<CotizacionHospedajeDetalleHabitacion, 'id' | 'costoPorPersona' | 'costoTotal'> & {
+  id?: string;
+};

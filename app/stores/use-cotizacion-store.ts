@@ -1,6 +1,8 @@
 import type {
   Cotizacion,
   CotizacionFormData,
+  CotizacionHospedaje,
+  CotizacionHospedajeFormData,
   CotizacionProveedor,
   CotizacionProveedorFilters,
   CotizacionProveedorFormData,
@@ -16,6 +18,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const cotizaciones = ref<Cotizacion[]>([]);
   const proveedoresCotizacion = ref<CotizacionProveedor[]>([]);
   const pagosProveedor = ref<PagoProveedor[]>([]);
+  const hospedajesCotizacion = ref<CotizacionHospedaje[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<CotizacionProveedorFilters>({});
@@ -64,6 +67,35 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  const getHospedajesByCotizacion = computed(() => {
+    return (cotizacionId: string): CotizacionHospedaje[] => {
+      return hospedajesCotizacion.value.filter(h => h.cotizacionId === cotizacionId);
+    };
+  });
+
+  const getTotalCostoHospedajes = computed(() => {
+    return (cotizacionId: string): number => {
+      return hospedajesCotizacion.value
+        .filter(h => h.cotizacionId === cotizacionId)
+        .reduce((sum, h) => sum + h.costoTotal, 0);
+    };
+  });
+
+  const getTotalHabitacionesPorTipo = computed(() => {
+    return (cotizacionId: string): { [tipoId: string]: number } => {
+      const resultado: { [tipoId: string]: number } = {};
+      const hospedajes = getHospedajesByCotizacion.value(cotizacionId);
+
+      for (const hospedaje of hospedajes) {
+        for (const detalle of hospedaje.detalles) {
+          resultado[detalle.habitacionTipoId] = (resultado[detalle.habitacionTipoId] ?? 0) + detalle.cantidad;
+        }
+      }
+
+      return resultado;
+    };
+  });
+
   const getAsientoMinimoCalculado = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
@@ -75,6 +107,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.precio
+  // Incluye costos de proveedores y hospedajes
   const getPrecioAsientoCalculado = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
@@ -83,6 +116,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       const costoMinimo = getCostoTipoMinimo.value(cotizacionId);
       const costoCapacidad = getCostoTipoTotal.value(cotizacionId);
+      const costoHospedajes = getTotalCostoHospedajes.value(cotizacionId);
 
       const parteMinimo = cotizacion.asientoMinimoObjetivo > 0
         ? costoMinimo / cotizacion.asientoMinimoObjetivo
@@ -90,10 +124,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const parteCapacidad = cotizacion.capacidadAutobus > 0
         ? costoCapacidad / cotizacion.capacidadAutobus
         : 0;
+      const parteHospedaje = cotizacion.capacidadAutobus > 0
+        ? costoHospedajes / cotizacion.capacidadAutobus
+        : 0;
 
-      if (parteMinimo === 0 && parteCapacidad === 0)
+      if (parteMinimo === 0 && parteCapacidad === 0 && parteHospedaje === 0)
         return 0;
-      return Math.ceil(parteMinimo + parteCapacidad);
+      return Math.ceil(parteMinimo + parteCapacidad + parteHospedaje);
     };
   });
 
@@ -456,11 +493,91 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     filters.value = {};
   }
 
+  // ============================================================================
+  // Hospedaje Actions
+  // ============================================================================
+
+  function addHospedajeCotizacion(data: CotizacionHospedajeFormData): CotizacionHospedaje | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+    if (!cotizacion)
+      return { error: 'Cotización no encontrada' };
+    if (cotizacion.estado === 'confirmada')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    // Calcular costoTotal
+    const costoTotal = data.detalles.reduce((sum, detalle) => {
+      return sum + (detalle.precioPorNoche * data.cantidadNoches * detalle.cantidad);
+    }, 0);
+
+    const newHospedaje: CotizacionHospedaje = {
+      ...data,
+      id: `cot-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      costoTotal,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    hospedajesCotizacion.value.push(newHospedaje);
+    _syncPrecioToTravel(data.cotizacionId);
+    return newHospedaje;
+  }
+
+  function updateHospedajeCotizacion(
+    id: string,
+    data: Partial<CotizacionHospedajeFormData>,
+  ): CotizacionHospedaje | undefined {
+    const index = hospedajesCotizacion.value.findIndex(h => h.id === id);
+    if (index === -1)
+      return undefined;
+
+    const existing = hospedajesCotizacion.value[index];
+    if (!existing)
+      return undefined;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return undefined;
+
+    // Calcular costoTotal basado en detalles
+    const costoTotal = (data.detalles ?? existing.detalles).reduce((sum, detalle) => {
+      return sum + (detalle.precioPorNoche * (data.cantidadNoches ?? existing.cantidadNoches) * detalle.cantidad);
+    }, 0);
+
+    const updated: CotizacionHospedaje = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      cotizacionId: existing.cotizacionId,
+      createdAt: existing.createdAt,
+      costoTotal,
+      updatedAt: new Date().toISOString(),
+    };
+
+    hospedajesCotizacion.value[index] = updated;
+    _syncPrecioToTravel(existing.cotizacionId);
+    return updated;
+  }
+
+  function deleteHospedajeCotizacion(id: string): void {
+    const hospedaje = hospedajesCotizacion.value.find(h => h.id === id);
+    if (!hospedaje)
+      return;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return;
+
+    const cotizacionId = hospedaje.cotizacionId;
+    hospedajesCotizacion.value = hospedajesCotizacion.value.filter(h => h.id !== id);
+    _syncPrecioToTravel(cotizacionId);
+  }
+
   return {
     // State
     cotizaciones,
     proveedoresCotizacion,
     pagosProveedor,
+    hospedajesCotizacion,
     loading,
     error,
     filters,
@@ -482,6 +599,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     puedeConfirmar,
     hasCotizacion,
     filteredProveedores,
+    getHospedajesByCotizacion,
+    getTotalCostoHospedajes,
+    getTotalHabitacionesPorTipo,
     // Actions
     createCotizacion,
     updateCotizacion,
@@ -495,6 +615,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     deletePagoProveedor,
     setFilters,
     clearFilters,
+    addHospedajeCotizacion,
+    updateHospedajeCotizacion,
+    deleteHospedajeCotizacion,
   };
 }, {
   persist: {
