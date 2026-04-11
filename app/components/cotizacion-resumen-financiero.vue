@@ -15,6 +15,8 @@ const cotizacion = computed(() =>
 const costoTotal = computed(() => cotizacionStore.getCostoTotal(cotizacionId));
 const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(cotizacionId));
 const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(cotizacionId));
+const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(cotizacionId));
+const costoTotalConHospedaje = computed(() => costoTotal.value + costoHospedajes.value);
 const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(cotizacionId));
 const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(cotizacionId));
 
@@ -48,6 +50,22 @@ function formatCurrency(amount: number): string {
             ÷ cap. bus
           </span>
         </div>
+      </div>
+    </UCard>
+
+    <!-- Total Hospedaje -->
+    <UCard>
+      <div class="space-y-1">
+        <p class="text-sm text-muted flex items-center gap-2">
+          <span class="i-lucide-door-open w-4 h-4 text-amber-500" />
+          Total Hospedaje
+        </p>
+        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">
+          {{ formatCurrency(costoHospedajes) }}
+        </p>
+        <p class="text-xs text-muted pt-1">
+          Costo Total: {{ formatCurrency(costoTotalConHospedaje) }}
+        </p>
       </div>
     </UCard>
 
