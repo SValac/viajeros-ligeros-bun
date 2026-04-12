@@ -401,6 +401,7 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
   <UModal
     v-model:open="isProveedorFormOpen"
     :title="selectedProveedor ? 'Editar Proveedor' : 'Agregar Proveedor'"
+    :description="selectedProveedor ? 'Modifica los datos del proveedor en la cotización' : 'Agrega un nuevo proveedor de servicio a la cotización'"
     class="sm:max-w-2xl"
   >
     <template #body>
@@ -417,6 +418,7 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
   <USlideover
     v-model:open="isHistorialOpen"
     :title="`Pagos — ${historialProveedorNombre}`"
+    description="Registro de pagos realizados al proveedor"
     side="right"
   >
     <template #body>

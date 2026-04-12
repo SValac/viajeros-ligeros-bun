@@ -15,8 +15,11 @@ const cotizacion = computed(() =>
 const costoTotal = computed(() => cotizacionStore.getCostoTotal(cotizacionId));
 const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(cotizacionId));
 const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(cotizacionId));
+const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(cotizacionId));
+const costoTotalConHospedaje = computed(() => costoTotal.value + costoHospedajes.value);
 const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(cotizacionId));
 const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(cotizacionId));
+const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(cotizacionId));
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
@@ -28,12 +31,12 @@ function formatCurrency(amount: number): string {
 
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-    <!-- Costo Total Operación -->
+    <!-- Costo Total Proveedores -->
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
           <span class="i-lucide-wallet w-4 h-4 text-error" />
-          Costo Total Operación
+          Costo Total Proveedores
         </p>
         <p class="text-2xl font-bold text-error">
           {{ formatCurrency(costoTotal) }}
@@ -48,6 +51,22 @@ function formatCurrency(amount: number): string {
             ÷ cap. bus
           </span>
         </div>
+      </div>
+    </UCard>
+
+    <!-- Total Hospedaje -->
+    <UCard>
+      <div class="space-y-1">
+        <p class="text-sm text-muted flex items-center gap-2">
+          <span class="i-lucide-door-open w-4 h-4 text-amber-500" />
+          Total Hospedaje
+        </p>
+        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">
+          {{ formatCurrency(costoHospedajes) }}
+        </p>
+        <p class="text-xs text-muted pt-1">
+          Costo Total: {{ formatCurrency(costoTotalConHospedaje) }}
+        </p>
       </div>
     </UCard>
 
@@ -121,6 +140,25 @@ function formatCurrency(amount: number): string {
           :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'"
         >
           {{ formatCurrency(saldoPendiente) }}
+        </p>
+      </div>
+    </UCard>
+
+    <!-- Saldo Pendiente Hospedajes -->
+    <UCard>
+      <div class="space-y-1">
+        <p class="text-sm text-muted flex items-center gap-2">
+          <span
+            class="i-lucide-hotel w-4 h-4"
+            :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
+          />
+          Saldo Pendiente Hospedaje
+        </p>
+        <p
+          class="text-2xl font-bold"
+          :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
+        >
+          {{ formatCurrency(saldoPendienteHospedajes) }}
         </p>
       </div>
     </UCard>
