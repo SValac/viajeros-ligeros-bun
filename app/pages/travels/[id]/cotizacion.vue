@@ -255,50 +255,24 @@ function handleHospedajeAgregado() {
           </div>
         </UCard>
 
-        <!-- Tabla de proveedores -->
-        <UCard>
-          <template #header>
-            <h2 class="font-semibold flex items-center gap-2">
-              <span class="i-lucide-building w-5 h-5 text-muted" />
-              Proveedores
-            </h2>
-          </template>
-          <CotizacionProveedorTabla
-            :cotizacion-id="cotizacion.id"
-            :readonly="readonly"
-          />
-        </UCard>
+        <!-- Sección Proveedores -->
+        <CotizacionProveedoresSection
+          :cotizacion-id="cotizacion.id"
+          :readonly="readonly"
+        />
 
-        <!-- Hospedaje -->
-        <UCard>
-          <template #header>
-            <div class="flex items-center justify-between w-full">
-              <h2 class="font-semibold flex items-center gap-2">
-                <span class="i-lucide-door-open w-5 h-5 text-muted" />
-                Hospedaje
-              </h2>
-              <UButton
-                v-if="!readonly"
-                icon="i-lucide-plus"
-                size="xs"
-                label="Agregar Hospedaje"
-                @click="isAgregarHospedajeModalOpen = true"
-              />
-            </div>
-          </template>
-          <div class="space-y-6">
-            <!-- Tabla de hospedajes -->
-            <CotizacionHospedajeTabla
-              :cotizacion-id="cotizacion.id"
-              :readonly="readonly"
-            />
+        <!-- Sección Hospedaje -->
+        <CotizacionHospedajeSection
+          :cotizacion-id="cotizacion.id"
+          :readonly="readonly"
+          @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
+        />
 
-            <!-- Resumen de hospedajes -->
-            <CotizacionHospedajeResumen
-              :cotizacion-id="cotizacion.id"
-            />
-          </div>
-        </UCard>
+        <!-- Sección Precio al Público -->
+        <CotizacionPrecioPublicoSection
+          :cotizacion-id="cotizacion.id"
+          :readonly="readonly"
+        />
       </template>
     </div>
     <!-- Modal: crear cotización -->
