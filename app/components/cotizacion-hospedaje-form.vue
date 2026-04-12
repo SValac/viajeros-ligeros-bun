@@ -39,6 +39,11 @@ const hotelesSelectItems = computed(() =>
   hotelesDisponibles.value.map(p => ({ value: p.id, label: p.nombre })),
 );
 
+const metodoPagoOptions = [
+  { label: 'Efectivo', value: 'cash' },
+  { label: 'Transferencia', value: 'transfer' },
+];
+
 // Esquema de validación
 const formSchema = z.object({
   cotizacionId: z.string(),
@@ -46,6 +51,7 @@ const formSchema = z.object({
   cantidadNoches: z.number({ message: 'Ingresa la cantidad de noches' })
     .int()
     .positive('Debe ser mayor a 0'),
+  metodoPago: z.enum(['cash', 'transfer']),
   detalles: z.array(z.object({
     habitacionTipoId: z.string(),
     cantidad: z.number().int().positive('Debe ser mayor a 0'),
@@ -60,6 +66,7 @@ const formState = reactive<Partial<FormSchema>>({
   cotizacionId: props.cotizacionId,
   providerId: '',
   cantidadNoches: 1,
+  metodoPago: 'cash',
   detalles: [],
 });
 
@@ -162,6 +169,7 @@ function handleSubmit() {
   formState.cotizacionId = props.cotizacionId;
   formState.providerId = '';
   formState.cantidadNoches = 1;
+  formState.metodoPago = 'cash';
   formState.detalles = [];
 
   emit('hospedajeAgregado');
@@ -172,6 +180,7 @@ function handleCancel() {
   formState.cotizacionId = props.cotizacionId;
   formState.providerId = '';
   formState.cantidadNoches = 1;
+  formState.metodoPago = 'cash';
   formState.detalles = [];
   emit('update:open', false);
 }
@@ -211,6 +220,14 @@ function handleCancel() {
             type="number"
             min="1"
             placeholder="Ej. 3"
+          />
+        </UFormField>
+
+        <!-- Método de Pago -->
+        <UFormField label="Método de Pago" required>
+          <USelect
+            v-model="formState.metodoPago"
+            :items="metodoPagoOptions"
           />
         </UFormField>
 

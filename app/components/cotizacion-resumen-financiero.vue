@@ -19,6 +19,7 @@ const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(c
 const costoTotalConHospedaje = computed(() => costoTotal.value + costoHospedajes.value);
 const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(cotizacionId));
 const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(cotizacionId));
+const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(cotizacionId));
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
@@ -139,6 +140,25 @@ function formatCurrency(amount: number): string {
           :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'"
         >
           {{ formatCurrency(saldoPendiente) }}
+        </p>
+      </div>
+    </UCard>
+
+    <!-- Saldo Pendiente Hospedajes -->
+    <UCard>
+      <div class="space-y-1">
+        <p class="text-sm text-muted flex items-center gap-2">
+          <span
+            class="i-lucide-hotel w-4 h-4"
+            :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
+          />
+          Saldo Pendiente Hospedaje
+        </p>
+        <p
+          class="text-2xl font-bold"
+          :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
+        >
+          {{ formatCurrency(saldoPendienteHospedajes) }}
         </p>
       </div>
     </UCard>

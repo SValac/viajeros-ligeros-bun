@@ -4,7 +4,7 @@ import type { TableColumn } from '@nuxt/ui';
 import { h } from 'vue';
 import { z } from 'zod';
 
-import type { CotizacionHospedaje, CotizacionHospedajeDetalleHabitacion, CotizacionHospedajeFormData } from '~/types/cotizacion';
+import type { CotizacionHospedaje, CotizacionHospedajeDetalleHabitacion, CotizacionHospedajeFormData, EstadoPagoHospedaje } from '~/types/cotizacion';
 import type { BedConfiguration, HotelRoomType } from '~/types/hotel-room';
 
 type Props = {
@@ -107,14 +107,53 @@ function getDesgloseHabitaciones(hospedaje: CotizacionHospedaje): string {
     .join(' + ');
 }
 
+// Slideover historial de pagos
+const isHistorialOpen = ref(false);
+const historialHospedaje = ref<CotizacionHospedaje | null>(null);
+
+function abrirHistorial(hospedaje: CotizacionHospedaje) {
+  historialHospedaje.value = hospedaje;
+  isHistorialOpen.value = true;
+}
+
+// Helpers de pago para columnas
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+}
+
+const estadoPagoBadge: Record<EstadoPagoHospedaje, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
+  pendiente: { label: 'Pendiente', color: 'warning' },
+  anticipo: { label: 'Anticipo', color: 'neutral' },
+  liquidado: { label: 'Liquidado', color: 'success' },
+};
+
 // Acciones por fila
 function getRowActions(hospedaje: CotizacionHospedaje) {
+  const saldo = cotizacionStore.getSaldoPendienteHospedaje(hospedaje.id);
   return [
+    [
+      {
+        label: 'Ver historial de pagos',
+        icon: 'i-lucide-receipt',
+        onSelect: () => abrirHistorial(hospedaje),
+      },
+      {
+        label: 'Registrar pago',
+        icon: 'i-lucide-banknote',
+        disabled: saldo <= 0,
+        onSelect: () => abrirHistorial(hospedaje),
+      },
+    ],
     [
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
         onSelect: () => abrirEdicion(hospedaje),
+      },
+      {
+        label: hospedaje.confirmado ? 'Marcar sin confirmar' : 'Marcar como confirmado',
+        icon: hospedaje.confirmado ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
+        onSelect: () => cotizacionStore.toggleConfirmadoHospedaje(hospedaje.id),
       },
     ],
     [
@@ -149,7 +188,43 @@ const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
     {
       accessorKey: 'costoTotal',
       header: 'Costo Total',
-      cell: ({ row }) => h('span', { class: 'font-bold text-primary' }, `$${row.original.costoTotal.toFixed(2)}`),
+      cell: ({ row }) => h('span', { class: 'font-bold' }, formatCurrency(row.original.costoTotal)),
+    },
+    {
+      id: 'pagado',
+      header: 'Pagado',
+      cell: ({ row }) => {
+        const pagado = cotizacionStore.getAnticipadoHospedaje(row.original.id);
+        return h('span', { class: 'text-success font-medium' }, formatCurrency(pagado));
+      },
+    },
+    {
+      id: 'pendiente',
+      header: 'Pendiente',
+      cell: ({ row }) => {
+        const saldo = cotizacionStore.getSaldoPendienteHospedaje(row.original.id);
+        return h('span', { class: saldo > 0 ? 'text-warning font-medium' : 'text-success font-medium' }, formatCurrency(saldo));
+      },
+    },
+    {
+      id: 'estadoPago',
+      header: 'Estado Pago',
+      cell: ({ row }) => {
+        const estado = cotizacionStore.getEstadoPagoHospedaje(row.original.id);
+        const badge = estadoPagoBadge[estado];
+        return h(resolveComponent('UBadge'), { label: badge.label, color: badge.color, variant: 'subtle', size: 'xs' });
+      },
+    },
+    {
+      id: 'confirmado',
+      header: 'Confirmado',
+      cell: ({ row }) =>
+        h(resolveComponent('UBadge'), {
+          label: row.original.confirmado ? 'Sí' : 'No',
+          color: row.original.confirmado ? 'success' : 'neutral',
+          variant: 'subtle',
+          size: 'xs',
+        }),
     },
   ];
 
@@ -369,5 +444,23 @@ function eliminarHospedaje(id: string) {
         </div>
       </template>
     </UModal>
+
+    <!-- Slideover historial de pagos -->
+    <USlideover
+      v-model:open="isHistorialOpen"
+      :title="historialHospedaje ? `Pagos — ${getNombreHotel(historialHospedaje.providerId)}` : 'Historial de Pagos'"
+      description="Registro de pagos realizados al hotel"
+      side="right"
+      class="sm:max-w-lg"
+    >
+      <template #body>
+        <PagoHospedajeHistorial
+          v-if="historialHospedaje"
+          :cotizacion-hospedaje-id="historialHospedaje.id"
+          :hotel-nombre="getNombreHotel(historialHospedaje.providerId)"
+          :readonly="props.readonly"
+        />
+      </template>
+    </USlideover>
   </div>
 </template>
