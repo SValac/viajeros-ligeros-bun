@@ -30,12 +30,12 @@ function formatCurrency(amount: number): string {
 
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-    <!-- Costo Total Operación -->
+    <!-- Costo Total Proveedores -->
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
           <span class="i-lucide-wallet w-4 h-4 text-error" />
-          Costo Total Operación
+          Costo Total Proveedores
         </p>
         <p class="text-2xl font-bold text-error">
           {{ formatCurrency(costoTotal) }}
