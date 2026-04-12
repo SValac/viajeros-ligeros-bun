@@ -22,10 +22,17 @@ const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
 
-// Hoteles disponibles (providers con categoría 'hospedaje')
+// IDs de hoteles ya agregados a esta cotización
+const hotelsYaAgregados = computed(() => {
+  return new Set(
+    cotizacionStore.getHospedajesByCotizacion(props.cotizacionId).map(h => h.providerId),
+  );
+});
+
+// Hoteles disponibles (providers con categoría 'hospedaje', activos y no duplicados)
 const hotelesDisponibles = computed(() => {
   return providerStore.getProvidersByCategory('hospedaje')
-    .filter(p => p.activo);
+    .filter(p => p.activo && !hotelsYaAgregados.value.has(p.id));
 });
 
 const hotelesSelectItems = computed(() =>
@@ -182,7 +189,15 @@ function handleCancel() {
       <form class="space-y-6" @submit.prevent="handleSubmit">
         <!-- Seleccionar Hotel -->
         <UFormField label="Hotel" required>
+          <UAlert
+            v-if="hotelesDisponibles.length === 0"
+            icon="i-lucide-info"
+            color="neutral"
+            variant="subtle"
+            title="Todos los hoteles ya fueron agregados a esta cotización"
+          />
           <USelect
+            v-else
             v-model="formState.providerId"
             :items="hotelesSelectItems"
             placeholder="Selecciona un hotel"
@@ -285,6 +300,7 @@ function handleCancel() {
           <UButton
             type="submit"
             label="Agregar Hospedaje"
+            :disabled="hotelesDisponibles.length === 0"
           />
         </div>
       </form>
