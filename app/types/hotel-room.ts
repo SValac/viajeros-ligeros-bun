@@ -11,6 +11,7 @@ export type HotelRoomType = {
   cantidadHabitaciones: number;
   camas: BedConfiguration[];
   precioPorNoche: number;
+  costoHabitacionPorPersona: number; // precioPorNoche / ocupacionMaxima (calculado automáticamente)
   detallesAdicionales?: string;
   createdAt: string;
   updatedAt: string;
@@ -25,7 +26,7 @@ export type HotelRoomData = {
   updatedAt: string;
 };
 
-export type HotelRoomTypeFormData = Omit<HotelRoomType, 'id' | 'createdAt' | 'updatedAt'>;
+export type HotelRoomTypeFormData = Omit<HotelRoomType, 'id' | 'createdAt' | 'updatedAt' | 'costoHabitacionPorPersona'>;
 
 export type HotelRoomDataFormData = Omit<HotelRoomData, 'id' | 'createdAt' | 'updatedAt' | 'roomTypes'> & {
   id?: string;

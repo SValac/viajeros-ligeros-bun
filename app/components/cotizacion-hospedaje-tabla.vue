@@ -100,13 +100,6 @@ function getNombreHotel(providerId: string): string {
   return providerStore.getProviderById(providerId)?.nombre ?? 'Desconocido';
 }
 
-// Obtener desglose de habitaciones como string
-function getDesgloseHabitaciones(hospedaje: CotizacionHospedaje): string {
-  return hospedaje.detalles
-    .map(d => `${d.cantidad} hab (${d.ocupacionMaxima} p)`)
-    .join(' + ');
-}
-
 // Slideover historial de pagos
 const isHistorialOpen = ref(false);
 const historialHospedaje = ref<CotizacionHospedaje | null>(null);

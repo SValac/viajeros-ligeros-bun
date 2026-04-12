@@ -1,4 +1,10 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui';
+
+import { h } from 'vue';
+
+import type { CotizacionHospedaje } from '~/types/cotizacion';
+
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 type Props = {
@@ -12,21 +18,14 @@ const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 
 const hospedajes = computed(() => cotizacionStore.getHospedajesByCotizacion(props.cotizacionId));
-
 const totalCosto = computed(() => cotizacionStore.getTotalCostoHospedajes(props.cotizacionId));
 
 function getNombreHotel(providerId: string): string {
   return providerStore.getProviderById(providerId)?.nombre ?? 'Desconocido';
 }
 
-// Para cada hospedaje, obtener el tipo de habitación del store
-function getTipoInfo(providerId: string, habitacionTipoId: string) {
-  const roomData = hotelRoomStore.getRoomDataByProviderId(providerId);
-  return roomData?.roomTypes.find(t => t.id === habitacionTipoId) ?? null;
-}
-
 // Items del accordion — uno por hospedaje
-function getDesgloseHabitaciones(hospedaje: typeof hospedajes.value[number]): string {
+function getDesgloseHabitaciones(hospedaje: CotizacionHospedaje): string {
   return hospedaje.detalles
     .map(d => `${d.cantidad} hab (${d.ocupacionMaxima} p)`)
     .join(' · ');
@@ -40,7 +39,6 @@ const accordionItems = computed(() =>
   })),
 );
 
-// Por default todos abiertos
 const defaultValue = computed(() => hospedajes.value.map(h => h.id));
 
 const costoPromedioPorPersona = computed(() => {
@@ -52,6 +50,67 @@ const costoPromedioPorPersona = computed(() => {
   }
   return totalPersonas > 0 ? totalCosto.value / totalPersonas : 0;
 });
+
+// ── UTable ────────────────────────────────────────────────────────────────────
+
+type DetalleRow = {
+  id: string;
+  camasLabel: string;
+  ocupacion: number;
+  cantidad: number;
+  precioPorNoche: number;
+  costoPorPersona: number | undefined;
+  costoTotal: number;
+};
+
+const columns: TableColumn<DetalleRow>[] = [
+  {
+    id: 'tipo',
+    header: 'Tipo',
+    cell: ({ row }) =>
+      h('div', [
+        h('p', { class: 'font-medium' }, row.original.camasLabel || '—'),
+        h('p', { class: 'text-xs text-muted' }, `${row.original.ocupacion} ${row.original.ocupacion === 1 ? 'persona' : 'personas'}`),
+      ]),
+  },
+  {
+    accessorKey: 'cantidad',
+    header: 'Habitaciones',
+    cell: ({ row }) => h('div', { class: 'text-right' }, `${row.original.cantidad} hab`),
+  },
+  {
+    accessorKey: 'precioPorNoche',
+    header: 'Precio/noche',
+    cell: ({ row }) => h('div', { class: 'text-right' }, `$${row.original.precioPorNoche.toFixed(2)}`),
+  },
+  {
+    accessorKey: 'costoPorPersona',
+    header: 'Precio/Persona',
+    cell: ({ row }) =>
+      h('div', { class: 'text-right' }, row.original.costoPorPersona != null ? `$${row.original.costoPorPersona.toFixed(2)}` : '—'),
+  },
+  {
+    accessorKey: 'costoTotal',
+    header: 'Subtotal',
+    cell: ({ row }) => h('div', { class: 'text-right font-semibold' }, `$${row.original.costoTotal.toFixed(2)}`),
+  },
+];
+
+function getDetalleRows(hospedaje: CotizacionHospedaje): DetalleRow[] {
+  return hospedaje.detalles.map((d) => {
+    const roomData = hotelRoomStore.getRoomDataByProviderId(hospedaje.providerId);
+    const tipoInfo = roomData?.roomTypes.find(t => t.id === d.habitacionTipoId) ?? null;
+    return {
+      id: d.id,
+      camasLabel: formatBedConfiguration(tipoInfo?.camas ?? []),
+      ocupacion: d.ocupacionMaxima,
+      cantidad: d.cantidad,
+      precioPorNoche: d.precioPorNoche,
+      costoPorPersona: d.costoPorPersona,
+      costoTotal: d.precioPorNoche * hospedaje.cantidadNoches * d.cantidad,
+    };
+  });
+}
 </script>
 
 <template>
@@ -105,48 +164,10 @@ const costoPromedioPorPersona = computed(() => {
           :key="hospedaje.id"
           #[`hotel-${hospedaje.id}`]
         >
-          <!-- Tabla de tipos de habitación -->
-          <div class="border rounded-lg overflow-hidden text-sm">
-            <div class="bg-muted/30 px-4 py-2 grid grid-cols-4 gap-2 text-xs font-medium border-b">
-              <div>Tipo</div>
-              <div class="text-right">
-                Habitaciones
-              </div>
-              <div class="text-right">
-                Precio/noche
-              </div>
-              <div class="text-right">
-                Subtotal
-              </div>
-            </div>
-            <div
-              v-for="detalle in hospedaje.detalles"
-              :key="detalle.id"
-              class="px-4 py-3 border-b last:border-b-0 grid grid-cols-4 gap-2"
-            >
-              <div>
-                <p class="font-medium">
-                  {{ formatBedConfiguration(getTipoInfo(hospedaje.providerId, detalle.habitacionTipoId)?.camas ?? []) || '—' }}
-                </p>
-                <p class="text-xs text-muted">
-                  {{ detalle.ocupacionMaxima }} {{ detalle.ocupacionMaxima === 1 ? 'persona' : 'personas' }}
-                </p>
-              </div>
-              <div class="text-right">
-                {{ detalle.cantidad }} hab
-              </div>
-              <div class="text-right">
-                ${{ detalle.precioPorNoche.toFixed(2) }}
-              </div>
-              <div class="text-right font-semibold">
-                ${{ (detalle.precioPorNoche * hospedaje.cantidadNoches * detalle.cantidad).toFixed(2) }}
-              </div>
-            </div>
-            <!-- Total del hotel -->
-            <div class="px-4 py-2 bg-muted/10 flex justify-between items-center text-sm font-semibold border-t">
-              <span>Total ({{ hospedaje.cantidadNoches }} noche{{ hospedaje.cantidadNoches !== 1 ? 's' : '' }})</span>
-              <span class="text-primary">${{ hospedaje.costoTotal.toFixed(2) }}</span>
-            </div>
+          <UTable :data="getDetalleRows(hospedaje)" :columns="columns" />
+          <div class="px-4 py-2 bg-muted/10 flex justify-between items-center text-sm font-semibold border-t">
+            <span>Total ({{ hospedaje.cantidadNoches }} noche{{ hospedaje.cantidadNoches !== 1 ? 's' : '' }})</span>
+            <span class="text-primary">${{ hospedaje.costoTotal.toFixed(2) }}</span>
           </div>
         </template>
       </UAccordion>
