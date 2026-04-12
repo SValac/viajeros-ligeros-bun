@@ -3,6 +3,8 @@ import type {
   CotizacionFormData,
   CotizacionHospedaje,
   CotizacionHospedajeFormData,
+  CotizacionPrecioPublico,
+  CotizacionPrecioPublicoFormData,
   CotizacionProveedor,
   CotizacionProveedorFilters,
   CotizacionProveedorFormData,
@@ -15,6 +17,7 @@ import type {
 } from '~/types/cotizacion';
 
 import { useTravelsStore } from '~/stores/use-travel-store';
+import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // State
@@ -23,6 +26,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const pagosProveedor = ref<PagoProveedor[]>([]);
   const hospedajesCotizacion = ref<CotizacionHospedaje[]>([]);
   const pagosHospedaje = ref<PagoHospedaje[]>([]);
+  const preciosPublicos = ref<CotizacionPrecioPublico[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<CotizacionProveedorFilters>({});
@@ -97,6 +101,82 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       }
 
       return resultado;
+    };
+  });
+
+  const getPreciosPublicosByCotizacion = computed(() => {
+    return (cotizacionId: string): CotizacionPrecioPublico[] => {
+      return preciosPublicos.value.filter(p => p.cotizacionId === cotizacionId);
+    };
+  });
+
+  // Matriz de precios de referencia: precioAsiento + hospedaje agrupado por ocupacionMaxima
+  const getMatrizPreciosReferencia = computed(() => {
+    return (cotizacionId: string): Array<{
+      ocupacionMaxima: number;
+      precioPorPersona: number;
+      desglose: {
+        precioAsiento: number;
+        hospedaje: Array<{
+          hotelNombre: string;
+          tipoHabitacion: string;
+          costoPorPersona: number;
+        }>;
+        totalHospedaje: number;
+      };
+    }> => {
+      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
+      if (!cotizacion)
+        return [];
+
+      const precioAsiento = cotizacion.precioAsiento;
+      const hospedajes = getHospedajesByCotizacion.value(cotizacionId);
+      const providerStore = useProviderStore();
+      const hotelRoomStore = useHotelRoomStore();
+
+      // Agrupar entradas por ocupacionMaxima
+      const porOcupacion: Map<number, Array<{
+        hotelNombre: string;
+        tipoHabitacion: string;
+        costoPorPersona: number;
+      }>> = new Map();
+
+      for (const hospedaje of hospedajes) {
+        const hotelProvider = providerStore.getProviderById(hospedaje.providerId);
+        const hotelNombre = hotelProvider?.nombre ?? `Hotel ${hospedaje.providerId}`;
+        const roomData = hotelRoomStore.getRoomDataByProviderId(hospedaje.providerId);
+
+        for (const detalle of hospedaje.detalles) {
+          const ocupacion = detalle.ocupacionMaxima;
+          const costoPorPersona = detalle.precioPorNoche / detalle.ocupacionMaxima;
+
+          const roomType = roomData?.roomTypes.find(rt => rt.id === detalle.habitacionTipoId);
+          const tipoHabitacion = roomType
+            ? formatBedConfiguration(roomType.camas)
+            : `${ocupacion} persona${ocupacion > 1 ? 's' : ''}`;
+
+          if (!porOcupacion.has(ocupacion)) {
+            porOcupacion.set(ocupacion, []);
+          }
+          porOcupacion.get(ocupacion)!.push({ hotelNombre, tipoHabitacion, costoPorPersona });
+        }
+      }
+
+      // Construir resultado ordenado por ocupacionMaxima ascendente
+      return [...porOcupacion.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([ocupacionMaxima, hoteles]) => {
+          const totalHospedaje = hoteles.reduce((sum, h) => sum + h.costoPorPersona, 0);
+          return {
+            ocupacionMaxima,
+            precioPorPersona: precioAsiento + totalHospedaje,
+            desglose: {
+              precioAsiento,
+              hospedaje: hoteles,
+              totalHospedaje,
+            },
+          };
+        });
     };
   });
 
@@ -554,15 +634,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion.estado === 'confirmada')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    // Calcular costoTotal
-    const costoTotal = data.detalles.reduce((sum, detalle) => {
+    // Calcular costoTotal y enriquecer detalles con costoPorPersona
+    const detallesEnriquecidos = data.detalles.map(d => ({
+      ...d,
+      id: d.id ?? crypto.randomUUID(),
+      costoPorPersona: d.precioPorNoche / d.ocupacionMaxima,
+    }));
+
+    const costoTotal = detallesEnriquecidos.reduce((sum, detalle) => {
       return sum + (detalle.precioPorNoche * data.cantidadNoches * detalle.cantidad);
     }, 0);
 
     const newHospedaje: CotizacionHospedaje = {
-      metodoPago: 'cash',
-      confirmado: false,
       ...data,
+      detalles: detallesEnriquecidos,
       id: `cot-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       costoTotal,
       createdAt: new Date().toISOString(),
@@ -590,14 +675,22 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.estado === 'confirmada')
       return undefined;
 
-    // Calcular costoTotal basado en detalles
-    const costoTotal = (data.detalles ?? existing.detalles).reduce((sum, detalle) => {
+    // Calcular costoTotal y enriquecer detalles con costoPorPersona
+    const detallesBase = data.detalles ?? existing.detalles;
+    const detallesEnriquecidos = detallesBase.map(d => ({
+      ...d,
+      id: d.id ?? crypto.randomUUID(),
+      costoPorPersona: d.precioPorNoche / d.ocupacionMaxima,
+    }));
+
+    const costoTotal = detallesEnriquecidos.reduce((sum, detalle) => {
       return sum + (detalle.precioPorNoche * (data.cantidadNoches ?? existing.cantidadNoches) * detalle.cantidad);
     }, 0);
 
     const updated: CotizacionHospedaje = {
       ...existing,
       ...data,
+      detalles: detallesEnriquecidos,
       id: existing.id,
       cotizacionId: existing.cotizacionId,
       createdAt: existing.createdAt,
@@ -700,6 +793,55 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
   }
 
+  // ============================================================================
+  // Precio al Público Actions
+  // ============================================================================
+
+  function addPrecioPublico(data: CotizacionPrecioPublicoFormData): CotizacionPrecioPublico | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+    if (!cotizacion)
+      return { error: 'Cotización no encontrada' };
+
+    const now = new Date().toISOString();
+    const newPrecio: CotizacionPrecioPublico = {
+      ...data,
+      id: `precio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    preciosPublicos.value.push(newPrecio);
+    error.value = null;
+    return newPrecio;
+  }
+
+  function updatePrecioPublico(id: string, data: Partial<CotizacionPrecioPublicoFormData>): CotizacionPrecioPublico | undefined {
+    const index = preciosPublicos.value.findIndex(p => p.id === id);
+    if (index === -1)
+      return undefined;
+
+    const existing = preciosPublicos.value[index];
+    if (!existing)
+      return undefined;
+
+    const updated: CotizacionPrecioPublico = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      cotizacionId: existing.cotizacionId,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    preciosPublicos.value[index] = updated;
+    error.value = null;
+    return updated;
+  }
+
+  function deletePrecioPublico(id: string): void {
+    preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
+  }
+
   return {
     // State
     cotizaciones,
@@ -707,6 +849,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     pagosProveedor,
     hospedajesCotizacion,
     pagosHospedaje,
+    preciosPublicos,
     loading,
     error,
     filters,
@@ -736,6 +879,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getHospedajesByCotizacion,
     getTotalCostoHospedajes,
     getTotalHabitacionesPorTipo,
+    getPreciosPublicosByCotizacion,
+    getMatrizPreciosReferencia,
     // Actions
     createCotizacion,
     updateCotizacion,
@@ -756,6 +901,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addPagoHospedaje,
     updatePagoHospedaje,
     deletePagoHospedaje,
+    addPrecioPublico,
+    updatePrecioPublico,
+    deletePrecioPublico,
   };
 }, {
   persist: {

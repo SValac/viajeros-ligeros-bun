@@ -99,3 +99,24 @@ export type CotizacionHospedajeFormData = Omit<CotizacionHospedaje, 'id' | 'cost
 export type CotizacionHospedajeDetalleFormData = Omit<CotizacionHospedajeDetalleHabitacion, 'id' | 'costoPorPersona' | 'costoTotal'> & {
   id?: string;
 };
+
+// ============================================================================
+// Precio al Público Types
+// ============================================================================
+
+export type CotizacionPrecioPublico = {
+  id: string;
+  cotizacionId: string;
+  tipo: string; // Ej: "Habitación Sencilla", "Niños 4-10 años"
+  descripcion: string; // Ej: "En habitación para 1 persona"
+  precioPorPersona: number; // Precio de venta
+  tipoHabitacion?: string; // Ej: "Sencilla", "Doble", "Triple" (opcional, para referencia)
+  grupoEdad?: string; // Ej: "Adultos", "Niños 4-10 años" (opcional)
+  notas?: string; // Notas adicionales
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CotizacionPrecioPublicoFormData = Omit<CotizacionPrecioPublico, 'id' | 'createdAt' | 'updatedAt'> & {
+  id?: string;
+};

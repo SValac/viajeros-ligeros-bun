@@ -3,7 +3,7 @@ import { computed, ref } from 'vue';
 
 import type { HotelRoomData, HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
-import { calculateTotalRoomsUsed } from '~/utils/hotel-room-helpers';
+import { calculateCostPerPerson, calculateTotalRoomsUsed } from '~/utils/hotel-room-helpers';
 
 export const useHotelRoomStore = defineStore('hotel-room', () => {
   // State
@@ -77,9 +77,11 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     }
 
     const now = new Date().toISOString();
+    const costoHabitacionPorPersona = calculateCostPerPerson(data.precioPorNoche, data.ocupacionMaxima);
     const newRoomType: HotelRoomType = {
       id: crypto.randomUUID(),
       ...data,
+      costoHabitacionPorPersona,
       createdAt: now,
       updatedAt: now,
     };
@@ -104,8 +106,10 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     }
 
     const now = new Date().toISOString();
+    const costoHabitacionPorPersona = calculateCostPerPerson(data.precioPorNoche, data.ocupacionMaxima);
     Object.assign(roomType, {
       ...data,
+      costoHabitacionPorPersona,
       updatedAt: now,
     });
 

@@ -52,3 +52,7 @@ export function areRoomTypesIdentical(a: HotelRoomTypeFormData, b: HotelRoomType
 export function calculateTotalRoomsUsed(roomTypes: HotelRoomType[]): number {
   return roomTypes.reduce((total, roomType) => total + roomType.cantidadHabitaciones, 0);
 }
+
+export function calculateCostPerPerson(precioPorNoche: number, ocupacionMaxima: number): number {
+  return precioPorNoche / ocupacionMaxima;
+}
