@@ -6,7 +6,10 @@ import type {
   CotizacionProveedor,
   CotizacionProveedorFilters,
   CotizacionProveedorFormData,
+  EstadoPagoHospedaje,
   EstadoPagoProveedor,
+  PagoHospedaje,
+  PagoHospedajeFormData,
   PagoProveedor,
   PagoProveedorFormData,
 } from '~/types/cotizacion';
@@ -19,6 +22,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const proveedoresCotizacion = ref<CotizacionProveedor[]>([]);
   const pagosProveedor = ref<PagoProveedor[]>([]);
   const hospedajesCotizacion = ref<CotizacionHospedaje[]>([]);
+  const pagosHospedaje = ref<PagoHospedaje[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<CotizacionProveedorFilters>({});
@@ -201,6 +205,52 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return proveedoresCotizacion.value
         .filter(p => p.cotizacionId === cotizacionId)
         .reduce((sum, p) => sum + getSaldoPendienteProveedor.value(p.id), 0);
+    };
+  });
+
+  const getPagosByHospedaje = computed(() => {
+    return (cotizacionHospedajeId: string): PagoHospedaje[] => {
+      return [...pagosHospedaje.value.filter(p => p.cotizacionHospedajeId === cotizacionHospedajeId)]
+        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    };
+  });
+
+  const getAnticipadoHospedaje = computed(() => {
+    return (cotizacionHospedajeId: string): number => {
+      return pagosHospedaje.value
+        .filter(p => p.cotizacionHospedajeId === cotizacionHospedajeId)
+        .reduce((sum, p) => sum + p.monto, 0);
+    };
+  });
+
+  const getSaldoPendienteHospedaje = computed(() => {
+    return (cotizacionHospedajeId: string): number => {
+      const hospedaje = hospedajesCotizacion.value.find(h => h.id === cotizacionHospedajeId);
+      if (!hospedaje)
+        return 0;
+      return hospedaje.costoTotal - getAnticipadoHospedaje.value(cotizacionHospedajeId);
+    };
+  });
+
+  const getEstadoPagoHospedaje = computed(() => {
+    return (cotizacionHospedajeId: string): EstadoPagoHospedaje => {
+      const hospedaje = hospedajesCotizacion.value.find(h => h.id === cotizacionHospedajeId);
+      if (!hospedaje)
+        return 'pendiente';
+      const anticipado = getAnticipadoHospedaje.value(cotizacionHospedajeId);
+      if (anticipado <= 0)
+        return 'pendiente';
+      if (anticipado >= hospedaje.costoTotal)
+        return 'liquidado';
+      return 'anticipo';
+    };
+  });
+
+  const getSaldoTotalPendienteHospedajes = computed(() => {
+    return (cotizacionId: string): number => {
+      return hospedajesCotizacion.value
+        .filter(h => h.cotizacionId === cotizacionId)
+        .reduce((sum, h) => sum + getSaldoPendienteHospedaje.value(h.id), 0);
     };
   });
 
@@ -510,6 +560,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }, 0);
 
     const newHospedaje: CotizacionHospedaje = {
+      metodoPago: 'cash',
+      confirmado: false,
       ...data,
       id: `cot-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       costoTotal,
@@ -569,7 +621,83 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
     const cotizacionId = hospedaje.cotizacionId;
     hospedajesCotizacion.value = hospedajesCotizacion.value.filter(h => h.id !== id);
+    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.cotizacionHospedajeId !== id);
     _syncPrecioToTravel(cotizacionId);
+  }
+
+  function toggleConfirmadoHospedaje(id: string): void {
+    const index = hospedajesCotizacion.value.findIndex(h => h.id === id);
+    if (index === -1)
+      return;
+
+    const hospedaje = hospedajesCotizacion.value[index];
+    if (!hospedaje)
+      return;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return;
+
+    hospedajesCotizacion.value[index] = { ...hospedaje, confirmado: !hospedaje.confirmado };
+  }
+
+  function addPagoHospedaje(data: PagoHospedajeFormData): PagoHospedaje | { error: string } {
+    const hospedaje = hospedajesCotizacion.value.find(h => h.id === data.cotizacionHospedajeId);
+    if (!hospedaje)
+      return { error: 'Hospedaje no encontrado' };
+
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    if (data.monto <= 0)
+      return { error: 'El monto debe ser mayor a 0' };
+
+    const saldoPendiente = getSaldoPendienteHospedaje.value(data.cotizacionHospedajeId);
+    if (data.monto > saldoPendiente)
+      return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
+
+    const newPago: PagoHospedaje = {
+      ...data,
+      id: `pago-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    pagosHospedaje.value.push(newPago);
+    return newPago;
+  }
+
+  function updatePagoHospedaje(id: string, data: Partial<PagoHospedajeFormData>): PagoHospedaje | undefined {
+    const index = pagosHospedaje.value.findIndex(p => p.id === id);
+    if (index === -1)
+      return undefined;
+
+    const existing = pagosHospedaje.value[index];
+    if (!existing)
+      return undefined;
+
+    const updated: PagoHospedaje = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      createdAt: existing.createdAt,
+    };
+
+    pagosHospedaje.value[index] = updated;
+    return updated;
+  }
+
+  function deletePagoHospedaje(id: string): void {
+    const pago = pagosHospedaje.value.find(p => p.id === id);
+    if (!pago)
+      return;
+
+    const hospedaje = hospedajesCotizacion.value.find(h => h.id === pago.cotizacionHospedajeId);
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje?.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return;
+
+    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
   }
 
   return {
@@ -578,6 +706,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     proveedoresCotizacion,
     pagosProveedor,
     hospedajesCotizacion,
+    pagosHospedaje,
     loading,
     error,
     filters,
@@ -596,6 +725,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getSaldoPendienteProveedor,
     getEstadoPagoProveedor,
     getSaldoTotalPendiente,
+    getPagosByHospedaje,
+    getAnticipadoHospedaje,
+    getSaldoPendienteHospedaje,
+    getEstadoPagoHospedaje,
+    getSaldoTotalPendienteHospedajes,
     puedeConfirmar,
     hasCotizacion,
     filteredProveedores,
@@ -618,6 +752,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addHospedajeCotizacion,
     updateHospedajeCotizacion,
     deleteHospedajeCotizacion,
+    toggleConfirmadoHospedaje,
+    addPagoHospedaje,
+    updatePagoHospedaje,
+    deletePagoHospedaje,
   };
 }, {
   persist: {
