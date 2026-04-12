@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui';
+
+import { h } from 'vue';
 import { z } from 'zod';
 
 import type { CotizacionHospedaje, CotizacionHospedajeDetalleHabitacion, CotizacionHospedajeFormData } from '~/types/cotizacion';
@@ -104,6 +107,71 @@ function getDesgloseHabitaciones(hospedaje: CotizacionHospedaje): string {
     .join(' + ');
 }
 
+// Acciones por fila
+function getRowActions(hospedaje: CotizacionHospedaje) {
+  return [
+    [
+      {
+        label: 'Editar',
+        icon: 'i-lucide-pencil',
+        onSelect: () => abrirEdicion(hospedaje),
+      },
+    ],
+    [
+      {
+        label: 'Eliminar',
+        icon: 'i-lucide-trash-2',
+        color: 'error' as const,
+        onSelect: () => eliminarHospedaje(hospedaje.id),
+      },
+    ],
+  ];
+}
+
+// Columnas de la tabla
+const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
+  const cols: TableColumn<CotizacionHospedaje>[] = [
+    {
+      accessorKey: 'providerId',
+      header: 'Hotel',
+      cell: ({ row }) => h('span', { class: 'font-medium' }, getNombreHotel(row.original.providerId)),
+    },
+    {
+      accessorKey: 'cantidadNoches',
+      header: 'Noches',
+      cell: ({ row }) => h('span', { class: 'font-medium' }, String(row.original.cantidadNoches)),
+    },
+    {
+      id: 'habitaciones',
+      header: 'Habitaciones',
+      cell: ({ row }) => h('span', { class: 'text-xs text-muted' }, getDesgloseHabitaciones(row.original)),
+    },
+    {
+      accessorKey: 'costoTotal',
+      header: 'Costo Total',
+      cell: ({ row }) => h('span', { class: 'font-bold text-primary' }, `$${row.original.costoTotal.toFixed(2)}`),
+    },
+  ];
+
+  if (!props.readonly) {
+    cols.push({
+      id: 'actions',
+      header: '',
+      cell: ({ row }) =>
+        h(resolveComponent('UDropdownMenu'), {
+          items: getRowActions(row.original),
+        }, () => h(resolveComponent('UButton'), {
+          color: 'neutral',
+          variant: 'ghost',
+          icon: 'i-lucide-more-vertical',
+          size: 'xs',
+        })),
+    });
+  }
+
+  return cols;
+});
+
 // Abrir modal de edición
 function abrirEdicion(hospedaje: CotizacionHospedaje) {
   editingHospedaje.value = hospedaje;
@@ -166,84 +234,11 @@ function eliminarHospedaje(id: string) {
 <template>
   <div class="space-y-4">
     <!-- Tabla de hospedajes -->
-    <div v-if="hospedajes.length > 0" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-muted/30 border-b">
-          <tr>
-            <th class="px-4 py-3 text-left font-semibold">
-              Hotel
-            </th>
-            <th class="px-4 py-3 text-left font-semibold">
-              Noches
-            </th>
-            <th class="px-4 py-3 text-left font-semibold">
-              Habitaciones
-            </th>
-            <th class="px-4 py-3 text-right font-semibold">
-              Costo Total
-            </th>
-            <th v-if="!readonly" class="px-4 py-3 text-center font-semibold">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y">
-          <tr
-            v-for="hospedaje in hospedajes"
-            :key="hospedaje.id"
-            class="hover:bg-muted/10 transition-colors"
-          >
-            <!-- Hotel -->
-            <td class="px-4 py-3">
-              <div>
-                <p class="font-medium">
-                  {{ getNombreHotel(hospedaje.providerId) }}
-                </p>
-              </div>
-            </td>
-
-            <!-- Noches -->
-            <td class="px-4 py-3">
-              <span class="font-medium">{{ hospedaje.cantidadNoches }}</span>
-            </td>
-
-            <!-- Habitaciones desglose -->
-            <td class="px-4 py-3">
-              <p class="text-xs text-muted">
-                {{ getDesgloseHabitaciones(hospedaje) }}
-              </p>
-            </td>
-
-            <!-- Costo Total -->
-            <td class="px-4 py-3 text-right">
-              <span class="font-bold text-primary">
-                ${{ hospedaje.costoTotal.toFixed(2) }}
-              </span>
-            </td>
-
-            <!-- Acciones -->
-            <td v-if="!readonly" class="px-4 py-3 text-center">
-              <div class="flex justify-center gap-2">
-                <UButton
-                  icon="i-lucide-pencil"
-                  size="xs"
-                  variant="ghost"
-                  color="neutral"
-                  @click="abrirEdicion(hospedaje)"
-                />
-                <UButton
-                  icon="i-lucide-trash-2"
-                  size="xs"
-                  variant="ghost"
-                  color="error"
-                  @click="eliminarHospedaje(hospedaje.id)"
-                />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <UTable
+      v-if="hospedajes.length > 0"
+      :data="hospedajes"
+      :columns="columns"
+    />
 
     <!-- Sin hospedajes -->
     <div v-else class="text-center py-8 text-muted">
