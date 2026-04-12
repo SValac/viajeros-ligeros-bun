@@ -181,11 +181,6 @@ const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
       cell: ({ row }) => h('span', { class: 'font-medium' }, String(row.original.cantidadNoches)),
     },
     {
-      id: 'habitaciones',
-      header: 'Habitaciones',
-      cell: ({ row }) => h('span', { class: 'text-xs text-muted' }, getDesgloseHabitaciones(row.original)),
-    },
-    {
       accessorKey: 'costoTotal',
       header: 'Costo Total',
       cell: ({ row }) => h('span', { class: 'font-bold' }, formatCurrency(row.original.costoTotal)),
@@ -231,7 +226,7 @@ const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
   if (!props.readonly) {
     cols.push({
       id: 'actions',
-      header: '',
+      header: 'Acciones',
       cell: ({ row }) =>
         h(resolveComponent('UDropdownMenu'), {
           items: getRowActions(row.original),

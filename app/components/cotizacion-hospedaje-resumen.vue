@@ -26,12 +26,17 @@ function getTipoInfo(providerId: string, habitacionTipoId: string) {
 }
 
 // Items del accordion — uno por hospedaje
+function getDesgloseHabitaciones(hospedaje: typeof hospedajes.value[number]): string {
+  return hospedaje.detalles
+    .map(d => `${d.cantidad} hab (${d.ocupacionMaxima} p)`)
+    .join(' · ');
+}
+
 const accordionItems = computed(() =>
   hospedajes.value.map(h => ({
-    label: getNombreHotel(h.providerId),
+    label: `${getNombreHotel(h.providerId)} - ${getDesgloseHabitaciones(h)}`,
     value: h.id,
     slot: `hotel-${h.id}`,
-    description: `${h.cantidadNoches} noche${h.cantidadNoches !== 1 ? 's' : ''} · ${h.detalles.length} tipo${h.detalles.length !== 1 ? 's' : ''} de habitación`,
   })),
 );
 
@@ -52,7 +57,7 @@ const costoPromedioPorPersona = computed(() => {
 <template>
   <div v-if="hospedajes.length > 0" class="space-y-4">
     <!-- Resumen General -->
-    <div class="bg-gradient-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
+    <div class="bg-linear-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
           <p class="text-xs text-muted mb-1">
