@@ -7,7 +7,6 @@ import Underline from '@tiptap/extension-underline';
 import StarterKit from '@tiptap/starter-kit';
 import { EditorContent, useEditor } from '@tiptap/vue-3';
 import EmojiPicker from 'vue3-emoji-picker';
-import 'vue3-emoji-picker/css';
 
 // ─── Props & v-model ──────────────────────────────────────────────────────────
 const props = defineProps<{
@@ -76,7 +75,12 @@ const linkUrl = ref('');
 const editor = useEditor({
   content: model.value,
   extensions: [
-    StarterKit,
+    StarterKit.configure({
+      // StarterKit v3 ya los incluye — los desactivamos para usar
+      // nuestras versiones configuradas y evitar extensiones duplicadas.
+      link: false,
+      underline: false,
+    }),
     Underline,
     Link.configure({ openOnClick: false }),
     TextStyle,
