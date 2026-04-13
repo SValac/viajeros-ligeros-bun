@@ -211,10 +211,9 @@ function onCancel() {
       name="descripcion"
       required
     >
-      <UTextarea
+      <RichTextEditor
         v-model="state.descripcion"
         placeholder="Describe el viaje, actividades incluidas, etc."
-        :rows="3"
       />
     </UFormField>
 
