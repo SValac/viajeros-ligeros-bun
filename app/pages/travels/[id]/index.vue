@@ -12,6 +12,11 @@ const travelId = computed(() => route.params.id as string);
 const travel = computed(() => travelsStore.getTravelById(travelId.value));
 const tieneCotizacion = computed(() => cotizacionStore.hasCotizacion(travelId.value));
 
+const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
+const preciosPublicos = computed(() =>
+  cotizacion.value ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.value.id) : [],
+);
+
 // Redirect to dashboard if travel not found
 watchEffect(() => {
   if (!travel.value && travelId.value) {
@@ -184,9 +189,10 @@ definePageMeta({
                     {{ travel.destino }}
                   </h1>
                 </div>
-                <pre class="text-muted">
-                  {{ travel.descripcion }}
-                </pre>
+                <RichContent
+                  :html="travel.descripcion"
+                  class="text-muted"
+                />
               </div>
 
               <UBadge
@@ -224,7 +230,7 @@ definePageMeta({
 
               <div>
                 <div class="text-sm text-muted mb-1">
-                  Precio Total
+                  Precio Proveedores
                 </div>
                 <div class="flex items-center gap-2">
                   <span class="i-lucide-dollar-sign w-4 h-4 text-muted" />
@@ -260,6 +266,78 @@ definePageMeta({
                 {{ formatDate(travel.fechaFin) }}
               </div>
             </div>
+          </div>
+        </div>
+
+        <!-- Precios al Público Section -->
+        <div class="mb-6">
+          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
+            <span class="i-lucide-tag w-5 h-5" />
+            Precios al Público
+          </h2>
+          <template v-if="preciosPublicos.length > 0">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div
+                v-for="precio in preciosPublicos"
+                :key="precio.id"
+                class="p-4 bg-elevated rounded-lg flex items-start justify-between gap-4"
+              >
+                <div class="flex-1 min-w-0">
+                  <div class="font-medium">
+                    {{ precio.tipo }}
+                  </div>
+                  <div class="text-sm text-muted mt-0.5">
+                    {{ precio.descripcion }}
+                  </div>
+                  <div v-if="precio.tipoHabitacion || precio.grupoEdad" class="flex items-center gap-2 mt-1.5">
+                    <UBadge
+                      v-if="precio.tipoHabitacion"
+                      :label="precio.tipoHabitacion"
+                      color="neutral"
+                      variant="subtle"
+                      size="xs"
+                    />
+                    <UBadge
+                      v-if="precio.grupoEdad"
+                      :label="precio.grupoEdad"
+                      color="neutral"
+                      variant="subtle"
+                      size="xs"
+                    />
+                  </div>
+                  <div v-if="precio.notas" class="text-xs text-muted mt-1.5 italic">
+                    {{ precio.notas }}
+                  </div>
+                </div>
+                <div class="text-right shrink-0">
+                  <div class="text-xs text-muted mb-0.5">
+                    Por persona
+                  </div>
+                  <div class="text-lg font-bold text-primary">
+                    {{ formatCurrency(precio.precioPorPersona) }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <div v-else class="p-8 text-center bg-elevated rounded-lg">
+            <span class="i-lucide-tag w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
+            <p class="text-muted font-medium mb-1">
+              Sin precios al público
+            </p>
+            <p class="text-sm text-muted">
+              Agrega los precios en la sección de
+              <UButton
+                variant="link"
+                color="primary"
+                size="xs"
+                class="px-0"
+                label="Cotización"
+                @click="router.push({ name: 'travel-cotizacion', params: { id: travel.id } })"
+              />
+              para que aparezcan aquí.
+            </p>
           </div>
         </div>
 

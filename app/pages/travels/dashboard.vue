@@ -119,22 +119,16 @@ function getRowActions(travel: Travel) {
 // Columnas de la tabla
 const columns: TableColumn<Travel>[] = [
   {
-    accessorKey: 'id',
-    header: 'ID',
-    cell: ({ row }) => {
-      const id = (row.getValue('id') as string).slice(0, 12);
-      return h('span', { class: 'text-xs font-mono text-gray-500' }, `${id}...`);
-    },
-  },
-  {
     accessorKey: 'destino',
     header: 'Destino',
-    cell: ({ row }) => {
-      return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-map-pin w-4 h-4 text-gray-400' }),
+    cell: ({ row }) =>
+      h(resolveComponent('NuxtLink'), {
+        to: `/travels/${row.original.id}`,
+        class: 'flex items-center gap-2 hover:text-primary transition-colors group',
+      }, () => [
+        h('span', { class: 'i-lucide-map-pin w-4 h-4 text-muted group-hover:text-primary' }),
         h('span', { class: 'font-medium' }, row.getValue('destino')),
-      ]);
-    },
+      ]),
   },
   {
     accessorKey: 'cliente',
