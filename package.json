@@ -16,10 +16,17 @@
   "dependencies": {
     "@nuxt/ui": "^4.3.0",
     "@pinia-plugin-persistedstate/nuxt": "^1.2.1",
+    "@tiptap/extension-link": "^3.22.3",
+    "@tiptap/extension-placeholder": "^3.22.3",
+    "@tiptap/extension-text-style": "^3.22.3",
+    "@tiptap/extension-underline": "^3.22.3",
+    "@tiptap/starter-kit": "^3.22.3",
+    "@tiptap/vue-3": "^3.22.3",
     "@vueuse/core": "^14.1.0",
     "nuxt": "^4.2.2",
     "vue": "^3.5.25",
     "vue-router": "^4.6.3",
+    "vue3-emoji-picker": "^1.1.8",
     "zod": "^4.2.1"
   },
   "devDependencies": {
@@ -32,6 +39,9 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "typescript": "^5.9.3"
+  },
+  "overrides": {
+    "@tiptap/core": "3.22.3"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,vue}": "eslint --fix"
