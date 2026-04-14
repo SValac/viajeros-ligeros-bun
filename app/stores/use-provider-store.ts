@@ -2,6 +2,8 @@ import { defineStore } from 'pinia';
 
 import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, ProviderUpdateData } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 import { useHotelRoomStore } from './use-hotel-room-store';
 
 export const useProviderStore = defineStore('providers', () => {
@@ -33,12 +35,12 @@ export const useProviderStore = defineStore('providers', () => {
 
   const statsByCategory = computed(() => {
     const stats: Record<ProviderCategory, number> = {
-      'guias': 0,
-      'transporte': 0,
-      'hospedaje': 0,
-      'agencias-autobus': 0,
-      'comidas': 0,
-      'otros': 0,
+      [PROVIDER_CATEGORY.GUIAS]: 0,
+      [PROVIDER_CATEGORY.TRANSPORTE]: 0,
+      [PROVIDER_CATEGORY.HOSPEDAJE]: 0,
+      [PROVIDER_CATEGORY.AGENCIAS_AUTOBUS]: 0,
+      [PROVIDER_CATEGORY.COMIDAS]: 0,
+      [PROVIDER_CATEGORY.OTROS]: 0,
     };
 
     providers.value

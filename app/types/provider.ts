@@ -1,11 +1,14 @@
-// Provider category as union type (extensible by adding more values)
-export type ProviderCategory
-  = 'guias'
-    | 'transporte'
-    | 'hospedaje'
-    | 'agencias-autobus'
-    | 'comidas'
-    | 'otros';
+// Provider category constant — single source of truth; type is derived from it
+export const PROVIDER_CATEGORY = {
+  GUIAS: 'guias',
+  TRANSPORTE: 'transporte',
+  HOSPEDAJE: 'hospedaje',
+  AGENCIAS_AUTOBUS: 'agencias-autobus',
+  COMIDAS: 'comidas',
+  OTROS: 'otros',
+} as const;
+
+export type ProviderCategory = typeof PROVIDER_CATEGORY[keyof typeof PROVIDER_CATEGORY];
 
 // Contact information for provider
 export type ProviderContact = {
