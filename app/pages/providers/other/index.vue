@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Provider, ProviderFilters, ProviderFormData, ProviderLocation } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 definePageMeta({
   name: 'providers-other',
 });
@@ -16,7 +18,7 @@ const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 const localFilters = ref<ProviderFilters>({});
 
-const categoryProviders = computed(() => providerStore.getProvidersByCategory('otros'));
+const categoryProviders = computed(() => providerStore.getProvidersByCategory(PROVIDER_CATEGORY.OTROS));
 
 const providers = computed(() => {
   let result = [...categoryProviders.value];
@@ -82,7 +84,7 @@ function closeModal() {
 
 function handleFormSubmit(data: ProviderFormData) {
   try {
-    data.categoria = 'otros';
+    data.categoria = PROVIDER_CATEGORY.OTROS;
 
     if (editingProvider.value) {
       const success = providerStore.updateProvider(editingProvider.value.id, data);
@@ -289,6 +291,7 @@ const columns: TableColumn<Provider>[] = [
       <template #body>
         <ProviderForm
           :provider="editingProvider"
+          :fixed-categoria="PROVIDER_CATEGORY.OTROS"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />

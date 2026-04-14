@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, ProviderLocation } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 const route = useRoute();
 const toast = useToast();
 
@@ -105,8 +107,8 @@ const categoryInfo = computed(() => {
   return info[categoria.value] || info.otros;
 });
 
-const isAgenciasAutobus = computed(() => categoria.value === 'agencias-autobus');
-const isHospedaje = computed(() => categoria.value === 'hospedaje');
+const isAgenciasAutobus = computed(() => categoria.value === PROVIDER_CATEGORY.AGENCIAS_AUTOBUS);
+const isHospedaje = computed(() => categoria.value === PROVIDER_CATEGORY.HOSPEDAJE);
 
 const providerSelectOptions = computed(() =>
   providers.value.map(p => ({ value: p.id, label: p.nombre })),

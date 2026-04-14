@@ -3,10 +3,11 @@ import type { FormSubmitEvent } from '#ui/types';
 
 import { z } from 'zod';
 
-import type { Provider, ProviderFormData } from '~/types/provider';
+import type { Provider, ProviderCategory, ProviderFormData } from '~/types/provider';
 
 type Props = {
   provider?: Provider | null;
+  fixedCategoria?: ProviderCategory;
 };
 
 const props = defineProps<Props>();
@@ -80,7 +81,7 @@ type Schema = z.output<typeof schema>;
 // Estado inicial del formulario
 const state = ref<Schema>({
   nombre: props.provider?.nombre || '',
-  categoria: props.provider?.categoria || 'otros',
+  categoria: props.provider?.categoria || props.fixedCategoria || 'otros',
   descripcion: props.provider?.descripcion || '',
   ubicacion: {
     ciudad: props.provider?.ubicacion?.ciudad || '',
@@ -144,7 +145,17 @@ function onCancel() {
       name="categoria"
       required
     >
+      <template v-if="fixedCategoria">
+        <UBadge
+          size="lg"
+          variant="subtle"
+          color="primary"
+        >
+          {{ categoriaOptions.find(o => o.value === fixedCategoria)?.label }}
+        </UBadge>
+      </template>
       <USelect
+        v-else
         v-model="state.categoria"
         :items="categoriaOptions"
         placeholder="Seleccionar categoría"

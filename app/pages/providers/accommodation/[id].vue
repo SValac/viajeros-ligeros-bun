@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderFormData } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 definePageMeta({
   name: 'providers-accommodation-detail',
 });
@@ -19,7 +21,7 @@ watchEffect(() => {
   if (provider.value === undefined) {
     router.replace('/providers/accommodation');
   }
-  else if (provider.value.categoria !== 'hospedaje') {
+  else if (provider.value.categoria !== PROVIDER_CATEGORY.HOSPEDAJE) {
     router.replace('/providers/accommodation');
   }
 });
@@ -29,7 +31,7 @@ function handleFormSubmit(data: ProviderFormData) {
     return;
 
   try {
-    data.categoria = 'hospedaje';
+    data.categoria = PROVIDER_CATEGORY.HOSPEDAJE;
     const success = providerStore.updateProvider(provider.value.id, data);
     if (success) {
       toast.add({ title: 'Hospedaje actualizado', description: `${data.nombre} se actualizó correctamente`, color: 'primary' });

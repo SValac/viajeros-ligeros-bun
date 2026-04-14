@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderFormData } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 definePageMeta({
   name: 'providers-bus-agencies-detail',
 });
@@ -18,7 +20,7 @@ watchEffect(() => {
   if (provider.value === undefined) {
     router.replace('/providers/bus-agencies');
   }
-  else if (provider.value.categoria !== 'agencias-autobus') {
+  else if (provider.value.categoria !== PROVIDER_CATEGORY.AGENCIAS_AUTOBUS) {
     router.replace('/providers/bus-agencies');
   }
 });
@@ -28,7 +30,7 @@ function handleFormSubmit(data: ProviderFormData) {
     return;
 
   try {
-    data.categoria = 'agencias-autobus';
+    data.categoria = PROVIDER_CATEGORY.AGENCIAS_AUTOBUS;
     const success = providerStore.updateProvider(provider.value.id, data);
     if (success) {
       toast.add({ title: 'Agencia actualizada', description: `${data.nombre} se actualizó correctamente`, color: 'primary' });

@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Provider, ProviderFilters, ProviderFormData, ProviderLocation } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 definePageMeta({
   name: 'providers-accommodation',
 });
@@ -17,7 +19,7 @@ const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 const localFilters = ref<ProviderFilters>({});
 
-const categoryProviders = computed(() => providerStore.getProvidersByCategory('hospedaje'));
+const categoryProviders = computed(() => providerStore.getProvidersByCategory(PROVIDER_CATEGORY.HOSPEDAJE));
 
 const providers = computed(() => {
   let result = [...categoryProviders.value];
@@ -83,7 +85,7 @@ function closeModal() {
 
 function handleFormSubmit(data: ProviderFormData) {
   try {
-    data.categoria = 'hospedaje';
+    data.categoria = PROVIDER_CATEGORY.HOSPEDAJE;
 
     if (editingProvider.value) {
       const success = providerStore.updateProvider(editingProvider.value.id, data);
@@ -294,6 +296,7 @@ const columns: TableColumn<Provider>[] = [
       <template #body>
         <ProviderForm
           :provider="editingProvider"
+          :fixed-categoria="PROVIDER_CATEGORY.HOSPEDAJE"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />

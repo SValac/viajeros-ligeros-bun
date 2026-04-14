@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderCategory } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 definePageMeta({
   name: 'providers-dashboard',
 });
@@ -22,7 +24,7 @@ type CategoryInfo = {
 
 const categories: CategoryInfo[] = [
   {
-    key: 'guias',
+    key: PROVIDER_CATEGORY.GUIAS,
     label: 'Guías',
     icon: 'i-lucide-user-search',
     color: 'blue',
@@ -31,7 +33,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/guides',
   },
   {
-    key: 'transporte',
+    key: PROVIDER_CATEGORY.TRANSPORTE,
     label: 'Transporte',
     icon: 'i-lucide-car',
     color: 'purple',
@@ -40,7 +42,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/transportation',
   },
   {
-    key: 'hospedaje',
+    key: PROVIDER_CATEGORY.HOSPEDAJE,
     label: 'Hospedaje',
     icon: 'i-lucide-hotel',
     color: 'green',
@@ -49,7 +51,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/accommodation',
   },
   {
-    key: 'agencias-autobus',
+    key: PROVIDER_CATEGORY.AGENCIAS_AUTOBUS,
     label: 'Agencias de Autobús',
     icon: 'i-lucide-bus',
     color: 'orange',
@@ -58,7 +60,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/bus-agencies',
   },
   {
-    key: 'comidas',
+    key: PROVIDER_CATEGORY.COMIDAS,
     label: 'Comidas',
     icon: 'i-lucide-utensils',
     color: 'amber',
@@ -67,7 +69,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/food-services',
   },
   {
-    key: 'otros',
+    key: PROVIDER_CATEGORY.OTROS,
     label: 'Otros',
     icon: 'i-lucide-package',
     color: 'gray',

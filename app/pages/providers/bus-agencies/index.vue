@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Provider, ProviderFilters, ProviderFormData, ProviderLocation } from '~/types/provider';
 
+import { PROVIDER_CATEGORY } from '~/types/provider';
+
 definePageMeta({
   name: 'providers-bus-agencies',
 });
@@ -17,7 +19,7 @@ const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 const localFilters = ref<ProviderFilters>({});
 
-const categoryProviders = computed(() => providerStore.getProvidersByCategory('agencias-autobus'));
+const categoryProviders = computed(() => providerStore.getProvidersByCategory(PROVIDER_CATEGORY.AGENCIAS_AUTOBUS));
 
 const providers = computed(() => {
   let result = [...categoryProviders.value];
@@ -83,7 +85,7 @@ function closeModal() {
 
 function handleFormSubmit(data: ProviderFormData) {
   try {
-    data.categoria = 'agencias-autobus';
+    data.categoria = PROVIDER_CATEGORY.AGENCIAS_AUTOBUS;
 
     if (editingProvider.value) {
       const success = providerStore.updateProvider(editingProvider.value.id, data);
@@ -309,6 +311,7 @@ const columns: TableColumn<Provider>[] = [
       <template #body>
         <ProviderForm
           :provider="editingProvider"
+          :fixed-categoria="PROVIDER_CATEGORY.AGENCIAS_AUTOBUS"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />
