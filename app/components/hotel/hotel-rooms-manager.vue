@@ -189,6 +189,7 @@ function handleDelete(rt: HotelRoomType) {
     <UModal
       v-model:open="isFormModalOpen"
       :title="isEditing ? 'Editar habitación' : 'Nueva habitación'"
+      :description="isEditing ? 'Modifica los detalles de la habitación' : 'Ingresa los detalles de la habitación'"
       class="sm:max-w-xl"
     >
       <template #body>

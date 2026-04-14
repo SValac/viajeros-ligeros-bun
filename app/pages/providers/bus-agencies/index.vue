@@ -212,7 +212,7 @@ const columns: TableColumn<Provider>[] = [
       return h(resolveComponent('UBadge'), {
         variant: 'subtle',
         color: activo ? 'primary' : 'warning',
-      }, activo ? 'Activo' : 'Inactivo');
+      }, () => activo ? 'Activo' : 'Inactivo');
     },
   },
   {
