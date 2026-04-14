@@ -86,7 +86,7 @@ const state = ref<Schema>({
   ubicacion: {
     ciudad: props.provider?.ubicacion?.ciudad || '',
     estado: props.provider?.ubicacion?.estado || '',
-    pais: props.provider?.ubicacion?.pais || '',
+    pais: props.provider?.ubicacion?.pais || 'México',
   },
   contacto: {
     nombre: props.provider?.contacto?.nombre || '',
