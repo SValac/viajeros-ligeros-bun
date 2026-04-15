@@ -56,6 +56,7 @@ const crearState = reactive<CrearFormSchema>({
 
 const isCrearModalOpen = shallowRef(false);
 const isAgregarHospedajeModalOpen = shallowRef(false);
+const isAgregarBusModalOpen = shallowRef(false);
 
 function handleCrearCotizacion() {
   const result = crearSchema.safeParse(crearState);
@@ -268,6 +269,13 @@ function handleHospedajeAgregado() {
           @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
         />
 
+        <!-- Sección Autobuses -->
+        <CotizacionBusesSection
+          :cotizacion-id="cotizacion.id"
+          :readonly="readonly"
+          @agregar-bus="isAgregarBusModalOpen = true"
+        />
+
         <!-- Sección Precio al Público -->
         <CotizacionPrecioPublicoSection
           :cotizacion-id="cotizacion.id"
@@ -344,6 +352,15 @@ function handleHospedajeAgregado() {
       :cotizacion-id="cotizacion.id"
       @update:open="(v) => isAgregarHospedajeModalOpen = v"
       @hospedaje-agregado="handleHospedajeAgregado"
+    />
+
+    <!-- Modal: agregar autobús -->
+    <CotizacionBusForm
+      v-if="cotizacion"
+      :open="isAgregarBusModalOpen"
+      :cotizacion-id="cotizacion.id"
+      @update:open="(v) => isAgregarBusModalOpen = v"
+      @bus-agregado="isAgregarBusModalOpen = false"
     />
   </div>
 </template>

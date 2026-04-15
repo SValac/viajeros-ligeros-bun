@@ -1,5 +1,7 @@
 import type {
   Cotizacion,
+  CotizacionBus,
+  CotizacionBusFormData,
   CotizacionFormData,
   CotizacionHospedaje,
   CotizacionHospedajeFormData,
@@ -27,6 +29,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const hospedajesCotizacion = ref<CotizacionHospedaje[]>([]);
   const pagosHospedaje = ref<PagoHospedaje[]>([]);
   const preciosPublicos = ref<CotizacionPrecioPublico[]>([]);
+  const busesApartados = ref<CotizacionBus[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<CotizacionProveedorFilters>({});
@@ -368,6 +371,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       }
 
       return result;
+    };
+  });
+
+  const getBusesByCotizacion = computed(() => {
+    return (cotizacionId: string): CotizacionBus[] => {
+      return busesApartados.value.filter(b => b.cotizacionId === cotizacionId);
+    };
+  });
+
+  const getBusesByProveedorEnCotizacion = computed(() => {
+    return (cotizacionId: string, proveedorId: string): CotizacionBus[] => {
+      return busesApartados.value.filter(
+        b => b.cotizacionId === cotizacionId && b.proveedorId === proveedorId,
+      );
     };
   });
 
@@ -842,6 +859,75 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
   }
 
+  // ============================================================================
+  // Autobuses Apartados Actions
+  // ============================================================================
+
+  function addBusCotizacion(data: CotizacionBusFormData): CotizacionBus | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+    if (!cotizacion)
+      return { error: 'Cotización no encontrada' };
+    if (cotizacion.estado === 'confirmada')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    const duplicado = busesApartados.value.find(
+      b => b.cotizacionId === data.cotizacionId
+        && b.proveedorId === data.proveedorId
+        && b.numeroUnidad === data.numeroUnidad,
+    );
+    if (duplicado)
+      return { error: 'Este número de unidad ya existe para este proveedor en la cotización' };
+
+    const now = new Date().toISOString();
+    const newBus: CotizacionBus = {
+      ...data,
+      id: `cot-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    busesApartados.value.push(newBus);
+    return newBus;
+  }
+
+  function updateBusCotizacion(id: string, data: Partial<CotizacionBusFormData>): CotizacionBus | undefined {
+    const index = busesApartados.value.findIndex(b => b.id === id);
+    if (index === -1)
+      return undefined;
+
+    const existing = busesApartados.value[index];
+    if (!existing)
+      return undefined;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return undefined;
+
+    const updated: CotizacionBus = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      cotizacionId: existing.cotizacionId,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    busesApartados.value[index] = updated;
+    return updated;
+  }
+
+  function deleteBusCotizacion(id: string): void {
+    const bus = busesApartados.value.find(b => b.id === id);
+    if (!bus)
+      return;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return;
+
+    busesApartados.value = busesApartados.value.filter(b => b.id !== id);
+  }
+
   return {
     // State
     cotizaciones,
@@ -850,6 +936,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     hospedajesCotizacion,
     pagosHospedaje,
     preciosPublicos,
+    busesApartados,
     loading,
     error,
     filters,
@@ -881,6 +968,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getTotalHabitacionesPorTipo,
     getPreciosPublicosByCotizacion,
     getMatrizPreciosReferencia,
+    getBusesByCotizacion,
+    getBusesByProveedorEnCotizacion,
     // Actions
     createCotizacion,
     updateCotizacion,
@@ -904,6 +993,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addPrecioPublico,
     updatePrecioPublico,
     deletePrecioPublico,
+    addBusCotizacion,
+    updateBusCotizacion,
+    deleteBusCotizacion,
   };
 }, {
   persist: {
