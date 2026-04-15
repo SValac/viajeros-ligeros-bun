@@ -12,6 +12,7 @@ definePageMeta({
 // Store
 const travelsStore = useTravelsStore();
 const cotizacionStore = useCotizacionStore();
+const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
 const router = useRouter();
 
@@ -131,12 +132,19 @@ const columns: TableColumn<Travel>[] = [
       ]),
   },
   {
-    accessorKey: 'cliente',
-    header: 'Cliente',
+    accessorKey: 'coordinadorIds',
+    header: 'Coordinadores',
     cell: ({ row }) => {
+      const ids = row.getValue('coordinadorIds') as string[];
+      if (!ids || ids.length === 0)
+        return h('span', { class: 'text-sm text-gray-400' }, 'Sin coordinador');
+      const names = ids.map((id) => {
+        const c = coordinatorStore.getCoordinatorById(id);
+        return c ? c.nombre : '—';
+      });
       return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-user w-4 h-4 text-gray-400' }),
-        h('span', {}, row.getValue('cliente')),
+        h('span', { class: 'i-lucide-user-star w-4 h-4 text-gray-400 shrink-0' }),
+        h('span', { class: 'text-sm' }, names.join(', ')),
       ]);
     },
   },

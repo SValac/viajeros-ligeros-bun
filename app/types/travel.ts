@@ -46,7 +46,7 @@ export type Travel = {
   descripcion: string;
   imagenUrl?: string;
   estado: TravelStatus;
-  cliente: string;
+  coordinadorIds: string[];
   itinerario: TravelActivity[];
   servicios: TravelService[];
   autobuses: TravelBus[];
@@ -70,7 +70,6 @@ export type TravelUpdateData = Omit<Travel, 'id' | 'createdAt' | 'updatedAt'>;
 // Tipo para filtros de tabla
 export type TravelFilters = {
   estado?: TravelStatus;
-  cliente?: string;
   fechaDesde?: string;
   fechaHasta?: string;
 };

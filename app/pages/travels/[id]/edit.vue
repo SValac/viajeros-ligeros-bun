@@ -75,7 +75,7 @@ function handleCancel() {
         </h1>
       </div>
       <p class="text-muted text-sm">
-        Destino: {{ travel.destino }} • Cliente: {{ travel.cliente }}
+        Destino: {{ travel.destino }}
       </p>
     </div>
 
