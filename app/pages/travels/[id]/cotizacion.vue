@@ -37,25 +37,23 @@ watchEffect(() => {
 
 // Form for creating a new cotizacion
 const crearSchema = z.object({
-  capacidadAutobus: z.number({ message: 'Ingresa la capacidad del autobús' }).int().positive('Debe ser mayor a 0'),
   asientoMinimoObjetivo: z.number().int().nonnegative().optional(),
   notas: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
 });
 
 type CrearFormSchema = {
-  capacidadAutobus?: number;
   asientoMinimoObjetivo?: number;
   notas?: string;
 };
 
 const crearState = reactive<CrearFormSchema>({
-  capacidadAutobus: undefined,
   asientoMinimoObjetivo: undefined,
   notas: '',
 });
 
 const isCrearModalOpen = shallowRef(false);
 const isAgregarHospedajeModalOpen = shallowRef(false);
+const isAgregarBusModalOpen = shallowRef(false);
 
 function handleCrearCotizacion() {
   const result = crearSchema.safeParse(crearState);
@@ -64,8 +62,8 @@ function handleCrearCotizacion() {
 
   cotizacionStore.createCotizacion({
     travelId: travelId.value,
-    precioAsiento: 0, // Se calcula automáticamente al agregar proveedores y definir asiento mínimo
-    capacidadAutobus: result.data.capacidadAutobus,
+    precioAsiento: 0,
+    capacidadAutobus: 0,
     asientoMinimoObjetivo: result.data.asientoMinimoObjetivo ?? 0,
     estado: 'borrador',
     notas: result.data.notas,
@@ -189,13 +187,13 @@ function handleHospedajeAgregado() {
             </div>
           </template>
 
-          <div v-if="!editandoParametros" class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div v-if="!editandoParametros" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <p class="text-xs text-muted mb-1">
-                Capacidad Autobús
+                Capacidad del Autobús
               </p>
               <p class="font-medium">
-                {{ cotizacion.capacidadAutobus }} asientos
+                {{ cotizacion.capacidadAutobus }}
               </p>
             </div>
             <div>
@@ -268,6 +266,13 @@ function handleHospedajeAgregado() {
           @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
         />
 
+        <!-- Sección Autobuses -->
+        <CotizacionBusesSection
+          :cotizacion-id="cotizacion.id"
+          :readonly="readonly"
+          @agregar-bus="isAgregarBusModalOpen = true"
+        />
+
         <!-- Sección Precio al Público -->
         <CotizacionPrecioPublicoSection
           :cotizacion-id="cotizacion.id"
@@ -289,19 +294,6 @@ function handleHospedajeAgregado() {
           class="space-y-4"
           @submit="handleCrearCotizacion"
         >
-          <UFormField
-            label="Capacidad del Autobús"
-            name="capacidadAutobus"
-            required
-          >
-            <UInput
-              v-model.number="crearState.capacidadAutobus"
-              type="number"
-              placeholder="Ej. 44"
-              class="w-full"
-            />
-          </UFormField>
-
           <UFormField label="Asiento Mínimo Objetivo" name="asientoMinimoObjetivo">
             <UInput
               v-model.number="crearState.asientoMinimoObjetivo"
@@ -344,6 +336,15 @@ function handleHospedajeAgregado() {
       :cotizacion-id="cotizacion.id"
       @update:open="(v) => isAgregarHospedajeModalOpen = v"
       @hospedaje-agregado="handleHospedajeAgregado"
+    />
+
+    <!-- Modal: agregar autobús -->
+    <CotizacionBusForm
+      v-if="cotizacion"
+      :open="isAgregarBusModalOpen"
+      :cotizacion-id="cotizacion.id"
+      @update:open="(v) => isAgregarBusModalOpen = v"
+      @bus-agregado="isAgregarBusModalOpen = false"
     />
   </div>
 </template>

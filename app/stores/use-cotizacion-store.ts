@@ -1,5 +1,7 @@
 import type {
   Cotizacion,
+  CotizacionBus,
+  CotizacionBusFormData,
   CotizacionFormData,
   CotizacionHospedaje,
   CotizacionHospedajeFormData,
@@ -8,8 +10,11 @@ import type {
   CotizacionProveedor,
   CotizacionProveedorFilters,
   CotizacionProveedorFormData,
+  EstadoPagoBus,
   EstadoPagoHospedaje,
   EstadoPagoProveedor,
+  PagoBus,
+  PagoBusFormData,
   PagoHospedaje,
   PagoHospedajeFormData,
   PagoProveedor,
@@ -27,6 +32,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const hospedajesCotizacion = ref<CotizacionHospedaje[]>([]);
   const pagosHospedaje = ref<PagoHospedaje[]>([]);
   const preciosPublicos = ref<CotizacionPrecioPublico[]>([]);
+  const busesApartados = ref<CotizacionBus[]>([]);
+  const pagosBus = ref<PagoBus[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<CotizacionProveedorFilters>({});
@@ -191,7 +198,31 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.precio
-  // Incluye costos de proveedores y hospedajes
+  // Incluye costos de proveedores, hospedajes y autobuses
+  const getTotalCostoBuses = computed(() => {
+    return (cotizacionId: string): number => {
+      return busesApartados.value
+        .filter(b => b.cotizacionId === cotizacionId)
+        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+    };
+  });
+
+  const getCostoBusesTipoMinimo = computed(() => {
+    return (cotizacionId: string): number => {
+      return busesApartados.value
+        .filter(b => b.cotizacionId === cotizacionId && (b.tipoDivision ?? 'minimo') === 'minimo')
+        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+    };
+  });
+
+  const getCostoBusesTipoTotal = computed(() => {
+    return (cotizacionId: string): number => {
+      return busesApartados.value
+        .filter(b => b.cotizacionId === cotizacionId && (b.tipoDivision ?? 'minimo') === 'total')
+        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+    };
+  });
+
   const getPrecioAsientoCalculado = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
@@ -200,30 +231,32 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       const costoMinimo = getCostoTipoMinimo.value(cotizacionId);
       const costoCapacidad = getCostoTipoTotal.value(cotizacionId);
-      const costoHospedajes = getTotalCostoHospedajes.value(cotizacionId);
+      const costoBusesMinimo = getCostoBusesTipoMinimo.value(cotizacionId);
+      const costoBusesTotal = getCostoBusesTipoTotal.value(cotizacionId);
 
       const parteMinimo = cotizacion.asientoMinimoObjetivo > 0
-        ? costoMinimo / cotizacion.asientoMinimoObjetivo
+        ? (costoMinimo + costoBusesMinimo) / cotizacion.asientoMinimoObjetivo
         : 0;
       const parteCapacidad = cotizacion.capacidadAutobus > 0
-        ? costoCapacidad / cotizacion.capacidadAutobus
-        : 0;
-      const parteHospedaje = cotizacion.capacidadAutobus > 0
-        ? costoHospedajes / cotizacion.capacidadAutobus
+        ? (costoCapacidad + costoBusesTotal) / cotizacion.capacidadAutobus
         : 0;
 
-      if (parteMinimo === 0 && parteCapacidad === 0 && parteHospedaje === 0)
+      if (parteMinimo === 0 && parteCapacidad === 0)
         return 0;
-      return Math.ceil(parteMinimo + parteCapacidad + parteHospedaje);
+      return Math.ceil(parteMinimo + parteCapacidad);
     };
   });
 
   const getGananciaProyectada = computed(() => {
     return (cotizacionId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion)
+      if (!cotizacion || cotizacion.capacidadAutobus === 0)
         return 0;
-      return (cotizacion.capacidadAutobus - cotizacion.asientoMinimoObjetivo) * cotizacion.precioAsiento;
+      const precioAsiento = getPrecioAsientoCalculado.value(cotizacionId);
+      const costoTotal = getCostoTotal.value(cotizacionId)
+        + getTotalCostoBuses.value(cotizacionId)
+        + getTotalCostoHospedajes.value(cotizacionId);
+      return (cotizacion.capacidadAutobus * precioAsiento) - costoTotal;
     };
   });
 
@@ -368,6 +401,83 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       }
 
       return result;
+    };
+  });
+
+  const getBusesByCotizacion = computed(() => {
+    return (cotizacionId: string): CotizacionBus[] => {
+      return busesApartados.value.filter(b => b.cotizacionId === cotizacionId);
+    };
+  });
+
+  const getBusesByProveedorEnCotizacion = computed(() => {
+    return (cotizacionId: string, proveedorId: string): CotizacionBus[] => {
+      return busesApartados.value.filter(
+        b => b.cotizacionId === cotizacionId && b.proveedorId === proveedorId,
+      );
+    };
+  });
+
+  const getPagosByBus = computed(() => {
+    return (cotizacionBusId: string): PagoBus[] => {
+      return [...pagosBus.value.filter(p => p.cotizacionBusId === cotizacionBusId)]
+        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    };
+  });
+
+  const getAnticipadoBus = computed(() => {
+    return (cotizacionBusId: string): number => {
+      return pagosBus.value
+        .filter(p => p.cotizacionBusId === cotizacionBusId)
+        .reduce((sum, p) => sum + p.monto, 0);
+    };
+  });
+
+  const getSaldoPendienteBus = computed(() => {
+    return (cotizacionBusId: string): number => {
+      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+      if (!bus)
+        return 0;
+      return bus.costoTotal - getAnticipadoBus.value(cotizacionBusId);
+    };
+  });
+
+  const getSaldoTotalPendienteBuses = computed(() => {
+    return (cotizacionId: string): number => {
+      return busesApartados.value
+        .filter(b => b.cotizacionId === cotizacionId)
+        .reduce((sum, b) => sum + getSaldoPendienteBus.value(b.id), 0);
+    };
+  });
+
+  const getEstadoPagoBus = computed(() => {
+    return (cotizacionBusId: string): EstadoPagoBus => {
+      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+      if (!bus)
+        return 'pendiente';
+      const anticipado = getAnticipadoBus.value(cotizacionBusId);
+      if (anticipado <= 0)
+        return 'pendiente';
+      if (anticipado >= bus.costoTotal)
+        return 'liquidado';
+      return 'anticipo';
+    };
+  });
+
+  const getCostoPerPersonaBus = computed(() => {
+    return (cotizacionBusId: string): number => {
+      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+      if (!bus)
+        return 0;
+      const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
+      if (!cotizacion)
+        return 0;
+      const divisor = bus.tipoDivision === 'total'
+        ? cotizacion.capacidadAutobus
+        : cotizacion.asientoMinimoObjetivo;
+      if (divisor === 0)
+        return 0;
+      return bus.costoTotal / divisor;
     };
   });
 
@@ -842,6 +952,130 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
   }
 
+  // ============================================================================
+  // Autobuses Apartados Actions
+  // ============================================================================
+
+  function addBusCotizacion(data: CotizacionBusFormData): CotizacionBus | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+    if (!cotizacion)
+      return { error: 'Cotización no encontrada' };
+    if (cotizacion.estado === 'confirmada')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    const duplicado = busesApartados.value.find(
+      b => b.cotizacionId === data.cotizacionId
+        && b.proveedorId === data.proveedorId
+        && b.numeroUnidad === data.numeroUnidad,
+    );
+    if (duplicado)
+      return { error: 'Este número de unidad ya existe para este proveedor en la cotización' };
+
+    const now = new Date().toISOString();
+    const newBus: CotizacionBus = {
+      ...data,
+      id: `cot-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    busesApartados.value.push(newBus);
+    _syncPrecioToTravel(data.cotizacionId);
+    return newBus;
+  }
+
+  function updateBusCotizacion(id: string, data: Partial<CotizacionBusFormData>): CotizacionBus | undefined {
+    const index = busesApartados.value.findIndex(b => b.id === id);
+    if (index === -1)
+      return undefined;
+
+    const existing = busesApartados.value[index];
+    if (!existing)
+      return undefined;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return undefined;
+
+    const updated: CotizacionBus = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      cotizacionId: existing.cotizacionId,
+      createdAt: existing.createdAt,
+      updatedAt: new Date().toISOString(),
+    };
+
+    busesApartados.value[index] = updated;
+    _syncPrecioToTravel(existing.cotizacionId);
+    return updated;
+  }
+
+  function deleteBusCotizacion(id: string): void {
+    const bus = busesApartados.value.find(b => b.id === id);
+    if (!bus)
+      return;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return;
+
+    const cotizacionId = bus.cotizacionId;
+    busesApartados.value = busesApartados.value.filter(b => b.id !== id);
+    pagosBus.value = pagosBus.value.filter(p => p.cotizacionBusId !== id);
+    _syncPrecioToTravel(cotizacionId);
+  }
+
+  function addPagoBus(data: PagoBusFormData): PagoBus | { error: string } {
+    const bus = busesApartados.value.find(b => b.id === data.cotizacionBusId);
+    if (!bus)
+      return { error: 'Autobús no encontrado' };
+
+    const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
+    if (cotizacion?.estado === 'confirmada')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    if (data.monto <= 0)
+      return { error: 'El monto debe ser mayor a 0' };
+
+    const saldoPendiente = getSaldoPendienteBus.value(data.cotizacionBusId);
+    if (data.monto > saldoPendiente)
+      return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
+
+    const newPago: PagoBus = {
+      ...data,
+      id: `pago-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      createdAt: new Date().toISOString(),
+    };
+
+    pagosBus.value.push(newPago);
+    return newPago;
+  }
+
+  function updatePagoBus(id: string, data: Partial<PagoBusFormData>): PagoBus | undefined {
+    const index = pagosBus.value.findIndex(p => p.id === id);
+    if (index === -1)
+      return undefined;
+
+    const existing = pagosBus.value[index];
+    if (!existing)
+      return undefined;
+
+    const updated: PagoBus = {
+      ...existing,
+      ...data,
+      id: existing.id,
+      createdAt: existing.createdAt,
+    };
+
+    pagosBus.value[index] = updated;
+    return updated;
+  }
+
+  function deletePagoBus(id: string): void {
+    pagosBus.value = pagosBus.value.filter(p => p.id !== id);
+  }
+
   return {
     // State
     cotizaciones,
@@ -850,6 +1084,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     hospedajesCotizacion,
     pagosHospedaje,
     preciosPublicos,
+    busesApartados,
+    pagosBus,
     loading,
     error,
     filters,
@@ -881,6 +1117,17 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getTotalHabitacionesPorTipo,
     getPreciosPublicosByCotizacion,
     getMatrizPreciosReferencia,
+    getTotalCostoBuses,
+    getCostoBusesTipoMinimo,
+    getCostoBusesTipoTotal,
+    getSaldoTotalPendienteBuses,
+    getBusesByCotizacion,
+    getBusesByProveedorEnCotizacion,
+    getPagosByBus,
+    getAnticipadoBus,
+    getSaldoPendienteBus,
+    getEstadoPagoBus,
+    getCostoPerPersonaBus,
     // Actions
     createCotizacion,
     updateCotizacion,
@@ -904,6 +1151,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addPrecioPublico,
     updatePrecioPublico,
     deletePrecioPublico,
+    addBusCotizacion,
+    updateBusCotizacion,
+    deleteBusCotizacion,
+    addPagoBus,
+    updatePagoBus,
+    deletePagoBus,
   };
 }, {
   persist: {

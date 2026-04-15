@@ -12,14 +12,20 @@ const cotizacion = computed(() =>
   cotizacionStore.cotizaciones.find(c => c.id === cotizacionId),
 );
 
-const costoTotal = computed(() => cotizacionStore.getCostoTotal(cotizacionId));
+const costoProveedores = computed(() => cotizacionStore.getCostoTotal(cotizacionId));
 const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(cotizacionId));
 const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(cotizacionId));
 const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(cotizacionId));
-const costoTotalConHospedaje = computed(() => costoTotal.value + costoHospedajes.value);
+const costoBuses = computed(() => cotizacionStore.getTotalCostoBuses(cotizacionId));
+const costoBusesTipoMinimo = computed(() => cotizacionStore.getCostoBusesTipoMinimo(cotizacionId));
+const costoBusesTipoTotal = computed(() => cotizacionStore.getCostoBusesTipoTotal(cotizacionId));
+const costoTotal = computed(() => costoProveedores.value + costoBuses.value);
+const costoMinimoConBuses = computed(() => costoTipoMinimo.value + costoBusesTipoMinimo.value);
+const costoCapacidadConBuses = computed(() => costoTipoTotal.value + costoBusesTipoTotal.value);
 const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(cotizacionId));
 const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(cotizacionId));
 const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(cotizacionId));
+const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(cotizacionId));
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
@@ -31,26 +37,48 @@ function formatCurrency(amount: number): string {
 
 <template>
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-    <!-- Costo Total Proveedores -->
+    <!-- Costo Total (Proveedores + Buses) -->
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
           <span class="i-lucide-wallet w-4 h-4 text-error" />
-          Costo Total Proveedores
+          Costo Total
         </p>
         <p class="text-2xl font-bold text-error">
           {{ formatCurrency(costoTotal) }}
         </p>
-        <div class="flex flex-wrap gap-2 pt-1">
+        <div class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
           <span class="text-xs text-muted">
-            <span class="font-medium text-blue-500">{{ formatCurrency(costoTipoMinimo) }}</span>
+            Servicios: <span class="font-medium">{{ formatCurrency(costoProveedores) }}</span>
+          </span>
+          <span class="text-xs text-muted">
+            Buses: <span class="font-medium">{{ formatCurrency(costoBuses) }}</span>
+          </span>
+          <span class="text-xs text-muted">
+            <span class="font-medium text-blue-500">{{ formatCurrency(costoMinimoConBuses) }}</span>
             ÷ asientos mín.
           </span>
           <span class="text-xs text-muted">
-            <span class="font-medium">{{ formatCurrency(costoTipoTotal) }}</span>
+            <span class="font-medium">{{ formatCurrency(costoCapacidadConBuses) }}</span>
             ÷ cap. bus
           </span>
         </div>
+      </div>
+    </UCard>
+
+    <!-- Total Autobuses -->
+    <UCard>
+      <div class="space-y-1">
+        <p class="text-sm text-muted flex items-center gap-2">
+          <span class="i-lucide-bus w-4 h-4 text-purple-500" />
+          Total Autobuses
+        </p>
+        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
+          {{ formatCurrency(costoBuses) }}
+        </p>
+        <!-- <p class="text-xs text-muted pt-1">
+          Incluido en costo total: {{ formatCurrency(costoTotal) }}
+        </p> -->
       </div>
     </UCard>
 
@@ -64,9 +92,9 @@ function formatCurrency(amount: number): string {
         <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">
           {{ formatCurrency(costoHospedajes) }}
         </p>
-        <p class="text-xs text-muted pt-1">
+        <!-- <p class="text-xs text-muted pt-1">
           Costo Total: {{ formatCurrency(costoTotalConHospedaje) }}
-        </p>
+        </p> -->
       </div>
     </UCard>
 
@@ -80,6 +108,19 @@ function formatCurrency(amount: number): string {
         <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
           {{ formatCurrency(cotizacion?.precioAsiento ?? 0) }}
         </p>
+        <div class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
+          <span class="text-xs text-muted">
+            Servicios: <span class="font-medium">{{ formatCurrency(costoMinimoConBuses) }}</span>
+            ÷ asientos mín.
+          </span>
+          <span class="text-xs text-muted">
+            Buses: <span class="font-medium">{{ formatCurrency(costoCapacidadConBuses) }}</span>
+            ÷ cap. bus
+          </span>
+          <span class="text-xs text-muted italic">
+            Hospedaje no incluido
+          </span>
+        </div>
       </div>
     </UCard>
 
@@ -108,6 +149,9 @@ function formatCurrency(amount: number): string {
         </p>
         <p class="text-2xl font-bold text-success">
           {{ formatCurrency(gananciaProyectada) }}
+        </p>
+        <p class="text-xs text-muted pt-1">
+          ({{ cotizacion?.capacidadAutobus ?? 0 }} asientos × {{ formatCurrency(cotizacion?.precioAsiento ?? 0) }}) − costo total
         </p>
       </div>
     </UCard>
@@ -159,6 +203,25 @@ function formatCurrency(amount: number): string {
           :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
         >
           {{ formatCurrency(saldoPendienteHospedajes) }}
+        </p>
+      </div>
+    </UCard>
+
+    <!-- Saldo Pendiente Autobuses -->
+    <UCard>
+      <div class="space-y-1">
+        <p class="text-sm text-muted flex items-center gap-2">
+          <span
+            class="i-lucide-bus w-4 h-4"
+            :class="saldoPendienteBuses > 0 ? 'text-warning' : 'text-success'"
+          />
+          Saldo Pendiente Autobuses
+        </p>
+        <p
+          class="text-2xl font-bold"
+          :class="saldoPendienteBuses > 0 ? 'text-warning' : 'text-success'"
+        >
+          {{ formatCurrency(saldoPendienteBuses) }}
         </p>
       </div>
     </UCard>

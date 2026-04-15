@@ -101,6 +101,48 @@ export type CotizacionHospedajeDetalleFormData = Omit<CotizacionHospedajeDetalle
 };
 
 // ============================================================================
+// Autobuses Apartados Types
+// ============================================================================
+
+export type CotizacionBusEstado = 'apartado' | 'confirmado' | 'pendiente';
+
+export type CotizacionBus = {
+  id: string;
+  cotizacionId: string;
+  proveedorId: string; // FK a Provider (agencia-autobus)
+  numeroUnidad: string;
+  capacidad: number;
+  estado: CotizacionBusEstado;
+  costoTotal: number;
+  tipoDivision: TipoDivisionCosto;
+  metodoPago: PaymentType;
+  observaciones?: string;
+  confirmado: boolean;
+  notas?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type CotizacionBusFormData = Omit<CotizacionBus, 'id' | 'createdAt' | 'updatedAt'> & {
+  id?: string;
+};
+
+export type EstadoPagoBus = 'pendiente' | 'anticipo' | 'liquidado';
+
+export type PagoBus = {
+  id: string;
+  cotizacionBusId: string;
+  monto: number;
+  fechaPago: string;
+  tipoPago: PaymentType;
+  concepto?: string;
+  notas?: string;
+  createdAt: string;
+};
+
+export type PagoBusFormData = Omit<PagoBus, 'id' | 'createdAt'> & { id?: string };
+
+// ============================================================================
 // Precio al Público Types
 // ============================================================================
 

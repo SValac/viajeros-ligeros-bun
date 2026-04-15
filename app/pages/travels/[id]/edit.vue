@@ -87,22 +87,6 @@ function handleCancel() {
         @cancel="handleCancel"
       />
     </UCard>
-
-    <!-- Autobuses -->
-    <UCard class="mt-6">
-      <template #header>
-        <div class="flex items-center gap-2">
-          <span class="i-lucide-bus w-5 h-5" />
-          <h2 class="font-semibold">
-            Autobuses
-          </h2>
-        </div>
-      </template>
-      <TravelBusList
-        :travel-id="travelId"
-        :editable="true"
-      />
-    </UCard>
   </div>
 
   <!-- Loading state mientras se verifica el viaje -->
