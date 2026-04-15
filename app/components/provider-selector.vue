@@ -3,9 +3,10 @@ import type { ProviderCategory, ProviderFormData } from '~/types/provider';
 
 type Props = {
   modelValue?: string;
+  excludeCategories?: ProviderCategory[];
 };
 
-const { modelValue } = defineProps<Props>();
+const { modelValue, excludeCategories = [] } = defineProps<Props>();
 
 const emit = defineEmits<{
   'update:modelValue': [value: string | undefined];
@@ -21,7 +22,7 @@ const selectedCategory = ref<ProviderCategory | undefined>(undefined);
 const selectedProviderId = ref(modelValue);
 
 // Opciones de categoría
-const categoryOptions = [
+const allCategoryOptions = [
   { value: 'guias', label: 'Guías', icon: 'i-lucide-user-search' },
   { value: 'transporte', label: 'Transporte', icon: 'i-lucide-car' },
   { value: 'hospedaje', label: 'Hospedaje', icon: 'i-lucide-hotel' },
@@ -29,6 +30,12 @@ const categoryOptions = [
   { value: 'comidas', label: 'Comidas', icon: 'i-lucide-utensils' },
   { value: 'otros', label: 'Otros', icon: 'i-lucide-package' },
 ];
+
+const categoryOptions = computed(() =>
+  excludeCategories.length
+    ? allCategoryOptions.filter(opt => !excludeCategories.includes(opt.value as ProviderCategory))
+    : allCategoryOptions,
+);
 
 // Computed - Proveedores disponibles filtrados por categoría
 const availableProviders = computed(() => {

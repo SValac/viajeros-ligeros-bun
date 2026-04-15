@@ -75,7 +75,10 @@ function onSubmit() {
       name="providerId"
       required
     >
-      <ProviderSelector v-model="state.providerId" />
+      <ProviderSelector
+        v-model="state.providerId"
+        :exclude-categories="['hospedaje', 'agencias-autobus']"
+      />
     </UFormField>
 
     <!-- Descripción del Servicio -->
