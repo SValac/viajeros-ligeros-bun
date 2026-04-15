@@ -67,7 +67,7 @@ const state = ref<Schema>({
 const travelOptions = computed(() =>
   availableTravels.map(t => ({
     value: t.id,
-    label: `${t.destino} — ${t.cliente} (${t.fechaInicio})`,
+    label: `${t.destino} (${t.fechaInicio})`,
   })),
 );
 

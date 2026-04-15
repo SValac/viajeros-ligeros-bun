@@ -4,6 +4,7 @@ const router = useRouter();
 const toast = useToast();
 const travelsStore = useTravelsStore();
 const cotizacionStore = useCotizacionStore();
+const coordinatorStore = useCoordinatorStore();
 
 // Get travel ID from route params
 const travelId = computed(() => route.params.id as string);
@@ -16,6 +17,11 @@ const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId
 const preciosPublicos = computed(() =>
   cotizacion.value ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.value.id) : [],
 );
+
+const coordinadoresDelViaje = computed(() => {
+  const ids = travel.value?.coordinadorIds ?? [];
+  return ids.map(id => coordinatorStore.getCoordinatorById(id)).filter(Boolean);
+});
 
 // Redirect to dashboard if travel not found
 watchEffect(() => {
@@ -208,11 +214,21 @@ definePageMeta({
             <div class="grid grid-cols-3 gap-4 pt-4 border-t border-default">
               <div>
                 <div class="text-sm text-muted mb-1">
-                  Cliente
+                  Coordinadores
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="i-lucide-user w-4 h-4 text-muted" />
-                  <span class="font-medium">{{ travel.cliente }}</span>
+                <div class="flex flex-col gap-1">
+                  <div
+                    v-for="c in coordinadoresDelViaje"
+                    :key="c!.id"
+                    class="flex items-center gap-2"
+                  >
+                    <span class="i-lucide-user-star w-4 h-4 text-muted shrink-0" />
+                    <span class="font-medium">{{ c!.nombre }}</span>
+                  </div>
+                  <span
+                    v-if="coordinadoresDelViaje.length === 0"
+                    class="text-sm text-muted"
+                  >Sin coordinador</span>
                 </div>
               </div>
 

@@ -18,8 +18,9 @@ const items: NavigationMenuItem[][] = [[{
   icon: 'i-lucide-credit-card',
   to: { name: 'payments-index' },
 }, {
-  label: 'Contactos',
-  icon: 'i-lucide-users',
+  label: 'Coordinadores',
+  icon: 'i-lucide-user-star',
+  to: { name: 'coordinators-index' },
 }, {
   label: 'Proveedores',
   icon: 'i-lucide-handshake',
