@@ -113,6 +113,11 @@ export type CotizacionBus = {
   numeroUnidad: string;
   capacidad: number;
   estado: CotizacionBusEstado;
+  costoTotal: number;
+  tipoDivision: TipoDivisionCosto;
+  metodoPago: PaymentType;
+  observaciones?: string;
+  confirmado: boolean;
   notas?: string;
   createdAt: string;
   updatedAt: string;
@@ -121,6 +126,21 @@ export type CotizacionBus = {
 export type CotizacionBusFormData = Omit<CotizacionBus, 'id' | 'createdAt' | 'updatedAt'> & {
   id?: string;
 };
+
+export type EstadoPagoBus = 'pendiente' | 'anticipo' | 'liquidado';
+
+export type PagoBus = {
+  id: string;
+  cotizacionBusId: string;
+  monto: number;
+  fechaPago: string;
+  tipoPago: PaymentType;
+  concepto?: string;
+  notas?: string;
+  createdAt: string;
+};
+
+export type PagoBusFormData = Omit<PagoBus, 'id' | 'createdAt'> & { id?: string };
 
 // ============================================================================
 // Precio al Público Types

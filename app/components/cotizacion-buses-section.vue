@@ -1,9 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
-
-import { h } from 'vue';
-
-import type { CotizacionBus, CotizacionBusEstado } from '~/types/cotizacion';
+import type { CotizacionBus, EstadoPagoBus } from '~/types/cotizacion';
 
 type Props = {
   cotizacionId: string;
@@ -14,9 +10,7 @@ type Emits = {
   (e: 'agregarBus'): void;
 };
 
-const props = withDefaults(defineProps<Props>(), {
-  readonly: false,
-});
+const { cotizacionId, readonly = false } = defineProps<Props>();
 
 defineEmits<Emits>();
 
@@ -24,41 +18,109 @@ const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const toast = useToast();
 
-const buses = computed(() => cotizacionStore.getBusesByCotizacion(props.cotizacionId));
+const buses = computed(() => cotizacionStore.getBusesByCotizacion(cotizacionId));
 
-// Modal edición
-const isEditModalOpen = ref(false);
-const editingBus = ref<CotizacionBus | null>(null);
-const editFormState = reactive({
-  numeroUnidad: '',
-  capacidad: 44,
-  estado: 'apartado' as CotizacionBusEstado,
-  notas: '',
-});
+// Modal state
+const isDetallesFormOpen = shallowRef(false);
+const isHistorialOpen = shallowRef(false);
+const isDeleteModalOpen = shallowRef(false);
+const selectedBus = shallowRef<CotizacionBus | null>(null);
 
-function getNombreProveedor(proveedorId: string): string {
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+}
+
+function getNombreAgencia(proveedorId: string): string {
   return providerStore.getProviderById(proveedorId)?.nombre ?? 'Desconocido';
 }
 
-const estadoBadge: Record<CotizacionBusEstado, { label: string; color: 'success' | 'info' | 'warning' }> = {
-  confirmado: { label: 'Confirmado', color: 'success' },
-  apartado: { label: 'Apartado', color: 'info' },
-  pendiente: { label: 'Pendiente', color: 'warning' },
-};
+function getEstadoPagoColor(estado: EstadoPagoBus): 'warning' | 'info' | 'success' {
+  if (estado === 'pendiente')
+    return 'warning';
+  if (estado === 'anticipo')
+    return 'info';
+  return 'success';
+}
 
-const estadoOptions = [
-  { label: 'Apartado', value: 'apartado' },
-  { label: 'Confirmado', value: 'confirmado' },
-  { label: 'Pendiente', value: 'pendiente' },
-];
+function getEstadoPagoLabel(estado: EstadoPagoBus): string {
+  if (estado === 'pendiente')
+    return 'Pendiente';
+  if (estado === 'anticipo')
+    return 'Anticipo';
+  return 'Liquidado';
+}
 
-function getRowActions(bus: CotizacionBus) {
+function openHistorial(bus: CotizacionBus) {
+  selectedBus.value = bus;
+  isHistorialOpen.value = true;
+}
+
+function openDetalles(bus: CotizacionBus) {
+  selectedBus.value = bus;
+  isDetallesFormOpen.value = true;
+}
+
+function openDeleteConfirm(bus: CotizacionBus) {
+  selectedBus.value = bus;
+  isDeleteModalOpen.value = true;
+}
+
+function handleToggleConfirmado(bus: CotizacionBus) {
+  if (readonly)
+    return;
+  cotizacionStore.updateBusCotizacion(bus.id, { confirmado: !bus.confirmado });
+}
+
+function handleDetallesSubmit(data: Partial<import('~/types/cotizacion').CotizacionBusFormData>) {
+  if (!selectedBus.value)
+    return;
+  const result = cotizacionStore.updateBusCotizacion(selectedBus.value.id, data);
+  if (result) {
+    toast.add({ title: 'Autobús actualizado', color: 'success' });
+  }
+  isDetallesFormOpen.value = false;
+  selectedBus.value = null;
+}
+
+function confirmDelete() {
+  if (!selectedBus.value)
+    return;
+  cotizacionStore.deleteBusCotizacion(selectedBus.value.id);
+  toast.add({ title: 'Autobús eliminado', color: 'warning' });
+  isDeleteModalOpen.value = false;
+  selectedBus.value = null;
+}
+
+function getBusActions(bus: CotizacionBus) {
+  const readActions = [
+    {
+      label: 'Ver historial de pagos',
+      icon: 'i-lucide-receipt',
+      onSelect: () => openHistorial(bus),
+    },
+  ];
+
+  if (readonly)
+    return [readActions];
+
   return [
+    readActions,
     [
       {
-        label: 'Editar',
+        label: 'Registrar pago',
+        icon: 'i-lucide-banknote',
+        disabled: cotizacionStore.getSaldoPendienteBus(bus.id) <= 0,
+        onSelect: () => openHistorial(bus),
+      },
+      {
+        label: 'Editar detalles',
         icon: 'i-lucide-pencil',
-        onSelect: () => abrirEdicion(bus),
+        onSelect: () => openDetalles(bus),
+      },
+      {
+        label: bus.confirmado ? 'Marcar sin confirmar' : 'Marcar como confirmado',
+        icon: bus.confirmado ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
+        onSelect: () => handleToggleConfirmado(bus),
       },
     ],
     [
@@ -66,110 +128,10 @@ function getRowActions(bus: CotizacionBus) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => eliminarBus(bus.id),
+        onSelect: () => openDeleteConfirm(bus),
       },
     ],
   ];
-}
-
-const columns = computed<TableColumn<CotizacionBus>[]>(() => {
-  const cols: TableColumn<CotizacionBus>[] = [
-    {
-      accessorKey: 'proveedorId',
-      header: 'Agencia',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, getNombreProveedor(row.original.proveedorId)),
-    },
-    {
-      accessorKey: 'numeroUnidad',
-      header: 'Número de Unidad',
-      cell: ({ row }) => h('span', { class: 'font-mono font-medium' }, row.original.numeroUnidad),
-    },
-    {
-      accessorKey: 'capacidad',
-      header: 'Capacidad',
-      cell: ({ row }) => h('span', {}, `${row.original.capacidad} asientos`),
-    },
-    {
-      accessorKey: 'estado',
-      header: 'Estado',
-      cell: ({ row }) => {
-        const badge = estadoBadge[row.original.estado];
-        return h(resolveComponent('UBadge'), {
-          label: badge.label,
-          color: badge.color,
-          variant: 'subtle',
-          size: 'xs',
-        });
-      },
-    },
-    {
-      accessorKey: 'notas',
-      header: 'Notas',
-      cell: ({ row }) => h('span', { class: 'text-muted text-sm' }, row.original.notas ?? '—'),
-    },
-  ];
-
-  if (!props.readonly) {
-    cols.push({
-      id: 'actions',
-      header: 'Acciones',
-      cell: ({ row }) =>
-        h(resolveComponent('UDropdownMenu'), {
-          items: getRowActions(row.original),
-        }, () => h(resolveComponent('UButton'), {
-          color: 'neutral',
-          variant: 'ghost',
-          icon: 'i-lucide-more-vertical',
-          size: 'xs',
-        })),
-    });
-  }
-
-  return cols;
-});
-
-function abrirEdicion(bus: CotizacionBus) {
-  editingBus.value = bus;
-  editFormState.numeroUnidad = bus.numeroUnidad;
-  editFormState.capacidad = bus.capacidad;
-  editFormState.estado = bus.estado;
-  editFormState.notas = bus.notas ?? '';
-  isEditModalOpen.value = true;
-}
-
-function guardarEdicion() {
-  if (!editingBus.value)
-    return;
-
-  if (!editFormState.numeroUnidad.trim()) {
-    toast.add({ title: 'Error', description: 'El número de unidad es requerido', color: 'error' });
-    return;
-  }
-  if (editFormState.capacidad <= 0) {
-    toast.add({ title: 'Error', description: 'La capacidad debe ser mayor a 0', color: 'error' });
-    return;
-  }
-
-  const updated = cotizacionStore.updateBusCotizacion(editingBus.value.id, {
-    numeroUnidad: editFormState.numeroUnidad.trim(),
-    capacidad: editFormState.capacidad,
-    estado: editFormState.estado,
-    notas: editFormState.notas || undefined,
-  });
-
-  if (!updated) {
-    toast.add({ title: 'Error', description: 'No se pudo actualizar el autobús', color: 'error' });
-    return;
-  }
-
-  toast.add({ title: 'Autobús actualizado', color: 'success' });
-  isEditModalOpen.value = false;
-  editingBus.value = null;
-}
-
-function eliminarBus(id: string) {
-  cotizacionStore.deleteBusCotizacion(id);
-  toast.add({ title: 'Autobús eliminado', color: 'success' });
 }
 </script>
 
@@ -192,80 +154,215 @@ function eliminarBus(id: string) {
     </template>
 
     <!-- Tabla -->
-    <UTable
-      v-if="buses.length > 0"
-      :data="buses"
-      :columns="columns"
-    />
+    <div v-if="buses.length > 0" class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-default text-left text-muted">
+            <th class="pb-2 pr-4 font-medium">
+              Agencia
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Unidad
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Asientos
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              División
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo Total
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo/persona
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pagado
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pendiente
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Método
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Estado Pago
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Confirmado
+            </th>
+            <th class="pb-2 font-medium">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="bus in buses"
+            :key="bus.id"
+            class="border-b border-default/50 hover:bg-elevated/50"
+          >
+            <td class="py-3 pr-4 font-medium">
+              {{ getNombreAgencia(bus.proveedorId) }}
+            </td>
+            <td class="py-3 pr-4 font-mono">
+              {{ bus.numeroUnidad }}
+            </td>
+            <td class="py-3 pr-4">
+              {{ bus.capacidad }}
+            </td>
 
-    <!-- Empty state -->
-    <div v-else class="text-center py-8 text-muted">
-      <span class="i-lucide-inbox w-8 h-8 mx-auto mb-2 block opacity-50" />
-      <p class="text-sm">
-        No hay autobuses apartados
-      </p>
+            <!-- División -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="(bus.tipoDivision ?? 'minimo') === 'minimo' ? 'Asientos min.' : 'Cap. bus'"
+                :color="(bus.tipoDivision ?? 'minimo') === 'minimo' ? 'info' : 'neutral'"
+                variant="subtle"
+                size="xs"
+              />
+            </td>
+
+            <!-- Costo Total -->
+            <td class="py-3 pr-4 font-medium">
+              {{ formatCurrency(bus.costoTotal ?? 0) }}
+            </td>
+
+            <!-- Costo/persona -->
+            <td class="py-3 pr-4">
+              {{ formatCurrency(cotizacionStore.getCostoPerPersonaBus(bus.id)) }}
+            </td>
+
+            <!-- Pagado -->
+            <td class="py-3 pr-4 text-success">
+              {{ formatCurrency(cotizacionStore.getAnticipadoBus(bus.id)) }}
+            </td>
+
+            <!-- Pendiente -->
+            <td class="py-3 pr-4">
+              <span :class="cotizacionStore.getSaldoPendienteBus(bus.id) > 0 ? 'text-warning' : 'text-success'">
+                {{ formatCurrency(cotizacionStore.getSaldoPendienteBus(bus.id)) }}
+              </span>
+            </td>
+
+            <!-- Método -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="bus.metodoPago === 'cash' ? 'Efectivo' : 'Transferencia'"
+                :color="bus.metodoPago === 'cash' ? 'success' : 'info'"
+                variant="subtle"
+                size="xs"
+              />
+            </td>
+
+            <!-- Estado Pago -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="getEstadoPagoLabel(cotizacionStore.getEstadoPagoBus(bus.id))"
+                :color="getEstadoPagoColor(cotizacionStore.getEstadoPagoBus(bus.id))"
+                variant="subtle"
+                size="xs"
+              />
+            </td>
+
+            <!-- Confirmado -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="bus.confirmado ? 'Sí' : 'No'"
+                :color="bus.confirmado ? 'success' : 'neutral'"
+                variant="subtle"
+                size="xs"
+              />
+            </td>
+
+            <!-- Acciones -->
+            <td class="py-3">
+              <UDropdownMenu :items="getBusActions(bus)">
+                <UButton
+                  icon="i-lucide-more-vertical"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                />
+              </UDropdownMenu>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
-    <!-- Modal edición -->
-    <UModal
-      v-model:open="isEditModalOpen"
-      title="Editar Autobús"
-      class="sm:max-w-md"
-    >
-      <template #body>
-        <div v-if="editingBus" class="space-y-4">
-          <div>
-            <label class="text-sm font-medium block mb-2">Agencia</label>
-            <div class="bg-muted/20 rounded px-4 py-2 text-sm">
-              {{ getNombreProveedor(editingBus.proveedorId) }}
-            </div>
-          </div>
-
-          <UFormField label="Número de Unidad" required>
-            <UInput
-              v-model="editFormState.numeroUnidad"
-              placeholder="Ej. BUS-001"
-            />
-          </UFormField>
-
-          <UFormField label="Capacidad (asientos)" required>
-            <UInput
-              v-model.number="editFormState.capacidad"
-              type="number"
-              min="1"
-              placeholder="Ej. 44"
-            />
-          </UFormField>
-
-          <UFormField label="Estado">
-            <USelect
-              v-model="editFormState.estado"
-              :items="estadoOptions"
-            />
-          </UFormField>
-
-          <UFormField label="Notas">
-            <UTextarea
-              v-model="editFormState.notas"
-              placeholder="Observaciones..."
-              :rows="2"
-            />
-          </UFormField>
-
-          <div class="flex justify-end gap-3 pt-2">
-            <UButton
-              variant="ghost"
-              color="neutral"
-              label="Cancelar"
-              @click="isEditModalOpen = false"
-            />
-            <UButton
-              label="Guardar"
-              @click="guardarEdicion"
-            />
-          </div>
-        </div>
-      </template>
-    </UModal>
+    <!-- Empty state -->
+    <div v-else class="py-10 text-center bg-elevated/50 rounded-lg">
+      <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-2 block" />
+      <p class="text-muted">
+        No hay autobuses apartados en esta cotización
+      </p>
+      <UButton
+        v-if="!readonly"
+        variant="ghost"
+        size="sm"
+        label="Agregar primer autobús"
+        class="mt-2"
+        @click="$emit('agregarBus')"
+      />
+    </div>
   </UCard>
+
+  <!-- Slideover: historial de pagos -->
+  <USlideover
+    v-model:open="isHistorialOpen"
+    :title="selectedBus ? `Pagos — ${selectedBus.numeroUnidad}` : 'Historial de Pagos'"
+    description="Registro de pagos realizados a la agencia"
+    side="right"
+  >
+    <template #body>
+      <div class="p-4">
+        <PagoBusHistorial
+          v-if="selectedBus"
+          :cotizacion-bus-id="selectedBus.id"
+          :bus-label="selectedBus.numeroUnidad"
+          :readonly="readonly"
+        />
+      </div>
+    </template>
+  </USlideover>
+
+  <!-- Modal: editar detalles financieros -->
+  <UModal
+    v-model:open="isDetallesFormOpen"
+    title="Detalles de Cotización"
+    description="Actualiza los datos financieros del autobús"
+    class="sm:max-w-lg"
+  >
+    <template #body>
+      <CotizacionBusCotizacionForm
+        v-if="selectedBus"
+        :bus="selectedBus"
+        @submit="handleDetallesSubmit"
+        @cancel="isDetallesFormOpen = false"
+      />
+    </template>
+  </UModal>
+
+  <!-- Modal: confirmar eliminación -->
+  <UModal
+    v-model:open="isDeleteModalOpen"
+    title="Eliminar Autobús"
+    description="¿Estás seguro? Se eliminarán también todos los pagos asociados."
+  >
+    <template #footer>
+      <div class="flex justify-end gap-3">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          label="Cancelar"
+          @click="isDeleteModalOpen = false"
+        />
+        <UButton
+          color="error"
+          label="Eliminar"
+          @click="confirmDelete"
+        />
+      </div>
+    </template>
+  </UModal>
 </template>

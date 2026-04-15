@@ -2,7 +2,7 @@
 import { z } from 'zod';
 
 import type { Bus } from '~/types/bus';
-import type { CotizacionBusEstado } from '~/types/cotizacion';
+import type { CotizacionBusEstado, TipoDivisionCosto } from '~/types/cotizacion';
 
 type Props = {
   cotizacionId: string;
@@ -31,17 +31,32 @@ const agenciasSelectItems = computed(() =>
   agenciasDisponibles.value.map(p => ({ value: p.id, label: p.nombre })),
 );
 
-const estadoOptions = [
+const estadoOptions: { label: string; value: CotizacionBusEstado }[] = [
   { label: 'Apartado', value: 'apartado' },
   { label: 'Confirmado', value: 'confirmado' },
   { label: 'Pendiente', value: 'pendiente' },
 ];
 
+const metodoPagoOptions = [
+  { label: 'Efectivo', value: 'cash' },
+  { label: 'Transferencia', value: 'transfer' },
+];
+
+const tipoDivisionOptions: { label: string; value: TipoDivisionCosto }[] = [
+  { label: 'Asientos mínimos objetivo', value: 'minimo' },
+  { label: 'Capacidad total del bus', value: 'total' },
+];
+
 const busSchema = z.object({
   proveedorId: z.string({ message: 'Selecciona una agencia' }).min(1, 'Selecciona una agencia'),
-  numeroUnidad: z.string({ message: 'Número de unidad es requerido' }).min(1, 'Número de unidad es requerido').max(50),
+  numeroUnidad: z.string({ message: 'Número de unidad es requerido' }).min(1).max(50),
   capacidad: z.number({ message: 'Ingresa la capacidad' }).int().positive('Debe ser mayor a 0'),
   estado: z.enum(['apartado', 'confirmado', 'pendiente']),
+  costoTotal: z.number({ message: 'Ingresa el costo total' }).positive('El costo debe ser mayor a 0'),
+  tipoDivision: z.enum(['minimo', 'total']),
+  metodoPago: z.enum(['cash', 'transfer']),
+  observaciones: z.string().max(500).optional(),
+  confirmado: z.boolean(),
   notas: z.string().max(500).optional(),
 });
 
@@ -51,7 +66,12 @@ const formState = reactive<Partial<BusSchema>>({
   proveedorId: '',
   numeroUnidad: '',
   capacidad: undefined,
-  estado: 'apartado' as CotizacionBusEstado,
+  estado: 'apartado',
+  costoTotal: undefined,
+  tipoDivision: 'minimo',
+  metodoPago: 'cash',
+  observaciones: '',
+  confirmado: false,
   notas: '',
 });
 
@@ -73,10 +93,13 @@ watch(() => formState.proveedorId, () => {
 
 function seleccionarUnidad(bus: Bus) {
   busSeleccionado.value = bus;
-  // Construir numeroUnidad a partir del catálogo
   const partes = [bus.marca, bus.modelo, bus.año ? `(${bus.año})` : null].filter(Boolean);
   formState.numeroUnidad = partes.length > 0 ? partes.join(' ') : `Unidad ${bus.id.slice(-6)}`;
   formState.capacidad = bus.cantidadAsientos;
+  // Pre-llenar costo con precio de renta del catálogo si existe
+  if (bus.precioRenta && !formState.costoTotal) {
+    formState.costoTotal = bus.precioRenta;
+  }
 }
 
 function deseleccionarUnidad() {
@@ -95,6 +118,11 @@ function resetForm() {
   formState.numeroUnidad = '';
   formState.capacidad = undefined;
   formState.estado = 'apartado';
+  formState.costoTotal = undefined;
+  formState.tipoDivision = 'minimo';
+  formState.metodoPago = 'cash';
+  formState.observaciones = '';
+  formState.confirmado = false;
   formState.notas = '';
   busSeleccionado.value = null;
 }
@@ -114,6 +142,7 @@ function handleSubmit() {
     cotizacionId: props.cotizacionId,
     ...result.data,
     notas: result.data.notas || undefined,
+    observaciones: result.data.observaciones || undefined,
   });
 
   if ('error' in response) {
@@ -165,14 +194,13 @@ function handleCancel() {
           <div class="space-y-3">
             <label class="text-sm font-medium">Unidad <span class="text-error">*</span></label>
 
-            <!-- Sin unidades registradas -->
+            <!-- Sin unidades -->
             <UAlert
               v-if="unidadesAgencia.length === 0"
               icon="i-lucide-bus-front"
               color="warning"
               variant="subtle"
               title="Esta agencia no tiene unidades registradas"
-              description="Agrega las unidades desde el perfil de la agencia antes de continuar."
             >
               <template #description>
                 <p class="text-sm mt-1">
@@ -195,7 +223,7 @@ function handleCancel() {
               <!-- Unidad seleccionada -->
               <div
                 v-if="busSeleccionado"
-                class="border border-primary rounded-lg p-4 bg-primary/5 space-y-2"
+                class="border border-primary rounded-lg p-4 bg-primary/5"
               >
                 <div class="flex items-start justify-between gap-2">
                   <div>
@@ -246,40 +274,55 @@ function handleCancel() {
           </div>
         </template>
 
-        <!-- Campos adicionales (visibles solo cuando hay unidad seleccionada) -->
+        <!-- Campos visibles después de seleccionar unidad -->
         <template v-if="busSeleccionado">
-          <!-- Número de unidad (editable) -->
+          <USeparator label="Identificación" />
+
           <UFormField label="Identificador de la Unidad" required>
-            <UInput
-              v-model="formState.numeroUnidad"
-              placeholder="Ej. BUS-001 o Marca Modelo"
-            />
+            <UInput v-model="formState.numeroUnidad" placeholder="Ej. BUS-001 o Marca Modelo" />
           </UFormField>
 
-          <!-- Capacidad (editable, pre-llenada) -->
-          <UFormField label="Capacidad (asientos)" required>
+          <div class="grid grid-cols-2 gap-4">
+            <UFormField label="Capacidad (asientos)" required>
+              <UInput
+                v-model.number="formState.capacidad"
+                type="number"
+                min="1"
+              />
+            </UFormField>
+            <UFormField label="Estado">
+              <USelect v-model="formState.estado" :items="estadoOptions" />
+            </UFormField>
+          </div>
+
+          <USeparator label="Cotización" />
+
+          <UFormField label="Costo Total" required>
             <UInput
-              v-model.number="formState.capacidad"
+              v-model.number="formState.costoTotal"
               type="number"
-              min="1"
+              placeholder="0.00"
             />
           </UFormField>
 
-          <!-- Estado -->
-          <UFormField label="Estado">
-            <USelect
-              v-model="formState.estado"
-              :items="estadoOptions"
-            />
+          <UFormField label="Dividir entre" required>
+            <USelect v-model="formState.tipoDivision" :items="tipoDivisionOptions" />
           </UFormField>
 
-          <!-- Notas -->
-          <UFormField label="Notas">
+          <UFormField label="Método de Pago" required>
+            <USelect v-model="formState.metodoPago" :items="metodoPagoOptions" />
+          </UFormField>
+
+          <UFormField label="Observaciones">
             <UTextarea
-              v-model="formState.notas"
-              placeholder="Observaciones sobre este autobús..."
+              v-model="formState.observaciones"
+              placeholder="Notas sobre el servicio..."
               :rows="2"
             />
+          </UFormField>
+
+          <UFormField name="confirmado">
+            <UCheckbox v-model="formState.confirmado" label="Servicio confirmado por el proveedor" />
           </UFormField>
         </template>
 
