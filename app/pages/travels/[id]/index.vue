@@ -260,11 +260,12 @@ definePageMeta({
         </template>
 
         <!-- Dates Section -->
-        <div class="mb-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span class="i-lucide-calendar-days w-5 h-5" />
-            Fechas del Viaje
-          </h2>
+        <section id="dates" class="mb-6">
+          <TheSeparator
+            size="lg"
+            text="Fechas del Viaje"
+            icon="i-lucide-calendar-days"
+          />
           <div class="grid grid-cols-2 gap-4">
             <div class="p-4 bg-elevated rounded-lg">
               <div class="text-sm text-muted mb-1">
@@ -283,14 +284,15 @@ definePageMeta({
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Precios al Público Section -->
-        <div class="mb-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span class="i-lucide-tag w-5 h-5" />
-            Precios al Público
-          </h2>
+        <!-- Public Prices Section -->
+        <section id="public-prices">
+          <TheSeparator
+            size="lg"
+            text="Precios al Público"
+            icon="i-lucide-tag"
+          />
           <template v-if="preciosPublicos.length > 0">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div
@@ -355,142 +357,111 @@ definePageMeta({
               para que aparezcan aquí.
             </p>
           </div>
-        </div>
+        </section>
 
         <!-- Itinerary Section -->
-        <div v-if="travel.itinerario.length > 0" class="mb-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span class="i-lucide-route w-5 h-5" />
-            Itinerario
-          </h2>
+        <section id="itinerary">
+          <TheSeparator
+            size="xl"
+            text="Itinerario"
+            icon="i-lucide-route"
+          />
+          <div v-if="travel.itinerario.length > 0" class="mb-6">
+            <div class="space-y-4">
+              <div
+                v-for="(activity, index) in travel.itinerario"
+                :key="activity.id"
+                class="relative pl-8"
+              >
+                <!-- Timeline dot and line -->
+                <div class="absolute left-0 top-0 flex flex-col items-center">
+                  <div class="w-4 h-4 rounded-full bg-primary border-2 border-background" />
+                  <div
+                    v-if="index < travel.itinerario.length - 1"
+                    class="w-0.5 h-full bg-default mt-1"
+                  />
+                </div>
 
-          <div class="space-y-4">
-            <div
-              v-for="(activity, index) in travel.itinerario"
-              :key="activity.id"
-              class="relative pl-8"
-            >
-              <!-- Timeline dot and line -->
-              <div class="absolute left-0 top-0 flex flex-col items-center">
-                <div class="w-4 h-4 rounded-full bg-primary border-2 border-background" />
-                <div
-                  v-if="index < travel.itinerario.length - 1"
-                  class="w-0.5 h-full bg-default mt-1"
-                />
-              </div>
-
-              <!-- Activity Card -->
-              <UCard class="mb-2">
-                <div class="flex items-start justify-between gap-4">
-                  <div class="flex-1">
-                    <div class="flex items-center gap-2 mb-2">
-                      <UBadge color="primary" variant="subtle">
-                        Día {{ activity.dia }}
-                      </UBadge>
-                      <span v-if="activity.hora" class="text-sm text-muted flex items-center gap-1">
-                        <span class="i-lucide-clock w-3 h-3" />
-                        {{ activity.hora }}
-                      </span>
-                    </div>
-                    <h3 class="font-semibold text-lg mb-1">
-                      {{ activity.titulo }}
-                    </h3>
-                    <p class="text-muted text-sm mb-2">
-                      {{ activity.descripcion }}
-                    </p>
-                    <div v-if="activity.ubicacion" class="flex items-center gap-1 text-sm text-muted">
-                      <span class="i-lucide-map-pin w-3 h-3" />
-                      {{ activity.ubicacion }}
+                <!-- Activity Card -->
+                <UCard class="mb-2">
+                  <div class="flex items-start justify-between gap-4">
+                    <div class="flex-1">
+                      <div class="flex items-center gap-2 mb-2">
+                        <UBadge color="primary" variant="subtle">
+                          Día {{ activity.dia }}
+                        </UBadge>
+                        <span v-if="activity.hora" class="text-sm text-muted flex items-center gap-1">
+                          <span class="i-lucide-clock w-3 h-3" />
+                          {{ activity.hora }}
+                        </span>
+                      </div>
+                      <h3 class="font-semibold text-lg mb-1">
+                        {{ activity.titulo }}
+                      </h3>
+                      <p class="text-muted text-sm mb-2">
+                        {{ activity.descripcion }}
+                      </p>
+                      <div v-if="activity.ubicacion" class="flex items-center gap-1 text-sm text-muted">
+                        <span class="i-lucide-map-pin w-3 h-3" />
+                        {{ activity.ubicacion }}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </UCard>
+                </UCard>
+              </div>
             </div>
           </div>
-        </div>
-
-        <div v-else class="mb-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span class="i-lucide-route w-5 h-5" />
-            Itinerario
-          </h2>
-          <div class="p-8 text-center bg-elevated rounded-lg">
-            <span class="i-lucide-calendar-x w-12 h-12 text-muted mx-auto mb-2" />
-            <p class="text-muted">
-              No hay actividades programadas en el itinerario
-            </p>
+          <div v-else class="mb-6">
+            <div class="p-8 text-center bg-elevated rounded-lg">
+              <span class="i-lucide-calendar-x w-12 h-12 text-muted mx-auto mb-2" />
+              <p class="text-muted">
+                No hay actividades programadas en el itinerario
+              </p>
+            </div>
           </div>
-        </div>
+        </section>
 
         <!-- Services Section -->
-        <div class="mb-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span class="i-lucide-package w-5 h-5" />
-            Servicios
-          </h2>
-
-          <div v-if="travel.servicios.length > 0" class="grid grid-cols-2 gap-3">
-            <div
-              v-for="service in travel.servicios"
-              :key="service.id"
-              class="p-4 bg-elevated rounded-lg flex items-start gap-3"
-            >
-              <div class="shrink-0 mt-0.5">
-                <span
-                  v-if="service.incluido"
-                  class="i-lucide-check-circle w-5 h-5 text-success"
-                />
-                <span
-                  v-else
-                  class="i-lucide-x-circle w-5 h-5 text-error"
-                />
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="font-medium mb-0.5">
-                  {{ service.nombre }}
-                </div>
-                <div v-if="service.descripcion" class="text-sm text-muted">
-                  {{ service.descripcion }}
-                </div>
-                <div class="text-xs mt-1" :class="service.incluido ? 'text-success' : 'text-muted'">
-                  {{ service.incluido ? 'Incluido' : 'No incluido' }}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div v-else class="p-8 text-center bg-elevated rounded-lg">
-            <span class="i-lucide-package-x w-12 h-12 text-muted mx-auto mb-2" />
-            <p class="text-muted">
-              No hay servicios definidos para este viaje
-            </p>
-          </div>
-        </div>
+        <section id="servicies">
+          <TheSeparator
+            size="xl"
+            text="Servicios"
+            icon="i-lucide-briefcase"
+          />
+          <TravelServiciosSection
+            :travel-id="travelId"
+          />
+        </section>
 
         <!-- Buses Section -->
-        <div class="mb-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span class="i-lucide-bus w-5 h-5" />
-            Autobuses
-          </h2>
+        <section id="buses" class="mb-6">
+          <TheSeparator
+            size="xl"
+            text="Autobuses"
+            icon="i-lucide-bus"
+          />
           <TravelBusList
             :travel-id="travelId"
             :editable="false"
           />
-        </div>
+        </section>
 
         <!-- Internal Notes Section -->
-        <div v-if="travel.notasInternas" class="mb-6">
-          <h2 class="text-xl font-semibold mb-4 flex items-center gap-2">
-            <span class="i-lucide-sticky-note w-5 h-5" />
-            Notas Internas
-          </h2>
+        <section
+          v-if="travel.notasInternas"
+          id="notas"
+        >
+          <TheSeparator
+            size="xl"
+            text="Notas Internas"
+            icon="i-lucide-sticky-note"
+          />
           <div class="p-4 bg-elevated rounded-lg">
             <p class="text-sm whitespace-pre-wrap">
               {{ travel.notasInternas }}
             </p>
           </div>
-        </div>
+        </section>
 
         <!-- Footer Metadata -->
         <template #footer>
