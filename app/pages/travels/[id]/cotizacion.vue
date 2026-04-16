@@ -253,31 +253,39 @@ function handleHospedajeAgregado() {
           </div>
         </UCard>
 
-        <!-- Sección Proveedores -->
-        <CotizacionProveedoresSection
-          :cotizacion-id="cotizacion.id"
-          :readonly="readonly"
-        />
+        <!-- Sección Servicios -->
+        <section id="servicios">
+          <CotizacionProveedoresSection
+            :cotizacion-id="cotizacion.id"
+            :readonly="readonly"
+          />
+        </section>
 
         <!-- Sección Hospedaje -->
-        <CotizacionHospedajeSection
-          :cotizacion-id="cotizacion.id"
-          :readonly="readonly"
-          @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
-        />
+        <section id="hospedaje">
+          <CotizacionHospedajeSection
+            :cotizacion-id="cotizacion.id"
+            :readonly="readonly"
+            @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
+          />
+        </section>
 
         <!-- Sección Autobuses -->
-        <CotizacionBusesSection
-          :cotizacion-id="cotizacion.id"
-          :readonly="readonly"
-          @agregar-bus="isAgregarBusModalOpen = true"
-        />
+        <section id="autobuses">
+          <CotizacionBusesSection
+            :cotizacion-id="cotizacion.id"
+            :readonly="readonly"
+            @agregar-bus="isAgregarBusModalOpen = true"
+          />
+        </section>
 
         <!-- Sección Precio al Público -->
-        <CotizacionPrecioPublicoSection
-          :cotizacion-id="cotizacion.id"
-          :readonly="readonly"
-        />
+        <section id="precio-publico">
+          <CotizacionPrecioPublicoSection
+            :cotizacion-id="cotizacion.id"
+            :readonly="readonly"
+          />
+        </section>
       </template>
     </div>
     <!-- Modal: crear cotización -->
