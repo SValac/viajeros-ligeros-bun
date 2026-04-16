@@ -346,10 +346,6 @@ function onCancel() {
       :fecha-fin="state.fechaFin"
     />
 
-    <!-- Servicios Incluidos -->
-    <USeparator label="Servicios Incluidos" />
-    <TravelServiceList v-model="servicios" />
-
     <!-- Botones de acción -->
     <div class="flex justify-end gap-3 pt-4">
       <UButton
