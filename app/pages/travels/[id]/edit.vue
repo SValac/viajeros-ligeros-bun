@@ -111,7 +111,7 @@ function handleCancel() {
           </h2>
         </div>
       </template>
-      <TravelBusesSection :travel-id="travelId" />
+      <TravelBusesSection :travel-id="travelId" :editable="true" />
     </UCard>
   </div>
 

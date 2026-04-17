@@ -1,14 +1,19 @@
 <script setup lang="ts">
 type Props = {
   travelId: string;
+  editable?: boolean;
 };
 
-const { travelId } = defineProps<Props>();
+const { travelId, editable = false } = defineProps<Props>();
 
 const router = useRouter();
 const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
+const coordinatorStore = useCoordinatorStore();
 
+const travelsStore = useTravelsStore();
+
+const travel = computed(() => travelsStore.getTravelById(travelId));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId));
 const buses = computed(() => {
   if (!cotizacion.value)
@@ -16,12 +21,24 @@ const buses = computed(() => {
   return cotizacionStore.getBusesByCotizacion(cotizacion.value.id);
 });
 
-function getProviderName(proveedorId: string): string {
-  return providerStore.getProviderById(proveedorId)?.nombre ?? 'Proveedor desconocido';
+// IDs de coordinadores ya asignados a algún bus (excluyendo el bus actual)
+function coordinadoresOcupados(excludeBusId: string): string[] {
+  return buses.value
+    .filter(b => b.id !== excludeBusId)
+    .flatMap(b => b.coordinadorIds ?? []);
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+// Opciones filtradas: solo coordinadores del viaje, no ocupados en otros buses
+function getCoordinadorOptions(busId: string) {
+  const delViaje = travel.value?.coordinadorIds ?? [];
+  const ocupados = coordinadoresOcupados(busId);
+  return coordinatorStore.allCoordinators
+    .filter(c => delViaje.includes(c.id) && !ocupados.includes(c.id))
+    .map(c => ({ value: c.id, label: c.nombre }));
+}
+
+function getProviderName(proveedorId: string): string {
+  return providerStore.getProviderById(proveedorId)?.nombre ?? 'Proveedor desconocido';
 }
 
 function getEstadoColor(estado: string): 'success' | 'warning' | 'neutral' {
@@ -39,6 +56,20 @@ function getEstadoLabel(estado: string): string {
     pendiente: 'Pendiente',
   };
   return labels[estado] ?? estado;
+}
+
+function getBusCoordinadorIds(busId: string): string[] {
+  const bus = buses.value.find(b => b.id === busId);
+  return bus?.coordinadorIds ? [...bus.coordinadorIds] : [];
+}
+
+function getCoordinadorName(id: string): string {
+  return coordinatorStore.getCoordinatorById(id)?.nombre ?? 'Desconocido';
+}
+
+function onCoordinadoresChange(busId: string, selected: string[]) {
+  const capped = selected.slice(0, 2) as [] | [string] | [string, string];
+  cotizacionStore.updateBusCotizacion(busId, { coordinadorIds: capped });
 }
 
 function goToCotizacion() {
@@ -61,24 +92,75 @@ function goToCotizacion() {
                 <span class="font-medium">{{ getProviderName(bus.proveedorId) }}</span>
                 <span v-if="bus.numeroUnidad" class="text-sm text-muted">· Unidad {{ bus.numeroUnidad }}</span>
               </div>
-              <UBadge
-                :label="getEstadoLabel(bus.estado)"
-                :color="getEstadoColor(bus.estado)"
-                variant="subtle"
-                size="xs"
-              />
+              <div class="flex items-center gap-2 shrink-0">
+                <div class="flex items-center gap-1 text-sm text-muted">
+                  <span class="i-lucide-users w-3.5 h-3.5" />
+                  <span>{{ bus.capacidad }}</span>
+                </div>
+                <UBadge
+                  :label="getEstadoLabel(bus.estado)"
+                  :color="getEstadoColor(bus.estado)"
+                  variant="subtle"
+                  size="xs"
+                />
+              </div>
             </div>
           </template>
 
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div class="flex items-center gap-1.5 text-muted">
-              <span class="i-lucide-users w-4 h-4" />
-              <span>{{ bus.capacidad }} asientos</span>
+          <!-- Coordinadores (modo editable) -->
+          <div v-if="editable">
+            <div class="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
+              Coordinadores (máx. 2)
             </div>
-            <div class="flex items-center gap-1.5 text-muted">
-              <span class="i-lucide-banknote w-4 h-4" />
-              <span>{{ formatCurrency(bus.costoTotal) }}</span>
+            <USelectMenu
+              :model-value="getBusCoordinadorIds(bus.id)"
+              :items="getCoordinadorOptions(bus.id)"
+              value-key="value"
+              multiple
+              placeholder="Seleccionar coordinadores"
+              @update:model-value="(val) => onCoordinadoresChange(bus.id, val)"
+            />
+            <div v-if="getBusCoordinadorIds(bus.id).length > 0" class="flex items-center gap-3 mt-3">
+              <div
+                v-for="cId in getBusCoordinadorIds(bus.id)"
+                :key="cId"
+                class="flex items-center gap-2"
+              >
+                <UAvatar
+                  :alt="getCoordinadorName(cId)"
+                  size="sm"
+                  color="primary"
+                  variant="soft"
+                />
+                <span class="text-sm font-medium">{{ getCoordinadorName(cId) }}</span>
+              </div>
             </div>
+          </div>
+
+          <!-- Coordinadores (modo lectura) -->
+          <div v-else-if="bus.coordinadorIds && bus.coordinadorIds.length > 0">
+            <div class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+              Coordinadores
+            </div>
+            <div class="flex items-center gap-4">
+              <div
+                v-for="cId in bus.coordinadorIds"
+                :key="cId"
+                class="flex items-center gap-2"
+              >
+                <UAvatar
+                  :alt="getCoordinadorName(cId)"
+                  size="sm"
+                  color="primary"
+                  variant="soft"
+                />
+                <span class="text-sm font-medium">{{ getCoordinadorName(cId) }}</span>
+              </div>
+            </div>
+          </div>
+
+          <div v-else class="text-sm text-muted italic">
+            Sin coordinadores asignados
           </div>
 
           <p v-if="bus.notas || bus.observaciones" class="text-sm text-muted mt-2 italic">

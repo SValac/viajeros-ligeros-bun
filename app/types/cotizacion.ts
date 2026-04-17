@@ -119,6 +119,7 @@ export type CotizacionBus = {
   observaciones?: string;
   confirmado: boolean;
   notas?: string;
+  coordinadorIds?: [] | [string] | [string, string];
   createdAt: string;
   updatedAt: string;
 };
