@@ -80,12 +80,38 @@ function handleCancel() {
     </div>
 
     <!-- Formulario -->
-    <UCard>
+    <UCard class="mb-6">
       <TravelForm
         :travel="travel"
         @submit="handleSubmit"
         @cancel="handleCancel"
       />
+    </UCard>
+
+    <!-- Servicios -->
+    <UCard class="mb-6">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <span class="i-lucide-briefcase w-5 h-5 text-muted" />
+          <h2 class="font-semibold text-lg">
+            Servicios
+          </h2>
+        </div>
+      </template>
+      <TravelServiciosSection :travel-id="travelId" />
+    </UCard>
+
+    <!-- Autobuses -->
+    <UCard>
+      <template #header>
+        <div class="flex items-center gap-2">
+          <span class="i-lucide-bus w-5 h-5 text-muted" />
+          <h2 class="font-semibold text-lg">
+            Autobuses
+          </h2>
+        </div>
+      </template>
+      <TravelBusesSection :travel-id="travelId" />
     </UCard>
   </div>
 

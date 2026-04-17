@@ -440,9 +440,8 @@ definePageMeta({
             text="Autobuses"
             icon="i-lucide-bus"
           />
-          <TravelBusList
+          <TravelBusesSection
             :travel-id="travelId"
-            :editable="false"
           />
         </section>
 
