@@ -253,6 +253,8 @@ onMounted(() => {
           <PaymentSummaryCard
             :summary="paymentStore.getTravelerPaymentSummary(travelerId, id, getTravelPrice(id))"
             :traveler-name="travelerName"
+            :discount-description="paymentStore.getAccountConfig(travelerId, id)?.discountDescription"
+            :surcharge-description="paymentStore.getAccountConfig(travelerId, id)?.surchargeDescription"
           />
 
           <!-- Payment history -->

@@ -253,6 +253,22 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
+    id: 'surcharge',
+    header: 'Incremento',
+    cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      if (s.surcharge <= 0)
+        return h('span', { class: 'text-sm text-muted' }, '—');
+      const surchargeAmount = s.surchargeType === 'percentage'
+        ? s.appliedPrice * s.surcharge / 100
+        : s.surcharge;
+      return h('span', { class: 'text-sm text-warning' }, formatCurrency(surchargeAmount));
+    },
+  },
+  {
     id: 'totalPaid',
     header: 'Abonado',
     cell: ({ row }) => {
