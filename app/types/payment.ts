@@ -28,6 +28,10 @@ export type TravelerAccountConfig = {
   childPrice?: number;
   discount?: number;
   discountType?: DiscountType;
+  discountDescription?: string;
+  surcharge?: number;
+  surchargeType?: DiscountType;
+  surchargeDescription?: string;
   precioPublicoId?: string;
   precioPublicoMonto?: number;
 };
@@ -40,6 +44,8 @@ export type TravelerPaymentSummary = {
   appliedPrice: number;
   discount: number;
   discountType: DiscountType;
+  surcharge: number;
+  surchargeType: DiscountType;
   finalCost: number;
   totalPaid: number;
   balance: number;

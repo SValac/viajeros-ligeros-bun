@@ -70,17 +70,17 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
 
       const discount = config?.discount ?? 0;
       const discountType: DiscountType = config?.discountType ?? 'fixed';
+      const surcharge = config?.surcharge ?? 0;
+      const surchargeType: DiscountType = config?.surchargeType ?? 'fixed';
 
-      let finalCost: number;
-      if (discount > 0) {
-        finalCost = discountType === 'percentage'
-          ? appliedPrice * (1 - discount / 100)
-          : appliedPrice - discount;
-      }
-      else {
-        finalCost = appliedPrice;
-      }
-      finalCost = Math.max(0, finalCost);
+      const discountAmount = discount > 0
+        ? (discountType === 'percentage' ? appliedPrice * discount / 100 : discount)
+        : 0;
+      const surchargeAmount = surcharge > 0
+        ? (surchargeType === 'percentage' ? appliedPrice * surcharge / 100 : surcharge)
+        : 0;
+
+      const finalCost = Math.max(0, appliedPrice - discountAmount + surchargeAmount);
 
       const travelerPayments = getPaymentsByTravelerAndTravel.value(travelerId, travelId);
       const totalPaid = travelerPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -105,6 +105,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
         appliedPrice,
         discount,
         discountType,
+        surcharge,
+        surchargeType,
         finalCost,
         totalPaid,
         balance,
