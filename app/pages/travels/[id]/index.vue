@@ -112,6 +112,7 @@ async function deleteTravel() {
 
 // Set page meta
 definePageMeta({
+  name: 'travel-detail',
   layout: 'default',
 });
 </script>
@@ -130,6 +131,13 @@ definePageMeta({
         />
 
         <div class="flex gap-2">
+          <UButton
+            icon="i-lucide-users"
+            label="Viajeros"
+            variant="outline"
+            color="neutral"
+            @click="router.push({ name: 'travel-travelers', params: { id: travel.id } })"
+          />
           <UButton
             icon="i-lucide-credit-card"
             label="Ver Pagos"
