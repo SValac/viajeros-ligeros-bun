@@ -389,6 +389,7 @@ onMounted(() => {
         v-model:expanded="expanded"
         :columns="columns"
         :data="groupedFilteredTravelers"
+        :get-row-id="(row) => row.id"
         :get-sub-rows="(row) => row.children"
         :ui="{
           base: 'border-separate border-spacing-0',

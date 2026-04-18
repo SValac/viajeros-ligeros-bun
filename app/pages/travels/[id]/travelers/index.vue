@@ -4,14 +4,13 @@ import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
-import type { Travel } from '~/types/travel';
 import type { Traveler, TravelerFormData, TravelerWithChildren } from '~/types/traveler';
 
 definePageMeta({
-  name: 'travelers-index',
+  name: 'travel-travelers',
 });
 
-// Stores
+const route = useRoute();
 const router = useRouter();
 const travelerStore = useTravelerStore();
 const travelStore = useTravelsStore();
@@ -19,16 +18,26 @@ const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const toast = useToast();
 
+const travelId = computed(() => route.params.id as string);
+const travel = computed(() => travelStore.getTravelById(travelId.value));
+
 // Estado local
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
 const expanded = ref<ExpandedStateList>({});
 
+// Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
+onMounted(() => {
+  travelerStore.setFilters({ travelId: travelId.value });
+});
+
+watch(travelId, (id) => {
+  travelerStore.setFilters({ travelId: id });
+});
+
 // Datos derivados de stores
 const travelers = computed(() => travelerStore.filteredGroupedTravelers);
 
-// Mantener siempre expandidos todos los grupos: recalcula y sobreescribe
-// el estado completo cada vez que cambian los datos.
 watchEffect(() => {
   const newExpanded: ExpandedStateList = {};
   for (const row of travelers.value) {
@@ -38,27 +47,22 @@ watchEffect(() => {
   }
   expanded.value = newExpanded;
 });
-const total = computed(() => travelerStore.travelers.length);
 
-const allTravels = computed((): Travel[] => travelStore.allTravels);
+const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
+const totalTravelers = computed(() => travelersOfTravel.value.length);
+const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.esRepresentante).length);
+const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.esRepresentante).length);
 
 const allBuses = computed(() => cotizacionStore.busesApartados);
 
-// Representantes disponibles según los filtros actuales (travelId/travelBusId)
-const representantes = computed((): Traveler[] =>
+const representantes = computed(() =>
   travelerStore.filteredTravelers.filter(t => t.esRepresentante),
 );
 
 const filters = computed({
   get: () => travelerStore.filters,
-  set: val => travelerStore.setFilters(val),
+  set: val => travelerStore.setFilters({ ...val, travelId: travelId.value }),
 });
-
-// Helpers de visualización
-function getTravelLabel(travelId: string): string {
-  const travel = allTravels.value.find(t => t.id === travelId);
-  return travel ? travel.destino : travelId;
-}
 
 function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
@@ -68,7 +72,6 @@ function getBusLabel(travelBusId: string): string {
   return agencia ? `${agencia} — Unidad ${bus.numeroUnidad}` : `Unidad ${bus.numeroUnidad}`;
 }
 
-// Acciones del formulario
 function openCreateModal() {
   editingTraveler.value = null;
   isFormModalOpen.value = true;
@@ -128,7 +131,6 @@ function handleDelete(traveler: Traveler) {
   }
 }
 
-// Acciones de fila
 function getRowActions(traveler: Traveler) {
   return [
     [
@@ -155,7 +157,6 @@ function getRowActions(traveler: Traveler) {
   ];
 }
 
-// Columnas de la tabla
 const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'nombreCompleto',
@@ -185,17 +186,6 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       }
 
       return h('div', { class: 'flex items-center', style: `padding-left: ${depth * 1.5 + 0.75}rem` }, [nameNode]);
-    },
-  },
-  {
-    accessorKey: 'travelId',
-    header: 'Viaje',
-    cell: ({ row }) => {
-      return h(
-        'span',
-        { class: 'text-sm text-gray-600 dark:text-gray-300' },
-        getTravelLabel(row.getValue('travelId')),
-      );
     },
   },
   {
@@ -263,24 +253,27 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
 ];
-
-// Lifecycle
-onMounted(() => {
-  travelerStore.clearFilters();
-});
 </script>
 
 <template>
   <div class="space-y-6">
     <!-- Header -->
     <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Gestión de Viajeros
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
-          Administra los clientes que reservan lugares en los viajes
-        </p>
+      <div class="flex items-center gap-3">
+        <UButton
+          icon="i-lucide-arrow-left"
+          variant="ghost"
+          color="neutral"
+          @click="router.push({ name: 'travel-detail', params: { id: travelId } })"
+        />
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
+            Viajeros
+          </h1>
+          <p class="text-gray-500 dark:text-gray-400 mt-1">
+            {{ travel?.destino ?? travelId }}
+          </p>
+        </div>
       </div>
       <UButton
         icon="i-lucide-plus"
@@ -300,7 +293,7 @@ onMounted(() => {
               Total Viajeros
             </p>
             <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-              {{ total }}
+              {{ totalTravelers }}
             </p>
           </div>
           <UIcon name="i-lucide-users" class="w-10 h-10 text-gray-400" />
@@ -314,7 +307,7 @@ onMounted(() => {
               Representantes
             </p>
             <p class="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-1">
-              {{ travelerStore.travelers.filter(t => t.esRepresentante).length }}
+              {{ totalRepresentantes }}
             </p>
           </div>
           <UIcon name="i-lucide-user-check" class="w-10 h-10 text-primary-400" />
@@ -328,7 +321,7 @@ onMounted(() => {
               Acompañantes
             </p>
             <p class="text-2xl font-bold text-gray-600 dark:text-gray-300 mt-1">
-              {{ travelerStore.travelers.filter(t => !t.esRepresentante).length }}
+              {{ totalAcompañantes }}
             </p>
           </div>
           <UIcon name="i-lucide-user" class="w-10 h-10 text-gray-400" />
@@ -339,9 +332,10 @@ onMounted(() => {
     <!-- Filtros -->
     <TravelerFilterBar
       v-model="filters"
-      :available-travels="allTravels"
+      :available-travels="[]"
       :available-buses="allBuses"
       :representantes="representantes"
+      :hide-travel-filter="true"
     />
 
     <!-- Tabla de viajeros -->
@@ -351,20 +345,23 @@ onMounted(() => {
           name="i-lucide-inbox"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
         />
-        <template v-if="filters.travelId || filters.travelBusId || filters.representanteId">
+        <template v-if="filters.travelBusId || filters.representanteId">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Sin resultados para los filtros aplicados
           </h3>
           <p class="text-gray-500 dark:text-gray-400 mb-4">
             Intenta con otros criterios de búsqueda
           </p>
-          <UButton icon="i-lucide-filter-x" @click="travelerStore.clearFilters()">
+          <UButton
+            icon="i-lucide-filter-x"
+            @click="travelerStore.setFilters({ travelId })"
+          >
             Limpiar filtros
           </UButton>
         </template>
         <template v-else>
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No hay viajeros aún
+            No hay viajeros en este viaje
           </h3>
           <p class="text-gray-500 dark:text-gray-400 mb-4">
             Comienza registrando el primer viajero
@@ -379,6 +376,7 @@ onMounted(() => {
         v-model:expanded="expanded"
         :columns="columns"
         :data="travelers"
+        :get-row-id="(row) => row.id"
         :get-sub-rows="(row) => row.children"
         :ui="{
           base: 'border-separate border-spacing-0',
@@ -399,8 +397,9 @@ onMounted(() => {
       <template #body>
         <TravelerForm
           :traveler="editingTraveler"
-          :available-travels="allTravels"
+          :available-travels="[]"
           :available-travelers="travelerStore.travelers"
+          :locked-travel-id="travelId"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />
