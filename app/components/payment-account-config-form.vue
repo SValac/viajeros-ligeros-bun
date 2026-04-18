@@ -21,6 +21,10 @@ const selectedPrecioPublicoId = ref<string | undefined>(
 );
 const discount = ref<number>(props.config?.discount ?? 0);
 const discountType = ref<DiscountType>(props.config?.discountType ?? 'fixed');
+const discountDescription = ref<string>(props.config?.discountDescription ?? '');
+const surcharge = ref<number>(props.config?.surcharge ?? 0);
+const surchargeType = ref<DiscountType>(props.config?.surchargeType ?? 'fixed');
+const surchargeDescription = ref<string>(props.config?.surchargeDescription ?? '');
 
 const travelerTypeOptions = [
   { label: 'Adulto', value: 'adult' },
@@ -47,12 +51,13 @@ const appliedPrice = computed(() => selectedPrecio.value?.precioPorPersona ?? 0)
 
 const finalCost = computed(() => {
   const base = appliedPrice.value;
-  if (discount.value > 0) {
-    return discountType.value === 'percentage'
-      ? base * (1 - discount.value / 100)
-      : base - discount.value;
-  }
-  return base;
+  const discountAmount = discount.value > 0
+    ? (discountType.value === 'percentage' ? base * discount.value / 100 : discount.value)
+    : 0;
+  const surchargeAmount = surcharge.value > 0
+    ? (surchargeType.value === 'percentage' ? base * surcharge.value / 100 : surcharge.value)
+    : 0;
+  return Math.max(0, base - discountAmount + surchargeAmount);
 });
 
 function formatCurrency(value: number) {
@@ -68,6 +73,10 @@ function handleSubmit() {
     precioPublicoMonto: selectedPrecio.value?.precioPorPersona,
     discount: discount.value || 0,
     discountType: discount.value > 0 ? discountType.value : 'fixed',
+    discountDescription: discount.value > 0 ? discountDescription.value || undefined : undefined,
+    surcharge: surcharge.value || 0,
+    surchargeType: surcharge.value > 0 ? surchargeType.value : 'fixed',
+    surchargeDescription: surcharge.value > 0 ? surchargeDescription.value || undefined : undefined,
   };
   emit('submit', config);
 }
@@ -145,6 +154,50 @@ function handleSubmit() {
           class="w-40"
         />
       </div>
+    </div>
+
+    <div v-if="discount > 0">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        Motivo del descuento
+      </label>
+      <UInput
+        v-model="discountDescription"
+        placeholder="Ej: Cortesía, familiar del coordinador..."
+      />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        Incremento <span class="text-gray-400">(opcional)</span>
+      </label>
+      <div class="flex gap-2">
+        <UInput
+          v-model.number="surcharge"
+          type="number"
+          :min="0"
+          step="0.01"
+          placeholder="0"
+          class="flex-1"
+        />
+        <USelect
+          v-model="surchargeType"
+          :items="discountTypeOptions"
+          value-key="value"
+          label-key="label"
+          :disabled="surcharge <= 0"
+          class="w-40"
+        />
+      </div>
+    </div>
+
+    <div v-if="surcharge > 0">
+      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+        Motivo del incremento
+      </label>
+      <UInput
+        v-model="surchargeDescription"
+        placeholder="Ej: Cuarto sencillo, seguro adicional..."
+      />
     </div>
 
     <div class="p-3 bg-elevated rounded-lg text-sm border border-default">

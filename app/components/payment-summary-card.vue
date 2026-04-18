@@ -4,6 +4,8 @@ import type { TravelerPaymentSummary } from '~/types/payment';
 defineProps<{
   summary: TravelerPaymentSummary;
   travelerName: string;
+  discountDescription?: string;
+  surchargeDescription?: string;
 }>();
 
 function formatCurrency(value: number) {
@@ -55,11 +57,25 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
         <span>
           Descuento
           <span v-if="summary.discountType === 'percentage'" class="text-xs">({{ summary.discount }}%)</span>
+          <span v-if="discountDescription" class="block text-xs text-muted font-normal">{{ discountDescription }}</span>
         </span>
         <span>
           - {{ summary.discountType === 'percentage'
             ? formatCurrency(summary.appliedPrice * summary.discount / 100)
             : formatCurrency(summary.discount) }}
+        </span>
+      </div>
+
+      <div v-if="summary.surcharge > 0" class="flex justify-between text-warning">
+        <span>
+          Incremento
+          <span v-if="summary.surchargeType === 'percentage'" class="text-xs">({{ summary.surcharge }}%)</span>
+          <span v-if="surchargeDescription" class="block text-xs text-muted font-normal">{{ surchargeDescription }}</span>
+        </span>
+        <span>
+          + {{ summary.surchargeType === 'percentage'
+            ? formatCurrency(summary.appliedPrice * summary.surcharge / 100)
+            : formatCurrency(summary.surcharge) }}
         </span>
       </div>
 
