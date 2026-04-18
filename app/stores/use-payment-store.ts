@@ -62,9 +62,11 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     return (travelerId: string, travelId: string, travelPrice: number): TravelerPaymentSummary => {
       const config = getAccountConfig.value(travelerId, travelId);
       const travelerType = config?.travelerType ?? 'adult';
-      const appliedPrice = travelerType === 'child' && config?.childPrice != null
-        ? config.childPrice
-        : travelPrice;
+      const appliedPrice = config?.precioPublicoMonto ?? (
+        travelerType === 'child' && config?.childPrice != null
+          ? config.childPrice
+          : travelPrice
+      );
 
       const discount = config?.discount ?? 0;
       const discountType: DiscountType = config?.discountType ?? 'fixed';
@@ -148,9 +150,11 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     const existingPayments = getPaymentsByTravelerAndTravel.value(data.travelerId, data.travelId);
     const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    const appliedPrice = config.travelerType === 'child' && config.childPrice != null
-      ? config.childPrice
-      : 0; // fallback; callers should set childPrice or use travel price
+    const appliedPrice = config.precioPublicoMonto ?? (
+      config.travelerType === 'child' && config.childPrice != null
+        ? config.childPrice
+        : 0
+    );
 
     const discount = config.discount ?? 0;
     const discountType = config.discountType ?? 'fixed';

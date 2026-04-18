@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { CotizacionPrecioPublico } from '~/types/cotizacion';
 import type { DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
 
 const props = defineProps<{
   travelerId: string;
   travelId: string;
   travelBasePrice: number;
+  preciosPublicos: CotizacionPrecioPublico[];
   config?: TravelerAccountConfig;
 }>();
 
@@ -14,7 +16,9 @@ const emit = defineEmits<{
 }>();
 
 const travelerType = ref<TravelerType>(props.config?.travelerType ?? 'adult');
-const childPrice = ref<number | null>(props.config?.childPrice ?? null);
+const selectedPrecioPublicoId = ref<string | undefined>(
+  props.config?.precioPublicoId ?? undefined,
+);
 const discount = ref<number>(props.config?.discount ?? 0);
 const discountType = ref<DiscountType>(props.config?.discountType ?? 'fixed');
 
@@ -23,17 +27,23 @@ const travelerTypeOptions = [
   { label: 'Niño', value: 'child' },
 ];
 
+const precioPublicoOptions = computed(() =>
+  props.preciosPublicos.map(p => ({
+    label: `${p.tipo} — ${formatCurrency(p.precioPorPersona)}`,
+    value: p.id,
+  })),
+);
+
+const selectedPrecio = computed(() =>
+  props.preciosPublicos.find(p => p.id === selectedPrecioPublicoId.value),
+);
+
 const discountTypeOptions = [
   { label: 'Monto fijo', value: 'fixed' },
   { label: 'Porcentaje (%)', value: 'percentage' },
 ];
 
-const appliedPrice = computed(() => {
-  if (travelerType.value === 'child' && childPrice.value != null) {
-    return childPrice.value;
-  }
-  return props.travelBasePrice;
-});
+const appliedPrice = computed(() => selectedPrecio.value?.precioPorPersona ?? 0);
 
 const finalCost = computed(() => {
   const base = appliedPrice.value;
@@ -54,7 +64,8 @@ function handleSubmit() {
     travelId: props.travelId,
     travelerId: props.travelerId,
     travelerType: travelerType.value,
-    childPrice: travelerType.value === 'child' && childPrice.value != null ? childPrice.value : undefined,
+    precioPublicoId: selectedPrecio.value?.id,
+    precioPublicoMonto: selectedPrecio.value?.precioPorPersona,
     discount: discount.value || 0,
     discountType: discount.value > 0 ? discountType.value : 'fixed',
   };
@@ -85,17 +96,23 @@ function handleSubmit() {
       </div>
     </div>
 
-    <div v-if="travelerType === 'child'">
+    <div v-if="preciosPublicos.length === 0">
+      <UAlert
+        color="warning"
+        title="No hay precios al público configurados en la cotización de este viaje."
+      />
+    </div>
+
+    <div v-else>
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Precio para niño
-        <span class="text-xs text-gray-400 ml-1">(base: {{ formatCurrency(travelBasePrice) }})</span>
+        Precio al público
       </label>
-      <UInput
-        v-model.number="childPrice"
-        type="number"
-        :min="0"
-        step="0.01"
-        placeholder="0.00"
+      <USelect
+        v-model="selectedPrecioPublicoId"
+        :items="precioPublicoOptions"
+        value-key="value"
+        label-key="label"
+        placeholder="Selecciona un precio..."
       />
     </div>
 

@@ -28,6 +28,8 @@ export type TravelerAccountConfig = {
   childPrice?: number;
   discount?: number;
   discountType?: DiscountType;
+  precioPublicoId?: string;
+  precioPublicoMonto?: number;
 };
 
 export type TravelerPaymentSummary = {

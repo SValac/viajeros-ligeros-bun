@@ -18,8 +18,16 @@ const paymentStore = usePaymentStore();
 const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 
+const cotizacionStore = useCotizacionStore();
+
 const travelId = computed(() => route.params.id as string);
 const travel = computed(() => travelStore.getTravelById(travelId.value));
+const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
+const preciosPublicos = computed(() =>
+  cotizacion.value
+    ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.value.id)
+    : [],
+);
 
 watchEffect(() => {
   if (!travel.value && travelId.value) {
@@ -192,10 +200,25 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    id: 'tipo',
+    id: 'travelerType',
     header: 'Tipo',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
+      return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => label);
+    },
+  },
+  {
+    id: 'tipo',
+    header: 'Precio',
+    cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (config?.precioPublicoId) {
+        const precio = preciosPublicos.value.find(p => p.id === config.precioPublicoId);
+        if (precio) {
+          return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => precio.tipo);
+        }
+      }
       const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
       return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => label);
     },
@@ -439,6 +462,7 @@ onMounted(() => {
           :traveler-id="selectedTraveler.id"
           :travel-id="travelId"
           :travel-base-price="travelPrice"
+          :precios-publicos="preciosPublicos"
           :config="selectedConfig"
           @submit="handleConfigSubmit"
           @cancel="closeModals"
