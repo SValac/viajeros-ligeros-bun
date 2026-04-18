@@ -38,7 +38,7 @@ function handleSubmit(data: TravelFormData) {
     });
 
     // Navegar de vuelta al dashboard
-    router.push('/travels/dashboard');
+    // router.push('/travels/dashboard');
   }
   else {
     toast.add({
@@ -58,7 +58,7 @@ function handleCancel() {
 <template>
   <div
     v-if="travel"
-    class="container mx-auto p-6 max-w-4xl"
+    class="mx-auto p-6"
   >
     <!-- Header -->
     <div class="mb-6">
@@ -79,40 +79,39 @@ function handleCancel() {
       </p>
     </div>
 
-    <!-- Formulario -->
-    <UCard class="mb-6">
+    <!-- Row 1: Formulario + Servicios -->
+    <section id="form" class="mb-6">
       <TravelForm
         :travel="travel"
         @submit="handleSubmit"
         @cancel="handleCancel"
       />
-    </UCard>
-
-    <!-- Servicios -->
-    <UCard class="mb-6">
-      <template #header>
-        <div class="flex items-center gap-2">
-          <span class="i-lucide-briefcase w-5 h-5 text-muted" />
-          <h2 class="font-semibold text-lg">
-            Servicios
-          </h2>
-        </div>
-      </template>
-      <TravelServiciosSection :travel-id="travelId" />
-    </UCard>
-
-    <!-- Autobuses -->
-    <UCard>
-      <template #header>
-        <div class="flex items-center gap-2">
-          <span class="i-lucide-bus w-5 h-5 text-muted" />
-          <h2 class="font-semibold text-lg">
-            Autobuses
-          </h2>
-        </div>
-      </template>
-      <TravelBusesSection :travel-id="travelId" :editable="true" />
-    </UCard>
+    </section>
+    <section id="services" class="grid grid-cols-1 xl:grid-cols-2 gap-4 mb-4">
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2">
+            <span class="i-lucide-briefcase w-5 h-5 text-muted" />
+            <h2 class="font-semibold text-lg">
+              Servicios
+            </h2>
+          </div>
+        </template>
+        <TravelServiciosSection :travel-id="travelId" />
+      </UCard>
+      <UCard>
+        <template #header>
+          <div class="flex items-center gap-2">
+            <span class="i-lucide-bus w-5 h-5 text-muted" />
+            <h2 class="font-semibold text-lg">
+              Autobuses
+            </h2>
+          </div>
+        </template>
+        <TravelBusesSection :travel-id="travelId" :editable="true" />
+      </UCard>
+    </section>
+    <!-- Row 2: Autobuses -->
   </div>
 
   <!-- Loading state mientras se verifica el viaje -->
