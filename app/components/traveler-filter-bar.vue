@@ -7,6 +7,7 @@ type Props = {
   availableTravels: Travel[];
   availableBuses: CotizacionBus[];
   representantes?: Traveler[];
+  hideTravelFilter?: boolean;
 };
 
 const props = defineProps<Props>();
@@ -62,7 +63,9 @@ function onRepresentanteChange(val: string | undefined) {
 }
 
 function clearAll() {
-  filters.value = {};
+  filters.value = props.hideTravelFilter
+    ? { travelId: filters.value.travelId }
+    : {};
 }
 
 const hasFilters = computed(() =>
@@ -73,6 +76,7 @@ const hasFilters = computed(() =>
 <template>
   <div class="flex flex-wrap items-center gap-3">
     <USelect
+      v-if="!hideTravelFilter"
       :model-value="filters.travelId"
       :items="travelOptions"
       value-key="value"

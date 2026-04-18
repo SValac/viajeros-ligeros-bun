@@ -10,9 +10,10 @@ type Props = {
   traveler?: Traveler | null;
   availableTravels: Travel[];
   availableTravelers: Traveler[];
+  lockedTravelId?: string;
 };
 
-const { traveler = null, availableTravels, availableTravelers } = defineProps<Props>();
+const { traveler = null, availableTravels, availableTravelers, lockedTravelId } = defineProps<Props>();
 const emit = defineEmits<{
   submit: [data: TravelerFormData];
   cancel: [];
@@ -56,7 +57,7 @@ const state = ref<Schema>({
   nombre: traveler?.nombre ?? '',
   apellido: traveler?.apellido ?? '',
   telefono: traveler?.telefono ?? '',
-  travelId: traveler?.travelId ?? '',
+  travelId: traveler?.travelId ?? lockedTravelId ?? '',
   travelBusId: traveler?.travelBusId ?? '',
   asiento: traveler?.asiento ?? '',
   puntoAbordaje: traveler?.puntoAbordaje ?? '',
@@ -193,6 +194,7 @@ function onCancel() {
     <USeparator label="Asignación al viaje" />
 
     <UFormField
+      v-if="!lockedTravelId"
       label="Viaje"
       name="travelId"
       required
