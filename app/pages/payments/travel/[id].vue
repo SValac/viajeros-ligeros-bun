@@ -97,9 +97,11 @@ watchEffect(() => {
 
 // Caja del viaje
 const cashSummary = computed(() => {
-  const summaries = enrolledTravelers.value.map((t: Traveler) =>
-    paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value),
-  );
+  const summaries = enrolledTravelers.value
+    .filter((t: Traveler) => !!paymentStore.getAccountConfig(t.id, travelId.value)?.precioPublicoId)
+    .map((t: Traveler) =>
+      paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value),
+    );
   const totalExpected = summaries.reduce((sum: number, s) => sum + s.finalCost, 0);
   const totalCollected = summaries.reduce((sum: number, s) => sum + s.totalPaid, 0);
   return { totalExpected, totalCollected, balance: totalExpected - totalCollected };
@@ -227,6 +229,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'costoFinal',
     header: 'Costo final',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: 'text-sm' }, formatCurrency(s.finalCost));
     },
@@ -235,6 +240,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'descuento',
     header: 'Descuento',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       if (s.discount <= 0)
         return h('span', { class: 'text-sm text-muted' }, '—');
@@ -248,6 +256,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'totalPaid',
     header: 'Abonado',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalPaid));
     },
@@ -256,6 +267,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'balance',
     header: 'Saldo pendiente',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: s.balance > 0 ? 'text-sm text-error' : 'text-sm text-success' }, formatCurrency(s.balance));
     },
@@ -264,6 +278,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'status',
     header: 'Estado',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => 'Sin configurar');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       const cfg = statusConfig[s.status] ?? { color: 'neutral', label: s.status };
       return h(resolveComponent('UBadge'), { color: cfg.color, variant: 'subtle' }, () => cfg.label);
