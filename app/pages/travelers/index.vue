@@ -4,7 +4,7 @@ import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
-import type { Travel, TravelBus } from '~/types/travel';
+import type { Travel } from '~/types/travel';
 import type { Traveler, TravelerFormData, TravelerWithChildren } from '~/types/traveler';
 
 definePageMeta({
@@ -15,6 +15,8 @@ definePageMeta({
 const router = useRouter();
 const travelerStore = useTravelerStore();
 const travelStore = useTravelsStore();
+const cotizacionStore = useCotizacionStore();
+const providerStore = useProviderStore();
 const toast = useToast();
 
 // Estado local
@@ -40,9 +42,7 @@ const total = computed(() => travelerStore.travelers.length);
 
 const allTravels = computed((): Travel[] => travelStore.allTravels);
 
-const allBuses = computed((): TravelBus[] =>
-  allTravels.value.flatMap(t => t.autobuses ?? []),
-);
+const allBuses = computed(() => cotizacionStore.busesApartados);
 
 // Representantes disponibles según los filtros actuales (travelId/travelBusId)
 const representantes = computed((): Traveler[] =>
@@ -64,7 +64,8 @@ function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
   if (!bus)
     return travelBusId;
-  return [bus.marca, bus.modelo].filter(Boolean).join(' ') || `Camión ${travelBusId.slice(-4)}`;
+  const agencia = providerStore.getProviderById(bus.proveedorId)?.nombre;
+  return agencia ? `${agencia} — Unidad ${bus.numeroUnidad}` : `Unidad ${bus.numeroUnidad}`;
 }
 
 // Acciones del formulario

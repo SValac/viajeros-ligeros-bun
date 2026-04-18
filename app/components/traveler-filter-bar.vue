@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { Travel, TravelBus } from '~/types/travel';
+import type { CotizacionBus } from '~/types/cotizacion';
+import type { Travel } from '~/types/travel';
 import type { Traveler, TravelerFilters } from '~/types/traveler';
 
 type Props = {
   availableTravels: Travel[];
-  availableBuses: TravelBus[];
+  availableBuses: CotizacionBus[];
   representantes?: Traveler[];
 };
 
@@ -12,6 +13,9 @@ const props = defineProps<Props>();
 
 // defineModel — Vue 3.4+ (Nuxt 4 / Vue 3.5)
 const filters = defineModel<TravelerFilters>({ default: () => ({}) });
+
+const cotizacionStore = useCotizacionStore();
+const providerStore = useProviderStore();
 
 const travelOptions = computed(() =>
   props.availableTravels.map(t => ({ label: t.destino, value: t.id })),
@@ -24,21 +28,24 @@ const representanteOptions = computed(() =>
   })),
 );
 
-// Filtra los camiones por el viaje seleccionado si hay uno activo
+// Filtra los camiones por la cotizacion del viaje seleccionado
 const busOptions = computed(() => {
-  const buses = filters.value.travelId
-    ? props.availableBuses.filter(b =>
-        props.availableTravels
-          .find(t => t.id === filters.value.travelId)
-          ?.autobuses
-          .some(ab => ab.id === b.id),
-      )
-    : props.availableBuses;
+  let buses = props.availableBuses;
 
-  return buses.map(b => ({
-    label: [b.marca, b.modelo].filter(Boolean).join(' ') || `Camión ${b.id}`,
-    value: b.id,
-  }));
+  if (filters.value.travelId) {
+    const cotizacion = cotizacionStore.getCotizacionByTravel(filters.value.travelId);
+    buses = cotizacion
+      ? buses.filter(b => b.cotizacionId === cotizacion.id)
+      : [];
+  }
+
+  return buses.map((b) => {
+    const agencia = providerStore.getProviderById(b.proveedorId)?.nombre;
+    return {
+      label: agencia ? `${agencia} — Unidad ${b.numeroUnidad}` : `Unidad ${b.numeroUnidad}`,
+      value: b.id,
+    };
+  });
 });
 
 function onTravelChange(val: string | undefined) {
