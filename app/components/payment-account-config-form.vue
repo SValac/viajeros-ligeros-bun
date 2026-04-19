@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { CotizacionPrecioPublico } from '~/types/cotizacion';
-import type { DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
+import type { AjusteItem, DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
 
 const props = defineProps<{
   travelerId: string;
@@ -19,12 +19,13 @@ const travelerType = ref<TravelerType>(props.config?.travelerType ?? 'adult');
 const selectedPrecioPublicoId = ref<string | undefined>(
   props.config?.precioPublicoId ?? undefined,
 );
-const discount = ref<number>(props.config?.discount ?? 0);
-const discountType = ref<DiscountType>(props.config?.discountType ?? 'fixed');
-const discountDescription = ref<string>(props.config?.discountDescription ?? '');
-const surcharge = ref<number>(props.config?.surcharge ?? 0);
-const surchargeType = ref<DiscountType>(props.config?.surchargeType ?? 'fixed');
-const surchargeDescription = ref<string>(props.config?.surchargeDescription ?? '');
+
+const discounts = ref<AjusteItem[]>(
+  props.config?.discounts ? props.config.discounts.map(d => ({ ...d })) : [],
+);
+const surcharges = ref<AjusteItem[]>(
+  props.config?.surcharges ? props.config.surcharges.map(s => ({ ...s })) : [],
+);
 
 const travelerTypeOptions = [
   { label: 'Adulto', value: 'adult' },
@@ -42,7 +43,7 @@ const selectedPrecio = computed(() =>
   props.preciosPublicos.find(p => p.id === selectedPrecioPublicoId.value),
 );
 
-const discountTypeOptions = [
+const ajusteTypeOptions = [
   { label: 'Monto fijo', value: 'fixed' },
   { label: 'Porcentaje (%)', value: 'percentage' },
 ];
@@ -51,17 +52,33 @@ const appliedPrice = computed(() => selectedPrecio.value?.precioPorPersona ?? 0)
 
 const finalCost = computed(() => {
   const base = appliedPrice.value;
-  const discountAmount = discount.value > 0
-    ? (discountType.value === 'percentage' ? base * discount.value / 100 : discount.value)
-    : 0;
-  const surchargeAmount = surcharge.value > 0
-    ? (surchargeType.value === 'percentage' ? base * surcharge.value / 100 : surcharge.value)
-    : 0;
-  return Math.max(0, base - discountAmount + surchargeAmount);
+  const totalDiscount = discounts.value.reduce((sum, d) => {
+    return sum + (d.type === 'percentage' ? base * d.amount / 100 : d.amount);
+  }, 0);
+  const totalSurcharge = surcharges.value.reduce((sum, s) => {
+    return sum + (s.type === 'percentage' ? base * s.amount / 100 : s.amount);
+  }, 0);
+  return Math.max(0, base - totalDiscount + totalSurcharge);
 });
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+}
+
+function addDiscount() {
+  discounts.value.push({ amount: 0, type: 'fixed' as DiscountType, description: '' });
+}
+
+function removeDiscount(index: number) {
+  discounts.value.splice(index, 1);
+}
+
+function addSurcharge() {
+  surcharges.value.push({ amount: 0, type: 'fixed' as DiscountType, description: '' });
+}
+
+function removeSurcharge(index: number) {
+  surcharges.value.splice(index, 1);
 }
 
 function handleSubmit() {
@@ -71,12 +88,12 @@ function handleSubmit() {
     travelerType: travelerType.value,
     precioPublicoId: selectedPrecio.value?.id,
     precioPublicoMonto: selectedPrecio.value?.precioPorPersona,
-    discount: discount.value || 0,
-    discountType: discount.value > 0 ? discountType.value : 'fixed',
-    discountDescription: discount.value > 0 ? discountDescription.value || undefined : undefined,
-    surcharge: surcharge.value || 0,
-    surchargeType: surcharge.value > 0 ? surchargeType.value : 'fixed',
-    surchargeDescription: surcharge.value > 0 ? surchargeDescription.value || undefined : undefined,
+    discounts: discounts.value
+      .filter(d => d.amount > 0)
+      .map(d => ({ amount: d.amount, type: d.type, description: d.description || undefined })),
+    surcharges: surcharges.value
+      .filter(s => s.amount > 0)
+      .map(s => ({ amount: s.amount, type: s.type, description: s.description || undefined })),
   };
   emit('submit', config);
 }
@@ -133,12 +150,26 @@ function handleSubmit() {
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Descuento <span class="text-gray-400">(opcional)</span>
-      </label>
-      <div class="flex gap-2">
+      <div class="flex items-center justify-between mb-1">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Descuentos <span class="text-gray-400">(opcional)</span>
+        </label>
+        <UButton
+          size="xs"
+          variant="ghost"
+          icon="i-lucide-plus"
+          @click="addDiscount"
+        >
+          Agregar
+        </UButton>
+      </div>
+      <div
+        v-for="(item, index) in discounts"
+        :key="index"
+        class="flex gap-2 mb-2"
+      >
         <UInput
-          v-model.number="discount"
+          v-model.number="item.amount"
           type="number"
           :min="0"
           step="0.01"
@@ -146,33 +177,47 @@ function handleSubmit() {
           class="flex-1"
         />
         <USelect
-          v-model="discountType"
-          :items="discountTypeOptions"
+          v-model="item.type"
+          :items="ajusteTypeOptions"
           value-key="value"
           label-key="label"
-          :disabled="discount <= 0"
           class="w-40"
         />
+        <UInput
+          v-model="item.description"
+          placeholder="Motivo..."
+          class="flex-1"
+        />
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          @click="removeDiscount(index)"
+        />
       </div>
-    </div>
-
-    <div v-if="discount > 0">
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Motivo del descuento
-      </label>
-      <UInput
-        v-model="discountDescription"
-        placeholder="Ej: Cortesía, familiar del coordinador..."
-      />
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Incremento <span class="text-gray-400">(opcional)</span>
-      </label>
-      <div class="flex gap-2">
+      <div class="flex items-center justify-between mb-1">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Incrementos <span class="text-gray-400">(opcional)</span>
+        </label>
+        <UButton
+          size="xs"
+          variant="ghost"
+          icon="i-lucide-plus"
+          @click="addSurcharge"
+        >
+          Agregar
+        </UButton>
+      </div>
+      <div
+        v-for="(item, index) in surcharges"
+        :key="index"
+        class="flex gap-2 mb-2"
+      >
         <UInput
-          v-model.number="surcharge"
+          v-model.number="item.amount"
           type="number"
           :min="0"
           step="0.01"
@@ -180,24 +225,24 @@ function handleSubmit() {
           class="flex-1"
         />
         <USelect
-          v-model="surchargeType"
-          :items="discountTypeOptions"
+          v-model="item.type"
+          :items="ajusteTypeOptions"
           value-key="value"
           label-key="label"
-          :disabled="surcharge <= 0"
           class="w-40"
         />
+        <UInput
+          v-model="item.description"
+          placeholder="Motivo..."
+          class="flex-1"
+        />
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          @click="removeSurcharge(index)"
+        />
       </div>
-    </div>
-
-    <div v-if="surcharge > 0">
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Motivo del incremento
-      </label>
-      <UInput
-        v-model="surchargeDescription"
-        placeholder="Ej: Cuarto sencillo, seguro adicional..."
-      />
     </div>
 
     <div class="p-3 bg-elevated rounded-lg text-sm border border-default">

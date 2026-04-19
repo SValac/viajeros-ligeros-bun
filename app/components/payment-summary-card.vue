@@ -4,12 +4,16 @@ import type { TravelerPaymentSummary } from '~/types/payment';
 defineProps<{
   summary: TravelerPaymentSummary;
   travelerName: string;
-  discountDescription?: string;
-  surchargeDescription?: string;
 }>();
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+}
+
+function formatAjusteAmount(item: { amount: number; type: 'fixed' | 'percentage' }, appliedPrice: number) {
+  return item.type === 'percentage'
+    ? formatCurrency(appliedPrice * item.amount / 100)
+    : formatCurrency(item.amount);
 }
 
 type BadgeColor = 'warning' | 'info' | 'success';
@@ -53,30 +57,30 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
         <span>{{ formatCurrency(summary.appliedPrice) }}</span>
       </div>
 
-      <div v-if="summary.discount > 0" class="flex justify-between text-success">
+      <div
+        v-for="(item, index) in summary.discounts"
+        :key="`discount-${index}`"
+        class="flex justify-between text-success"
+      >
         <span>
           Descuento
-          <span v-if="summary.discountType === 'percentage'" class="text-xs">({{ summary.discount }}%)</span>
-          <span v-if="discountDescription" class="block text-xs text-muted font-normal">{{ discountDescription }}</span>
+          <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
+          <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
-        <span>
-          - {{ summary.discountType === 'percentage'
-            ? formatCurrency(summary.appliedPrice * summary.discount / 100)
-            : formatCurrency(summary.discount) }}
-        </span>
+        <span>- {{ formatAjusteAmount(item, summary.appliedPrice) }}</span>
       </div>
 
-      <div v-if="summary.surcharge > 0" class="flex justify-between text-warning">
+      <div
+        v-for="(item, index) in summary.surcharges"
+        :key="`surcharge-${index}`"
+        class="flex justify-between text-warning"
+      >
         <span>
           Incremento
-          <span v-if="summary.surchargeType === 'percentage'" class="text-xs">({{ summary.surcharge }}%)</span>
-          <span v-if="surchargeDescription" class="block text-xs text-muted font-normal">{{ surchargeDescription }}</span>
+          <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
+          <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
-        <span>
-          + {{ summary.surchargeType === 'percentage'
-            ? formatCurrency(summary.appliedPrice * summary.surcharge / 100)
-            : formatCurrency(summary.surcharge) }}
-        </span>
+        <span>+ {{ formatAjusteAmount(item, summary.appliedPrice) }}</span>
       </div>
 
       <div class="flex justify-between font-medium border-t border-default pt-2">
