@@ -3,6 +3,12 @@ export type TravelerType = 'adult' | 'child';
 export type PaymentStatus = 'pending' | 'partial' | 'paid';
 export type DiscountType = 'fixed' | 'percentage';
 
+export type AjusteItem = {
+  amount: number;
+  type: DiscountType;
+  description?: string;
+};
+
 export type Payment = {
   id: string;
   travelId: string;
@@ -26,12 +32,8 @@ export type TravelerAccountConfig = {
   travelerId: string;
   travelerType: TravelerType;
   childPrice?: number;
-  discount?: number;
-  discountType?: DiscountType;
-  discountDescription?: string;
-  surcharge?: number;
-  surchargeType?: DiscountType;
-  surchargeDescription?: string;
+  discounts: AjusteItem[];
+  surcharges: AjusteItem[];
   precioPublicoId?: string;
   precioPublicoMonto?: number;
 };
@@ -42,10 +44,10 @@ export type TravelerPaymentSummary = {
   totalCost: number;
   travelerType: TravelerType;
   appliedPrice: number;
-  discount: number;
-  discountType: DiscountType;
-  surcharge: number;
-  surchargeType: DiscountType;
+  discounts: AjusteItem[];
+  surcharges: AjusteItem[];
+  totalDiscountAmount: number;
+  totalSurchargeAmount: number;
   finalCost: number;
   totalPaid: number;
   balance: number;

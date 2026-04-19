@@ -1,5 +1,5 @@
 import type {
-  DiscountType,
+  AjusteItem,
   Payment,
   PaymentFilters,
   PaymentFormData,
@@ -68,19 +68,16 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
           : travelPrice
       );
 
-      const discount = config?.discount ?? 0;
-      const discountType: DiscountType = config?.discountType ?? 'fixed';
-      const surcharge = config?.surcharge ?? 0;
-      const surchargeType: DiscountType = config?.surchargeType ?? 'fixed';
+      const discounts = config?.discounts ?? [];
+      const surcharges = config?.surcharges ?? [];
 
-      const discountAmount = discount > 0
-        ? (discountType === 'percentage' ? appliedPrice * discount / 100 : discount)
-        : 0;
-      const surchargeAmount = surcharge > 0
-        ? (surchargeType === 'percentage' ? appliedPrice * surcharge / 100 : surcharge)
-        : 0;
+      function calcAmount(item: AjusteItem, base: number) {
+        return item.type === 'percentage' ? base * item.amount / 100 : item.amount;
+      }
 
-      const finalCost = Math.max(0, appliedPrice - discountAmount + surchargeAmount);
+      const totalDiscountAmount = discounts.reduce((sum, d) => sum + calcAmount(d, appliedPrice), 0);
+      const totalSurchargeAmount = surcharges.reduce((sum, s) => sum + calcAmount(s, appliedPrice), 0);
+      const finalCost = Math.max(0, appliedPrice - totalDiscountAmount + totalSurchargeAmount);
 
       const travelerPayments = getPaymentsByTravelerAndTravel.value(travelerId, travelId);
       const totalPaid = travelerPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -103,10 +100,10 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
         totalCost: travelPrice,
         travelerType,
         appliedPrice,
-        discount,
-        discountType,
-        surcharge,
-        surchargeType,
+        discounts,
+        surcharges,
+        totalDiscountAmount,
+        totalSurchargeAmount,
         finalCost,
         totalPaid,
         balance,
@@ -158,11 +155,15 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
         : 0
     );
 
-    const discount = config.discount ?? 0;
-    const discountType = config.discountType ?? 'fixed';
-    const finalCost = discount > 0
-      ? (discountType === 'percentage' ? appliedPrice * (1 - discount / 100) : appliedPrice - discount)
-      : appliedPrice;
+    const discounts = config.discounts ?? [];
+    const surcharges = config.surcharges ?? [];
+    const totalDiscountAmount = discounts.reduce((sum, d) => {
+      return sum + (d.type === 'percentage' ? appliedPrice * d.amount / 100 : d.amount);
+    }, 0);
+    const totalSurchargeAmount = surcharges.reduce((sum, s) => {
+      return sum + (s.type === 'percentage' ? appliedPrice * s.amount / 100 : s.amount);
+    }, 0);
+    const finalCost = Math.max(0, appliedPrice - totalDiscountAmount + totalSurchargeAmount);
 
     const balance = Math.max(0, finalCost - totalPaid);
 
