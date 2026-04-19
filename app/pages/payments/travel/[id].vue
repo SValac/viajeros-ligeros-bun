@@ -244,12 +244,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       if (!config?.precioPublicoId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
-      if (s.discount <= 0)
+      if (s.totalDiscountAmount <= 0)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const discountAmount = s.discountType === 'percentage'
-        ? s.appliedPrice * s.discount / 100
-        : s.discount;
-      return h('span', { class: 'text-sm text-success' }, formatCurrency(discountAmount));
+      return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalDiscountAmount));
     },
   },
   {
@@ -260,12 +257,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       if (!config?.precioPublicoId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
-      if (s.surcharge <= 0)
+      if (s.totalSurchargeAmount <= 0)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const surchargeAmount = s.surchargeType === 'percentage'
-        ? s.appliedPrice * s.surcharge / 100
-        : s.surcharge;
-      return h('span', { class: 'text-sm text-warning' }, formatCurrency(surchargeAmount));
+      return h('span', { class: 'text-sm text-warning' }, formatCurrency(s.totalSurchargeAmount));
     },
   },
   {
