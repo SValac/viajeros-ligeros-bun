@@ -190,10 +190,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
             onClick: row.getToggleExpandedHandler(),
             class: 'text-muted hover:text-default',
           }, [
-            h('span', {
-              class: row.getIsExpanded()
-                ? 'i-lucide-chevron-down w-4 h-4'
-                : 'i-lucide-chevron-right w-4 h-4',
+            h(resolveComponent('UIcon'), {
+              name: row.getIsExpanded() ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right',
+              class: 'w-4 h-4',
             }),
           ]),
           link,
