@@ -308,6 +308,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
               {
                 label: 'Registrar abono',
                 icon: 'i-lucide-plus-circle',
+                disabled: !paymentStore.getAccountConfig(row.original.id, travelId.value)?.precioPublicoId,
                 onSelect: () => openPaymentModal(row.original),
               },
               {
@@ -458,17 +459,24 @@ onMounted(() => {
     >
       <template #body>
         <PaymentForm
-          v-if="selectedTraveler && selectedSummary"
+          v-if="selectedTraveler && selectedConfig?.precioPublicoId && selectedSummary"
           :traveler-id="selectedTraveler.id"
           :travel-id="travelId"
           :max-amount="selectedSummary.balance"
           @submit="handlePaymentSubmit"
           @cancel="closeModals"
         />
-        <div v-else class="p-4 text-center text-muted">
-          <p>Configura primero la cuenta del viajero para registrar pagos.</p>
+        <div v-else class="flex flex-col gap-3">
+          <UAlert
+            color="warning"
+            variant="soft"
+            icon="i-lucide-triangle-alert"
+            title="Cuenta sin configurar"
+            description="Configura primero la cuenta del viajero para poder registrar pagos."
+          />
           <UButton
-            class="mt-3"
+            color="warning"
+            variant="soft"
             @click="() => { const t = selectedTraveler; closeModals(); if (t) openConfigModal(t); }"
           >
             Configurar cuenta
