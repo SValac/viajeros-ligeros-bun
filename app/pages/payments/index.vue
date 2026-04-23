@@ -57,7 +57,13 @@ const columns: TableColumn<TravelSummaryRow>[] = [
   {
     id: 'destino',
     header: 'Destino',
-    cell: ({ row }) => h('div', { class: 'font-medium' }, row.original.travel.destino),
+    cell: ({ row }) => h(resolveComponent('NuxtLink'), {
+      to: { name: 'payments-travel', params: { id: row.original.travel.id } },
+      class: 'flex items-center gap-2 hover:text-primary transition-colors group',
+    }, () => [
+      h('span', { class: 'i-lucide-map-pin w-4 h-4 text-muted group-hover:text-primary' }),
+      h('span', { class: 'font-medium' }, row.original.travel.destino),
+    ]),
   },
   {
     id: 'viajeros',

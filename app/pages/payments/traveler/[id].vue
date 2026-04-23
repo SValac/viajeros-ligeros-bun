@@ -3,7 +3,7 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Payment, PaymentFormData } from '~/types/payment';
+import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
 
 definePageMeta({
   name: 'payments-traveler',
@@ -15,6 +15,7 @@ const toast = useToast();
 const paymentStore = usePaymentStore();
 const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
+const cotizacionStore = useCotizacionStore();
 
 const travelerId = computed(() => route.params.id as string);
 const traveler = computed(() => travelerStore.getTravelerById(travelerId.value));
@@ -161,6 +162,43 @@ const columns: TableColumn<Payment>[] = [
   },
 ];
 
+// Config modal
+const isConfigModalOpen = shallowRef(false);
+const editingConfigTravelId = shallowRef<string | null>(null);
+
+function openConfigModal(travelId: string) {
+  editingConfigTravelId.value = travelId;
+  isConfigModalOpen.value = true;
+}
+
+function closeConfigModal() {
+  isConfigModalOpen.value = false;
+  editingConfigTravelId.value = null;
+}
+
+const editingConfig = computed(() =>
+  editingConfigTravelId.value
+    ? paymentStore.getAccountConfig(travelerId.value, editingConfigTravelId.value)
+    : undefined,
+);
+
+const editingConfigPreciosPublicos = computed(() => {
+  if (!editingConfigTravelId.value)
+    return [];
+  const cotizacion = cotizacionStore.getCotizacionByTravel(editingConfigTravelId.value);
+  return cotizacion ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.id) : [];
+});
+
+const editingConfigTravelPrice = computed(() =>
+  editingConfigTravelId.value ? getTravelPrice(editingConfigTravelId.value) : 0,
+);
+
+function handleConfigSubmit(config: TravelerAccountConfig) {
+  paymentStore.setAccountConfig(config);
+  toast.add({ title: 'Configuración guardada', color: 'success' });
+  closeConfigModal();
+}
+
 const editingSummary = computed(() => {
   if (!editingPayment.value)
     return null;
@@ -239,14 +277,25 @@ onMounted(() => {
               <UIcon name="i-lucide-map-pin" class="w-5 h-5 text-primary" />
               {{ getTravelName(id) }}
             </h2>
-            <UButton
-              size="sm"
-              variant="outline"
-              icon="i-lucide-credit-card"
-              @click="router.push({ name: 'payments-travel', params: { id } })"
-            >
-              Ver pagos del viaje
-            </UButton>
+            <div class="flex items-center gap-2">
+              <UButton
+                size="sm"
+                variant="ghost"
+                color="neutral"
+                icon="i-lucide-settings"
+                @click="openConfigModal(id)"
+              >
+                Configurar cuenta
+              </UButton>
+              <UButton
+                size="sm"
+                variant="outline"
+                icon="i-lucide-credit-card"
+                @click="router.push({ name: 'payments-travel', params: { id } })"
+              >
+                Ver pagos del viaje
+              </UButton>
+            </div>
           </div>
 
           <!-- Summary card -->
@@ -286,6 +335,26 @@ onMounted(() => {
         Este viajero no tiene pagos ni cuentas configuradas
       </p>
     </div>
+
+    <!-- Account Config Modal -->
+    <UModal
+      v-model:open="isConfigModalOpen"
+      title="Configurar cuenta"
+      :description="editingConfigTravelId ? getTravelName(editingConfigTravelId) : ''"
+    >
+      <template #body>
+        <PaymentAccountConfigForm
+          v-if="editingConfigTravelId"
+          :traveler-id="travelerId"
+          :travel-id="editingConfigTravelId"
+          :travel-base-price="editingConfigTravelPrice"
+          :precios-publicos="editingConfigPreciosPublicos"
+          :config="editingConfig"
+          @submit="handleConfigSubmit"
+          @cancel="closeConfigModal"
+        />
+      </template>
+    </UModal>
 
     <!-- Edit Modal -->
     <UModal v-model:open="isEditModalOpen" title="Editar pago">

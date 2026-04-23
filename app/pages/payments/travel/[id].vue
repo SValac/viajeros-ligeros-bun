@@ -18,8 +18,16 @@ const paymentStore = usePaymentStore();
 const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 
+const cotizacionStore = useCotizacionStore();
+
 const travelId = computed(() => route.params.id as string);
 const travel = computed(() => travelStore.getTravelById(travelId.value));
+const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
+const preciosPublicos = computed(() =>
+  cotizacion.value
+    ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.value.id)
+    : [],
+);
 
 watchEffect(() => {
   if (!travel.value && travelId.value) {
@@ -89,9 +97,11 @@ watchEffect(() => {
 
 // Caja del viaje
 const cashSummary = computed(() => {
-  const summaries = enrolledTravelers.value.map((t: Traveler) =>
-    paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value),
-  );
+  const summaries = enrolledTravelers.value
+    .filter((t: Traveler) => !!paymentStore.getAccountConfig(t.id, travelId.value)?.precioPublicoId)
+    .map((t: Traveler) =>
+      paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value),
+    );
   const totalExpected = summaries.reduce((sum: number, s) => sum + s.finalCost, 0);
   const totalCollected = summaries.reduce((sum: number, s) => sum + s.totalPaid, 0);
   return { totalExpected, totalCollected, balance: totalExpected - totalCollected };
@@ -169,6 +179,10 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const depth = row.depth;
       const traveler = row.original;
       const nombre = `${traveler.nombre} ${traveler.apellido}`;
+      const link = h(resolveComponent('NuxtLink'), {
+        to: { name: 'payments-traveler', params: { id: traveler.id } },
+        class: 'font-medium hover:text-primary transition-colors',
+      }, () => nombre);
 
       if (row.getCanExpand()) {
         return h('div', { class: 'flex items-center gap-1' }, [
@@ -176,23 +190,22 @@ const columns: TableColumn<TravelerWithChildren>[] = [
             onClick: row.getToggleExpandedHandler(),
             class: 'text-muted hover:text-default',
           }, [
-            h('span', {
-              class: row.getIsExpanded()
-                ? 'i-lucide-chevron-down w-4 h-4'
-                : 'i-lucide-chevron-right w-4 h-4',
+            h(resolveComponent('UIcon'), {
+              name: row.getIsExpanded() ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right',
+              class: 'w-4 h-4',
             }),
           ]),
-          h('span', { class: 'font-medium' }, nombre),
+          link,
         ]);
       }
 
       return h('div', {
         style: `padding-left: ${depth * 1.5 + 0.75}rem`,
-      }, nombre);
+      }, [link]);
     },
   },
   {
-    id: 'tipo',
+    id: 'travelerType',
     header: 'Tipo',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
@@ -201,9 +214,27 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
+    id: 'tipo',
+    header: 'Precio',
+    cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (config?.precioPublicoId) {
+        const precio = preciosPublicos.value.find(p => p.id === config.precioPublicoId);
+        if (precio) {
+          return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => precio.tipo);
+        }
+      }
+      const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
+      return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => label);
+    },
+  },
+  {
     id: 'costoFinal',
     header: 'Costo final',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: 'text-sm' }, formatCurrency(s.finalCost));
     },
@@ -212,19 +243,35 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'descuento',
     header: 'Descuento',
     cell: ({ row }) => {
-      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
-      if (s.discount <= 0)
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const discountAmount = s.discountType === 'percentage'
-        ? s.appliedPrice * s.discount / 100
-        : s.discount;
-      return h('span', { class: 'text-sm text-success' }, formatCurrency(discountAmount));
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      if (s.totalDiscountAmount <= 0)
+        return h('span', { class: 'text-sm text-muted' }, '—');
+      return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalDiscountAmount));
+    },
+  },
+  {
+    id: 'surcharge',
+    header: 'Incremento',
+    cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      if (s.totalSurchargeAmount <= 0)
+        return h('span', { class: 'text-sm text-muted' }, '—');
+      return h('span', { class: 'text-sm text-warning' }, formatCurrency(s.totalSurchargeAmount));
     },
   },
   {
     id: 'totalPaid',
     header: 'Abonado',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalPaid));
     },
@@ -233,6 +280,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'balance',
     header: 'Saldo pendiente',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: s.balance > 0 ? 'text-sm text-error' : 'text-sm text-success' }, formatCurrency(s.balance));
     },
@@ -241,6 +291,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     id: 'status',
     header: 'Estado',
     cell: ({ row }) => {
+      const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
+      if (!config?.precioPublicoId)
+        return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => 'Sin configurar');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       const cfg = statusConfig[s.status] ?? { color: 'neutral', label: s.status };
       return h(resolveComponent('UBadge'), { color: cfg.color, variant: 'subtle' }, () => cfg.label);
@@ -258,6 +311,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
               {
                 label: 'Registrar abono',
                 icon: 'i-lucide-plus-circle',
+                disabled: !paymentStore.getAccountConfig(row.original.id, travelId.value)?.precioPublicoId,
                 onSelect: () => openPaymentModal(row.original),
               },
               {
@@ -408,17 +462,24 @@ onMounted(() => {
     >
       <template #body>
         <PaymentForm
-          v-if="selectedTraveler && selectedSummary"
+          v-if="selectedTraveler && selectedConfig?.precioPublicoId && selectedSummary"
           :traveler-id="selectedTraveler.id"
           :travel-id="travelId"
           :max-amount="selectedSummary.balance"
           @submit="handlePaymentSubmit"
           @cancel="closeModals"
         />
-        <div v-else class="p-4 text-center text-muted">
-          <p>Configura primero la cuenta del viajero para registrar pagos.</p>
+        <div v-else class="flex flex-col gap-3">
+          <UAlert
+            color="warning"
+            variant="soft"
+            icon="i-lucide-triangle-alert"
+            title="Cuenta sin configurar"
+            description="Configura primero la cuenta del viajero para poder registrar pagos."
+          />
           <UButton
-            class="mt-3"
+            color="warning"
+            variant="soft"
             @click="() => { const t = selectedTraveler; closeModals(); if (t) openConfigModal(t); }"
           >
             Configurar cuenta
@@ -439,6 +500,7 @@ onMounted(() => {
           :traveler-id="selectedTraveler.id"
           :travel-id="travelId"
           :travel-base-price="travelPrice"
+          :precios-publicos="preciosPublicos"
           :config="selectedConfig"
           @submit="handleConfigSubmit"
           @cancel="closeModals"

@@ -10,6 +10,12 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
 }
 
+function formatAjusteAmount(item: { amount: number; type: 'fixed' | 'percentage' }, appliedPrice: number) {
+  return item.type === 'percentage'
+    ? formatCurrency(appliedPrice * item.amount / 100)
+    : formatCurrency(item.amount);
+}
+
 type BadgeColor = 'warning' | 'info' | 'success';
 
 const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
@@ -51,16 +57,30 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
         <span>{{ formatCurrency(summary.appliedPrice) }}</span>
       </div>
 
-      <div v-if="summary.discount > 0" class="flex justify-between text-success">
+      <div
+        v-for="(item, index) in summary.discounts"
+        :key="`discount-${index}`"
+        class="flex justify-between text-success"
+      >
         <span>
           Descuento
-          <span v-if="summary.discountType === 'percentage'" class="text-xs">({{ summary.discount }}%)</span>
+          <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
+          <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
+        <span>- {{ formatAjusteAmount(item, summary.appliedPrice) }}</span>
+      </div>
+
+      <div
+        v-for="(item, index) in summary.surcharges"
+        :key="`surcharge-${index}`"
+        class="flex justify-between text-warning"
+      >
         <span>
-          - {{ summary.discountType === 'percentage'
-            ? formatCurrency(summary.appliedPrice * summary.discount / 100)
-            : formatCurrency(summary.discount) }}
+          Incremento
+          <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
+          <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
+        <span>+ {{ formatAjusteAmount(item, summary.appliedPrice) }}</span>
       </div>
 
       <div class="flex justify-between font-medium border-t border-default pt-2">

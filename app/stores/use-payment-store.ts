@@ -1,5 +1,5 @@
 import type {
-  DiscountType,
+  AjusteItem,
   Payment,
   PaymentFilters,
   PaymentFormData,
@@ -62,23 +62,22 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     return (travelerId: string, travelId: string, travelPrice: number): TravelerPaymentSummary => {
       const config = getAccountConfig.value(travelerId, travelId);
       const travelerType = config?.travelerType ?? 'adult';
-      const appliedPrice = travelerType === 'child' && config?.childPrice != null
-        ? config.childPrice
-        : travelPrice;
+      const appliedPrice = config?.precioPublicoMonto ?? (
+        travelerType === 'child' && config?.childPrice != null
+          ? config.childPrice
+          : travelPrice
+      );
 
-      const discount = config?.discount ?? 0;
-      const discountType: DiscountType = config?.discountType ?? 'fixed';
+      const discounts = config?.discounts ?? [];
+      const surcharges = config?.surcharges ?? [];
 
-      let finalCost: number;
-      if (discount > 0) {
-        finalCost = discountType === 'percentage'
-          ? appliedPrice * (1 - discount / 100)
-          : appliedPrice - discount;
+      function calcAmount(item: AjusteItem, base: number) {
+        return item.type === 'percentage' ? base * item.amount / 100 : item.amount;
       }
-      else {
-        finalCost = appliedPrice;
-      }
-      finalCost = Math.max(0, finalCost);
+
+      const totalDiscountAmount = discounts.reduce((sum, d) => sum + calcAmount(d, appliedPrice), 0);
+      const totalSurchargeAmount = surcharges.reduce((sum, s) => sum + calcAmount(s, appliedPrice), 0);
+      const finalCost = Math.max(0, appliedPrice - totalDiscountAmount + totalSurchargeAmount);
 
       const travelerPayments = getPaymentsByTravelerAndTravel.value(travelerId, travelId);
       const totalPaid = travelerPayments.reduce((sum, p) => sum + p.amount, 0);
@@ -101,8 +100,10 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
         totalCost: travelPrice,
         travelerType,
         appliedPrice,
-        discount,
-        discountType,
+        discounts,
+        surcharges,
+        totalDiscountAmount,
+        totalSurchargeAmount,
         finalCost,
         totalPaid,
         balance,
@@ -148,15 +149,21 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     const existingPayments = getPaymentsByTravelerAndTravel.value(data.travelerId, data.travelId);
     const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    const appliedPrice = config.travelerType === 'child' && config.childPrice != null
-      ? config.childPrice
-      : 0; // fallback; callers should set childPrice or use travel price
+    const appliedPrice = config.precioPublicoMonto ?? (
+      config.travelerType === 'child' && config.childPrice != null
+        ? config.childPrice
+        : 0
+    );
 
-    const discount = config.discount ?? 0;
-    const discountType = config.discountType ?? 'fixed';
-    const finalCost = discount > 0
-      ? (discountType === 'percentage' ? appliedPrice * (1 - discount / 100) : appliedPrice - discount)
-      : appliedPrice;
+    const discounts = config.discounts ?? [];
+    const surcharges = config.surcharges ?? [];
+    const totalDiscountAmount = discounts.reduce((sum, d) => {
+      return sum + (d.type === 'percentage' ? appliedPrice * d.amount / 100 : d.amount);
+    }, 0);
+    const totalSurchargeAmount = surcharges.reduce((sum, s) => {
+      return sum + (s.type === 'percentage' ? appliedPrice * s.amount / 100 : s.amount);
+    }, 0);
+    const finalCost = Math.max(0, appliedPrice - totalDiscountAmount + totalSurchargeAmount);
 
     const balance = Math.max(0, finalCost - totalPaid);
 

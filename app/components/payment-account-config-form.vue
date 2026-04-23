@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import type { DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
+import type { CotizacionPrecioPublico } from '~/types/cotizacion';
+import type { AjusteItem, DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
 
 const props = defineProps<{
   travelerId: string;
   travelId: string;
   travelBasePrice: number;
+  preciosPublicos: CotizacionPrecioPublico[];
   config?: TravelerAccountConfig;
 }>();
 
@@ -14,39 +16,69 @@ const emit = defineEmits<{
 }>();
 
 const travelerType = ref<TravelerType>(props.config?.travelerType ?? 'adult');
-const childPrice = ref<number | null>(props.config?.childPrice ?? null);
-const discount = ref<number>(props.config?.discount ?? 0);
-const discountType = ref<DiscountType>(props.config?.discountType ?? 'fixed');
+const selectedPrecioPublicoId = ref<string | undefined>(
+  props.config?.precioPublicoId ?? undefined,
+);
+
+const discounts = ref<AjusteItem[]>(
+  props.config?.discounts ? props.config.discounts.map(d => ({ ...d })) : [],
+);
+const surcharges = ref<AjusteItem[]>(
+  props.config?.surcharges ? props.config.surcharges.map(s => ({ ...s })) : [],
+);
 
 const travelerTypeOptions = [
   { label: 'Adulto', value: 'adult' },
   { label: 'Niño', value: 'child' },
 ];
 
-const discountTypeOptions = [
+const precioPublicoOptions = computed(() =>
+  props.preciosPublicos.map(p => ({
+    label: `${p.tipo} — ${formatCurrency(p.precioPorPersona)}`,
+    value: p.id,
+  })),
+);
+
+const selectedPrecio = computed(() =>
+  props.preciosPublicos.find(p => p.id === selectedPrecioPublicoId.value),
+);
+
+const ajusteTypeOptions = [
   { label: 'Monto fijo', value: 'fixed' },
   { label: 'Porcentaje (%)', value: 'percentage' },
 ];
 
-const appliedPrice = computed(() => {
-  if (travelerType.value === 'child' && childPrice.value != null) {
-    return childPrice.value;
-  }
-  return props.travelBasePrice;
-});
+const appliedPrice = computed(() => selectedPrecio.value?.precioPorPersona ?? 0);
 
 const finalCost = computed(() => {
   const base = appliedPrice.value;
-  if (discount.value > 0) {
-    return discountType.value === 'percentage'
-      ? base * (1 - discount.value / 100)
-      : base - discount.value;
-  }
-  return base;
+  const totalDiscount = discounts.value.reduce((sum, d) => {
+    return sum + (d.type === 'percentage' ? base * d.amount / 100 : d.amount);
+  }, 0);
+  const totalSurcharge = surcharges.value.reduce((sum, s) => {
+    return sum + (s.type === 'percentage' ? base * s.amount / 100 : s.amount);
+  }, 0);
+  return Math.max(0, base - totalDiscount + totalSurcharge);
 });
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
+}
+
+function addDiscount() {
+  discounts.value.push({ amount: 0, type: 'fixed' as DiscountType, description: '' });
+}
+
+function removeDiscount(index: number) {
+  discounts.value.splice(index, 1);
+}
+
+function addSurcharge() {
+  surcharges.value.push({ amount: 0, type: 'fixed' as DiscountType, description: '' });
+}
+
+function removeSurcharge(index: number) {
+  surcharges.value.splice(index, 1);
 }
 
 function handleSubmit() {
@@ -54,9 +86,14 @@ function handleSubmit() {
     travelId: props.travelId,
     travelerId: props.travelerId,
     travelerType: travelerType.value,
-    childPrice: travelerType.value === 'child' && childPrice.value != null ? childPrice.value : undefined,
-    discount: discount.value || 0,
-    discountType: discount.value > 0 ? discountType.value : 'fixed',
+    precioPublicoId: selectedPrecio.value?.id,
+    precioPublicoMonto: selectedPrecio.value?.precioPorPersona,
+    discounts: discounts.value
+      .filter(d => d.amount > 0)
+      .map(d => ({ amount: d.amount, type: d.type, description: d.description || undefined })),
+    surcharges: surcharges.value
+      .filter(s => s.amount > 0)
+      .map(s => ({ amount: s.amount, type: s.type, description: s.description || undefined })),
   };
   emit('submit', config);
 }
@@ -85,17 +122,23 @@ function handleSubmit() {
       </div>
     </div>
 
-    <div v-if="travelerType === 'child'">
+    <div v-if="preciosPublicos.length === 0">
+      <UAlert
+        color="warning"
+        title="No hay precios al público configurados en la cotización de este viaje."
+      />
+    </div>
+
+    <div v-else>
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Precio para niño
-        <span class="text-xs text-gray-400 ml-1">(base: {{ formatCurrency(travelBasePrice) }})</span>
+        Precio al público
       </label>
-      <UInput
-        v-model.number="childPrice"
-        type="number"
-        :min="0"
-        step="0.01"
-        placeholder="0.00"
+      <USelect
+        v-model="selectedPrecioPublicoId"
+        :items="precioPublicoOptions"
+        value-key="value"
+        label-key="label"
+        placeholder="Selecciona un precio..."
       />
     </div>
 
@@ -107,12 +150,26 @@ function handleSubmit() {
     </div>
 
     <div>
-      <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-        Descuento <span class="text-gray-400">(opcional)</span>
-      </label>
-      <div class="flex gap-2">
+      <div class="flex items-center justify-between mb-1">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Descuentos <span class="text-gray-400">(opcional)</span>
+        </label>
+        <UButton
+          size="xs"
+          variant="ghost"
+          icon="i-lucide-plus"
+          @click="addDiscount"
+        >
+          Agregar
+        </UButton>
+      </div>
+      <div
+        v-for="(item, index) in discounts"
+        :key="index"
+        class="flex gap-2 mb-2"
+      >
         <UInput
-          v-model.number="discount"
+          v-model.number="item.amount"
           type="number"
           :min="0"
           step="0.01"
@@ -120,12 +177,70 @@ function handleSubmit() {
           class="flex-1"
         />
         <USelect
-          v-model="discountType"
-          :items="discountTypeOptions"
+          v-model="item.type"
+          :items="ajusteTypeOptions"
           value-key="value"
           label-key="label"
-          :disabled="discount <= 0"
           class="w-40"
+        />
+        <UInput
+          v-model="item.description"
+          placeholder="Motivo..."
+          class="flex-1"
+        />
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          @click="removeDiscount(index)"
+        />
+      </div>
+    </div>
+
+    <div>
+      <div class="flex items-center justify-between mb-1">
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          Incrementos <span class="text-gray-400">(opcional)</span>
+        </label>
+        <UButton
+          size="xs"
+          variant="ghost"
+          icon="i-lucide-plus"
+          @click="addSurcharge"
+        >
+          Agregar
+        </UButton>
+      </div>
+      <div
+        v-for="(item, index) in surcharges"
+        :key="index"
+        class="flex gap-2 mb-2"
+      >
+        <UInput
+          v-model.number="item.amount"
+          type="number"
+          :min="0"
+          step="0.01"
+          placeholder="0"
+          class="flex-1"
+        />
+        <USelect
+          v-model="item.type"
+          :items="ajusteTypeOptions"
+          value-key="value"
+          label-key="label"
+          class="w-40"
+        />
+        <UInput
+          v-model="item.description"
+          placeholder="Motivo..."
+          class="flex-1"
+        />
+        <UButton
+          icon="i-lucide-x"
+          color="neutral"
+          variant="ghost"
+          @click="removeSurcharge(index)"
         />
       </div>
     </div>
