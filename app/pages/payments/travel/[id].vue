@@ -179,6 +179,10 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const depth = row.depth;
       const traveler = row.original;
       const nombre = `${traveler.nombre} ${traveler.apellido}`;
+      const link = h(resolveComponent('NuxtLink'), {
+        to: { name: 'payments-traveler', params: { id: traveler.id } },
+        class: 'font-medium hover:text-primary transition-colors',
+      }, () => nombre);
 
       if (row.getCanExpand()) {
         return h('div', { class: 'flex items-center gap-1' }, [
@@ -192,13 +196,13 @@ const columns: TableColumn<TravelerWithChildren>[] = [
                 : 'i-lucide-chevron-right w-4 h-4',
             }),
           ]),
-          h('span', { class: 'font-medium' }, nombre),
+          link,
         ]);
       }
 
       return h('div', {
         style: `padding-left: ${depth * 1.5 + 0.75}rem`,
-      }, nombre);
+      }, [link]);
     },
   },
   {
