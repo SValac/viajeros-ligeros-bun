@@ -9,7 +9,7 @@ export default defineNuxtConfig({
     },
   },
   devtools: { enabled: true },
-  modules: ['@pinia/nuxt', '@pinia-plugin-persistedstate/nuxt', '@nuxt/eslint', '@nuxt/ui'],
+  modules: ['@pinia/nuxt', '@nuxt/eslint', '@nuxt/ui'],
   css: ['~/assets/css/main.css', 'vue3-emoji-picker/css'],
   eslint: {
     config: {

@@ -21,7 +21,6 @@
   },
   "dependencies": {
     "@nuxt/ui": "^4.3.0",
-    "@pinia-plugin-persistedstate/nuxt": "^1.2.1",
     "@supabase/supabase-js": "^2.104.1",
     "@tiptap/extension-link": "^3.22.3",
     "@tiptap/extension-placeholder": "^3.22.3",
