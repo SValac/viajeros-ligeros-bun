@@ -24,22 +24,22 @@ const revenue = computed(() => travelsStore.totalRevenue);
 // Funciones auxiliares
 function getStatusColor(status: TravelStatus): string {
   const colors: Record<TravelStatus, string> = {
-    'pendiente': 'amber',
-    'confirmado': 'blue',
-    'en-curso': 'purple',
-    'completado': 'green',
-    'cancelado': 'red',
+    pending: 'amber',
+    confirmed: 'blue',
+    in_progress: 'purple',
+    completed: 'green',
+    cancelled: 'red',
   };
   return colors[status] || 'gray';
 }
 
 function getStatusLabel(status: TravelStatus): string {
   const labels: Record<TravelStatus, string> = {
-    'pendiente': 'Pendiente',
-    'confirmado': 'Confirmado',
-    'en-curso': 'En Curso',
-    'completado': 'Completado',
-    'cancelado': 'Cancelado',
+    pending: 'Pendiente',
+    confirmed: 'Confirmado',
+    in_progress: 'En Curso',
+    completed: 'Completado',
+    cancelled: 'Cancelado',
   };
   return labels[status] || status;
 }
@@ -75,12 +75,12 @@ function navigateToEdit(travelId: string) {
 
 function handleDelete(travel: Travel) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar el viaje a ${travel.destino}?`)) {
+  if (confirm(`¿Estás seguro de eliminar el viaje a ${travel.destination}?`)) {
     const success = travelsStore.deleteTravel(travel.id);
     if (success) {
       toast.add({
         title: 'Viaje eliminado',
-        description: `${travel.destino} se eliminó correctamente`,
+        description: `${travel.destination} se eliminó correctamente`,
         color: 'warning',
       });
     }
@@ -102,8 +102,8 @@ function getRowActions(travel: Travel) {
         onSelect: () => navigateToEdit(travel.id),
       },
       {
-        label: cotizacionStore.hasCotizacion(travel.id) ? 'Ver cotización' : 'Crear cotización',
-        icon: cotizacionStore.hasCotizacion(travel.id) ? 'i-lucide-file-check' : 'i-lucide-file-plus',
+        label: cotizacionStore.hasQuotation(travel.id) ? 'Ver cotización' : 'Crear cotización',
+        icon: cotizacionStore.hasQuotation(travel.id) ? 'i-lucide-file-check' : 'i-lucide-file-plus',
         onSelect: () => router.push({ name: 'travel-cotizacion', params: { id: travel.id } }),
       },
     ],
@@ -132,15 +132,15 @@ const columns: TableColumn<Travel>[] = [
       ]),
   },
   {
-    accessorKey: 'coordinadorIds',
+    accessorKey: 'coordinatorIds',
     header: 'Coordinadores',
     cell: ({ row }) => {
-      const ids = row.getValue('coordinadorIds') as string[];
+      const ids = row.getValue('coordinatorIds') as string[];
       if (!ids || ids.length === 0)
         return h('span', { class: 'text-sm text-gray-400' }, 'Sin coordinador');
       const names = ids.map((id) => {
         const c = coordinatorStore.getCoordinatorById(id);
-        return c ? c.nombre : '—';
+        return c ? c.name : '—';
       });
       return h('div', { class: 'flex items-center gap-2' }, [
         h('span', { class: 'i-lucide-user-star w-4 h-4 text-gray-400 shrink-0' }),
@@ -153,18 +153,18 @@ const columns: TableColumn<Travel>[] = [
     header: 'Fechas',
     cell: ({ row }) => {
       const travel = row.original;
-      return h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatDateRange(travel.fechaInicio, travel.fechaFin));
+      return h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatDateRange(travel.startDate, travel.endDate));
     },
   },
   {
-    accessorKey: 'estado',
+    accessorKey: 'status',
     header: 'Estado',
     cell: ({ row }) => {
-      const estado = row.getValue('estado') as TravelStatus;
+      const status = row.getValue('status') as TravelStatus;
       return h(resolveComponent('UBadge'), {
-        color: getStatusColor(estado),
+        color: getStatusColor(status),
         variant: 'subtle',
-      }, () => getStatusLabel(estado));
+      }, () => getStatusLabel(status));
     },
   },
   {
@@ -178,7 +178,7 @@ const columns: TableColumn<Travel>[] = [
     id: 'cotizacion',
     header: 'Cotización',
     cell: ({ row }) => {
-      const hasCot = cotizacionStore.hasCotizacion(row.original.id);
+      const hasCot = cotizacionStore.hasQuotation(row.original.id);
       if (!hasCot)
         return h('span', { class: 'text-xs text-gray-400' }, '—');
       return h(resolveComponent('UBadge'), {
@@ -259,7 +259,7 @@ onMounted(() => {
               Confirmados
             </p>
             <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-              {{ stats.confirmado }}
+              {{ stats.confirmed }}
             </p>
           </div>
           <UIcon
@@ -277,7 +277,7 @@ onMounted(() => {
               En Curso
             </p>
             <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
-              {{ stats.enCurso }}
+              {{ stats.inProgress }}
             </p>
           </div>
           <UIcon

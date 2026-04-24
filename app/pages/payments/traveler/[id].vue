@@ -27,7 +27,7 @@ watchEffect(() => {
 });
 
 const travelerName = computed(() =>
-  traveler.value ? `${traveler.value.nombre} ${traveler.value.apellido}` : '',
+  traveler.value ? `${traveler.value.firstName} ${traveler.value.lastName}` : '',
 );
 
 // All travel IDs this traveler has account configs or payments for
@@ -49,16 +49,16 @@ const travelOptions = computed(() => [
   { label: 'Todos los viajes', value: 'all' },
   ...travelerTravelIds.value.map((id) => {
     const t = travelStore.getTravelById(id);
-    return { label: t?.destino ?? id, value: id };
+    return { label: t?.destination ?? id, value: id };
   }),
 ]);
 
 function getTravelName(id: string) {
-  return travelStore.getTravelById(id)?.destino ?? id;
+  return travelStore.getTravelById(id)?.destination ?? id;
 }
 
 function getTravelPrice(id: string) {
-  return travelStore.getTravelById(id)?.precio ?? 0;
+  return travelStore.getTravelById(id)?.price ?? 0;
 }
 
 const filteredPayments = computed(() => {
@@ -186,7 +186,7 @@ const editingConfigPreciosPublicos = computed(() => {
   if (!editingConfigTravelId.value)
     return [];
   const cotizacion = cotizacionStore.getCotizacionByTravel(editingConfigTravelId.value);
-  return cotizacion ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.id) : [];
+  return cotizacion ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.id) : [];
 });
 
 const editingConfigTravelPrice = computed(() =>

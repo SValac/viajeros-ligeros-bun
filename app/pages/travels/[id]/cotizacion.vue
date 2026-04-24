@@ -18,7 +18,7 @@ const travelId = computed(() => route.params.id as string);
 
 const travel = computed(() => travelStore.getTravelById(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
-const readonly = computed(() => cotizacion.value?.estado === 'confirmada');
+const readonly = computed(() => cotizacion.value?.status === 'confirmed');
 const acumuladoViajeros = computed(() =>
   paymentStore.getTravelCashSummary(travelId.value).totalCollected,
 );
@@ -37,18 +37,18 @@ watchEffect(() => {
 
 // Form for creating a new cotizacion
 const crearSchema = z.object({
-  asientoMinimoObjetivo: z.number().int().nonnegative().optional(),
-  notas: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
+  minimumSeatTarget: z.number().int().nonnegative().optional(),
+  notes: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
 });
 
 type CrearFormSchema = {
-  asientoMinimoObjetivo?: number;
-  notas?: string;
+  minimumSeatTarget?: number;
+  notes?: string;
 };
 
 const crearState = reactive<CrearFormSchema>({
-  asientoMinimoObjetivo: undefined,
-  notas: '',
+  minimumSeatTarget: undefined,
+  notes: '',
 });
 
 const isCrearModalOpen = shallowRef(false);
@@ -60,13 +60,13 @@ function handleCrearCotizacion() {
   if (!result.success)
     return;
 
-  cotizacionStore.createCotizacion({
+  cotizacionStore.createQuotation({
     travelId: travelId.value,
-    precioAsiento: 0,
-    capacidadAutobus: 0,
-    asientoMinimoObjetivo: result.data.asientoMinimoObjetivo ?? 0,
-    estado: 'borrador',
-    notas: result.data.notas,
+    seatPrice: 0,
+    busCapacity: 0,
+    minimumSeatTarget: result.data.minimumSeatTarget ?? 0,
+    status: 'draft',
+    notes: result.data.notes,
   });
 
   toast.add({ title: 'Cotización creada', color: 'success' });
@@ -81,26 +81,26 @@ function handleCotizacionConfirmada() {
 const editandoParametros = shallowRef(false);
 
 const paramsState = reactive({
-  capacidadAutobus: cotizacion.value?.capacidadAutobus ?? 0,
-  asientoMinimoObjetivo: cotizacion.value?.asientoMinimoObjetivo ?? 0,
-  notas: cotizacion.value?.notas ?? '',
+  busCapacity: cotizacion.value?.busCapacity ?? 0,
+  minimumSeatTarget: cotizacion.value?.minimumSeatTarget ?? 0,
+  notes: cotizacion.value?.notes ?? '',
 });
 
 watch(cotizacion, (c) => {
   if (c) {
-    paramsState.capacidadAutobus = c.capacidadAutobus;
-    paramsState.asientoMinimoObjetivo = c.asientoMinimoObjetivo;
-    paramsState.notas = c.notas ?? '';
+    paramsState.busCapacity = c.busCapacity;
+    paramsState.minimumSeatTarget = c.minimumSeatTarget;
+    paramsState.notes = c.notes ?? '';
   }
 }, { immediate: true });
 
 function guardarParametros() {
   if (!cotizacion.value)
     return;
-  cotizacionStore.updateCotizacion(cotizacion.value.id, {
-    capacidadAutobus: paramsState.capacidadAutobus,
-    asientoMinimoObjetivo: paramsState.asientoMinimoObjetivo,
-    notas: paramsState.notas,
+  cotizacionStore.updateQuotation(cotizacion.value.id, {
+    busCapacity: paramsState.busCapacity,
+    minimumSeatTarget: paramsState.minimumSeatTarget,
+    notes: paramsState.notes,
   });
   editandoParametros.value = false;
   toast.add({ title: 'Parámetros actualizados', color: 'success' });
@@ -128,7 +128,7 @@ function handleHospedajeAgregado() {
               Cotización
             </h1>
             <p class="text-muted text-sm">
-              {{ travel.destino }}
+              {{ travel.destination }}
             </p>
           </div>
         </div>
@@ -156,14 +156,14 @@ function handleHospedajeAgregado() {
       <template v-else>
         <!-- Header con acciones -->
         <CotizacionHeaderActions
-          :cotizacion-id="cotizacion.id"
+          :quotation-id="cotizacion.id"
           :readonly="readonly"
           @cotizacion-confirmada="handleCotizacionConfirmada"
         />
 
         <!-- Resumen financiero -->
         <CotizacionResumenFinanciero
-          :cotizacion-id="cotizacion.id"
+          :quotation-id="cotizacion.id"
           :acumulado-viajeros="acumuladoViajeros"
         />
 
@@ -193,7 +193,7 @@ function handleHospedajeAgregado() {
                 Capacidad del Autobús
               </p>
               <p class="font-medium">
-                {{ cotizacion.capacidadAutobus }}
+                {{ cotizacion.busCapacity }}
               </p>
             </div>
             <div>
@@ -201,7 +201,7 @@ function handleHospedajeAgregado() {
                 Asiento Mínimo Objetivo
               </p>
               <p class="font-medium">
-                {{ cotizacion.asientoMinimoObjetivo }}
+                {{ cotizacion.minimumSeatTarget }}
               </p>
             </div>
             <div>
@@ -209,7 +209,7 @@ function handleHospedajeAgregado() {
                 Notas
               </p>
               <p class="text-sm">
-                {{ cotizacion.notas || '—' }}
+                {{ cotizacion.notes || '—' }}
               </p>
             </div>
           </div>
@@ -218,14 +218,14 @@ function handleHospedajeAgregado() {
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <UFormField label="Capacidad del Autobús">
                 <UInput
-                  v-model.number="paramsState.capacidadAutobus"
+                  v-model.number="paramsState.busCapacity"
                   type="number"
                   class="w-full"
                 />
               </UFormField>
               <UFormField label="Asiento Mínimo Objetivo">
                 <UInput
-                  v-model.number="paramsState.asientoMinimoObjetivo"
+                  v-model.number="paramsState.minimumSeatTarget"
                   type="number"
                   class="w-full"
                 />
@@ -233,7 +233,7 @@ function handleHospedajeAgregado() {
             </div>
             <UFormField label="Notas">
               <UTextarea
-                v-model="paramsState.notas"
+                v-model="paramsState.notes"
                 :rows="3"
                 class="w-full"
               />
@@ -256,7 +256,7 @@ function handleHospedajeAgregado() {
         <!-- Sección Servicios -->
         <section id="servicios">
           <CotizacionProveedoresSection
-            :cotizacion-id="cotizacion.id"
+            :quotation-id="cotizacion.id"
             :readonly="readonly"
           />
         </section>
@@ -264,7 +264,7 @@ function handleHospedajeAgregado() {
         <!-- Sección Hospedaje -->
         <section id="hospedaje">
           <CotizacionHospedajeSection
-            :cotizacion-id="cotizacion.id"
+            :quotation-id="cotizacion.id"
             :readonly="readonly"
             @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
           />
@@ -273,7 +273,7 @@ function handleHospedajeAgregado() {
         <!-- Sección Autobuses -->
         <section id="autobuses">
           <CotizacionBusesSection
-            :cotizacion-id="cotizacion.id"
+            :quotation-id="cotizacion.id"
             :readonly="readonly"
             @agregar-bus="isAgregarBusModalOpen = true"
           />
@@ -282,7 +282,7 @@ function handleHospedajeAgregado() {
         <!-- Sección Precio al Público -->
         <section id="precio-publico">
           <CotizacionPrecioPublicoSection
-            :cotizacion-id="cotizacion.id"
+            :quotation-id="cotizacion.id"
             :readonly="readonly"
           />
         </section>
@@ -302,9 +302,9 @@ function handleHospedajeAgregado() {
           class="space-y-4"
           @submit="handleCrearCotizacion"
         >
-          <UFormField label="Asiento Mínimo Objetivo" name="asientoMinimoObjetivo">
+          <UFormField label="Asiento Mínimo Objetivo" name="minimumSeatTarget">
             <UInput
-              v-model.number="crearState.asientoMinimoObjetivo"
+              v-model.number="crearState.minimumSeatTarget"
               type="number"
               placeholder="Ej. 30"
               class="w-full"
@@ -313,7 +313,7 @@ function handleHospedajeAgregado() {
 
           <UFormField label="Notas" name="notas">
             <UTextarea
-              v-model="crearState.notas"
+              v-model="crearState.notes"
               placeholder="Observaciones sobre esta cotización..."
               :rows="3"
               class="w-full"
@@ -341,7 +341,7 @@ function handleHospedajeAgregado() {
     <CotizacionHospedajeForm
       v-if="cotizacion"
       :open="isAgregarHospedajeModalOpen"
-      :cotizacion-id="cotizacion.id"
+      :quotation-id="cotizacion.id"
       @update:open="(v) => isAgregarHospedajeModalOpen = v"
       @hospedaje-agregado="handleHospedajeAgregado"
     />
@@ -350,7 +350,7 @@ function handleHospedajeAgregado() {
     <CotizacionBusForm
       v-if="cotizacion"
       :open="isAgregarBusModalOpen"
-      :cotizacion-id="cotizacion.id"
+      :quotation-id="cotizacion.id"
       @update:open="(v) => isAgregarBusModalOpen = v"
       @bus-agregado="isAgregarBusModalOpen = false"
     />

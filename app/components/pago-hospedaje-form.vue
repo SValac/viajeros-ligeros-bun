@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { z } from 'zod';
 
-import type { PagoHospedaje, PagoHospedajeFormData } from '~/types/cotizacion';
+import type { AccommodationPayment, AccommodationPaymentFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionHospedajeId: string;
+  quotationAccommodationId: string;
   maxMonto: number;
-  pago?: PagoHospedaje | null;
+  pago?: AccommodationPayment | null;
 };
 
-const { cotizacionHospedajeId, maxMonto, pago = null } = defineProps<Props>();
+const { quotationAccommodationId, maxMonto, pago = null } = defineProps<Props>();
 
 const emit = defineEmits<{
-  submit: [data: PagoHospedajeFormData];
+  submit: [data: AccommodationPaymentFormData];
   cancel: [];
 }>();
 
@@ -23,31 +23,31 @@ const tipoPagoOptions = [
 
 const schema = computed(() =>
   z.object({
-    monto: z
+    amount: z
       .number({ message: 'Ingresa un monto válido' })
       .positive('El monto debe ser mayor a 0')
       .max(maxMonto, `El monto no puede superar $${maxMonto.toFixed(2)}`),
-    fechaPago: z.string().min(1, 'Selecciona una fecha'),
-    tipoPago: z.enum(['cash', 'transfer']),
-    concepto: z.string().max(200, 'Máximo 200 caracteres').optional(),
-    notas: z.string().max(500, 'Máximo 500 caracteres').optional(),
+    paymentDate: z.string().min(1, 'Selecciona una fecha'),
+    paymentType: z.enum(['cash', 'transfer']),
+    concept: z.string().max(200, 'Máximo 200 caracteres').optional(),
+    notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
   }),
 );
 
 type FormSchema = {
-  monto?: number;
-  fechaPago: string;
-  tipoPago: 'cash' | 'transfer';
-  concepto?: string;
-  notas?: string;
+  amount?: number;
+  paymentDate: string;
+  paymentType: 'cash' | 'transfer';
+  concept?: string;
+  notes?: string;
 };
 
 const state = reactive<FormSchema>({
-  monto: pago?.monto ?? undefined,
-  fechaPago: pago?.fechaPago ?? new Date().toISOString().split('T')[0]!,
-  tipoPago: pago?.tipoPago ?? 'cash',
-  concepto: pago?.concepto ?? '',
-  notas: pago?.notas ?? '',
+  amount: pago?.amount ?? undefined,
+  paymentDate: pago?.paymentDate ?? new Date().toISOString().split('T')[0]!,
+  paymentType: pago?.paymentType ?? 'cash',
+  concept: pago?.concept ?? '',
+  notes: pago?.notes ?? '',
 });
 
 function formatCurrency(amount: number): string {
@@ -62,9 +62,9 @@ function onSubmit() {
   if (!result.success)
     return;
 
-  const data: PagoHospedajeFormData = {
+  const data: AccommodationPaymentFormData = {
     ...result.data,
-    cotizacionHospedajeId,
+    quotationAccommodationId,
     ...(pago?.id ? { id: pago.id } : {}),
   };
 
@@ -82,11 +82,11 @@ function onSubmit() {
     <!-- Monto -->
     <UFormField
       label="Monto"
-      name="monto"
+      name="amount"
       required
     >
       <UInput
-        v-model.number="state.monto"
+        v-model.number="state.amount"
         type="number"
         placeholder="0.00"
         class="w-full"
@@ -105,7 +105,7 @@ function onSubmit() {
       required
     >
       <UInput
-        v-model="state.fechaPago"
+        v-model="state.paymentDate"
         type="date"
         class="w-full"
       />
@@ -118,16 +118,16 @@ function onSubmit() {
       required
     >
       <USelect
-        v-model="state.tipoPago"
+        v-model="state.paymentType"
         :items="tipoPagoOptions"
         class="w-full"
       />
     </UFormField>
 
     <!-- Concepto -->
-    <UFormField label="Concepto" name="concepto">
+    <UFormField label="Concepto" name="concept">
       <UInput
-        v-model="state.concepto"
+        v-model="state.concept"
         placeholder="Ej. Anticipo, Liquidación..."
         class="w-full"
       />
@@ -136,7 +136,7 @@ function onSubmit() {
     <!-- Notas -->
     <UFormField label="Notas" name="notas">
       <UTextarea
-        v-model="state.notas"
+        v-model="state.notes"
         placeholder="Notas adicionales..."
         :rows="3"
         class="w-full"

@@ -4,10 +4,10 @@ import type { TableColumn } from '@nuxt/ui';
 import { computed, h, reactive, ref, shallowRef } from 'vue';
 import { z } from 'zod';
 
-import type { CotizacionPrecioPublico, CotizacionPrecioPublicoFormData } from '~/types/cotizacion';
+import type { QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   readonly?: boolean;
 };
 
@@ -18,12 +18,12 @@ const toast = useToast();
 
 // Obtener matriz de precios de referencia
 const matrizPreciosReferencia = computed(() => {
-  return cotizacionStore.getMatrizPreciosReferencia(props.cotizacionId);
+  return cotizacionStore.getMatrizPreciosReferencia(props.quotationId);
 });
 
 // Obtener precios públicos agregados
 const preciosPublicos = computed(() => {
-  return cotizacionStore.getPreciosPublicosByCotizacion(props.cotizacionId);
+  return cotizacionStore.getPreciosPublicosByQuotation(props.quotationId);
 });
 
 // Helper para formatear moneda
@@ -40,42 +40,42 @@ const hayDatos = computed(() => {
 // Selección de tipo de habitación por hotel
 // ============================================================================
 
-type EntradaGrupo = { tipoHabitacion: string; costoPorPersona: number };
+type EntradaGrupo = { roomType: string; costPerPerson: number };
 
-// Map<`${ocupacionMaxima}::${hotelNombre}`, localIndex>
+// Map<`::${hotelName}`, localIndex>
 const seleccion = reactive(new Map<string, number>());
 
-function seleccionKey(ocupacionMaxima: number, hotelNombre: string): string {
-  return `${ocupacionMaxima}::${hotelNombre}`;
+function seleccionKey(maxOccupancy: number, hotelName: string): string {
+  return `::${hotelName}`;
 }
 
-function getSelectedLocalIndex(ocupacionMaxima: number, hotelNombre: string): number {
-  return seleccion.get(seleccionKey(ocupacionMaxima, hotelNombre)) ?? 0;
+function getSelectedLocalIndex(maxOccupancy: number, hotelName: string): number {
+  return seleccion.get(seleccionKey(maxOccupancy, hotelName)) ?? 0;
 }
 
-function selectLocalIndex(ocupacionMaxima: number, hotelNombre: string, localIndex: number): void {
-  seleccion.set(seleccionKey(ocupacionMaxima, hotelNombre), localIndex);
+function selectLocalIndex(maxOccupancy: number, hotelName: string, localIndex: number): void {
+  seleccion.set(seleccionKey(maxOccupancy, hotelName), localIndex);
 }
 
-function gruposHotel(hospedaje: Array<{ hotelNombre: string; tipoHabitacion: string; costoPorPersona: number }>): [string, EntradaGrupo[]][] {
+function gruposHotel(accommodation: Array<{ hotelName: string; roomType: string; costPerPerson: number }>): [string, EntradaGrupo[]][] {
   const map = new Map<string, EntradaGrupo[]>();
-  for (const entry of hospedaje) {
-    if (!map.has(entry.hotelNombre))
-      map.set(entry.hotelNombre, []);
-    map.get(entry.hotelNombre)!.push({ tipoHabitacion: entry.tipoHabitacion, costoPorPersona: entry.costoPorPersona });
+  for (const entry of accommodation) {
+    if (!map.has(entry.hotelName))
+      map.set(entry.hotelName, []);
+    map.get(entry.hotelName)!.push({ roomType: entry.roomType, costPerPerson: entry.costPerPerson });
   }
   return [...map.entries()];
 }
 
-function totalHospedajeSeleccionado(precio: { ocupacionMaxima: number; desglose: { hospedaje: Array<{ hotelNombre: string; tipoHabitacion: string; costoPorPersona: number }> } }): number {
-  return gruposHotel(precio.desglose.hospedaje).reduce((sum, [hotelNombre, tipos]) => {
-    const idx = getSelectedLocalIndex(precio.ocupacionMaxima, hotelNombre);
-    return sum + (tipos[idx] ?? tipos[0]!).costoPorPersona;
+function totalHospedajeSeleccionado(price: { maxOccupancy: number; breakdown: { accommodation: Array<{ hotelName: string; roomType: string; costPerPerson: number }> } }): number {
+  return gruposHotel(price.breakdown.accommodation).reduce((sum, [hotelName, tipos]) => {
+    const idx = getSelectedLocalIndex(price.maxOccupancy, hotelName);
+    return sum + (tipos[idx] ?? tipos[0]!).costPerPerson;
   }, 0);
 }
 
-function precioTotalSeleccionado(precio: { ocupacionMaxima: number; desglose: { precioAsiento: number; hospedaje: Array<{ hotelNombre: string; tipoHabitacion: string; costoPorPersona: number }> } }): number {
-  return precio.desglose.precioAsiento + totalHospedajeSeleccionado(precio);
+function precioTotalSeleccionado(price: { maxOccupancy: number; breakdown: { seatPrice: number; accommodation: Array<{ hotelName: string; roomType: string; costPerPerson: number }> } }): number {
+  return price.breakdown.seatPrice + totalHospedajeSeleccionado(price);
 }
 
 // ============================================================================
@@ -84,38 +84,38 @@ function precioTotalSeleccionado(precio: { ocupacionMaxima: number; desglose: { 
 
 // Schema de validación
 const formSchema = z.object({
-  tipo: z.string({ message: 'Ingresa el tipo de precio' }).min(1, 'Campo requerido'),
-  descripcion: z.string({ message: 'Ingresa la descripción' }).min(1, 'Campo requerido'),
-  precioPorPersona: z.number({ message: 'Ingresa el precio' }).positive('Debe ser mayor a 0'),
-  tipoHabitacion: z.string().optional(),
-  grupoEdad: z.string().optional(),
-  notas: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  priceType: z.string({ message: 'Ingresa el tipo de precio' }).min(1, 'Campo requerido'),
+  description: z.string({ message: 'Ingresa la descripción' }).min(1, 'Campo requerido'),
+  pricePerPerson: z.number({ message: 'Ingresa el precio' }).positive('Debe ser mayor a 0'),
+  roomType: z.string().optional(),
+  ageGroup: z.string().optional(),
+  notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
 });
 
 type FormSchema = z.infer<typeof formSchema>;
 
 // Estado del formulario
 const formState = reactive<Partial<FormSchema>>({
-  tipo: '',
-  descripcion: '',
-  precioPorPersona: 0,
-  tipoHabitacion: '',
-  grupoEdad: '',
-  notas: '',
+  priceType: '',
+  description: '',
+  pricePerPerson: 0,
+  roomType: '',
+  ageGroup: '',
+  notes: '',
 });
 
 // Modal state
 const isFormModalOpen = shallowRef(false);
-const editingPrecio = ref<CotizacionPrecioPublico | null>(null);
+const editingPrecio = ref<QuotationPublicPrice | null>(null);
 
 // Reset formulario
 function resetForm() {
-  formState.tipo = '';
-  formState.descripcion = '';
-  formState.precioPorPersona = 0;
-  formState.tipoHabitacion = '';
-  formState.grupoEdad = '';
-  formState.notas = '';
+  formState.priceType = '';
+  formState.description = '';
+  formState.pricePerPerson = 0;
+  formState.roomType = '';
+  formState.ageGroup = '';
+  formState.notes = '';
   editingPrecio.value = null;
 }
 
@@ -126,14 +126,14 @@ function abrirFormulario() {
 }
 
 // Abrir formulario para editar
-function abrirEdicion(precio: CotizacionPrecioPublico) {
-  editingPrecio.value = precio;
-  formState.tipo = precio.tipo;
-  formState.descripcion = precio.descripcion;
-  formState.precioPorPersona = precio.precioPorPersona;
-  formState.tipoHabitacion = precio.tipoHabitacion ?? '';
-  formState.grupoEdad = precio.grupoEdad ?? '';
-  formState.notas = precio.notas ?? '';
+function abrirEdicion(price: QuotationPublicPrice) {
+  editingPrecio.value = price;
+  formState.priceType = price.priceType;
+  formState.description = price.description;
+  formState.pricePerPerson = price.pricePerPerson;
+  formState.roomType = price.roomType ?? '';
+  formState.ageGroup = price.ageGroup ?? '';
+  formState.notes = price.notes ?? '';
   isFormModalOpen.value = true;
 }
 
@@ -153,7 +153,7 @@ function guardarPrecio() {
     // Actualizar
     const updated = cotizacionStore.updatePrecioPublico(editingPrecio.value.id, {
       ...result.data,
-    } as Partial<CotizacionPrecioPublicoFormData>);
+    } as Partial<QuotationPublicPriceFormData>);
 
     if (!updated) {
       toast.add({
@@ -172,9 +172,9 @@ function guardarPrecio() {
   else {
     // Crear
     const response = cotizacionStore.addPrecioPublico({
-      cotizacionId: props.cotizacionId,
+      quotationId: props.quotationId,
       ...result.data,
-    } as CotizacionPrecioPublicoFormData);
+    } as QuotationPublicPriceFormData);
 
     if ('error' in response) {
       toast.add({
@@ -205,13 +205,13 @@ function eliminarPrecio(id: string) {
 }
 
 // Acciones por fila
-function getRowActions(precio: CotizacionPrecioPublico) {
+function getRowActions(price: QuotationPublicPrice) {
   return [
     [
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
-        onSelect: () => abrirEdicion(precio),
+        onSelect: () => abrirEdicion(price),
       },
     ],
     [
@@ -219,39 +219,39 @@ function getRowActions(precio: CotizacionPrecioPublico) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => eliminarPrecio(precio.id),
+        onSelect: () => eliminarPrecio(price.id),
       },
     ],
   ];
 }
 
 // Columnas de la tabla
-const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
+const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
   return [
     {
-      accessorKey: 'tipo',
+      accessorKey: 'priceType',
       header: 'Tipo',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, row.original.tipo),
+      cell: ({ row }) => h('span', { class: 'font-medium' }, row.original.priceType),
     },
     {
-      accessorKey: 'descripcion',
+      accessorKey: 'description',
       header: 'Descripción',
-      cell: ({ row }) => h('span', { class: 'text-sm' }, row.original.descripcion),
+      cell: ({ row }) => h('span', { class: 'text-sm' }, row.original.description),
     },
     {
       accessorKey: 'precioPorPersona',
       header: 'Precio/Persona',
-      cell: ({ row }) => h('span', { class: 'font-bold text-primary' }, formatCurrency(row.original.precioPorPersona)),
+      cell: ({ row }) => h('span', { class: 'font-bold text-primary' }, formatCurrency(row.original.pricePerPerson)),
     },
     {
       id: 'tipoHabitacion',
       header: 'Tipo Habitación',
-      cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.original.tipoHabitacion ?? '—'),
+      cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.original.roomType ?? '—'),
     },
     {
       id: 'grupoEdad',
       header: 'Grupo Etario',
-      cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.original.grupoEdad ?? '—'),
+      cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.original.ageGroup ?? '—'),
     },
     {
       id: 'actions',
@@ -287,7 +287,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UCard
-            v-for="(precio, index) in matrizPreciosReferencia"
+            v-for="(price, index) in matrizPreciosReferencia"
             :key="index"
           >
             <template #header>
@@ -295,7 +295,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
                 <div class="flex items-center gap-2">
                   <span class="i-lucide-bed-double w-4 h-4 text-muted" />
                   <p class="font-semibold">
-                    Habitación para {{ precio.ocupacionMaxima }} persona{{ precio.ocupacionMaxima > 1 ? 's' : '' }}
+                    Habitación para {{ price.maxOccupancy }} persona{{ price.maxOccupancy > 1 ? 's' : '' }}
                   </p>
                 </div>
                 <div class="text-right">
@@ -303,7 +303,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
                     Precio por Persona
                   </p>
                   <p class="text-xl font-bold text-primary">
-                    {{ formatCurrency(precioTotalSeleccionado(precio)) }}
+                    {{ formatCurrency(precioTotalSeleccionado(price)) }}
                   </p>
                 </div>
               </div>
@@ -313,7 +313,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
               <!-- Precio asiento -->
               <div class="flex justify-between items-center">
                 <span class="text-muted">Precio Asiento Base</span>
-                <span class="font-medium">{{ formatCurrency(precio.desglose.precioAsiento) }}</span>
+                <span class="font-medium">{{ formatCurrency(price.breakdown.seatPrice) }}</span>
               </div>
 
               <USeparator />
@@ -324,18 +324,18 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
                   Hospedaje por Hotel
                 </p>
                 <div
-                  v-for="[hotelNombre, tipos] in gruposHotel(precio.desglose.hospedaje)"
-                  :key="hotelNombre"
+                  v-for="[hotelName, tipos] in gruposHotel(price.breakdown.accommodation)"
+                  :key="hotelName"
                   class="space-y-1"
                 >
                   <!-- Un solo tipo: sin radio -->
                   <template v-if="tipos.length === 1">
                     <div class="flex justify-between items-center pl-2">
                       <span class="text-muted">
-                        {{ hotelNombre }}
-                        <span class="text-xs opacity-60">· {{ tipos[0]!.tipoHabitacion }}</span>
+                        {{ hotelName }}
+                        <span class="text-xs opacity-60">· {{ tipos[0]!.roomType }}</span>
                       </span>
-                      <span class="font-medium">{{ formatCurrency(tipos[0]!.costoPorPersona) }}</span>
+                      <span class="font-medium">{{ formatCurrency(tipos[0]!.costPerPerson) }}</span>
                     </div>
                   </template>
                   <!-- Múltiples tipos: radio para elegir -->
@@ -344,22 +344,22 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
                       v-for="(tipo, localIdx) in tipos"
                       :key="localIdx"
                       class="flex items-center gap-2 pl-2 cursor-pointer select-none rounded hover:bg-muted/10 py-0.5 transition-colors"
-                      @click="selectLocalIndex(precio.ocupacionMaxima, hotelNombre, localIdx)"
+                      @click="selectLocalIndex(price.maxOccupancy, hotelName, localIdx)"
                     >
                       <UIcon
-                        :name="getSelectedLocalIndex(precio.ocupacionMaxima, hotelNombre) === localIdx ? 'i-lucide-circle-dot' : 'i-lucide-circle'"
+                        :name="getSelectedLocalIndex(price.maxOccupancy, hotelName) === localIdx ? 'i-lucide-circle-dot' : 'i-lucide-circle'"
                         class="w-4 h-4 shrink-0"
-                        :class="getSelectedLocalIndex(precio.ocupacionMaxima, hotelNombre) === localIdx ? 'text-primary' : 'text-muted'"
+                        :class="getSelectedLocalIndex(price.maxOccupancy, hotelName) === localIdx ? 'text-primary' : 'text-muted'"
                       />
                       <span class="flex-1 text-muted">
-                        {{ hotelNombre }}
-                        <span class="text-xs opacity-60">· {{ tipo.tipoHabitacion }}</span>
+                        {{ hotelName }}
+                        <span class="text-xs opacity-60">· {{ tipo.roomType }}</span>
                       </span>
                       <span
                         class="font-medium"
-                        :class="getSelectedLocalIndex(precio.ocupacionMaxima, hotelNombre) === localIdx ? 'text-foreground' : 'text-muted'"
+                        :class="getSelectedLocalIndex(price.maxOccupancy, hotelName) === localIdx ? 'text-foreground' : 'text-muted'"
                       >
-                        {{ formatCurrency(tipo.costoPorPersona) }}
+                        {{ formatCurrency(tipo.costPerPerson) }}
                       </span>
                     </div>
                   </template>
@@ -371,7 +371,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
               <!-- Total hospedaje -->
               <div class="flex justify-between items-center font-semibold">
                 <span>Total Hospedaje</span>
-                <span class="text-primary">{{ formatCurrency(totalHospedajeSeleccionado(precio)) }}</span>
+                <span class="text-primary">{{ formatCurrency(totalHospedajeSeleccionado(price)) }}</span>
               </div>
             </div>
 
@@ -379,7 +379,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
               <div class="flex justify-between items-center">
                 <span class="font-bold">Total por Persona</span>
                 <span class="text-lg font-bold text-primary">
-                  {{ formatCurrency(precioTotalSeleccionado(precio)) }}
+                  {{ formatCurrency(precioTotalSeleccionado(price)) }}
                 </span>
               </div>
             </template>
@@ -440,7 +440,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
           <!-- Tipo -->
           <UFormField label="Tipo de Precio" required>
             <UInput
-              v-model="formState.tipo"
+              v-model="formState.priceType"
               placeholder="Ej: Habitación Sencilla, Niños 4-10 años"
             />
           </UFormField>
@@ -448,7 +448,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
           <!-- Descripción -->
           <UFormField label="Descripción" required>
             <UInput
-              v-model="formState.descripcion"
+              v-model="formState.description"
               placeholder="Ej: En habitación para 1 persona"
             />
           </UFormField>
@@ -456,7 +456,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
           <!-- Precio por Persona -->
           <UFormField label="Precio por Persona" required>
             <UInput
-              v-model.number="formState.precioPorPersona"
+              v-model.number="formState.pricePerPerson"
               type="number"
               step="0.01"
               min="0"
@@ -468,7 +468,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
             <!-- Tipo Habitación (opcional) -->
             <UFormField label="Tipo Habitación (opcional)">
               <UInput
-                v-model="formState.tipoHabitacion"
+                v-model="formState.roomType"
                 placeholder="Ej: Sencilla, Doble"
               />
             </UFormField>
@@ -476,7 +476,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
             <!-- Grupo Etario (opcional) -->
             <UFormField label="Grupo Etario (opcional)">
               <UInput
-                v-model="formState.grupoEdad"
+                v-model="formState.ageGroup"
                 placeholder="Ej: Adultos, Niños"
               />
             </UFormField>
@@ -485,7 +485,7 @@ const columns = computed<TableColumn<CotizacionPrecioPublico>[]>(() => {
           <!-- Notas -->
           <UFormField label="Notas (opcional)">
             <UTextarea
-              v-model="formState.notas"
+              v-model="formState.notes"
               placeholder="Observaciones adicionales..."
               :rows="2"
             />

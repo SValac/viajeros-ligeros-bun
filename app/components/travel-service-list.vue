@@ -26,11 +26,11 @@ const providerStore = useProviderStore();
 
 // Servicios agrupados
 const serviciosIncluidos = computed(() => {
-  return services.value.filter(s => s.incluido);
+  return services.value.filter(s => s.included);
 });
 
 const serviciosNoIncluidos = computed(() => {
-  return services.value.filter(s => !s.incluido);
+  return services.value.filter(s => !s.included);
 });
 
 // Función para obtener nombre del proveedor
@@ -38,7 +38,7 @@ function getProviderName(providerId?: string): string | null {
   if (!providerId)
     return null;
   const provider = providerStore.getProviderById(providerId);
-  return provider?.nombre || null;
+  return provider?.name || null;
 }
 
 // Handlers
@@ -93,7 +93,7 @@ function toggleIncluido(service: TravelService) {
   if (index !== -1) {
     const currentService = services.value[index];
     if (currentService) {
-      currentService.incluido = !currentService.incluido;
+      currentService.included = !currentService.included;
       emit('update:modelValue', services.value);
     }
   }
@@ -101,7 +101,7 @@ function toggleIncluido(service: TravelService) {
 
 function deleteService(service: TravelService) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Eliminar el servicio "${service.nombre}"?`)) {
+  if (confirm(`¿Eliminar el servicio "${service.name}"?`)) {
     services.value = services.value.filter(s => s.id !== service.id);
     emit('update:modelValue', services.value);
 
@@ -169,7 +169,7 @@ function getServiceActions(service: TravelService) {
             <div class="flex items-start gap-3 flex-1">
               <!-- Checkbox -->
               <UCheckbox
-                :model-value="service.incluido"
+                :model-value="service.included"
                 class="mt-0.5"
                 @update:model-value="toggleIncluido(service)"
               />
@@ -177,7 +177,7 @@ function getServiceActions(service: TravelService) {
               <div class="flex-1 space-y-1">
                 <!-- Nombre -->
                 <div class="font-medium text-sm">
-                  {{ service.nombre }}
+                  {{ service.name }}
                 </div>
 
                 <!-- Proveedor (si está vinculado) -->
@@ -197,10 +197,10 @@ function getServiceActions(service: TravelService) {
 
                 <!-- Descripción -->
                 <div
-                  v-if="service.descripcion"
+                  v-if="service.description"
                   class="text-xs text-muted"
                 >
-                  {{ service.descripcion }}
+                  {{ service.description }}
                 </div>
               </div>
             </div>
@@ -234,7 +234,7 @@ function getServiceActions(service: TravelService) {
             <div class="flex items-start gap-3 flex-1">
               <!-- Checkbox -->
               <UCheckbox
-                :model-value="service.incluido"
+                :model-value="service.included"
                 class="mt-0.5"
                 @update:model-value="toggleIncluido(service)"
               />
@@ -242,7 +242,7 @@ function getServiceActions(service: TravelService) {
               <div class="flex-1 space-y-1">
                 <!-- Nombre -->
                 <div class="font-medium text-sm">
-                  {{ service.nombre }}
+                  {{ service.name }}
                 </div>
 
                 <!-- Proveedor (si está vinculado) -->
@@ -262,10 +262,10 @@ function getServiceActions(service: TravelService) {
 
                 <!-- Descripción -->
                 <div
-                  v-if="service.descripcion"
+                  v-if="service.description"
                   class="text-xs text-muted"
                 >
-                  {{ service.descripcion }}
+                  {{ service.description }}
                 </div>
               </div>
             </div>

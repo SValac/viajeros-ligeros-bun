@@ -11,7 +11,7 @@ const route = useRoute();
 const toast = useToast();
 
 // Get category from route
-const categoria = computed(() => route.params.categoria as ProviderCategory);
+const categoria = computed(() => route.params.category as ProviderCategory);
 
 // Store
 const providerStore = useProviderStore();
@@ -32,23 +32,23 @@ const categoryProviders = computed(() => providerStore.getProvidersByCategory(ca
 const providers = computed(() => {
   let result = [...categoryProviders.value];
 
-  if (localFilters.value.ciudad) {
+  if (localFilters.value.city) {
     result = result.filter(
-      p => p.ubicacion.ciudad.toLowerCase() === localFilters.value.ciudad!.toLowerCase(),
+      p => p.location.city.toLowerCase() === localFilters.value.city!.toLowerCase(),
     );
   }
-  if (localFilters.value.estado) {
+  if (localFilters.value.state) {
     result = result.filter(
-      p => p.ubicacion.estado.toLowerCase() === localFilters.value.estado!.toLowerCase(),
+      p => p.location.state.toLowerCase() === localFilters.value.state!.toLowerCase(),
     );
   }
   if (localFilters.value.searchTerm) {
     const term = localFilters.value.searchTerm.toLowerCase();
     result = result.filter(
       p =>
-        p.nombre.toLowerCase().includes(term)
-        || p.descripcion?.toLowerCase().includes(term)
-        || p.contacto.nombre?.toLowerCase().includes(term),
+        p.name.toLowerCase().includes(term)
+        || p.description?.toLowerCase().includes(term)
+        || p.contact.name?.toLowerCase().includes(term),
     );
   }
 
@@ -57,10 +57,10 @@ const providers = computed(() => {
 
 // Opciones de filtro derivadas solo de la categoría actual
 const availableCiudades = computed(() =>
-  [...new Set(categoryProviders.value.map(p => p.ubicacion.ciudad))].sort(),
+  [...new Set(categoryProviders.value.map(p => p.location.city))].sort(),
 );
 const availableEstados = computed(() =>
-  [...new Set(categoryProviders.value.map(p => p.ubicacion.estado))].sort(),
+  [...new Set(categoryProviders.value.map(p => p.location.state))].sort(),
 );
 
 const hasLocalFilters = computed(() =>
@@ -97,26 +97,26 @@ watch(categoria, () => {
 
 const categoryInfo = computed(() => {
   const info: Record<ProviderCategory, { label: string; icon: string; color: string }> = {
-    'guias': { label: 'Guías', icon: 'i-lucide-user-search', color: 'blue' },
-    'transporte': { label: 'Transportes', icon: 'i-lucide-car', color: 'purple' },
-    'hospedaje': { label: 'Hospedajes', icon: 'i-lucide-hotel', color: 'green' },
-    'agencias-autobus': { label: 'Agencias de Autobús', icon: 'i-lucide-bus', color: 'orange' },
-    'comidas': { label: 'Comidas', icon: 'i-lucide-utensils', color: 'amber' },
-    'otros': { label: 'Otros', icon: 'i-lucide-package', color: 'gray' },
+    guides: { label: 'Guías', icon: 'i-lucide-user-search', color: 'blue' },
+    transportation: { label: 'Transportes', icon: 'i-lucide-car', color: 'purple' },
+    accommodation: { label: 'Hospedajes', icon: 'i-lucide-hotel', color: 'green' },
+    bus_agencies: { label: 'Agencias de Autobús', icon: 'i-lucide-bus', color: 'orange' },
+    food_services: { label: 'Comidas', icon: 'i-lucide-utensils', color: 'amber' },
+    other: { label: 'Otros', icon: 'i-lucide-package', color: 'gray' },
   };
-  return info[categoria.value] || info.otros;
+  return info[categoria.value] || info.other;
 });
 
-const isAgenciasAutobus = computed(() => categoria.value === PROVIDER_CATEGORY.AGENCIAS_AUTOBUS);
-const isHospedaje = computed(() => categoria.value === PROVIDER_CATEGORY.HOSPEDAJE);
+const isAgenciasAutobus = computed(() => categoria.value === PROVIDER_CATEGORY.BUS_AGENCIES);
+const isHospedaje = computed(() => categoria.value === PROVIDER_CATEGORY.ACCOMMODATION);
 
 const providerSelectOptions = computed(() =>
-  providers.value.map(p => ({ value: p.id, label: p.nombre })),
+  providers.value.map(p => ({ value: p.id, label: p.name })),
 );
 
 // Funciones auxiliares
-function formatLocation(ubicacion: ProviderLocation): string {
-  const parts = [ubicacion.ciudad, ubicacion.estado, ubicacion.pais];
+function formatLocation(location: ProviderLocation): string {
+  const parts = [location.city, location.state, location.country];
   return parts.join(', ');
 }
 
@@ -139,14 +139,14 @@ function closeModal() {
 function handleFormSubmit(data: ProviderFormData) {
   try {
     // Force the category to match the current page
-    data.categoria = categoria.value;
+    data.category = categoria.value;
 
     if (editingProvider.value) {
       const success = providerStore.updateProvider(editingProvider.value.id, data);
       if (success) {
         toast.add({
           title: 'Proveedor actualizado',
-          description: `${data.nombre} se actualizó correctamente`,
+          description: `${data.name} se actualizó correctamente`,
           color: 'primary',
         });
         closeModal();
@@ -156,7 +156,7 @@ function handleFormSubmit(data: ProviderFormData) {
       providerStore.addProvider(data);
       toast.add({
         title: 'Proveedor creado',
-        description: `${data.nombre} se creó correctamente`,
+        description: `${data.name} se creó correctamente`,
         color: 'primary',
       });
       closeModal();
@@ -173,12 +173,12 @@ function handleFormSubmit(data: ProviderFormData) {
 
 function handleDelete(provider: Provider) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar el proveedor ${provider.nombre}?`)) {
+  if (confirm(`¿Estás seguro de eliminar el proveedor ${provider.name}?`)) {
     const success = providerStore.deleteProvider(provider.id);
     if (success) {
       toast.add({
         title: 'Proveedor eliminado',
-        description: `${provider.nombre} se eliminó correctamente`,
+        description: `${provider.name} se eliminó correctamente`,
         color: 'warning',
       });
     }
@@ -188,10 +188,10 @@ function handleDelete(provider: Provider) {
 function handleToggleStatus(provider: Provider) {
   const success = providerStore.toggleProviderStatus(provider.id);
   if (success) {
-    const newStatus = !provider.activo;
+    const newStatus = !provider.active;
     toast.add({
       title: 'Estado actualizado',
-      description: `${provider.nombre} ahora está ${newStatus ? 'activo' : 'inactivo'}`,
+      description: `${provider.name} ahora está ${newStatus ? 'activo' : 'inactivo'}`,
       color: 'primary',
     });
   }
@@ -207,8 +207,8 @@ function getRowActions(provider: Provider) {
         onSelect: () => openEditModal(provider),
       },
       {
-        label: provider.activo ? 'Desactivar' : 'Activar',
-        icon: provider.activo ? 'i-lucide-eye-off' : 'i-lucide-eye',
+        label: provider.active ? 'Desactivar' : 'Activar',
+        icon: provider.active ? 'i-lucide-eye-off' : 'i-lucide-eye',
         onSelect: () => handleToggleStatus(provider),
       },
     ],
@@ -235,7 +235,7 @@ function getRowActions(provider: Provider) {
 // Columnas de la tabla
 const columns: TableColumn<Provider>[] = [
   {
-    accessorKey: 'nombre',
+    accessorKey: 'name',
     header: 'Nombre',
     cell: ({ row }) => {
       return h('div', { class: 'flex items-center gap-2' }, [
@@ -247,21 +247,21 @@ const columns: TableColumn<Provider>[] = [
     },
   },
   {
-    accessorKey: 'ubicacion',
+    accessorKey: 'location',
     header: 'Ubicación',
     cell: ({ row }) => {
-      const ubicacion = row.getValue('ubicacion') as ProviderLocation;
+      const location = row.getValue('location') as ProviderLocation;
       return h('div', { class: 'flex items-center gap-2' }, [
         h('span', { class: 'i-lucide-map-pin w-3 h-3 text-gray-400' }),
-        h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatLocation(ubicacion)),
+        h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatLocation(location)),
       ]);
     },
   },
   {
-    accessorKey: 'contacto.telefono',
+    accessorKey: 'contacto.phone',
     header: 'Teléfono',
     cell: ({ row }) => {
-      const telefono = row.original.contacto.telefono;
+      const telefono = row.original.contact.phone;
       if (!telefono)
         return h('span', { class: 'text-sm text-gray-400' }, '-');
       return h('span', { class: 'text-sm' }, telefono);
@@ -271,7 +271,7 @@ const columns: TableColumn<Provider>[] = [
     accessorKey: 'contacto.email',
     header: 'Email',
     cell: ({ row }) => {
-      const email = row.original.contacto.email;
+      const email = row.original.contact.email;
       if (!email)
         return h('span', { class: 'text-sm text-gray-400' }, '-');
       return h('span', { class: 'text-sm' }, email);

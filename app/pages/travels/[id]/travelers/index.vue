@@ -50,13 +50,13 @@ watchEffect(() => {
 
 const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
 const totalTravelers = computed(() => travelersOfTravel.value.length);
-const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.esRepresentante).length);
-const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.esRepresentante).length);
+const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
+const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
 
 const allBuses = computed(() => cotizacionStore.busesApartados);
 
 const representantes = computed(() =>
-  travelerStore.filteredTravelers.filter(t => t.esRepresentante),
+  travelerStore.filteredTravelers.filter(t => t.isRepresentative),
 );
 
 const filters = computed({
@@ -68,8 +68,8 @@ function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
   if (!bus)
     return travelBusId;
-  const agencia = providerStore.getProviderById(bus.proveedorId)?.nombre;
-  return agencia ? `${agencia} — Unidad ${bus.numeroUnidad}` : `Unidad ${bus.numeroUnidad}`;
+  const agencia = providerStore.getProviderById(bus.providerId)?.name;
+  return agencia ? `${agencia} — Unidad ${bus.unitNumber}` : `Unidad ${bus.unitNumber}`;
 }
 
 function openCreateModal() {
@@ -94,7 +94,7 @@ function handleFormSubmit(data: TravelerFormData) {
       if (updated) {
         toast.add({
           title: 'Viajero actualizado',
-          description: `${data.nombre} ${data.apellido} se actualizó correctamente`,
+          description: `${data.firstName} ${data.lastName} se actualizó correctamente`,
           color: 'primary',
         });
         closeModal();
@@ -104,7 +104,7 @@ function handleFormSubmit(data: TravelerFormData) {
       travelerStore.addTraveler(data);
       toast.add({
         title: 'Viajero creado',
-        description: `${data.nombre} ${data.apellido} se registró correctamente`,
+        description: `${data.firstName} ${data.lastName} se registró correctamente`,
         color: 'primary',
       });
       closeModal();
@@ -121,11 +121,11 @@ function handleFormSubmit(data: TravelerFormData) {
 
 function handleDelete(traveler: Traveler) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${traveler.nombre} ${traveler.apellido}?`)) {
+  if (confirm(`¿Estás seguro de eliminar a ${traveler.firstName} ${traveler.lastName}?`)) {
     travelerStore.deleteTraveler(traveler.id);
     toast.add({
       title: 'Viajero eliminado',
-      description: `${traveler.nombre} ${traveler.apellido} se eliminó correctamente`,
+      description: `${traveler.firstName} ${traveler.lastName} se eliminó correctamente`,
       color: 'warning',
     });
   }
@@ -166,7 +166,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const depth = row.depth;
       const canExpand = row.getCanExpand();
 
-      const nameNode = h('span', { class: 'font-medium' }, `${t.nombre} ${t.apellido}`);
+      const nameNode = h('span', { class: 'font-medium' }, `${t.firstName} ${t.lastName}`);
 
       if (canExpand) {
         const isExpanded = row.getIsExpanded();
@@ -222,10 +222,10 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    accessorKey: 'esRepresentante',
+    accessorKey: 'isRepresentative',
     header: 'Representante',
     cell: ({ row }) => {
-      const esRep = row.getValue('esRepresentante') as boolean;
+      const esRep = row.getValue('isRepresentative') as boolean;
       return h(
         resolveComponent('UBadge'),
         {
@@ -271,7 +271,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
             Viajeros
           </h1>
           <p class="text-gray-500 dark:text-gray-400 mt-1">
-            {{ travel?.destino ?? travelId }}
+            {{ travel?.destination ?? travelId }}
           </p>
         </div>
       </div>
@@ -345,7 +345,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           name="i-lucide-inbox"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
         />
-        <template v-if="filters.travelBusId || filters.representanteId">
+        <template v-if="filters.travelBusId || filters.representativeId">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Sin resultados para los filtros aplicados
           </h3>

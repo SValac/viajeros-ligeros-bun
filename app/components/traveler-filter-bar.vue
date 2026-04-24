@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { CotizacionBus } from '~/types/cotizacion';
+import type { QuotationBus } from '~/types/quotation';
 import type { Travel } from '~/types/travel';
 import type { Traveler, TravelerFilters } from '~/types/traveler';
 
 type Props = {
   availableTravels: Travel[];
-  availableBuses: CotizacionBus[];
+  availableBuses: QuotationBus[];
   representantes?: Traveler[];
   hideTravelFilter?: boolean;
 };
@@ -19,12 +19,12 @@ const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 
 const travelOptions = computed(() =>
-  props.availableTravels.map(t => ({ label: t.destino, value: t.id })),
+  props.availableTravels.map(t => ({ label: t.destination, value: t.id })),
 );
 
 const representanteOptions = computed(() =>
   (props.representantes ?? []).map(r => ({
-    label: `${r.nombre} ${r.apellido}`,
+    label: `${r.firstName} ${r.lastName}`,
     value: r.id,
   })),
 );
@@ -36,14 +36,14 @@ const busOptions = computed(() => {
   if (filters.value.travelId) {
     const cotizacion = cotizacionStore.getCotizacionByTravel(filters.value.travelId);
     buses = cotizacion
-      ? buses.filter(b => b.cotizacionId === cotizacion.id)
+      ? buses.filter(b => b.quotationId === cotizacion.id)
       : [];
   }
 
   return buses.map((b) => {
-    const agencia = providerStore.getProviderById(b.proveedorId)?.nombre;
+    const agencia = providerStore.getProviderById(b.providerId)?.name;
     return {
-      label: agencia ? `${agencia} — Unidad ${b.numeroUnidad}` : `Unidad ${b.numeroUnidad}`,
+      label: agencia ? `${agencia} — Unidad ${b.unitNumber}` : `Unidad ${b.unitNumber}`,
       value: b.id,
     };
   });
@@ -51,7 +51,7 @@ const busOptions = computed(() => {
 
 function onTravelChange(val: string | undefined) {
   // Al cambiar de viaje, reseteamos el camión y representante para evitar selección inválida
-  filters.value = { ...filters.value, travelId: val, travelBusId: undefined, representanteId: undefined };
+  filters.value = { ...filters.value, travelId: val, travelBusId: undefined, representativeId: undefined };
 }
 
 function onBusChange(val: string | undefined) {
@@ -59,7 +59,7 @@ function onBusChange(val: string | undefined) {
 }
 
 function onRepresentanteChange(val: string | undefined) {
-  filters.value = { ...filters.value, representanteId: val };
+  filters.value = { ...filters.value, representativeId: val };
 }
 
 function clearAll() {
@@ -98,7 +98,7 @@ const hasFilters = computed(() =>
 
     <USelect
       v-if="representanteOptions.length > 0"
-      :model-value="filters.representanteId"
+      :model-value="filters.representativeId"
       :items="representanteOptions"
       value-key="value"
       label-key="label"

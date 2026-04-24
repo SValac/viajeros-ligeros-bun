@@ -16,12 +16,12 @@ export const useProviderStore = defineStore('providers', () => {
   // Getters
   const allProviders = computed(() => {
     return [...providers.value].sort((a, b) =>
-      a.nombre.localeCompare(b.nombre, 'es'),
+      a.name.localeCompare(b.name, 'es'),
     );
   });
 
   const activeProviders = computed(() => {
-    return providers.value.filter(p => p.activo);
+    return providers.value.filter(p => p.active);
   });
 
   const getProviderById = computed(() => {
@@ -29,54 +29,54 @@ export const useProviderStore = defineStore('providers', () => {
   });
 
   const getProvidersByCategory = computed(() => {
-    return (categoria: ProviderCategory) =>
-      providers.value.filter(p => p.categoria === categoria);
+    return (category: ProviderCategory) =>
+      providers.value.filter(p => p.category === category);
   });
 
   const statsByCategory = computed(() => {
     const stats: Record<ProviderCategory, number> = {
-      [PROVIDER_CATEGORY.GUIAS]: 0,
-      [PROVIDER_CATEGORY.TRANSPORTE]: 0,
-      [PROVIDER_CATEGORY.HOSPEDAJE]: 0,
-      [PROVIDER_CATEGORY.AGENCIAS_AUTOBUS]: 0,
-      [PROVIDER_CATEGORY.COMIDAS]: 0,
-      [PROVIDER_CATEGORY.OTROS]: 0,
+      [PROVIDER_CATEGORY.GUIDES]: 0,
+      [PROVIDER_CATEGORY.TRANSPORTATION]: 0,
+      [PROVIDER_CATEGORY.ACCOMMODATION]: 0,
+      [PROVIDER_CATEGORY.BUS_AGENCIES]: 0,
+      [PROVIDER_CATEGORY.FOOD_SERVICES]: 0,
+      [PROVIDER_CATEGORY.OTHER]: 0,
     };
 
     providers.value
-      .filter(p => p.activo)
-      .forEach(p => stats[p.categoria]++);
+      .filter(p => p.active)
+      .forEach(p => stats[p.category]++);
 
     return stats;
   });
 
   const totalProviders = computed(() => {
-    return providers.value.filter(p => p.activo).length;
+    return providers.value.filter(p => p.active).length;
   });
 
   const filteredProviders = computed(() => {
     let result = [...providers.value];
 
-    if (activeFilters.value.activo !== undefined) {
-      result = result.filter(p => p.activo === activeFilters.value.activo);
+    if (activeFilters.value.active !== undefined) {
+      result = result.filter(p => p.active === activeFilters.value.active);
     }
     else {
-      result = result.filter(p => p.activo);
+      result = result.filter(p => p.active);
     }
 
-    if (activeFilters.value.categoria) {
-      result = result.filter(p => p.categoria === activeFilters.value.categoria);
+    if (activeFilters.value.category) {
+      result = result.filter(p => p.category === activeFilters.value.category);
     }
 
-    if (activeFilters.value.ciudad) {
+    if (activeFilters.value.city) {
       result = result.filter(
-        p => p.ubicacion.ciudad.toLowerCase() === activeFilters.value.ciudad!.toLowerCase(),
+        p => p.location.city.toLowerCase() === activeFilters.value.city!.toLowerCase(),
       );
     }
 
-    if (activeFilters.value.estado) {
+    if (activeFilters.value.state) {
       result = result.filter(
-        p => p.ubicacion.estado.toLowerCase() === activeFilters.value.estado!.toLowerCase(),
+        p => p.location.state.toLowerCase() === activeFilters.value.state!.toLowerCase(),
       );
     }
 
@@ -84,21 +84,21 @@ export const useProviderStore = defineStore('providers', () => {
       const term = activeFilters.value.searchTerm.toLowerCase();
       result = result.filter(
         p =>
-          p.nombre.toLowerCase().includes(term)
-          || p.descripcion?.toLowerCase().includes(term)
-          || p.contacto.nombre?.toLowerCase().includes(term),
+          p.name.toLowerCase().includes(term)
+          || p.description?.toLowerCase().includes(term)
+          || p.contact.name?.toLowerCase().includes(term),
       );
     }
 
-    return result.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));
   });
 
   const availableCiudades = computed(() =>
-    [...new Set(providers.value.filter(p => p.activo).map(p => p.ubicacion.ciudad))].sort(),
+    [...new Set(providers.value.filter(p => p.active).map(p => p.location.city))].sort(),
   );
 
   const availableEstados = computed(() =>
-    [...new Set(providers.value.filter(p => p.activo).map(p => p.ubicacion.estado))].sort(),
+    [...new Set(providers.value.filter(p => p.active).map(p => p.location.state))].sort(),
   );
 
   const filteredCount = computed(() => filteredProviders.value.length);
@@ -170,7 +170,7 @@ export const useProviderStore = defineStore('providers', () => {
       return false;
     }
 
-    return updateProvider(id, { activo: !provider.activo });
+    return updateProvider(id, { active: !provider.active });
   }
 
   // Filter actions

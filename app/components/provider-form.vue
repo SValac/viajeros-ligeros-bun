@@ -19,45 +19,45 @@ const emit = defineEmits<{
 
 // Schema de validación
 const schema = z.object({
-  nombre: z.string()
+  name: z.string()
     .min(3, 'Mínimo 3 caracteres')
     .max(100, 'Máximo 100 caracteres'),
 
-  categoria: z.enum([
-    'guias',
-    'transporte',
-    'hospedaje',
-    'agencias-autobus',
-    'comidas',
-    'otros',
+  category: z.enum([
+    'guides',
+    'transportation',
+    'accommodation',
+    'bus_agencies',
+    'food_services',
+    'other',
   ]),
 
-  descripcion: z.string()
+  description: z.string()
     .max(500, 'Máximo 500 caracteres')
     .optional()
     .or(z.literal('')),
 
-  ubicacion: z.object({
-    ciudad: z.string()
+  location: z.object({
+    city: z.string()
       .min(1, 'La ciudad es requerida')
       .max(100, 'Máximo 100 caracteres'),
 
-    estado: z.string()
+    state: z.string()
       .min(1, 'El estado/provincia es requerido')
       .max(100, 'Máximo 100 caracteres'),
 
-    pais: z.string()
+    country: z.string()
       .min(1, 'El país es requerido')
       .max(100, 'Máximo 100 caracteres'),
   }),
 
-  contacto: z.object({
-    nombre: z.string()
+  contact: z.object({
+    name: z.string()
       .max(100, 'Máximo 100 caracteres')
       .optional()
       .or(z.literal('')),
 
-    telefono: z.string()
+    phone: z.string()
       .max(20, 'Máximo 20 caracteres')
       .optional()
       .or(z.literal('')),
@@ -67,44 +67,44 @@ const schema = z.object({
       .optional()
       .or(z.literal('')),
 
-    notas: z.string()
+    notes: z.string()
       .max(300, 'Máximo 300 caracteres')
       .optional()
       .or(z.literal('')),
   }),
 
-  activo: z.boolean(),
+  active: z.boolean(),
 });
 
 type Schema = z.output<typeof schema>;
 
 // Estado inicial del formulario
 const state = ref<Schema>({
-  nombre: props.provider?.nombre || '',
-  categoria: props.provider?.categoria || props.fixedCategoria || 'otros',
-  descripcion: props.provider?.descripcion || '',
-  ubicacion: {
-    ciudad: props.provider?.ubicacion?.ciudad || '',
-    estado: props.provider?.ubicacion?.estado || '',
-    pais: props.provider?.ubicacion?.pais || 'México',
+  name: props.provider?.name || '',
+  category: props.provider?.category || props.fixedCategoria || 'other',
+  description: props.provider?.description || '',
+  location: {
+    city: props.provider?.location?.city || '',
+    state: props.provider?.location?.state || '',
+    country: props.provider?.location?.country || 'México',
   },
-  contacto: {
-    nombre: props.provider?.contacto?.nombre || '',
-    telefono: props.provider?.contacto?.telefono || '',
-    email: props.provider?.contacto?.email || '',
-    notas: props.provider?.contacto?.notas || '',
+  contact: {
+    name: props.provider?.contact?.name || '',
+    phone: props.provider?.contact?.phone || '',
+    email: props.provider?.contact?.email || '',
+    notes: props.provider?.contact?.notes || '',
   },
-  activo: props.provider?.activo ?? true,
+  active: props.provider?.active ?? true,
 });
 
 // Opciones de categoría
 const categoriaOptions = [
-  { value: 'guias', label: 'Guías' },
-  { value: 'transporte', label: 'Transporte' },
-  { value: 'hospedaje', label: 'Hospedaje' },
-  { value: 'agencias-autobus', label: 'Agencias de Autobús' },
-  { value: 'comidas', label: 'Comidas' },
-  { value: 'otros', label: 'Otros' },
+  { value: 'guides', label: 'Guías' },
+  { value: 'transportation', label: 'Transporte' },
+  { value: 'accommodation', label: 'Hospedaje' },
+  { value: 'bus_agencies', label: 'Agencias de Autobús' },
+  { value: 'food_services', label: 'Comidas' },
+  { value: 'other', label: 'Otros' },
 ];
 
 // Handlers
@@ -131,18 +131,18 @@ function onCancel() {
     <!-- Información Básica -->
     <UFormField
       label="Nombre del Proveedor"
-      name="nombre"
+      name="name"
       required
     >
       <UInput
-        v-model="state.nombre"
+        v-model="state.name"
         placeholder="Ejemplo: Transportes del Norte"
       />
     </UFormField>
 
     <UFormField
       label="Categoría"
-      name="categoria"
+      name="category"
       required
     >
       <template v-if="fixedCategoria">
@@ -156,7 +156,7 @@ function onCancel() {
       </template>
       <USelect
         v-else
-        v-model="state.categoria"
+        v-model="state.category"
         :items="categoriaOptions"
         placeholder="Seleccionar categoría"
       />
@@ -164,10 +164,10 @@ function onCancel() {
 
     <UFormField
       label="Descripción"
-      name="descripcion"
+      name="description"
     >
       <UTextarea
-        v-model="state.descripcion"
+        v-model="state.description"
         :rows="3"
         placeholder="Descripción detallada del proveedor y sus servicios"
       />
@@ -179,33 +179,33 @@ function onCancel() {
     <div class="grid grid-cols-3 gap-4">
       <UFormField
         label="Ciudad"
-        name="ubicacion.ciudad"
+        name="location.city"
         required
       >
         <UInput
-          v-model="state.ubicacion.ciudad"
+          v-model="state.location.city"
           placeholder="Ciudad de México"
         />
       </UFormField>
 
       <UFormField
         label="Estado/Provincia"
-        name="ubicacion.estado"
+        name="location.state"
         required
       >
         <UInput
-          v-model="state.ubicacion.estado"
+          v-model="state.location.state"
           placeholder="CDMX"
         />
       </UFormField>
 
       <UFormField
         label="País"
-        name="ubicacion.pais"
+        name="location.country"
         required
       >
         <UInput
-          v-model="state.ubicacion.pais"
+          v-model="state.location.country"
           placeholder="México"
         />
       </UFormField>
@@ -216,10 +216,10 @@ function onCancel() {
 
     <UFormField
       label="Nombre de Contacto"
-      name="contacto.nombre"
+      name="contact.name"
     >
       <UInput
-        v-model="state.contacto.nombre"
+        v-model="state.contact.name"
         placeholder="Nombre de la persona de contacto"
       />
     </UFormField>
@@ -227,10 +227,10 @@ function onCancel() {
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Teléfono"
-        name="contacto.telefono"
+        name="contact.phone"
       >
         <UInput
-          v-model="state.contacto.telefono"
+          v-model="state.contact.phone"
           type="tel"
           placeholder="+52 55 1234 5678"
         />
@@ -238,10 +238,10 @@ function onCancel() {
 
       <UFormField
         label="Email"
-        name="contacto.email"
+        name="contact.email"
       >
         <UInput
-          v-model="state.contacto.email"
+          v-model="state.contact.email"
           type="email"
           placeholder="contacto@ejemplo.com"
         />
@@ -250,10 +250,10 @@ function onCancel() {
 
     <UFormField
       label="Notas de Contacto"
-      name="contacto.notas"
+      name="contact.notes"
     >
       <UTextarea
-        v-model="state.contacto.notas"
+        v-model="state.contact.notes"
         :rows="2"
         placeholder="Horarios, preferencias de contacto, etc."
       />
@@ -263,10 +263,10 @@ function onCancel() {
     <USeparator label="Estado" />
 
     <UFormField
-      name="activo"
+      name="active"
     >
       <UCheckbox
-        v-model="state.activo"
+        v-model="state.active"
         label="Proveedor activo"
       />
     </UFormField>
