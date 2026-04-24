@@ -4,11 +4,27 @@
 
 Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plugin-persistedstate/nuxt`) hacia Supabase como backend real, usando `@supabase/supabase-js` directamente (sin `@nuxtjs/supabase`). La migración debe preservar la API pública de cada store para no romper los componentes existentes.
 
+## Progreso
+
+| Fase | Estado |
+|------|--------|
+| Fase 1 — Setup & Cliente Supabase | ✅ Completada |
+| Fase 2 — Diseño de Esquema y Migraciones SQL | ✅ Completada |
+| Fase 2.5 — Rename a inglés + fix TypeScript | ✅ Completada |
+| Fase 3 — Capa de Mapeo y Utilidades | ✅ Completada |
+| Fase 4 — Migración de Stores Simples | ⬜ Pendiente |
+| Fase 5 — Migración de Stores con una FK | ⬜ Pendiente |
+| Fase 6 — Migración de Stores con Hijas Normalizadas | ⬜ Pendiente |
+| Fase 7 — Migración de Stores Dependientes | ⬜ Pendiente |
+| Fase 8 — Limpieza, Tipado y Validación | ⬜ Pendiente |
+
+---
+
 ## Stack Detectado
 
 - **Runtime/Build**: Nuxt 4, Bun, TypeScript (SSR desactivado — `ssr: false`, SPA mode)
 - **UI/State**: Vue 3, Nuxt UI, Pinia, `@pinia-plugin-persistedstate/nuxt`
-- **Backend nuevo**: Supabase (local `http://127.0.0.1:54321`, remoto `mkosbzhagjbyfvizafta`), CLI instalada y `@supabase/supabase-js` ya en dependencias
+- **Backend nuevo**: Supabase (local `http://127.0.0.1:54321`, Studio `http://127.0.0.1:54323`, remoto `mkosbzhagjbyfvizafta`), CLI v2.90.0 instalada y `@supabase/supabase-js` ya en dependencias
 - **Linter/Format**: `@nuxt/eslint`, kebab-case de archivos, 2 espacios, semicolons, comillas simples, `type` en lugar de `interface`
 
 ---
@@ -18,10 +34,11 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 ### Estrategia general
 
 1. **Backward-compatible shim**: cada store mantiene su API pública (mismos getters, mismos nombres de acciones). Internamente reemplazamos los arrays mutados en memoria por resultados cacheados de Supabase y las acciones por llamadas async.
-2. **Modo SPA (`ssr: false`)**: simplifica el uso de Supabase. Un plugin `.client.ts` y un `useSupabase()` composable son suficientes.
+2. **Modo SPA (`ssr: false`)**: simplifica el uso de Supabase. Solo `useSupabase()` composable — el plugin fue descartado por redundante.
 3. **Transición segura**: desactivar `persist: true` solo cuando el store correspondiente esté migrado. Remover `@pinia-plugin-persistedstate` al final.
 4. **Tipado generado**: `supabase gen types typescript --local` → `app/types/database.types.ts`. Los stores hacen mapeo DB row ↔ tipo de dominio (snake_case ↔ camelCase) en una capa de mappers por store.
-5. **IDs**: mantener `id: string` (UUID). Las tablas usan `uuid` con `default gen_random_uuid()`. `created_at`/`updated_at` con triggers `moddatetime`.
+5. **IDs**: mantener `id: string` (UUID). Las tablas usan `uuid` con `default gen_random_uuid()`. `created_at`/`updated_at` con triggers `moddatetime` (extension `extensions.moddatetime`).
+6. **Workflow de migraciones**: iterar SQL con `docker exec ... psql` → capturar con `supabase db diff -f <name> --local` → verificar con `supabase db reset --local`.
 
 ### Normalización vs JSONB
 
@@ -43,114 +60,105 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 
 ## Fases y Work Units
 
-### FASE 1 — Setup & Cliente Supabase
+### ✅ FASE 1 — Setup & Cliente Supabase
 
-#### U1 - Actualizar variables de entorno y `nuxt.config.ts`
-- **Archivos**: `nuxt.config.ts`, `.env.example`, `.env`
-- Completar `runtimeConfig.public.supabaseUrl` y `supabaseKey` para leer desde `NUXT_PUBLIC_SUPABASE_URL` y `NUXT_PUBLIC_SUPABASE_KEY`
-- Corregir el typo `subabaseSecretKey` → `supabaseServiceRoleKey` (server-only)
-- Crear `.env.example` con las tres variables: `NUXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321`, `NUXT_PUBLIC_SUPABASE_KEY=<anon key local>`, `NUXT_SUPABASE_SERVICE_ROLE_KEY=<service_role key>`
-- Depende de: ninguno
+#### ✅ U1 - Actualizar variables de entorno y `nuxt.config.ts`
+- **Archivos modificados**: `nuxt.config.ts`, `.env.example`
+- Corregido typo `subabaseSecretKey` → `supabaseSecretKey`
+- `.env.example` actualizado con `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_KEY`, `NUXT_SUPABASE_SECRET_KEY`
+- `.env` ya existía con las variables del entorno local
 
-#### U2 - Crear composable `useSupabase()` y plugin cliente
-- **Archivos**: `app/composables/use-supabase.ts`, `app/plugins/supabase.client.ts`, `app/types/database.types.ts` (placeholder)
-- Crear composable que exponga un cliente tipado `SupabaseClient<Database>` singleton lazy (instancia lazy dentro del composable, sin depender del ciclo del plugin)
-- Crear plugin `supabase.client.ts` que inicialice el cliente con `createClient` usando `runtimeConfig.public`
-- Exportar también tipos helper `Tables<'table_name'>`, `TablesInsert`, `TablesUpdate`
-- Depende de: U1
+#### ✅ U2 - Crear composable `useSupabase()`
+- **Archivos creados**: `app/composables/use-supabase.ts`, `app/types/database.types.ts` (placeholder)
+- Plugin descartado — el composable singleton lazy cubre todo lo necesario en SPA mode
+- Exporta `SupabaseClient<Database>` tipado
 
-#### U3 - Añadir scripts de Supabase a `package.json`
-- **Archivos**: `package.json`
-- Scripts: `db:start`, `db:stop`, `db:reset`, `db:types` (`supabase gen types typescript --local > app/types/database.types.ts`), `db:diff`, `db:push`
-- Depende de: U1
+#### ✅ U3 - Añadir scripts de Supabase a `package.json`
+- **Archivos modificados**: `package.json`
+- Scripts añadidos: `db:start`, `db:stop`, `db:reset`, `db:types`, `db:diff`, `db:push`
 
 ---
 
-### FASE 2 — Diseño de Esquema y Migraciones SQL
+### ✅ FASE 2 — Diseño de Esquema y Migraciones SQL
 
-> Todas las migraciones son estrictamente secuenciales (cada una depende de la anterior por FKs).
-> Tras cada migración, ejecutar: `bun run db:reset && bun run db:types`
+> Workflow real utilizado: `docker exec supabase_db_viajeros-ligeros-bun psql -U postgres` para iterar → `supabase db diff -f <name> --local` para capturar → `supabase db reset --local` para verificar.
+> `supabase db query` no soporta múltiples statements en una sola llamada.
 
-#### U4 - Migración: extensiones, funciones y enums
-- **Archivos**: `supabase/migrations/0001_init_extensions_enums.sql`
-- `create extension if not exists pgcrypto`
-- `create extension if not exists moddatetime`
-- Enums: `travel_status`, `provider_category`, `payment_type`, `traveler_type`, `cotizacion_status`, `tipo_division_costo`, `cotizacion_bus_estado`
-- Valores de cada enum tomados textualmente de `app/types/`
-- Depende de: U3
+#### ✅ U4 - Migración: extensiones y enums
+- **Archivo**: `supabase/migrations/20260424025733_init_extensions_enums.sql`
+- `moddatetime` extension en schema `extensions`
+- 7 enums: `travel_status`, `provider_category`, `payment_type`, `traveler_type`, `cotizacion_status`, `tipo_division_costo`, `cotizacion_bus_estado`
 
-#### U5 - Migración: tablas independientes (`providers`, `coordinators`)
-- **Archivos**: `supabase/migrations/0002_providers_coordinators.sql`
-- `providers`: `id uuid pk`, `nombre text not null`, `categoria provider_category`, `descripcion text`, `ubicacion_ciudad/estado/pais text`, `contacto_nombre/telefono/email/notas text`, `activo bool default true`, timestamps con trigger `moddatetime`
-- `coordinators`: equivalente a `Coordinator` (plano, sin FKs)
-- Índices: `providers(categoria)`, `providers(activo)`
-- RLS permisivo: `using (true) with check (true)` en todas las tablas
-- Depende de: U4
+#### ✅ U5 - Migración: `providers`, `coordinators`
+- **Archivo**: `supabase/migrations/20260424025826_providers_coordinators.sql`
+- RLS permisivo (`using (true)`), triggers `moddatetime`, índices por `categoria` y `activo`
 
-#### U6 - Migración: `buses` y `hotel_rooms` (+ `hotel_room_types`)
-- **Archivos**: `supabase/migrations/0003_buses_hotel_rooms.sql`
-- `buses`: FK `provider_id → providers(id) on delete cascade`, `modelo`, `marca`, `año int`, `cantidad_asientos int not null`, `precio_renta numeric not null`, `activo bool`, timestamps
-- `hotel_rooms`: FK `provider_id → providers(id) on delete cascade`, `total_habitaciones int`, timestamps
-- `hotel_room_types`: FK `hotel_room_id → hotel_rooms(id) on delete cascade`, `ocupacion_maxima int`, `cantidad_habitaciones int`, `camas jsonb not null default '[]'::jsonb`, `precio_por_noche numeric`, `costo_habitacion_por_persona numeric`, `detalles_adicionales text`, timestamps
-- Depende de: U5
+#### ✅ U6 - Migración: `buses`, `hotel_rooms`, `hotel_room_types`
+- **Archivo**: `supabase/migrations/20260424025916_buses_hotel_rooms.sql`
+- `camas[]` como JSONB en `hotel_room_types`
+- FK indexes en todas las columnas de FK
 
-#### U7 - Migración: `travels` y tablas hijas
-- **Archivos**: `supabase/migrations/0004_travels.sql`
-- `travels`: columnas escalares de `Travel` (sin itinerario, servicios, autobuses, coordinadorIds)
-- `travel_activities`: FK `travel_id`, `orden int`, campos de `TravelActivity`
-- `travel_services`: FK `travel_id`, campos de `TravelService`
-- `travel_buses`: FK `travel_id`, FK `bus_id → buses(id) on delete set null` (nullable), FK `provider_id → providers(id)`, operador campos, `cantidad_asientos`, `precio_renta`
-- `travel_coordinators`: tabla unión PK compuesta `(travel_id, coordinator_id)`
-- Todas con `on delete cascade` hacia `travels`, índices por `travel_id`
-- Depende de: U6
+#### ✅ U7 - Migración: `travels` y tablas hijas
+- **Archivo**: `supabase/migrations/20260424030016_travels.sql`
+- 5 tablas: `travels`, `travel_activities`, `travel_services`, `travel_buses`, `travel_coordinators`
 
-#### U8 - Migración: `travelers`
-- **Archivos**: `supabase/migrations/0005_travelers.sql`
-- FK `travel_id → travels(id) on delete cascade`
-- FK `travel_bus_id → travel_buses(id) on delete set null`
-- `representante_id` self-FK nullable (`on delete set null`)
-- Check constraint: `(es_representante = true AND representante_id IS NULL) OR (es_representante = false)`
-- Índices: `travel_id`, `travel_bus_id`, `representante_id`
-- Depende de: U7
+#### ✅ U8 - Migración: `travelers`
+- **Archivo**: `supabase/migrations/20260424030103_travelers.sql`
+- Self-FK `representante_id`, check constraint `travelers_representante_check`
 
-#### U9 - Migración: `payments` + `traveler_account_configs`
-- **Archivos**: `supabase/migrations/0006_payments.sql`
-- `payments`: FKs a `travels` y `travelers` (`on delete cascade`), `amount numeric`, `payment_date date`, `payment_type payment_type`, `notes text`, timestamps
-- `traveler_account_configs`: PK compuesta `(travel_id, traveler_id)`, `traveler_type traveler_type`, `child_price numeric`, `discounts jsonb not null default '[]'::jsonb`, `surcharges jsonb not null default '[]'::jsonb`, `precio_publico_id uuid` (sin FK por ahora — se añade en U10), `precio_publico_monto numeric`
-- Depende de: U8
+#### ✅ U9 - Migración: `payments`, `traveler_account_configs`
+- **Archivo**: `supabase/migrations/20260424030150_payments.sql`
+- `traveler_account_configs` con PK compuesta `(travel_id, traveler_id)`, JSONB para `discounts`/`surcharges`
+- `precio_publico_id` sin FK (se añade en U10)
 
-#### U10 - Migración: árbol de cotizaciones
-- **Archivos**: `supabase/migrations/0007_cotizaciones.sql`
-- `cotizaciones`: FK `travel_id`
-- `cotizacion_proveedores`: FK `cotizacion_id`, FK `provider_id`
-- `pagos_proveedor`: FK `cotizacion_proveedor_id`
-- `cotizacion_hospedajes`: FK `cotizacion_id`, FK `provider_id`
-- `cotizacion_hospedaje_detalles`: FK `cotizacion_hospedaje_id`, FK `hotel_room_type_id`
-- `cotizacion_buses`: FK `cotizacion_id`, FK `proveedor_id → providers`, `coordinador_ids jsonb default '[]'::jsonb`
-- `pagos_bus`: FK `cotizacion_bus_id`
-- `cotizacion_precios_publicos`: FK `cotizacion_id`
-- Al final: `alter table traveler_account_configs add constraint ... foreign key (precio_publico_id) references cotizacion_precios_publicos(id) on delete set null`
-- Depende de: U9
+#### ✅ U10 - Migración: árbol de cotizaciones
+- **Archivo**: `supabase/migrations/20260424030253_cotizaciones.sql`
+- 8 tablas: `cotizaciones`, `cotizacion_proveedores`, `pagos_proveedor`, `cotizacion_hospedajes`, `cotizacion_hospedaje_detalles`, `cotizacion_buses`, `pagos_bus`, `cotizacion_precios_publicos`
+- FK diferida de `traveler_account_configs.precio_publico_id → cotizacion_precios_publicos(id)` añadida al final
 
-#### U11 - Generar tipos de Supabase
-- **Archivos**: `app/types/database.types.ts`
-- Ejecutar `bun run db:reset && bun run db:types`
-- Verificar que el tipo `Database` contiene todas las tablas
-- Depende de: U10
+#### ✅ U11 - Generar tipos de Supabase
+- **Archivo**: `app/types/database.types.ts` (generado con `bun run db:types`)
+- Verificado: `supabase db reset --local` aplica las 7 migraciones sin errores
+- Tipos `Tables<>`, `TablesInsert<>`, `TablesUpdate<>`, `Enums<>` disponibles
 
 ---
 
-### FASE 3 — Capa de Mapeo y Utilidades
+### ✅ FASE 2.5 — Rename a inglés + corrección de TypeScript
 
-#### U12 - Utilidad genérica de mapeo `snake_case ↔ camelCase`
-- **Archivos**: `app/utils/supabase-mappers.ts`
-- Helpers: `mapTimestamps(row)`, `pickTimestamps(row)` — helpers genéricos para `created_at/updated_at`
-- Los mappers específicos viven junto a cada store como `app/stores/mappers/*.ts`
-- Depende de: U11
+> Esta fase emergió porque los stores, tipos de dominio y componentes usaban nombres en español, mientras que el esquema SQL y los tipos generados están en inglés. Fue necesario renombrar ~900 usos antes de continuar.
 
-#### U13 - Utilidad de manejo de errores Supabase
-- **Archivos**: `app/utils/supabase-error.ts`
-- `handleSupabaseError(error, context)` — logea, agrupa por código PostgREST común (`23505` duplicado, `23503` FK violación), lanza `Error` con mensaje legible en español
+#### ✅ Rename de tipos de dominio y enums a inglés
+- Todos los tipos en `app/types/` renombrados a inglés: `estado→status`, `nombre→name`, `precio→price`, `viaje→travel`, etc.
+- Enums de stores actualizados: `pendiente→pending`, `confirmado→confirmed`, `enCurso→in_progress`, etc.
+- Afectó: todos los stores, todos los componentes, todas las páginas
+
+#### ✅ Corrección de 900+ errores TypeScript
+- Errores reducidos de ~915 a 0
+- Principales áreas corregidas: stores (`use-travel-store`, `use-bus-store`), componentes de cotización, páginas de pagos, filtros de viajeros
+- Issues específicos resueltos: `location.status` (campo `state` de provincia), `provider.firstName` (debe ser `provider.name`), `accommodation` vs `hospedaje` en variables de loop, `cantidad`→`count`→`quantity` en `QuotationAccommodationDetail`
+
+---
+
+### ✅ FASE 3 — Capa de Mapeo y Utilidades
+
+#### ✅ U12 - Mappers en `app/utils/mappers.ts`
+- **Archivos**: `app/utils/mappers.ts`
+- **Decisión**: todos los mappers en un solo archivo (no divididos por store) para simplicidad
+- Cubre todas las entidades: Provider, Coordinator, Bus, Travel (+Activities/Buses/Services), Traveler, HotelRoom, Payment, TravelerAccountConfig, Quotation, QuotationProvider, QuotationAccommodation, QuotationBus, QuotationPublicPrice, y todos los tipos de pago
+- Patrón: `mapXxxRowToDomain(row)` para DB→dominio, `mapXxxToInsert(data)` para dominio→DB
+- `Travel` tiene parámetro extra `extras?` para inyectar arrays relacionados (coordinatorIds, itinerary, services, buses)
+- JSON fields con cast explícito: `beds as BedConfiguration[]`, `coordinator_ids as string[]`, `discounts/surcharges as AdjustmentItem[]`
+
+#### ✅ Migración adicional: `accommodation_payments`
+- **Archivo**: `supabase/migrations/20260424032200_accommodation_payments.sql`
+- La tabla `accommodation_payments` faltaba en el esquema original (existía en el dominio pero no en las migraciones SQL)
+- `app/types/database.types.ts` actualizado manualmente con la definición de la tabla
+- El mapper `mapAccommodationPaymentRowToDomain` ahora usa `Tables<'accommodation_payments'>`
+
+#### ⬜ U13 - Utilidad de manejo de errores Supabase
+- **Archivos**: `app/utils/supabase-error.ts` (pendiente)
+- `handleSupabaseError(error, context)` — logea, agrupa por código PostgREST común
+- Por ahora los stores manejan errores inline con `try/catch`
 - Depende de: U11
 
 ---
@@ -160,20 +168,22 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 > U14 y U15 pueden ejecutarse en paralelo.
 
 #### U14 - Migrar `use-provider-store.ts`
-- **Archivos**: `app/stores/use-provider-store.ts`, `app/stores/mappers/provider-mapper.ts`
-- Estado: `providers: Provider[]`, `loading: boolean`, `loaded: boolean`
-- `fetchAll()`: carga desde Supabase una vez (guard `loaded`)
+- **Archivos**: `app/stores/use-provider-store.ts`
+- Mappers ya disponibles en `app/utils/mappers.ts`
+- Estado: `providers: Provider[]`, `loading: boolean`
+- `fetchAll()`: carga desde Supabase
 - CRUD: cada acción llama Supabase y actualiza el array local tras éxito
-- Mapper: `rowToProvider(row)` y `providerToInsert(p)` — aplanar/desaplanar `ubicacion` y `contacto` (objetos anidados ↔ columnas planas)
 - Desactivar `persist: true`
 - Conservar firmas públicas exactas de getters y acciones
-- Depende de: U12, U13
+- Nota: acciones se vuelven `async` — los componentes deben `await` en handlers
+- Depende de: U12
 
 #### U15 - Migrar `use-coordinator-store.ts`
-- **Archivos**: `app/stores/use-coordinator-store.ts`, `app/stores/mappers/coordinator-mapper.ts`
+- **Archivos**: `app/stores/use-coordinator-store.ts`
+- Mappers ya disponibles en `app/utils/mappers.ts`
 - Mismo patrón que U14. Estructura plana, mapeo directo
 - Desactivar persist
-- Depende de: U12, U13
+- Depende de: U12
 
 ---
 
@@ -182,13 +192,13 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 > U16 y U17 pueden ejecutarse en paralelo.
 
 #### U16 - Migrar `use-bus-store.ts`
-- **Archivos**: `app/stores/use-bus-store.ts`, `app/stores/mappers/bus-mapper.ts`
+- **Archivos**: `app/stores/use-bus-store.ts`
 - FK a `providers`. Validación de FK delegada a la DB
-- Mapper `bus-mapper.ts`. Desactivar persist
+- Mappers en `app/utils/mappers.ts`. Desactivar persist
 - Depende de: U14
 
 #### U17 - Migrar `use-hotel-room-store.ts`
-- **Archivos**: `app/stores/use-hotel-room-store.ts`, `app/stores/mappers/hotel-room-mapper.ts`
+- **Archivos**: `app/stores/use-hotel-room-store.ts`
 - `fetchAll()`: `select('*, hotel_room_types(*)')` → mapear a `HotelRoomData` con `roomTypes[]`
 - `create`: insert `hotel_rooms` + bulk insert `hotel_room_types`
 - `update`: actualizar `hotel_rooms` + diff de `hotel_room_types` (altas/bajas/cambios)
@@ -202,7 +212,7 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 ### FASE 6 — Migración de Stores con Hijas Normalizadas
 
 #### U18 - Migrar `use-travel-store.ts`
-- **Archivos**: `app/stores/use-travel-store.ts`, `app/stores/mappers/travel-mapper.ts`, `supabase/migrations/0008_travel_rpcs.sql`
+- **Archivos**: `app/stores/use-travel-store.ts`, `supabase/migrations/<timestamp>_travel_rpcs.sql`
 - `fetchAll()`: `select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_coordinators(coordinator_id)')` con order en activities por `orden`
 - **Decisión de transacciones**: crear funciones SQL `create_travel(jsonb)` y `update_travel(jsonb)` invocadas con `.rpc()` para operaciones atómicas multi-tabla
 - Acciones sobre sub-colecciones (`addActivity`, `updateActivity`, `removeActivity`, `addService`, etc.) traducidas a CRUD sobre tablas hijas
@@ -210,7 +220,7 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 - Depende de: U15, U16
 
 #### U19 - Migrar `use-traveler-store.ts`
-- **Archivos**: `app/stores/use-traveler-store.ts`, `app/stores/mappers/traveler-mapper.ts`
+- **Archivos**: `app/stores/use-traveler-store.ts`
 - `fetchByTravel(travelId)` como acción principal (viajeros cargados por viaje, no todos)
 - CRUD standard + lógica árbol representante/acompañantes (leer store actual para política de eliminación)
 - Self-FK `representante_id` — respetar política existente del store al eliminar representante
@@ -221,14 +231,14 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 ### FASE 7 — Migración de Stores Dependientes
 
 #### U20 - Migrar `use-payment-store.ts`
-- **Archivos**: `app/stores/use-payment-store.ts`, `app/stores/mappers/payment-mapper.ts`
+- **Archivos**: `app/stores/use-payment-store.ts`
 - `payments` + `traveler_account_configs`
 - `traveler_account_configs`: PK compuesta → usar upsert con `onConflict: 'travel_id,traveler_id'`
 - `discounts`/`surcharges` como JSONB: cast explícito de tipo en el mapper
 - Depende de: U19
 
 #### U21 - Migrar `use-cotizacion-store.ts`
-- **Archivos**: `app/stores/use-cotizacion-store.ts`, `app/stores/mappers/cotizacion-mapper.ts`, `supabase/migrations/0009_cotizacion_rpcs.sql`
+- **Archivos**: `app/stores/use-cotizacion-store.ts`, `supabase/migrations/<timestamp>_cotizacion_rpcs.sql`
 - `fetchByTravel(travelId)`: query con select anidado de todas las sub-tablas en una sola llamada
 - Acciones granulares por sub-entidad (leer store actual para enumerar: `addProveedor`, `addPagoProveedor`, `addHospedaje`, `addHospedajeDetalle`, `addBus`, `addPagoBus`, `addPrecioPublico`, etc.)
 - RPCs `create_cotizacion(jsonb)` y `update_cotizacion(jsonb)` para operaciones root multi-tabla
@@ -260,24 +270,25 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 
 ## Orden de Ejecución
 
-| Wave | Work Units | Modo |
-|------|-----------|------|
-| 1 | U1 | secuencial |
-| 2 | U2, U3 | **paralelo** |
-| 3–9 | U4, U5, U6, U7, U8, U9, U10 | secuencial (uno por wave) |
-| 10 | U11 | secuencial |
-| 11 | U12, U13 | **paralelo** |
-| 12 | U14, U15 | **paralelo** |
-| 13 | U16, U17 | **paralelo** |
-| 14 | U18 | secuencial |
-| 15 | U19 | secuencial |
-| 16 | U20 | secuencial |
-| 17 | U21 | secuencial |
-| 18 | U22 | secuencial |
-| 19 | U23 | secuencial |
-| 20 | U24 | secuencial |
+| Wave | Work Units | Modo | Estado |
+|------|-----------|------|--------|
+| 1 | U1 | secuencial | ✅ |
+| 2 | U2, U3 | paralelo | ✅ |
+| 3–9 | U4, U5, U6, U7, U8, U9, U10 | secuencial | ✅ |
+| 10 | U11 | secuencial | ✅ |
+| 10.5 | Rename a inglés + fix TS | secuencial | ✅ |
+| 11 | U12, U13 | paralelo | ✅ U12, ⬜ U13 |
+| 12 | U14, U15 | paralelo | ⬜ |
+| 13 | U16, U17 | paralelo | ⬜ |
+| 14 | U18 | secuencial | ⬜ |
+| 15 | U19 | secuencial | ⬜ |
+| 16 | U20 | secuencial | ⬜ |
+| 17 | U21 | secuencial | ⬜ |
+| 18 | U22 | secuencial | ⬜ |
+| 19 | U23 | secuencial | ⬜ |
+| 20 | U24 | secuencial | ⬜ |
 
-> **Importante**: tras cada migración SQL (U4–U10, U18, U21), ejecutar `bun run db:reset && bun run db:types` antes de continuar con el siguiente work unit descendiente.
+---
 
 ## Notas para el Agente Ejecutor
 
@@ -286,3 +297,5 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 - Los mappers por store van en `app/stores/mappers/` — un archivo por entidad principal.
 - RLS es permisivo durante la migración (`using (true)`). Refinarlo es trabajo posterior (auth, row-level policies).
 - No usar `@nuxtjs/supabase` module. Solo `@supabase/supabase-js` directo.
+- `supabase db query` no soporta múltiples statements — usar `docker exec supabase_db_viajeros-ligeros-bun psql -U postgres -c "..."` para iterar SQL.
+- Workflow de migraciones: psql para iterar → `supabase db diff -f <name> --local` para capturar → `supabase db reset --local` para verificar.
