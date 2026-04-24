@@ -1,12 +1,16 @@
 import { defineStore } from 'pinia';
 
+import type { TablesUpdate } from '~/types/database.types';
 import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, ProviderUpdateData } from '~/types/provider';
 
 import { PROVIDER_CATEGORY } from '~/types/provider';
+import { mapProviderRowToDomain, mapProviderToInsert } from '~/utils/mappers';
 
 import { useHotelRoomStore } from './use-hotel-room-store';
 
 export const useProviderStore = defineStore('providers', () => {
+  const supabase = useSupabase();
+
   // State
   const providers = ref<Provider[]>([]);
   const loading = ref(false);
@@ -108,68 +112,112 @@ export const useProviderStore = defineStore('providers', () => {
   );
 
   // Actions
-  function addProvider(data: ProviderFormData): Provider {
-    const now = new Date().toISOString();
-    const newProvider: Provider = {
-      ...data,
-      id: `provider-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    providers.value.push(newProvider);
+  async function fetchAll(): Promise<void> {
+    loading.value = true;
     error.value = null;
-    return newProvider;
+    try {
+      const { data, error: err } = await supabase
+        .from('providers')
+        .select('*')
+        .order('name');
+      if (err)
+        throw err;
+      providers.value = data.map(mapProviderRowToDomain);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al cargar proveedores';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateProvider(id: string, data: Partial<ProviderUpdateData>): boolean {
+  async function addProvider(data: ProviderFormData): Promise<Provider> {
+    const { data: row, error: err } = await supabase
+      .from('providers')
+      .insert(mapProviderToInsert(data))
+      .select()
+      .single();
+
+    if (err) {
+      error.value = err.message;
+      throw err;
+    }
+
+    const provider = mapProviderRowToDomain(row);
+    providers.value.push(provider);
+    error.value = null;
+    return provider;
+  }
+
+  async function updateProvider(id: string, data: Partial<ProviderUpdateData>): Promise<boolean> {
+    const update: TablesUpdate<'providers'> = {};
+    if (data.name !== undefined)
+      update.name = data.name;
+    if (data.category !== undefined)
+      update.category = data.category;
+    if (data.active !== undefined)
+      update.active = data.active;
+    if ('description' in data)
+      update.description = data.description ?? null;
+    if (data.location) {
+      update.location_city = data.location.city;
+      update.location_state = data.location.state;
+      update.location_country = data.location.country;
+    }
+    if (data.contact) {
+      update.contact_name = data.contact.name ?? null;
+      update.contact_phone = data.contact.phone ?? null;
+      update.contact_email = data.contact.email ?? null;
+      update.contact_notes = data.contact.notes ?? null;
+    }
+
+    const { data: row, error: err } = await supabase
+      .from('providers')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (err) {
+      error.value = err.message;
+      return false;
+    }
+
     const index = providers.value.findIndex(p => p.id === id);
-    if (index === -1) {
-      error.value = 'Proveedor no encontrado';
-      return false;
+    if (index !== -1) {
+      providers.value[index] = mapProviderRowToDomain(row);
     }
-
-    const existing = providers.value[index];
-    if (!existing) {
-      error.value = 'Proveedor no encontrado';
-      return false;
-    }
-
-    providers.value[index] = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
-
     error.value = null;
     return true;
   }
 
-  function deleteProvider(id: string): boolean {
-    const index = providers.value.findIndex(p => p.id === id);
-    if (index === -1) {
-      error.value = 'Proveedor no encontrado';
+  async function deleteProvider(id: string): Promise<boolean> {
+    const { error: err } = await supabase
+      .from('providers')
+      .delete()
+      .eq('id', id);
+
+    if (err) {
+      error.value = err.message;
       return false;
     }
 
-    // Cascade delete: eliminar datos de habitaciones si el proveedor es de hospedaje
+    // Keep in-memory hotel room store in sync until it migrates to Supabase
     const hotelRoomStore = useHotelRoomStore();
     hotelRoomStore.deleteProviderRooms(id);
 
-    providers.value.splice(index, 1);
+    providers.value = providers.value.filter(p => p.id !== id);
     error.value = null;
     return true;
   }
 
-  function toggleProviderStatus(id: string): boolean {
+  async function toggleProviderStatus(id: string): Promise<boolean> {
     const provider = getProviderById.value(id);
     if (!provider) {
       error.value = 'Proveedor no encontrado';
       return false;
     }
-
     return updateProvider(id, { active: !provider.active });
   }
 
@@ -211,6 +259,7 @@ export const useProviderStore = defineStore('providers', () => {
     filteredCount,
     hasActiveFilters,
     // Actions
+    fetchAll,
     addProvider,
     updateProvider,
     deleteProvider,
@@ -220,10 +269,4 @@ export const useProviderStore = defineStore('providers', () => {
     removeFilter,
     clearFilters,
   };
-}, {
-  persist: {
-    key: 'viajeros-ligeros-providers',
-    storage: import.meta.client ? localStorage : undefined,
-    pick: ['providers'],
-  },
 });

@@ -1,6 +1,11 @@
 import type { Coordinator, CoordinatorFormData, CoordinatorUpdateData } from '~/types/coordinator';
+import type { TablesUpdate } from '~/types/database.types';
+
+import { mapCoordinatorRowToDomain, mapCoordinatorToInsert } from '~/utils/mappers';
 
 export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
+  const supabase = useSupabase();
+
   // State
   const coordinators = ref<Coordinator[]>([]);
   const loading = shallowRef(false);
@@ -20,54 +25,90 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
   });
 
   // Actions
-  function addCoordinator(data: CoordinatorFormData): Coordinator {
-    const now = new Date().toISOString();
-    const newCoordinator: Coordinator = {
-      ...data,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    coordinators.value.push(newCoordinator);
+  async function fetchAll(): Promise<void> {
+    loading.value = true;
     error.value = null;
-    return newCoordinator;
+    try {
+      const { data, error: err } = await supabase
+        .from('coordinators')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (err)
+        throw err;
+      coordinators.value = data.map(mapCoordinatorRowToDomain);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al cargar coordinadores';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateCoordinator(id: string, data: CoordinatorUpdateData): Coordinator | undefined {
-    const index = coordinators.value.findIndex(c => c.id === id);
-    if (index === -1) {
-      error.value = 'Coordinador no encontrado';
+  async function addCoordinator(data: CoordinatorFormData): Promise<Coordinator> {
+    const { data: row, error: err } = await supabase
+      .from('coordinators')
+      .insert(mapCoordinatorToInsert(data))
+      .select()
+      .single();
+
+    if (err) {
+      error.value = err.message;
+      throw err;
+    }
+
+    const coordinator = mapCoordinatorRowToDomain(row);
+    coordinators.value.push(coordinator);
+    error.value = null;
+    return coordinator;
+  }
+
+  async function updateCoordinator(id: string, data: CoordinatorUpdateData): Promise<Coordinator | undefined> {
+    const update: TablesUpdate<'coordinators'> = {};
+    if (data.name !== undefined)
+      update.name = data.name;
+    if (data.age !== undefined)
+      update.age = data.age;
+    if (data.phone !== undefined)
+      update.phone = data.phone;
+    if (data.email !== undefined)
+      update.email = data.email;
+    if ('notes' in data)
+      update.notes = data.notes ?? null;
+
+    const { data: row, error: err } = await supabase
+      .from('coordinators')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (err) {
+      error.value = err.message;
       return undefined;
     }
 
-    const existing = coordinators.value[index];
-    if (!existing) {
-      error.value = 'Coordinador no encontrado';
-      return undefined;
+    const coordinator = mapCoordinatorRowToDomain(row);
+    const index = coordinators.value.findIndex(c => c.id === id);
+    if (index !== -1) {
+      coordinators.value[index] = coordinator;
     }
-
-    const updated: Coordinator = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
-
-    coordinators.value[index] = updated;
     error.value = null;
-    return updated;
+    return coordinator;
   }
 
-  function deleteCoordinator(id: string): void {
-    const index = coordinators.value.findIndex(c => c.id === id);
-    if (index === -1) {
-      error.value = 'Coordinador no encontrado';
+  async function deleteCoordinator(id: string): Promise<void> {
+    const { error: err } = await supabase
+      .from('coordinators')
+      .delete()
+      .eq('id', id);
+
+    if (err) {
+      error.value = err.message;
       return;
     }
 
-    coordinators.value.splice(index, 1);
+    coordinators.value = coordinators.value.filter(c => c.id !== id);
     error.value = null;
   }
 
@@ -80,13 +121,9 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     allCoordinators,
     getCoordinatorById,
     // Actions
+    fetchAll,
     addCoordinator,
     updateCoordinator,
     deleteCoordinator,
   };
-}, {
-  persist: {
-    key: 'viajeros-ligeros-coordinators',
-    storage: import.meta.client ? localStorage : undefined,
-  },
 });

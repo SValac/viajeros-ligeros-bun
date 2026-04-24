@@ -83,19 +83,19 @@ function closeModal() {
   editingProvider.value = null;
 }
 
-function handleFormSubmit(data: ProviderFormData) {
+async function handleFormSubmit(data: ProviderFormData) {
   try {
     data.category = PROVIDER_CATEGORY.BUS_AGENCIES;
 
     if (editingProvider.value) {
-      const success = providerStore.updateProvider(editingProvider.value.id, data);
+      const success = await providerStore.updateProvider(editingProvider.value.id, data);
       if (success) {
         toast.add({ title: 'Agencia actualizada', description: `${data.name} se actualizó correctamente`, color: 'primary' });
         closeModal();
       }
     }
     else {
-      providerStore.addProvider(data);
+      await providerStore.addProvider(data);
       toast.add({ title: 'Agencia creada', description: `${data.name} se creó correctamente`, color: 'primary' });
       closeModal();
     }
@@ -105,18 +105,18 @@ function handleFormSubmit(data: ProviderFormData) {
   }
 }
 
-function handleDelete(provider: Provider) {
+async function handleDelete(provider: Provider) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar ${provider.name}?`)) {
-    const success = providerStore.deleteProvider(provider.id);
+    const success = await providerStore.deleteProvider(provider.id);
     if (success) {
       toast.add({ title: 'Agencia eliminada', description: `${provider.name} se eliminó correctamente`, color: 'warning' });
     }
   }
 }
 
-function handleToggleStatus(provider: Provider) {
-  const success = providerStore.toggleProviderStatus(provider.id);
+async function handleToggleStatus(provider: Provider) {
+  const success = await providerStore.toggleProviderStatus(provider.id);
   if (success) {
     const newStatus = !provider.active;
     toast.add({

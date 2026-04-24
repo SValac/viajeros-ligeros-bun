@@ -91,13 +91,13 @@ function openAddModal() {
   isAddModalOpen.value = true;
 }
 
-function handleProviderSubmit(data: ProviderFormData) {
+async function handleProviderSubmit(data: ProviderFormData) {
   // Si hay categoría seleccionada, forzarla
   if (selectedCategory.value) {
     data.category = selectedCategory.value;
   }
 
-  const newProvider = providerStore.addProvider(data);
+  const newProvider = await providerStore.addProvider(data);
 
   toast.add({
     title: 'Proveedor creado',

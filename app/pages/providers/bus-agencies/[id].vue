@@ -25,13 +25,13 @@ watchEffect(() => {
   }
 });
 
-function handleFormSubmit(data: ProviderFormData) {
+async function handleFormSubmit(data: ProviderFormData) {
   if (!provider.value)
     return;
 
   try {
     data.category = PROVIDER_CATEGORY.BUS_AGENCIES;
-    const success = providerStore.updateProvider(provider.value.id, data);
+    const success = await providerStore.updateProvider(provider.value.id, data);
     if (success) {
       toast.add({ title: 'Agencia actualizada', description: `${data.name} se actualizó correctamente`, color: 'primary' });
       isEditModalOpen.value = false;
@@ -42,10 +42,10 @@ function handleFormSubmit(data: ProviderFormData) {
   }
 }
 
-function handleToggleStatus() {
+async function handleToggleStatus() {
   if (!provider.value)
     return;
-  providerStore.toggleProviderStatus(provider.value.id);
+  await providerStore.toggleProviderStatus(provider.value.id);
   toast.add({
     title: 'Estado actualizado',
     description: `${provider.value.name} ahora está ${!provider.value.active ? 'activo' : 'inactivo'}`,
@@ -53,12 +53,12 @@ function handleToggleStatus() {
   });
 }
 
-function handleDelete() {
+async function handleDelete() {
   if (!provider.value)
     return;
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar ${provider.value.name}?`)) {
-    providerStore.deleteProvider(provider.value.id);
+    await providerStore.deleteProvider(provider.value.id);
     toast.add({ title: 'Agencia eliminada', color: 'warning' });
     router.push('/providers/bus-agencies');
   }
