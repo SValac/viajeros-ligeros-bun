@@ -18,7 +18,7 @@ const emit = defineEmits<{
   submit: [data: TravelerFormData];
   cancel: [];
 }>();
-const cotizacionStore = useCotizacionStore();
+const travelsStore = useTravelsStore();
 const providerStore = useProviderStore();
 
 // Schema de validación
@@ -73,18 +73,18 @@ const travelOptions = computed(() =>
   })),
 );
 
-// Cotización del viaje seleccionado — fuente de verdad para los buses
-const selectedCotizacion = computed(() =>
-  state.value.travelId ? cotizacionStore.getCotizacionByTravel(state.value.travelId) : undefined,
+// Viaje seleccionado — fuente de verdad para los buses (FK a travel_buses.id)
+const selectedTravel = computed(() =>
+  state.value.travelId ? travelsStore.getTravelById(state.value.travelId) : undefined,
 );
 
-// Opciones de camiones: vienen de cotizacion.busesApartados, no de travel.buses
+// Opciones de camiones: vienen de travel.buses (id de travel_buses)
 const busOptions = computed(() => {
-  if (!selectedCotizacion.value)
-    return [];
-  return cotizacionStore.getBusesByQuotation(selectedCotizacion.value.id).map((b) => {
+  const buses = selectedTravel.value?.buses ?? [];
+  return buses.map((b) => {
     const agencia = providerStore.getProviderById(b.providerId)?.name;
-    const label = agencia ? `${agencia} — Unidad ${b.unitNumber}` : `Unidad ${b.unitNumber}`;
+    const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
+    const label = agencia ? `${agencia} — ${busName}` : busName;
     return { value: b.id, label };
   });
 });
