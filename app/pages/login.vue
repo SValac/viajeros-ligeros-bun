@@ -20,22 +20,55 @@ const state = ref<Schema>({
 });
 
 const isSubmitting = ref(false);
+const submitError = ref('');
 const toast = useToast();
 const router = useRouter();
+const supabase = useSupabase();
+
+function getAuthErrorMessage(error: unknown): string {
+  if (!error || typeof error !== 'object' || !('message' in error))
+    return 'No pudimos iniciar sesión. Intenta de nuevo.';
+
+  const message = String(error.message ?? '').toLowerCase();
+
+  if (message.includes('invalid login credentials'))
+    return 'Email o contraseña inválidos.';
+
+  if (message.includes('email not confirmed'))
+    return 'Debes confirmar tu email antes de iniciar sesión.';
+
+  return String(error.message) || 'No pudimos iniciar sesión. Intenta de nuevo.';
+}
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   isSubmitting.value = true;
+  submitError.value = '';
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const { error } = await supabase.auth.signInWithPassword({
+      email: event.data.email,
+      password: event.data.password,
+    });
+
+    if (error)
+      throw error;
 
     toast.add({
-      title: 'Inicio de sesión (mock)',
+      title: 'Inicio de sesión exitoso',
       description: `Bienvenido, ${event.data.email}`,
       color: 'success',
     });
 
     await router.push('/');
+  }
+  catch (error) {
+    const message = getAuthErrorMessage(error);
+    submitError.value = message;
+    toast.add({
+      title: 'Error al iniciar sesión',
+      description: message,
+      color: 'error',
+    });
   }
   finally {
     isSubmitting.value = false;
@@ -89,6 +122,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             placeholder="••••••••"
           />
         </UFormField>
+
+        <UAlert
+          v-if="submitError"
+          color="error"
+          variant="soft"
+          :description="submitError"
+        />
 
         <UButton
           type="submit"

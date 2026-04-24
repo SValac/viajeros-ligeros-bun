@@ -30,22 +30,64 @@ const state = ref<Schema>({
 });
 
 const isSubmitting = ref(false);
+const submitError = ref('');
 const toast = useToast();
 const router = useRouter();
+const supabase = useSupabase();
+
+function getAuthErrorMessage(error: unknown): string {
+  if (!error || typeof error !== 'object' || !('message' in error))
+    return 'No pudimos crear tu cuenta. Intenta de nuevo.';
+
+  const message = String(error.message ?? '').toLowerCase();
+
+  if (message.includes('user already registered'))
+    return 'Este email ya está registrado.';
+
+  if (message.includes('password should be at least'))
+    return 'La contraseña no cumple los requisitos mínimos.';
+
+  return String(error.message) || 'No pudimos crear tu cuenta. Intenta de nuevo.';
+}
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   isSubmitting.value = true;
+  submitError.value = '';
 
   try {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const { data, error } = await supabase.auth.signUp({
+      email: event.data.email,
+      password: event.data.password,
+      options: {
+        data: {
+          name: event.data.name || undefined,
+        },
+      },
+    });
+
+    if (error)
+      throw error;
+
+    const requiresEmailVerification = !data.session;
 
     toast.add({
-      title: 'Registro (mock)',
-      description: `Cuenta creada para ${event.data.email}`,
+      title: requiresEmailVerification ? 'Revisa tu correo' : 'Registro exitoso',
+      description: requiresEmailVerification
+        ? 'Te enviamos un correo de verificación. Confirma tu email antes de iniciar sesión.'
+        : `Cuenta creada para ${event.data.email}`,
       color: 'success',
     });
 
     await router.push('/login');
+  }
+  catch (error) {
+    const message = getAuthErrorMessage(error);
+    submitError.value = message;
+    toast.add({
+      title: 'Error al registrarte',
+      description: message,
+      color: 'error',
+    });
   }
   finally {
     isSubmitting.value = false;
@@ -122,6 +164,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             placeholder="••••••••"
           />
         </UFormField>
+
+        <UAlert
+          v-if="submitError"
+          color="error"
+          variant="soft"
+          :description="submitError"
+        />
 
         <UButton
           type="submit"
