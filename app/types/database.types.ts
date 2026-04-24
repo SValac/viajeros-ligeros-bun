@@ -728,6 +728,7 @@ export type Database = {
           description: string;
           id: string;
           location: string | null;
+          map_location: Json | null;
           time: string | null;
           title: string;
           travel_id: string;
@@ -737,6 +738,7 @@ export type Database = {
           description: string;
           id?: string;
           location?: string | null;
+          map_location?: Json | null;
           time?: string | null;
           title: string;
           travel_id: string;
@@ -746,6 +748,7 @@ export type Database = {
           description?: string;
           id?: string;
           location?: string | null;
+          map_location?: Json | null;
           time?: string | null;
           title?: string;
           travel_id?: string;
