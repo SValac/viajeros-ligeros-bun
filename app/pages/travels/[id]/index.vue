@@ -23,6 +23,22 @@ const coordinadoresDelViaje = computed(() => {
   return ids.map(id => coordinatorStore.getCoordinatorById(id)).filter(Boolean);
 });
 
+async function loadCotizacionData(id: string) {
+  await cotizacionStore.fetchByTravel(id);
+}
+
+onMounted(() => {
+  if (travelId.value) {
+    void loadCotizacionData(travelId.value);
+  }
+});
+
+watch(travelId, (id) => {
+  if (id) {
+    void loadCotizacionData(id);
+  }
+});
+
 // Redirect to dashboard if travel not found
 watchEffect(() => {
   if (!travel.value && travelId.value) {

@@ -14,7 +14,6 @@ const route = useRoute();
 const router = useRouter();
 const travelerStore = useTravelerStore();
 const travelStore = useTravelsStore();
-const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const toast = useToast();
 
@@ -54,7 +53,7 @@ const totalTravelers = computed(() => travelersOfTravel.value.length);
 const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
 const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
 
-const allBuses = computed(() => cotizacionStore.busesApartados);
+const allBuses = computed(() => travel.value?.buses ?? []);
 
 const representantes = computed(() =>
   travelerStore.filteredTravelers.filter(t => t.isRepresentative),
@@ -70,7 +69,8 @@ function getBusLabel(travelBusId: string): string {
   if (!bus)
     return travelBusId;
   const agencia = providerStore.getProviderById(bus.providerId)?.name;
-  return agencia ? `${agencia} — Unidad ${bus.unitNumber}` : `Unidad ${bus.unitNumber}`;
+  const busName = [bus.brand, bus.model].filter(Boolean).join(' ').trim() || 'Camión';
+  return agencia ? `${agencia} — ${busName}` : busName;
 }
 
 function openCreateModal() {
