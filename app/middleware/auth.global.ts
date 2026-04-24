@@ -8,11 +8,11 @@ function normalizePath(path: string): string {
 }
 
 export default defineNuxtRouteMiddleware(async (to) => {
-  const supabase = useSupabase();
+  const authStore = useAuthStore();
   const currentPath = normalizePath(to.path);
   const isAuthPage = AUTH_PAGES.has(currentPath);
 
-  const { data, error } = await supabase.auth.getSession();
+  const { error } = await authStore.fetchSession();
 
   if (error) {
     console.error('Failed to get Supabase session in auth middleware:', error);
@@ -23,11 +23,9 @@ export default defineNuxtRouteMiddleware(async (to) => {
     return navigateTo('/login');
   }
 
-  const isAuthenticated = Boolean(data.session);
-
-  if (!isAuthenticated && !isAuthPage)
+  if (!authStore.isAuthenticated && !isAuthPage)
     return navigateTo('/login');
 
-  if (isAuthenticated && isAuthPage)
+  if (authStore.isAuthenticated && isAuthPage)
     return navigateTo('/');
 });

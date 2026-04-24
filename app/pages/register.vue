@@ -33,42 +33,21 @@ const isSubmitting = ref(false);
 const submitError = ref('');
 const toast = useToast();
 const router = useRouter();
-const supabase = useSupabase();
-
-function getAuthErrorMessage(error: unknown): string {
-  if (!error || typeof error !== 'object' || !('message' in error))
-    return 'No pudimos crear tu cuenta. Intenta de nuevo.';
-
-  const message = String(error.message ?? '').toLowerCase();
-
-  if (message.includes('user already registered'))
-    return 'Este email ya está registrado.';
-
-  if (message.includes('password should be at least'))
-    return 'La contraseña no cumple los requisitos mínimos.';
-
-  return String(error.message) || 'No pudimos crear tu cuenta. Intenta de nuevo.';
-}
+const { signUp } = useAuthStore();
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   isSubmitting.value = true;
   submitError.value = '';
 
   try {
-    const { data, error } = await supabase.auth.signUp({
-      email: event.data.email,
-      password: event.data.password,
-      options: {
-        data: {
-          name: event.data.name || undefined,
-        },
-      },
-    });
+    const { error, requiresEmailVerification } = await signUp(
+      event.data.email,
+      event.data.password,
+      event.data.name || undefined,
+    );
 
     if (error)
-      throw error;
-
-    const requiresEmailVerification = !data.session;
+      throw new Error(error);
 
     toast.add({
       title: requiresEmailVerification ? 'Revisa tu correo' : 'Registro exitoso',
@@ -81,7 +60,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     await router.push('/login');
   }
   catch (error) {
-    const message = getAuthErrorMessage(error);
+    const message = error instanceof Error ? error.message : 'No pudimos crear tu cuenta. Intenta de nuevo.';
     submitError.value = message;
     toast.add({
       title: 'Error al registrarte',
