@@ -20,42 +20,42 @@ const emit = defineEmits<{
 const currentYear = new Date().getFullYear();
 
 const schema = z.object({
-  marca: z.string().max(50, 'Máximo 50 caracteres').optional().or(z.literal('')),
-  modelo: z.string().max(50, 'Máximo 50 caracteres').optional().or(z.literal('')),
-  año: z.coerce.number()
+  brand: z.string().max(50, 'Máximo 50 caracteres').optional().or(z.literal('')),
+  model: z.string().max(50, 'Máximo 50 caracteres').optional().or(z.literal('')),
+  year: z.coerce.number()
     .int()
     .min(1950, 'Año mínimo 1950')
     .max(currentYear + 1, `Año máximo ${currentYear + 1}`)
     .optional()
     .or(z.literal('' as unknown as number)),
-  cantidadAsientos: z.coerce.number()
+  seatCount: z.coerce.number()
     .int()
     .min(1, 'Mínimo 1 asiento')
     .max(100, 'Máximo 100 asientos'),
-  precioRenta: z.coerce.number()
+  rentalPrice: z.coerce.number()
     .min(0, 'El precio no puede ser negativo'),
-  activo: z.boolean(),
+  active: z.boolean(),
 });
 
 type Schema = z.output<typeof schema>;
 
 const state = ref<Schema>({
-  marca: props.bus?.marca || '',
-  modelo: props.bus?.modelo || '',
-  año: props.bus?.año ?? undefined,
-  cantidadAsientos: props.bus?.cantidadAsientos || 1,
-  precioRenta: props.bus?.precioRenta || 0,
-  activo: props.bus?.activo ?? true,
+  brand: props.bus?.brand || '',
+  model: props.bus?.model || '',
+  year: props.bus?.year ?? undefined,
+  seatCount: props.bus?.seatCount || 1,
+  rentalPrice: props.bus?.rentalPrice || 0,
+  active: props.bus?.active ?? true,
 });
 
 function onSubmit(event: FormSubmitEvent<Schema>) {
   const formData: BusFormData = {
-    marca: event.data.marca || undefined,
-    modelo: event.data.modelo || undefined,
-    año: event.data.año || undefined,
-    cantidadAsientos: event.data.cantidadAsientos,
-    precioRenta: event.data.precioRenta,
-    activo: event.data.activo,
+    brand: event.data.brand || undefined,
+    model: event.data.model || undefined,
+    year: event.data.year || undefined,
+    seatCount: event.data.seatCount,
+    rentalPrice: event.data.rentalPrice,
+    active: event.data.active,
     providerId: props.providerId,
     id: props.bus?.id,
   };
@@ -78,20 +78,20 @@ function onCancel() {
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Marca"
-        name="marca"
+        name="brand"
       >
         <UInput
-          v-model="state.marca"
+          v-model="state.brand"
           placeholder="Mercedes-Benz"
         />
       </UFormField>
 
       <UFormField
         label="Modelo"
-        name="modelo"
+        name="model"
       >
         <UInput
-          v-model="state.modelo"
+          v-model="state.model"
           placeholder="Sprinter 516"
         />
       </UFormField>
@@ -101,10 +101,10 @@ function onCancel() {
     <div class="grid grid-cols-3 gap-4">
       <UFormField
         label="Año"
-        name="año"
+        name="year"
       >
         <UInput
-          v-model="state.año"
+          v-model="state.year"
           type="number"
           placeholder="2022"
         />
@@ -112,11 +112,11 @@ function onCancel() {
 
       <UFormField
         label="Cantidad de asientos"
-        name="cantidadAsientos"
+        name="seatCount"
         required
       >
         <UInput
-          v-model="state.cantidadAsientos"
+          v-model="state.seatCount"
           type="number"
           placeholder="40"
         />
@@ -124,11 +124,11 @@ function onCancel() {
 
       <UFormField
         label="Precio de renta"
-        name="precioRenta"
+        name="rentalPrice"
         required
       >
         <UInput
-          v-model="state.precioRenta"
+          v-model="state.rentalPrice"
           type="number"
           placeholder="5000"
         />
@@ -138,9 +138,9 @@ function onCancel() {
     <!-- Estado -->
     <USeparator label="Estado" />
 
-    <UFormField name="activo">
+    <UFormField name="active">
       <UCheckbox
-        v-model="state.activo"
+        v-model="state.active"
         label="Unidad activa"
       />
     </UFormField>

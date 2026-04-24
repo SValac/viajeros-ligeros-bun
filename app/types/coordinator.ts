@@ -1,10 +1,10 @@
 export type Coordinator = {
   id: string;
-  nombre: string;
-  edad: number;
-  telefono: string;
+  name: string;
+  age: number;
+  phone: string;
   email: string;
-  notas?: string;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
 };

@@ -1,56 +1,49 @@
-// Provider category constant — single source of truth; type is derived from it
 export const PROVIDER_CATEGORY = {
-  GUIAS: 'guias',
-  TRANSPORTE: 'transporte',
-  HOSPEDAJE: 'hospedaje',
-  AGENCIAS_AUTOBUS: 'agencias-autobus',
-  COMIDAS: 'comidas',
-  OTROS: 'otros',
+  GUIDES: 'guides',
+  TRANSPORTATION: 'transportation',
+  ACCOMMODATION: 'accommodation',
+  BUS_AGENCIES: 'bus_agencies',
+  FOOD_SERVICES: 'food_services',
+  OTHER: 'other',
 } as const;
 
 export type ProviderCategory = typeof PROVIDER_CATEGORY[keyof typeof PROVIDER_CATEGORY];
 
-// Contact information for provider
 export type ProviderContact = {
-  nombre?: string;
-  telefono?: string;
+  name?: string;
+  phone?: string;
   email?: string;
-  notas?: string;
+  notes?: string;
 };
 
-// Location information for provider
 export type ProviderLocation = {
-  ciudad: string;
-  estado: string;
-  pais: string;
+  city: string;
+  state: string;
+  country: string;
 };
 
-// Main provider model
 export type Provider = {
   id: string;
-  nombre: string;
-  categoria: ProviderCategory;
-  descripcion?: string;
-  ubicacion: ProviderLocation;
-  contacto: ProviderContact;
-  activo: boolean; // Soft delete / active status
+  name: string;
+  category: ProviderCategory;
+  description?: string;
+  location: ProviderLocation;
+  contact: ProviderContact;
+  active: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
-// Form data type (omits generated fields)
 export type ProviderFormData = Omit<Provider, 'id' | 'createdAt' | 'updatedAt'> & {
   id?: string;
 };
 
-// Update data type (excludes immutable fields)
 export type ProviderUpdateData = Omit<Provider, 'id' | 'createdAt' | 'updatedAt'>;
 
-// Filters for provider table
 export type ProviderFilters = {
-  categoria?: ProviderCategory;
-  activo?: boolean;
+  category?: ProviderCategory;
+  active?: boolean;
   searchTerm?: string;
-  ciudad?: string;
-  estado?: string;
+  city?: string;
+  state?: string;
 };

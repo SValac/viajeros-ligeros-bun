@@ -1,109 +1,109 @@
 import type {
-  Cotizacion,
-  CotizacionBus,
-  CotizacionBusFormData,
-  CotizacionFormData,
-  CotizacionHospedaje,
-  CotizacionHospedajeFormData,
-  CotizacionPrecioPublico,
-  CotizacionPrecioPublicoFormData,
-  CotizacionProveedor,
-  CotizacionProveedorFilters,
-  CotizacionProveedorFormData,
-  EstadoPagoBus,
-  EstadoPagoHospedaje,
-  EstadoPagoProveedor,
-  PagoBus,
-  PagoBusFormData,
-  PagoHospedaje,
-  PagoHospedajeFormData,
-  PagoProveedor,
-  PagoProveedorFormData,
-} from '~/types/cotizacion';
+  AccommodationPayment,
+  AccommodationPaymentFormData,
+  AccommodationPaymentStatus,
+  BusPayment,
+  BusPaymentFormData,
+  BusPaymentStatus,
+  ProviderPayment,
+  ProviderPaymentFormData,
+  ProviderPaymentStatus,
+  Quotation,
+  QuotationAccommodation,
+  QuotationAccommodationFormData,
+  QuotationBus,
+  QuotationBusFormData,
+  QuotationFormData,
+  QuotationProvider,
+  QuotationProviderFilters,
+  QuotationProviderFormData,
+  QuotationPublicPrice,
+  QuotationPublicPriceFormData,
+} from '~/types/quotation';
 
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // State
-  const cotizaciones = ref<Cotizacion[]>([]);
-  const proveedoresCotizacion = ref<CotizacionProveedor[]>([]);
-  const pagosProveedor = ref<PagoProveedor[]>([]);
-  const hospedajesCotizacion = ref<CotizacionHospedaje[]>([]);
-  const pagosHospedaje = ref<PagoHospedaje[]>([]);
-  const preciosPublicos = ref<CotizacionPrecioPublico[]>([]);
-  const busesApartados = ref<CotizacionBus[]>([]);
-  const pagosBus = ref<PagoBus[]>([]);
+  const cotizaciones = ref<Quotation[]>([]);
+  const proveedoresQuotation = ref<QuotationProvider[]>([]);
+  const pagosProveedor = ref<ProviderPayment[]>([]);
+  const hospedajesQuotation = ref<QuotationAccommodation[]>([]);
+  const pagosHospedaje = ref<AccommodationPayment[]>([]);
+  const preciosPublicos = ref<QuotationPublicPrice[]>([]);
+  const busesApartados = ref<QuotationBus[]>([]);
+  const pagosBus = ref<BusPayment[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
-  const filters = ref<CotizacionProveedorFilters>({});
+  const filters = ref<QuotationProviderFilters>({});
 
   // Getters
   const getCotizacionByTravel = computed(() => {
-    return (travelId: string): Cotizacion | undefined => {
+    return (travelId: string): Quotation | undefined => {
       return cotizaciones.value.find(c => c.travelId === travelId);
     };
   });
 
-  const getProveedoresByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionProveedor[] => {
-      return proveedoresCotizacion.value.filter(p => p.cotizacionId === cotizacionId);
+  const getProveedoresByQuotation = computed(() => {
+    return (quotationId: string): QuotationProvider[] => {
+      return proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
     };
   });
 
   const getPagosByProveedor = computed(() => {
-    return (cotizacionProveedorId: string): PagoProveedor[] => {
-      return [...pagosProveedor.value.filter(p => p.cotizacionProveedorId === cotizacionProveedorId)]
-        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    return (quotationProviderId: string): ProviderPayment[] => {
+      return [...pagosProveedor.value.filter(p => p.quotationProviderId === quotationProviderId)]
+        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getCostoTotal = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId)
-        .reduce((sum, p) => sum + p.costoTotal, 0);
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId)
+        .reduce((sum, p) => sum + p.totalCost, 0);
     };
   });
 
   const getCostoTipoMinimo = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId && (p.tipoDivision ?? 'minimo') === 'minimo')
-        .reduce((sum, p) => sum + p.costoTotal, 0);
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId && (p.splitType ?? 'minimum') === 'minimum')
+        .reduce((sum, p) => sum + p.totalCost, 0);
     };
   });
 
   const getCostoTipoTotal = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId && (p.tipoDivision ?? 'minimo') === 'total')
-        .reduce((sum, p) => sum + p.costoTotal, 0);
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId && (p.splitType ?? 'minimum') === 'total')
+        .reduce((sum, p) => sum + p.totalCost, 0);
     };
   });
 
-  const getHospedajesByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionHospedaje[] => {
-      return hospedajesCotizacion.value.filter(h => h.cotizacionId === cotizacionId);
+  const getHospedajesByQuotation = computed(() => {
+    return (quotationId: string): QuotationAccommodation[] => {
+      return hospedajesQuotation.value.filter(h => h.quotationId === quotationId);
     };
   });
 
   const getTotalCostoHospedajes = computed(() => {
-    return (cotizacionId: string): number => {
-      return hospedajesCotizacion.value
-        .filter(h => h.cotizacionId === cotizacionId)
-        .reduce((sum, h) => sum + h.costoTotal, 0);
+    return (quotationId: string): number => {
+      return hospedajesQuotation.value
+        .filter(h => h.quotationId === quotationId)
+        .reduce((sum, h) => sum + h.totalCost, 0);
     };
   });
 
   const getTotalHabitacionesPorTipo = computed(() => {
-    return (cotizacionId: string): { [tipoId: string]: number } => {
+    return (quotationId: string): { [tipoId: string]: number } => {
       const resultado: { [tipoId: string]: number } = {};
-      const hospedajes = getHospedajesByCotizacion.value(cotizacionId);
+      const hospedajes = getHospedajesByQuotation.value(quotationId);
 
       for (const hospedaje of hospedajes) {
-        for (const detalle of hospedaje.detalles) {
-          resultado[detalle.habitacionTipoId] = (resultado[detalle.habitacionTipoId] ?? 0) + detalle.cantidad;
+        for (const detalle of hospedaje.details) {
+          resultado[detalle.roomTypeId] = (resultado[detalle.roomTypeId] ?? 0) + detalle.quantity;
         }
       }
 
@@ -111,76 +111,76 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const getPreciosPublicosByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionPrecioPublico[] => {
-      return preciosPublicos.value.filter(p => p.cotizacionId === cotizacionId);
+  const getPreciosPublicosByQuotation = computed(() => {
+    return (quotationId: string): QuotationPublicPrice[] => {
+      return preciosPublicos.value.filter(p => p.quotationId === quotationId);
     };
   });
 
-  // Matriz de precios de referencia: precioAsiento + hospedaje agrupado por ocupacionMaxima
+  // Matriz de precios de referencia: seatPrice + hospedaje agrupado por maxOccupancy
   const getMatrizPreciosReferencia = computed(() => {
-    return (cotizacionId: string): Array<{
-      ocupacionMaxima: number;
-      precioPorPersona: number;
-      desglose: {
-        precioAsiento: number;
-        hospedaje: Array<{
-          hotelNombre: string;
-          tipoHabitacion: string;
-          costoPorPersona: number;
+    return (quotationId: string): Array<{
+      maxOccupancy: number;
+      pricePerPerson: number;
+      breakdown: {
+        seatPrice: number;
+        accommodation: Array<{
+          hotelName: string;
+          roomType: string;
+          costPerPerson: number;
         }>;
-        totalHospedaje: number;
+        totalAccommodation: number;
       };
     }> => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return [];
 
-      const precioAsiento = cotizacion.precioAsiento;
-      const hospedajes = getHospedajesByCotizacion.value(cotizacionId);
+      const seatPrice = cotizacion.seatPrice;
+      const hospedajes = getHospedajesByQuotation.value(quotationId);
       const providerStore = useProviderStore();
       const hotelRoomStore = useHotelRoomStore();
 
-      // Agrupar entradas por ocupacionMaxima
+      // Agrupar entradas por maxOccupancy
       const porOcupacion: Map<number, Array<{
-        hotelNombre: string;
-        tipoHabitacion: string;
-        costoPorPersona: number;
+        hotelName: string;
+        roomType: string;
+        costPerPerson: number;
       }>> = new Map();
 
       for (const hospedaje of hospedajes) {
         const hotelProvider = providerStore.getProviderById(hospedaje.providerId);
-        const hotelNombre = hotelProvider?.nombre ?? `Hotel ${hospedaje.providerId}`;
+        const hotelName = hotelProvider?.name ?? `Hotel ${hospedaje.providerId}`;
         const roomData = hotelRoomStore.getRoomDataByProviderId(hospedaje.providerId);
 
-        for (const detalle of hospedaje.detalles) {
-          const ocupacion = detalle.ocupacionMaxima;
-          const costoPorPersona = detalle.precioPorNoche / detalle.ocupacionMaxima;
+        for (const detalle of hospedaje.details) {
+          const ocupacion = detalle.maxOccupancy;
+          const costPerPerson = detalle.pricePerNight / detalle.maxOccupancy;
 
-          const roomType = roomData?.roomTypes.find(rt => rt.id === detalle.habitacionTipoId);
-          const tipoHabitacion = roomType
-            ? formatBedConfiguration(roomType.camas)
+          const roomTypeRecord = roomData?.roomTypes.find(rt => rt.id === detalle.roomTypeId);
+          const roomType = roomTypeRecord
+            ? formatBedConfiguration(roomTypeRecord.beds)
             : `${ocupacion} persona${ocupacion > 1 ? 's' : ''}`;
 
           if (!porOcupacion.has(ocupacion)) {
             porOcupacion.set(ocupacion, []);
           }
-          porOcupacion.get(ocupacion)!.push({ hotelNombre, tipoHabitacion, costoPorPersona });
+          porOcupacion.get(ocupacion)!.push({ hotelName, roomType, costPerPerson });
         }
       }
 
-      // Construir resultado ordenado por ocupacionMaxima ascendente
+      // Construir resultado ordenado por maxOccupancy ascendente
       return [...porOcupacion.entries()]
         .sort((a, b) => a[0] - b[0])
-        .map(([ocupacionMaxima, hoteles]) => {
-          const totalHospedaje = hoteles.reduce((sum, h) => sum + h.costoPorPersona, 0);
+        .map(([maxOccupancy, hoteles]) => {
+          const totalAccommodation = hoteles.reduce((sum, h) => sum + h.costPerPerson, 0);
           return {
-            ocupacionMaxima,
-            precioPorPersona: precioAsiento + totalHospedaje,
-            desglose: {
-              precioAsiento,
-              hospedaje: hoteles,
-              totalHospedaje,
+            maxOccupancy,
+            pricePerPerson: seatPrice + totalAccommodation,
+            breakdown: {
+              seatPrice,
+              accommodation: hoteles,
+              totalAccommodation,
             },
           };
         });
@@ -188,57 +188,57 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   const getAsientoMinimoCalculado = computed(() => {
-    return (cotizacionId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion || cotizacion.precioAsiento === 0)
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion || cotizacion.seatPrice === 0)
         return 0;
-      const costoTotal = getCostoTotal.value(cotizacionId);
-      return Math.ceil(costoTotal / cotizacion.precioAsiento);
+      const costoTotal = getCostoTotal.value(quotationId);
+      return Math.ceil(costoTotal / cotizacion.seatPrice);
     };
   });
 
-  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.precio
+  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.price
   // Incluye costos de proveedores, hospedajes y autobuses
   const getTotalCostoBuses = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId)
-        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+        .filter(b => b.quotationId === quotationId)
+        .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
   });
 
   const getCostoBusesTipoMinimo = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId && (b.tipoDivision ?? 'minimo') === 'minimo')
-        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+        .filter(b => b.quotationId === quotationId && (b.splitType ?? 'minimum') === 'minimum')
+        .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
   });
 
   const getCostoBusesTipoTotal = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId && (b.tipoDivision ?? 'minimo') === 'total')
-        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+        .filter(b => b.quotationId === quotationId && (b.splitType ?? 'minimum') === 'total')
+        .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
   });
 
   const getPrecioAsientoCalculado = computed(() => {
-    return (cotizacionId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return 0;
 
-      const costoMinimo = getCostoTipoMinimo.value(cotizacionId);
-      const costoCapacidad = getCostoTipoTotal.value(cotizacionId);
-      const costoBusesMinimo = getCostoBusesTipoMinimo.value(cotizacionId);
-      const costoBusesTotal = getCostoBusesTipoTotal.value(cotizacionId);
+      const costoMinimo = getCostoTipoMinimo.value(quotationId);
+      const costoCapacidad = getCostoTipoTotal.value(quotationId);
+      const costoBusesMinimo = getCostoBusesTipoMinimo.value(quotationId);
+      const costoBusesTotal = getCostoBusesTipoTotal.value(quotationId);
 
-      const parteMinimo = cotizacion.asientoMinimoObjetivo > 0
-        ? (costoMinimo + costoBusesMinimo) / cotizacion.asientoMinimoObjetivo
+      const parteMinimo = cotizacion.minimumSeatTarget > 0
+        ? (costoMinimo + costoBusesMinimo) / cotizacion.minimumSeatTarget
         : 0;
-      const parteCapacidad = cotizacion.capacidadAutobus > 0
-        ? (costoCapacidad + costoBusesTotal) / cotizacion.capacidadAutobus
+      const parteCapacidad = cotizacion.busCapacity > 0
+        ? (costoCapacidad + costoBusesTotal) / cotizacion.busCapacity
         : 0;
 
       if (parteMinimo === 0 && parteCapacidad === 0)
@@ -248,286 +248,286 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   const getGananciaProyectada = computed(() => {
-    return (cotizacionId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion || cotizacion.capacidadAutobus === 0)
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion || cotizacion.busCapacity === 0)
         return 0;
-      const precioAsiento = getPrecioAsientoCalculado.value(cotizacionId);
-      const costoTotal = getCostoTotal.value(cotizacionId)
-        + getTotalCostoBuses.value(cotizacionId)
-        + getTotalCostoHospedajes.value(cotizacionId);
-      return (cotizacion.capacidadAutobus * precioAsiento) - costoTotal;
+      const seatPrice = getPrecioAsientoCalculado.value(quotationId);
+      const costoTotal = getCostoTotal.value(quotationId)
+        + getTotalCostoBuses.value(quotationId)
+        + getTotalCostoHospedajes.value(quotationId);
+      return (cotizacion.busCapacity * seatPrice) - costoTotal;
     };
   });
 
   const getAnticipadoProveedor = computed(() => {
-    return (cotizacionProveedorId: string): number => {
+    return (quotationProviderId: string): number => {
       return pagosProveedor.value
-        .filter(p => p.cotizacionProveedorId === cotizacionProveedorId)
-        .reduce((sum, p) => sum + p.monto, 0);
+        .filter(p => p.quotationProviderId === quotationProviderId)
+        .reduce((sum, p) => sum + p.amount, 0);
     };
   });
 
   const getCostoPerPersonaProveedor = computed(() => {
-    return (cotizacionProveedorId: string): number => {
-      const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
+    return (quotationProviderId: string): number => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
 
-      const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
+      const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
       if (!cotizacion)
         return 0;
 
-      const tipoDivision = proveedor.tipoDivision ?? 'minimo';
-      const divisor = tipoDivision === 'total'
-        ? cotizacion.capacidadAutobus
-        : cotizacion.asientoMinimoObjetivo;
+      const splitType = proveedor.splitType ?? 'minimum';
+      const divisor = splitType === 'total'
+        ? cotizacion.busCapacity
+        : cotizacion.minimumSeatTarget;
 
       if (divisor === 0)
         return 0;
-      return proveedor.costoTotal / divisor;
+      return proveedor.totalCost / divisor;
     };
   });
 
   const getSaldoPendienteProveedor = computed(() => {
-    return (cotizacionProveedorId: string): number => {
-      const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
+    return (quotationProviderId: string): number => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
-      const anticipado = getAnticipadoProveedor.value(cotizacionProveedorId);
-      return proveedor.costoTotal - anticipado;
+      const anticipado = getAnticipadoProveedor.value(quotationProviderId);
+      return proveedor.totalCost - anticipado;
     };
   });
 
-  const getEstadoPagoProveedor = computed(() => {
-    return (cotizacionProveedorId: string): EstadoPagoProveedor => {
-      const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
+  const getProviderPaymentStatus = computed(() => {
+    return (quotationProviderId: string): ProviderPaymentStatus => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
-        return 'pendiente';
-      const anticipado = getAnticipadoProveedor.value(cotizacionProveedorId);
+        return 'pending';
+      const anticipado = getAnticipadoProveedor.value(quotationProviderId);
       if (anticipado <= 0)
-        return 'pendiente';
-      if (anticipado >= proveedor.costoTotal)
-        return 'liquidado';
-      return 'anticipo';
+        return 'pending';
+      if (anticipado >= proveedor.totalCost)
+        return 'paid';
+      return 'partial';
     };
   });
 
   const getSaldoTotalPendiente = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId)
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId)
         .reduce((sum, p) => sum + getSaldoPendienteProveedor.value(p.id), 0);
     };
   });
 
   const getPagosByHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): PagoHospedaje[] => {
-      return [...pagosHospedaje.value.filter(p => p.cotizacionHospedajeId === cotizacionHospedajeId)]
-        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    return (quotationAccommodationId: string): AccommodationPayment[] => {
+      return [...pagosHospedaje.value.filter(p => p.quotationAccommodationId === quotationAccommodationId)]
+        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getAnticipadoHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): number => {
+    return (quotationAccommodationId: string): number => {
       return pagosHospedaje.value
-        .filter(p => p.cotizacionHospedajeId === cotizacionHospedajeId)
-        .reduce((sum, p) => sum + p.monto, 0);
+        .filter(p => p.quotationAccommodationId === quotationAccommodationId)
+        .reduce((sum, p) => sum + p.amount, 0);
     };
   });
 
   const getSaldoPendienteHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): number => {
-      const hospedaje = hospedajesCotizacion.value.find(h => h.id === cotizacionHospedajeId);
+    return (quotationAccommodationId: string): number => {
+      const hospedaje = hospedajesQuotation.value.find(h => h.id === quotationAccommodationId);
       if (!hospedaje)
         return 0;
-      return hospedaje.costoTotal - getAnticipadoHospedaje.value(cotizacionHospedajeId);
+      return hospedaje.totalCost - getAnticipadoHospedaje.value(quotationAccommodationId);
     };
   });
 
-  const getEstadoPagoHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): EstadoPagoHospedaje => {
-      const hospedaje = hospedajesCotizacion.value.find(h => h.id === cotizacionHospedajeId);
+  const getAccommodationPaymentStatus = computed(() => {
+    return (quotationAccommodationId: string): AccommodationPaymentStatus => {
+      const hospedaje = hospedajesQuotation.value.find(h => h.id === quotationAccommodationId);
       if (!hospedaje)
-        return 'pendiente';
-      const anticipado = getAnticipadoHospedaje.value(cotizacionHospedajeId);
+        return 'pending';
+      const anticipado = getAnticipadoHospedaje.value(quotationAccommodationId);
       if (anticipado <= 0)
-        return 'pendiente';
-      if (anticipado >= hospedaje.costoTotal)
-        return 'liquidado';
-      return 'anticipo';
+        return 'pending';
+      if (anticipado >= hospedaje.totalCost)
+        return 'paid';
+      return 'partial';
     };
   });
 
   const getSaldoTotalPendienteHospedajes = computed(() => {
-    return (cotizacionId: string): number => {
-      return hospedajesCotizacion.value
-        .filter(h => h.cotizacionId === cotizacionId)
+    return (quotationId: string): number => {
+      return hospedajesQuotation.value
+        .filter(h => h.quotationId === quotationId)
         .reduce((sum, h) => sum + getSaldoPendienteHospedaje.value(h.id), 0);
     };
   });
 
   const puedeConfirmar = computed(() => {
-    return (cotizacionId: string): boolean => {
-      const proveedores = proveedoresCotizacion.value.filter(p => p.cotizacionId === cotizacionId);
+    return (quotationId: string): boolean => {
+      const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
       if (proveedores.length === 0)
         return false;
-      return proveedores.every(p => p.confirmado === true);
+      return proveedores.every(p => p.confirmed === true);
     };
   });
 
-  const hasCotizacion = computed(() => {
+  const hasQuotation = computed(() => {
     return (travelId: string): boolean => {
       return cotizaciones.value.some(c => c.travelId === travelId);
     };
   });
 
   const filteredProveedores = computed(() => {
-    return (cotizacionId: string): CotizacionProveedor[] => {
-      let result = proveedoresCotizacion.value.filter(p => p.cotizacionId === cotizacionId);
+    return (quotationId: string): QuotationProvider[] => {
+      let result = proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
 
       const f = filters.value;
 
-      if (f.estadoPago && f.estadoPago !== 'todos') {
-        result = result.filter(p => getEstadoPagoProveedor.value(p.id) === f.estadoPago);
+      if (f.paymentStatus && f.paymentStatus !== 'all') {
+        result = result.filter(p => getProviderPaymentStatus.value(p.id) === f.paymentStatus);
       }
 
-      if (f.confirmado !== undefined && f.confirmado !== 'todos') {
-        result = result.filter(p => p.confirmado === f.confirmado);
+      if (f.confirmed !== undefined && f.confirmed !== 'all') {
+        result = result.filter(p => p.confirmed === f.confirmed);
       }
 
-      if (f.metodoPago && f.metodoPago !== 'todos') {
-        result = result.filter(p => p.metodoPago === f.metodoPago);
+      if (f.paymentMethod && f.paymentMethod !== 'all') {
+        result = result.filter(p => p.paymentMethod === f.paymentMethod);
       }
 
       return result;
     };
   });
 
-  const getBusesByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionBus[] => {
-      return busesApartados.value.filter(b => b.cotizacionId === cotizacionId);
+  const getBusesByQuotation = computed(() => {
+    return (quotationId: string): QuotationBus[] => {
+      return busesApartados.value.filter(b => b.quotationId === quotationId);
     };
   });
 
-  const getBusesByProveedorEnCotizacion = computed(() => {
-    return (cotizacionId: string, proveedorId: string): CotizacionBus[] => {
+  const getBusesByProveedorEnQuotation = computed(() => {
+    return (quotationId: string, providerId: string): QuotationBus[] => {
       return busesApartados.value.filter(
-        b => b.cotizacionId === cotizacionId && b.proveedorId === proveedorId,
+        b => b.quotationId === quotationId && b.providerId === providerId,
       );
     };
   });
 
   const getPagosByBus = computed(() => {
-    return (cotizacionBusId: string): PagoBus[] => {
-      return [...pagosBus.value.filter(p => p.cotizacionBusId === cotizacionBusId)]
-        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    return (quotationBusId: string): BusPayment[] => {
+      return [...pagosBus.value.filter(p => p.quotationBusId === quotationBusId)]
+        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getAnticipadoBus = computed(() => {
-    return (cotizacionBusId: string): number => {
+    return (quotationBusId: string): number => {
       return pagosBus.value
-        .filter(p => p.cotizacionBusId === cotizacionBusId)
-        .reduce((sum, p) => sum + p.monto, 0);
+        .filter(p => p.quotationBusId === quotationBusId)
+        .reduce((sum, p) => sum + p.amount, 0);
     };
   });
 
   const getSaldoPendienteBus = computed(() => {
-    return (cotizacionBusId: string): number => {
-      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+    return (quotationBusId: string): number => {
+      const bus = busesApartados.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 0;
-      return bus.costoTotal - getAnticipadoBus.value(cotizacionBusId);
+      return bus.totalCost - getAnticipadoBus.value(quotationBusId);
     };
   });
 
   const getSaldoTotalPendienteBuses = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId)
+        .filter(b => b.quotationId === quotationId)
         .reduce((sum, b) => sum + getSaldoPendienteBus.value(b.id), 0);
     };
   });
 
-  const getEstadoPagoBus = computed(() => {
-    return (cotizacionBusId: string): EstadoPagoBus => {
-      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+  const getBusPaymentStatus = computed(() => {
+    return (quotationBusId: string): BusPaymentStatus => {
+      const bus = busesApartados.value.find(b => b.id === quotationBusId);
       if (!bus)
-        return 'pendiente';
-      const anticipado = getAnticipadoBus.value(cotizacionBusId);
+        return 'pending';
+      const anticipado = getAnticipadoBus.value(quotationBusId);
       if (anticipado <= 0)
-        return 'pendiente';
-      if (anticipado >= bus.costoTotal)
-        return 'liquidado';
-      return 'anticipo';
+        return 'pending';
+      if (anticipado >= bus.totalCost)
+        return 'paid';
+      return 'partial';
     };
   });
 
   const getCostoPerPersonaBus = computed(() => {
-    return (cotizacionBusId: string): number => {
-      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+    return (quotationBusId: string): number => {
+      const bus = busesApartados.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 0;
-      const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
+      const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
       if (!cotizacion)
         return 0;
-      const divisor = bus.tipoDivision === 'total'
-        ? cotizacion.capacidadAutobus
-        : cotizacion.asientoMinimoObjetivo;
+      const divisor = bus.splitType === 'total'
+        ? cotizacion.busCapacity
+        : cotizacion.minimumSeatTarget;
       if (divisor === 0)
         return 0;
-      return bus.costoTotal / divisor;
+      return bus.totalCost / divisor;
     };
   });
 
-  // Helper interno — recalcula precioAsiento y lo sincroniza a travel.precio
-  function _syncPrecioToTravel(cotizacionId: string): void {
-    const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-    if (!cotizacion || cotizacion.estado === 'confirmada')
+  // Helper interno — recalcula seatPrice y lo sincroniza a travel.price
+  function _syncPrecioToTravel(quotationId: string): void {
+    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    if (!cotizacion || cotizacion.status === 'confirmed')
       return;
-    if (cotizacion.asientoMinimoObjetivo === 0)
+    if (cotizacion.minimumSeatTarget === 0)
       return;
 
-    const nuevoPrecio = getPrecioAsientoCalculado.value(cotizacionId);
+    const nuevoPrecio = getPrecioAsientoCalculado.value(quotationId);
     if (nuevoPrecio === 0)
       return;
 
-    // Actualizar precioAsiento en la cotización directamente (evita recursión)
-    const index = cotizaciones.value.findIndex(c => c.id === cotizacionId);
+    // Actualizar seatPrice en la cotización directamente (evita recursión)
+    const index = cotizaciones.value.findIndex(c => c.id === quotationId);
     if (index !== -1 && cotizaciones.value[index]) {
       cotizaciones.value[index] = {
         ...cotizaciones.value[index]!,
-        precioAsiento: nuevoPrecio,
+        seatPrice: nuevoPrecio,
         updatedAt: new Date().toISOString(),
       };
     }
 
-    // Propagar a travel.precio (cotización → viaje)
+    // Propagar a travel.price (cotización → viaje)
     const travelStore = useTravelsStore();
-    travelStore.updateTravel(cotizacion.travelId, { precio: nuevoPrecio });
+    travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
   }
 
   // Actions
-  function createCotizacion(data: CotizacionFormData): Cotizacion {
+  function createQuotation(data: QuotationFormData): Quotation {
     const existing = cotizaciones.value.find(c => c.travelId === data.travelId);
     if (existing)
       return existing;
 
     const now = new Date().toISOString();
-    const newCotizacion: Cotizacion = {
+    const newQuotation: Quotation = {
       ...data,
       id: `cotizacion-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: now,
       updatedAt: now,
     };
 
-    cotizaciones.value.push(newCotizacion);
+    cotizaciones.value.push(newQuotation);
     error.value = null;
-    return newCotizacion;
+    return newQuotation;
   }
 
-  function updateCotizacion(id: string, data: Partial<CotizacionFormData>): Cotizacion | undefined {
+  function updateQuotation(id: string, data: Partial<QuotationFormData>): Quotation | undefined {
     const index = cotizaciones.value.findIndex(c => c.id === id);
     if (index === -1) {
       error.value = 'Cotización no encontrada';
@@ -538,7 +538,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: Cotizacion = {
+    const updated: Quotation = {
       ...existing,
       ...data,
       id: existing.id,
@@ -550,14 +550,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
 
     // Si cambió el asiento mínimo, recalcular precio y sincronizar al viaje
-    if ('asientoMinimoObjetivo' in data) {
+    if ('minimumSeatTarget' in data) {
       _syncPrecioToTravel(id);
     }
 
     return updated;
   }
 
-  function confirmarCotizacion(
+  function confirmarQuotation(
     id: string,
     travelStore: ReturnType<typeof useTravelsStore>,
   ): { success: boolean; error?: string } {
@@ -570,119 +570,119 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
 
     // Crear TravelService[] para el viaje a partir de los proveedores
-    const proveedores = proveedoresCotizacion.value.filter(p => p.cotizacionId === id);
-    const servicios = proveedores.map(p => ({
+    const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === id);
+    const services = proveedores.map(p => ({
       id: `serv-cotizacion-${p.id}`,
-      nombre: p.descripcionServicio,
-      descripcion: p.observaciones,
-      incluido: true,
+      name: p.serviceDescription,
+      description: p.remarks,
+      included: true,
       providerId: p.providerId,
     }));
 
-    const updated = travelStore.updateTravel(cotizacion.travelId, { servicios });
+    const updated = travelStore.updateTravel(cotizacion.travelId, { services });
     if (!updated) {
       return { success: false, error: 'No se pudo actualizar el viaje' };
     }
 
-    updateCotizacion(id, { estado: 'confirmada' });
+    updateQuotation(id, { status: 'confirmed' });
     return { success: true };
   }
 
-  function addProveedorCotizacion(data: CotizacionProveedorFormData): CotizacionProveedor | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  function addProveedorQuotation(data: QuotationProviderFormData): QuotationProvider | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
-    if (cotizacion.estado === 'confirmada')
+    if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    const newProveedor: CotizacionProveedor = {
+    const newProveedor: QuotationProvider = {
       ...data,
       id: `cot-prov-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
     };
 
-    proveedoresCotizacion.value.push(newProveedor);
-    _syncPrecioToTravel(data.cotizacionId);
+    proveedoresQuotation.value.push(newProveedor);
+    _syncPrecioToTravel(data.quotationId);
     return newProveedor;
   }
 
-  function updateProveedorCotizacion(
+  function updateProveedorQuotation(
     id: string,
-    data: Partial<CotizacionProveedorFormData>,
-  ): CotizacionProveedor | undefined {
-    const index = proveedoresCotizacion.value.findIndex(p => p.id === id);
+    data: Partial<QuotationProviderFormData>,
+  ): QuotationProvider | undefined {
+    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = proveedoresCotizacion.value[index];
+    const existing = proveedoresQuotation.value[index];
     if (!existing)
       return undefined;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    const updated: CotizacionProveedor = {
+    const updated: QuotationProvider = {
       ...existing,
       ...data,
       id: existing.id,
-      cotizacionId: existing.cotizacionId,
+      quotationId: existing.quotationId,
     };
 
-    proveedoresCotizacion.value[index] = updated;
-    _syncPrecioToTravel(existing.cotizacionId);
+    proveedoresQuotation.value[index] = updated;
+    _syncPrecioToTravel(existing.quotationId);
     return updated;
   }
 
-  function deleteProveedorCotizacion(id: string): void {
-    const proveedor = proveedoresCotizacion.value.find(p => p.id === id);
+  function deleteProveedorQuotation(id: string): void {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === id);
     if (!proveedor)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    const cotizacionId = proveedor.cotizacionId;
-    proveedoresCotizacion.value = proveedoresCotizacion.value.filter(p => p.id !== id);
-    pagosProveedor.value = pagosProveedor.value.filter(p => p.cotizacionProveedorId !== id);
-    _syncPrecioToTravel(cotizacionId);
+    const quotationId = proveedor.quotationId;
+    proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
+    pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
+    _syncPrecioToTravel(quotationId);
   }
 
   function toggleConfirmadoProveedor(id: string): void {
-    const index = proveedoresCotizacion.value.findIndex(p => p.id === id);
+    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
     if (index === -1)
       return;
 
-    const proveedor = proveedoresCotizacion.value[index];
+    const proveedor = proveedoresQuotation.value[index];
     if (!proveedor)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    proveedoresCotizacion.value[index] = { ...proveedor, confirmado: !proveedor.confirmado };
+    proveedoresQuotation.value[index] = { ...proveedor, confirmed: !proveedor.confirmed };
   }
 
-  function addPagoProveedor(data: PagoProveedorFormData): PagoProveedor | { error: string } {
-    const proveedor = proveedoresCotizacion.value.find(p => p.id === data.cotizacionProveedorId);
+  function addProviderPayment(data: ProviderPaymentFormData): ProviderPayment | { error: string } {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === data.quotationProviderId);
     if (!proveedor)
       return { error: 'Proveedor no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    if (data.monto <= 0)
+    if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
-    const saldoPendiente = getSaldoPendienteProveedor.value(data.cotizacionProveedorId);
-    if (data.monto > saldoPendiente) {
+    const saldoPendiente = getSaldoPendienteProveedor.value(data.quotationProviderId);
+    if (data.amount > saldoPendiente) {
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
     }
 
     const now = new Date().toISOString();
-    const newPago: PagoProveedor = {
+    const newPago: ProviderPayment = {
       ...data,
       id: `pago-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: now,
@@ -692,7 +692,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     return newPago;
   }
 
-  function updatePagoProveedor(id: string, data: Partial<PagoProveedorFormData>): PagoProveedor | undefined {
+  function updateProviderPayment(id: string, data: Partial<ProviderPaymentFormData>): ProviderPayment | undefined {
     const index = pagosProveedor.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -701,7 +701,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: PagoProveedor = {
+    const updated: ProviderPayment = {
       ...existing,
       ...data,
       id: existing.id,
@@ -712,20 +712,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     return updated;
   }
 
-  function deletePagoProveedor(id: string): void {
+  function deleteProviderPayment(id: string): void {
     const pago = pagosProveedor.value.find(p => p.id === id);
     if (!pago)
       return;
 
-    const proveedor = proveedoresCotizacion.value.find(p => p.id === pago.cotizacionProveedorId);
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor?.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const proveedor = proveedoresQuotation.value.find(p => p.id === pago.quotationProviderId);
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor?.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
     pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
   }
 
-  function setFilters(f: CotizacionProveedorFilters): void {
+  function setFilters(f: QuotationProviderFilters): void {
     filters.value = { ...f };
   }
 
@@ -737,130 +737,130 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Hospedaje Actions
   // ============================================================================
 
-  function addHospedajeCotizacion(data: CotizacionHospedajeFormData): CotizacionHospedaje | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  function addHospedajeQuotation(data: QuotationAccommodationFormData): QuotationAccommodation | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
-    if (cotizacion.estado === 'confirmada')
+    if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    // Calcular costoTotal y enriquecer detalles con costoPorPersona
-    const detallesEnriquecidos = data.detalles.map(d => ({
+    // Calcular totalCost y enriquecer detalles con costPerPerson
+    const detallesEnriquecidos = data.details.map(d => ({
       ...d,
       id: d.id ?? crypto.randomUUID(),
-      costoPorPersona: d.precioPorNoche / d.ocupacionMaxima,
+      costPerPerson: d.pricePerNight / d.maxOccupancy,
     }));
 
-    const costoTotal = detallesEnriquecidos.reduce((sum, detalle) => {
-      return sum + (detalle.precioPorNoche * data.cantidadNoches * detalle.cantidad);
+    const totalCost = detallesEnriquecidos.reduce((sum, detalle) => {
+      return sum + (detalle.pricePerNight * data.nightCount * detalle.quantity);
     }, 0);
 
-    const newHospedaje: CotizacionHospedaje = {
+    const newHospedaje: QuotationAccommodation = {
       ...data,
-      detalles: detallesEnriquecidos,
+      details: detallesEnriquecidos,
       id: `cot-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      costoTotal,
+      totalCost,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    hospedajesCotizacion.value.push(newHospedaje);
-    _syncPrecioToTravel(data.cotizacionId);
+    hospedajesQuotation.value.push(newHospedaje);
+    _syncPrecioToTravel(data.quotationId);
     return newHospedaje;
   }
 
-  function updateHospedajeCotizacion(
+  function updateHospedajeQuotation(
     id: string,
-    data: Partial<CotizacionHospedajeFormData>,
-  ): CotizacionHospedaje | undefined {
-    const index = hospedajesCotizacion.value.findIndex(h => h.id === id);
+    data: Partial<QuotationAccommodationFormData>,
+  ): QuotationAccommodation | undefined {
+    const index = hospedajesQuotation.value.findIndex(h => h.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = hospedajesCotizacion.value[index];
+    const existing = hospedajesQuotation.value[index];
     if (!existing)
       return undefined;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    // Calcular costoTotal y enriquecer detalles con costoPorPersona
-    const detallesBase = data.detalles ?? existing.detalles;
+    // Calcular totalCost y enriquecer detalles con costPerPerson
+    const detallesBase = data.details ?? existing.details;
     const detallesEnriquecidos = detallesBase.map(d => ({
       ...d,
       id: d.id ?? crypto.randomUUID(),
-      costoPorPersona: d.precioPorNoche / d.ocupacionMaxima,
+      costPerPerson: d.pricePerNight / d.maxOccupancy,
     }));
 
-    const costoTotal = detallesEnriquecidos.reduce((sum, detalle) => {
-      return sum + (detalle.precioPorNoche * (data.cantidadNoches ?? existing.cantidadNoches) * detalle.cantidad);
+    const totalCost = detallesEnriquecidos.reduce((sum, detalle) => {
+      return sum + (detalle.pricePerNight * (data.nightCount ?? existing.nightCount) * detalle.quantity);
     }, 0);
 
-    const updated: CotizacionHospedaje = {
+    const updated: QuotationAccommodation = {
       ...existing,
       ...data,
-      detalles: detallesEnriquecidos,
+      details: detallesEnriquecidos,
       id: existing.id,
-      cotizacionId: existing.cotizacionId,
+      quotationId: existing.quotationId,
       createdAt: existing.createdAt,
-      costoTotal,
+      totalCost,
       updatedAt: new Date().toISOString(),
     };
 
-    hospedajesCotizacion.value[index] = updated;
-    _syncPrecioToTravel(existing.cotizacionId);
+    hospedajesQuotation.value[index] = updated;
+    _syncPrecioToTravel(existing.quotationId);
     return updated;
   }
 
-  function deleteHospedajeCotizacion(id: string): void {
-    const hospedaje = hospedajesCotizacion.value.find(h => h.id === id);
+  function deleteHospedajeQuotation(id: string): void {
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    const cotizacionId = hospedaje.cotizacionId;
-    hospedajesCotizacion.value = hospedajesCotizacion.value.filter(h => h.id !== id);
-    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.cotizacionHospedajeId !== id);
-    _syncPrecioToTravel(cotizacionId);
+    const quotationId = hospedaje.quotationId;
+    hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
+    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
+    _syncPrecioToTravel(quotationId);
   }
 
   function toggleConfirmadoHospedaje(id: string): void {
-    const index = hospedajesCotizacion.value.findIndex(h => h.id === id);
+    const index = hospedajesQuotation.value.findIndex(h => h.id === id);
     if (index === -1)
       return;
 
-    const hospedaje = hospedajesCotizacion.value[index];
+    const hospedaje = hospedajesQuotation.value[index];
     if (!hospedaje)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    hospedajesCotizacion.value[index] = { ...hospedaje, confirmado: !hospedaje.confirmado };
+    hospedajesQuotation.value[index] = { ...hospedaje, confirmed: !hospedaje.confirmed };
   }
 
-  function addPagoHospedaje(data: PagoHospedajeFormData): PagoHospedaje | { error: string } {
-    const hospedaje = hospedajesCotizacion.value.find(h => h.id === data.cotizacionHospedajeId);
+  function addPagoHospedaje(data: AccommodationPaymentFormData): AccommodationPayment | { error: string } {
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === data.quotationAccommodationId);
     if (!hospedaje)
       return { error: 'Hospedaje no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    if (data.monto <= 0)
+    if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
-    const saldoPendiente = getSaldoPendienteHospedaje.value(data.cotizacionHospedajeId);
-    if (data.monto > saldoPendiente)
+    const saldoPendiente = getSaldoPendienteHospedaje.value(data.quotationAccommodationId);
+    if (data.amount > saldoPendiente)
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
 
-    const newPago: PagoHospedaje = {
+    const newPago: AccommodationPayment = {
       ...data,
       id: `pago-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: new Date().toISOString(),
@@ -870,7 +870,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     return newPago;
   }
 
-  function updatePagoHospedaje(id: string, data: Partial<PagoHospedajeFormData>): PagoHospedaje | undefined {
+  function updatePagoHospedaje(id: string, data: Partial<AccommodationPaymentFormData>): AccommodationPayment | undefined {
     const index = pagosHospedaje.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -879,7 +879,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: PagoHospedaje = {
+    const updated: AccommodationPayment = {
       ...existing,
       ...data,
       id: existing.id,
@@ -895,9 +895,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!pago)
       return;
 
-    const hospedaje = hospedajesCotizacion.value.find(h => h.id === pago.cotizacionHospedajeId);
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje?.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === pago.quotationAccommodationId);
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje?.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
     pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
@@ -907,13 +907,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Precio al Público Actions
   // ============================================================================
 
-  function addPrecioPublico(data: CotizacionPrecioPublicoFormData): CotizacionPrecioPublico | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  function addPrecioPublico(data: QuotationPublicPriceFormData): QuotationPublicPrice | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
 
     const now = new Date().toISOString();
-    const newPrecio: CotizacionPrecioPublico = {
+    const newPrecio: QuotationPublicPrice = {
       ...data,
       id: `precio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: now,
@@ -925,7 +925,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     return newPrecio;
   }
 
-  function updatePrecioPublico(id: string, data: Partial<CotizacionPrecioPublicoFormData>): CotizacionPrecioPublico | undefined {
+  function updatePrecioPublico(id: string, data: Partial<QuotationPublicPriceFormData>): QuotationPublicPrice | undefined {
     const index = preciosPublicos.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -934,11 +934,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: CotizacionPrecioPublico = {
+    const updated: QuotationPublicPrice = {
       ...existing,
       ...data,
       id: existing.id,
-      cotizacionId: existing.cotizacionId,
+      quotationId: existing.quotationId,
       createdAt: existing.createdAt,
       updatedAt: new Date().toISOString(),
     };
@@ -956,23 +956,23 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Autobuses Apartados Actions
   // ============================================================================
 
-  function addBusCotizacion(data: CotizacionBusFormData): CotizacionBus | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  function addBusQuotation(data: QuotationBusFormData): QuotationBus | { error: string } {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
-    if (cotizacion.estado === 'confirmada')
+    if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
     const duplicado = busesApartados.value.find(
-      b => b.cotizacionId === data.cotizacionId
-        && b.proveedorId === data.proveedorId
-        && b.numeroUnidad === data.numeroUnidad,
+      b => b.quotationId === data.quotationId
+        && b.providerId === data.providerId
+        && b.unitNumber === data.unitNumber,
     );
     if (duplicado)
       return { error: 'Este número de unidad ya existe para este proveedor en la cotización' };
 
     const now = new Date().toISOString();
-    const newBus: CotizacionBus = {
+    const newBus: QuotationBus = {
       ...data,
       id: `cot-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: now,
@@ -980,11 +980,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
 
     busesApartados.value.push(newBus);
-    _syncPrecioToTravel(data.cotizacionId);
+    _syncPrecioToTravel(data.quotationId);
     return newBus;
   }
 
-  function updateBusCotizacion(id: string, data: Partial<CotizacionBusFormData>): CotizacionBus | undefined {
+  function updateBusQuotation(id: string, data: Partial<QuotationBusFormData>): QuotationBus | undefined {
     const index = busesApartados.value.findIndex(b => b.id === id);
     if (index === -1)
       return undefined;
@@ -993,56 +993,56 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    const updated: CotizacionBus = {
+    const updated: QuotationBus = {
       ...existing,
       ...data,
       id: existing.id,
-      cotizacionId: existing.cotizacionId,
+      quotationId: existing.quotationId,
       createdAt: existing.createdAt,
       updatedAt: new Date().toISOString(),
     };
 
     busesApartados.value[index] = updated;
-    _syncPrecioToTravel(existing.cotizacionId);
+    _syncPrecioToTravel(existing.quotationId);
     return updated;
   }
 
-  function deleteBusCotizacion(id: string): void {
+  function deleteBusQuotation(id: string): void {
     const bus = busesApartados.value.find(b => b.id === id);
     if (!bus)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    const cotizacionId = bus.cotizacionId;
+    const quotationId = bus.quotationId;
     busesApartados.value = busesApartados.value.filter(b => b.id !== id);
-    pagosBus.value = pagosBus.value.filter(p => p.cotizacionBusId !== id);
-    _syncPrecioToTravel(cotizacionId);
+    pagosBus.value = pagosBus.value.filter(p => p.quotationBusId !== id);
+    _syncPrecioToTravel(quotationId);
   }
 
-  function addPagoBus(data: PagoBusFormData): PagoBus | { error: string } {
-    const bus = busesApartados.value.find(b => b.id === data.cotizacionBusId);
+  function addBusPayment(data: BusPaymentFormData): BusPayment | { error: string } {
+    const bus = busesApartados.value.find(b => b.id === data.quotationBusId);
     if (!bus)
       return { error: 'Autobús no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    if (data.monto <= 0)
+    if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
-    const saldoPendiente = getSaldoPendienteBus.value(data.cotizacionBusId);
-    if (data.monto > saldoPendiente)
+    const saldoPendiente = getSaldoPendienteBus.value(data.quotationBusId);
+    if (data.amount > saldoPendiente)
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
 
-    const newPago: PagoBus = {
+    const newPago: BusPayment = {
       ...data,
       id: `pago-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       createdAt: new Date().toISOString(),
@@ -1052,7 +1052,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     return newPago;
   }
 
-  function updatePagoBus(id: string, data: Partial<PagoBusFormData>): PagoBus | undefined {
+  function updateBusPayment(id: string, data: Partial<BusPaymentFormData>): BusPayment | undefined {
     const index = pagosBus.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -1061,7 +1061,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: PagoBus = {
+    const updated: BusPayment = {
       ...existing,
       ...data,
       id: existing.id,
@@ -1072,16 +1072,16 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     return updated;
   }
 
-  function deletePagoBus(id: string): void {
+  function deleteBusPayment(id: string): void {
     pagosBus.value = pagosBus.value.filter(p => p.id !== id);
   }
 
   return {
     // State
     cotizaciones,
-    proveedoresCotizacion,
+    proveedoresQuotation,
     pagosProveedor,
-    hospedajesCotizacion,
+    hospedajesQuotation,
     pagosHospedaje,
     preciosPublicos,
     busesApartados,
@@ -1091,7 +1091,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     filters,
     // Getters
     getCotizacionByTravel,
-    getProveedoresByCotizacion,
+    getProveedoresByQuotation,
     getPagosByProveedor,
     getCostoTotal,
     getCostoTipoMinimo,
@@ -1102,48 +1102,48 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getAnticipadoProveedor,
     getCostoPerPersonaProveedor,
     getSaldoPendienteProveedor,
-    getEstadoPagoProveedor,
+    getProviderPaymentStatus,
     getSaldoTotalPendiente,
     getPagosByHospedaje,
     getAnticipadoHospedaje,
     getSaldoPendienteHospedaje,
-    getEstadoPagoHospedaje,
+    getAccommodationPaymentStatus,
     getSaldoTotalPendienteHospedajes,
     puedeConfirmar,
-    hasCotizacion,
+    hasQuotation,
     filteredProveedores,
-    getHospedajesByCotizacion,
+    getHospedajesByQuotation,
     getTotalCostoHospedajes,
     getTotalHabitacionesPorTipo,
-    getPreciosPublicosByCotizacion,
+    getPreciosPublicosByQuotation,
     getMatrizPreciosReferencia,
     getTotalCostoBuses,
     getCostoBusesTipoMinimo,
     getCostoBusesTipoTotal,
     getSaldoTotalPendienteBuses,
-    getBusesByCotizacion,
-    getBusesByProveedorEnCotizacion,
+    getBusesByQuotation,
+    getBusesByProveedorEnQuotation,
     getPagosByBus,
     getAnticipadoBus,
     getSaldoPendienteBus,
-    getEstadoPagoBus,
+    getBusPaymentStatus,
     getCostoPerPersonaBus,
     // Actions
-    createCotizacion,
-    updateCotizacion,
-    confirmarCotizacion,
-    addProveedorCotizacion,
-    updateProveedorCotizacion,
-    deleteProveedorCotizacion,
+    createQuotation,
+    updateQuotation,
+    confirmarQuotation,
+    addProveedorQuotation,
+    updateProveedorQuotation,
+    deleteProveedorQuotation,
     toggleConfirmadoProveedor,
-    addPagoProveedor,
-    updatePagoProveedor,
-    deletePagoProveedor,
+    addProviderPayment,
+    updateProviderPayment,
+    deleteProviderPayment,
     setFilters,
     clearFilters,
-    addHospedajeCotizacion,
-    updateHospedajeCotizacion,
-    deleteHospedajeCotizacion,
+    addHospedajeQuotation,
+    updateHospedajeQuotation,
+    deleteHospedajeQuotation,
     toggleConfirmadoHospedaje,
     addPagoHospedaje,
     updatePagoHospedaje,
@@ -1151,12 +1151,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addPrecioPublico,
     updatePrecioPublico,
     deletePrecioPublico,
-    addBusCotizacion,
-    updateBusCotizacion,
-    deleteBusCotizacion,
-    addPagoBus,
-    updatePagoBus,
-    deletePagoBus,
+    addBusQuotation,
+    updateBusQuotation,
+    deleteBusQuotation,
+    addBusPayment,
+    updateBusPayment,
+    deleteBusPayment,
   };
 }, {
   persist: {

@@ -22,7 +22,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
 
   const getTotalRoomsByProvider = computed(() => (providerId: string) => {
     const roomData = hotelRoomsData.value.find(hrd => hrd.providerId === providerId);
-    return roomData?.totalHabitaciones ?? 0;
+    return roomData?.totalRooms ?? 0;
   });
 
   const getUsedRoomsByProvider = computed(() => (providerId: string) => {
@@ -33,7 +33,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
   });
 
   // Actions
-  function initRoomData(providerId: string, totalHabitaciones: number): void {
+  function initRoomData(providerId: string, totalRooms: number): void {
     if (hasRoomData.value(providerId)) {
       return;
     }
@@ -42,7 +42,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     const newRoomData: HotelRoomData = {
       id: providerId,
       providerId,
-      totalHabitaciones,
+      totalRooms,
       roomTypes: [],
       createdAt: now,
       updatedAt: now,
@@ -63,7 +63,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     if (!roomData)
       return false;
 
-    roomData.totalHabitaciones = total;
+    roomData.totalRooms = total;
     roomData.updatedAt = new Date().toISOString();
     error.value = null;
 
@@ -77,11 +77,11 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     }
 
     const now = new Date().toISOString();
-    const costoHabitacionPorPersona = calculateCostPerPerson(data.precioPorNoche, data.ocupacionMaxima);
+    const costPerPerson = calculateCostPerPerson(data.pricePerNight, data.maxOccupancy);
     const newRoomType: HotelRoomType = {
       id: crypto.randomUUID(),
       ...data,
-      costoHabitacionPorPersona,
+      costPerPerson,
       createdAt: now,
       updatedAt: now,
     };
@@ -106,10 +106,10 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     }
 
     const now = new Date().toISOString();
-    const costoHabitacionPorPersona = calculateCostPerPerson(data.precioPorNoche, data.ocupacionMaxima);
+    const costPerPerson = calculateCostPerPerson(data.pricePerNight, data.maxOccupancy);
     Object.assign(roomType, {
       ...data,
-      costoHabitacionPorPersona,
+      costPerPerson,
       updatedAt: now,
     });
 

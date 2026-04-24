@@ -33,8 +33,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   });
 
   const getGroupMembers = computed(() => {
-    return (representanteId: string): Traveler[] => {
-      return travelers.value.filter(t => t.representanteId === representanteId);
+    return (representativeId: string): Traveler[] => {
+      return travelers.value.filter(t => t.representativeId === representativeId);
     };
   });
 
@@ -55,18 +55,18 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     const base = filteredTravelers.value;
 
     // Si hay filtro de representante, retorna solo ese representante con sus acompañantes
-    if (filters.value.representanteId) {
-      const rep = base.find(t => t.id === filters.value.representanteId);
+    if (filters.value.representativeId) {
+      const rep = base.find(t => t.id === filters.value.representativeId);
       if (!rep)
         return [];
-      const children = base.filter(t => t.representanteId === rep.id);
+      const children = base.filter(t => t.representativeId === rep.id);
       return [{ ...rep, children: children.length > 0 ? children : undefined }];
     }
 
-    // Agrupar: separar acompañantes (tienen representanteId) de los demás
-    const grouped = Object.groupBy(base, t => t.representanteId ?? '');
+    // Agrupar: separar acompañantes (tienen representativeId) de los demás
+    const grouped = Object.groupBy(base, t => t.representativeId ?? '');
     const acompañantesIds = new Set(
-      base.filter(t => t.representanteId).map(t => t.id),
+      base.filter(t => t.representativeId).map(t => t.id),
     );
 
     const result: TravelerWithChildren[] = [];

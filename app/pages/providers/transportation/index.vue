@@ -18,28 +18,28 @@ const isFormModalOpen = ref(false);
 const editingProvider = ref<Provider | null>(null);
 const localFilters = ref<ProviderFilters>({});
 
-const categoryProviders = computed(() => providerStore.getProvidersByCategory(PROVIDER_CATEGORY.TRANSPORTE));
+const categoryProviders = computed(() => providerStore.getProvidersByCategory(PROVIDER_CATEGORY.TRANSPORTATION));
 
 const providers = computed(() => {
   let result = [...categoryProviders.value];
 
-  if (localFilters.value.ciudad) {
+  if (localFilters.value.city) {
     result = result.filter(
-      p => p.ubicacion.ciudad.toLowerCase() === localFilters.value.ciudad!.toLowerCase(),
+      p => p.location.city.toLowerCase() === localFilters.value.city!.toLowerCase(),
     );
   }
-  if (localFilters.value.estado) {
+  if (localFilters.value.state) {
     result = result.filter(
-      p => p.ubicacion.estado.toLowerCase() === localFilters.value.estado!.toLowerCase(),
+      p => p.location.state.toLowerCase() === localFilters.value.state!.toLowerCase(),
     );
   }
   if (localFilters.value.searchTerm) {
     const term = localFilters.value.searchTerm.toLowerCase();
     result = result.filter(
       p =>
-        p.nombre.toLowerCase().includes(term)
-        || p.descripcion?.toLowerCase().includes(term)
-        || p.contacto.nombre?.toLowerCase().includes(term),
+        p.name.toLowerCase().includes(term)
+        || p.description?.toLowerCase().includes(term)
+        || p.contact.name?.toLowerCase().includes(term),
     );
   }
 
@@ -47,10 +47,10 @@ const providers = computed(() => {
 });
 
 const availableCiudades = computed(() =>
-  [...new Set(categoryProviders.value.map(p => p.ubicacion.ciudad))].sort(),
+  [...new Set(categoryProviders.value.map(p => p.location.city))].sort(),
 );
 const availableEstados = computed(() =>
-  [...new Set(categoryProviders.value.map(p => p.ubicacion.estado))].sort(),
+  [...new Set(categoryProviders.value.map(p => p.location.state))].sort(),
 );
 
 const hasLocalFilters = computed(() =>
@@ -84,18 +84,18 @@ function closeModal() {
 
 function handleFormSubmit(data: ProviderFormData) {
   try {
-    data.categoria = PROVIDER_CATEGORY.TRANSPORTE;
+    data.category = PROVIDER_CATEGORY.TRANSPORTATION;
 
     if (editingProvider.value) {
       const success = providerStore.updateProvider(editingProvider.value.id, data);
       if (success) {
-        toast.add({ title: 'Transporte actualizado', description: `${data.nombre} se actualizó correctamente`, color: 'primary' });
+        toast.add({ title: 'Transporte actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
         closeModal();
       }
     }
     else {
       providerStore.addProvider(data);
-      toast.add({ title: 'Transporte creado', description: `${data.nombre} se creó correctamente`, color: 'primary' });
+      toast.add({ title: 'Transporte creado', description: `${data.name} se creó correctamente`, color: 'primary' });
       closeModal();
     }
   }
@@ -106,10 +106,10 @@ function handleFormSubmit(data: ProviderFormData) {
 
 function handleDelete(provider: Provider) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar ${provider.nombre}?`)) {
+  if (confirm(`¿Estás seguro de eliminar ${provider.name}?`)) {
     const success = providerStore.deleteProvider(provider.id);
     if (success) {
-      toast.add({ title: 'Proveedor eliminado', description: `${provider.nombre} se eliminó correctamente`, color: 'warning' });
+      toast.add({ title: 'Proveedor eliminado', description: `${provider.name} se eliminó correctamente`, color: 'warning' });
     }
   }
 }
@@ -117,10 +117,10 @@ function handleDelete(provider: Provider) {
 function handleToggleStatus(provider: Provider) {
   const success = providerStore.toggleProviderStatus(provider.id);
   if (success) {
-    const newStatus = !provider.activo;
+    const newStatus = !provider.active;
     toast.add({
       title: 'Estado actualizado',
-      description: `${provider.nombre} ahora está ${newStatus ? 'activo' : 'inactivo'}`,
+      description: `${provider.name} ahora está ${newStatus ? 'activo' : 'inactivo'}`,
       color: 'primary',
     });
   }
@@ -135,8 +135,8 @@ function getRowActions(provider: Provider) {
         onSelect: () => openEditModal(provider),
       },
       {
-        label: provider.activo ? 'Desactivar' : 'Activar',
-        icon: provider.activo ? 'i-lucide-eye-off' : 'i-lucide-eye',
+        label: provider.active ? 'Desactivar' : 'Activar',
+        icon: provider.active ? 'i-lucide-eye-off' : 'i-lucide-eye',
         onSelect: () => handleToggleStatus(provider),
       },
     ],
@@ -150,13 +150,13 @@ function getRowActions(provider: Provider) {
   ];
 }
 
-function formatLocation(ubicacion: ProviderLocation): string {
-  return [ubicacion.ciudad, ubicacion.estado, ubicacion.pais].join(', ');
+function formatLocation(location: ProviderLocation): string {
+  return [location.city, location.state, location.country].join(', ');
 }
 
 const columns: TableColumn<Provider>[] = [
   {
-    accessorKey: 'nombre',
+    accessorKey: 'name',
     header: 'Nombre',
     cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-2' }, [
@@ -165,21 +165,21 @@ const columns: TableColumn<Provider>[] = [
       ]),
   },
   {
-    accessorKey: 'ubicacion',
+    accessorKey: 'location',
     header: 'Ubicación',
     cell: ({ row }) => {
-      const ubicacion = row.getValue('ubicacion') as ProviderLocation;
+      const location = row.getValue('location') as ProviderLocation;
       return h('div', { class: 'flex items-center gap-2' }, [
         h('span', { class: 'i-lucide-map-pin w-3 h-3 text-gray-400' }),
-        h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatLocation(ubicacion)),
+        h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatLocation(location)),
       ]);
     },
   },
   {
-    accessorKey: 'contacto.telefono',
+    accessorKey: 'contacto.phone',
     header: 'Teléfono',
     cell: ({ row }) => {
-      const telefono = row.original.contacto.telefono;
+      const telefono = row.original.contact.phone;
       if (!telefono)
         return h('span', { class: 'text-sm text-gray-400' }, '-');
       return h('span', { class: 'text-sm' }, telefono);
@@ -189,7 +189,7 @@ const columns: TableColumn<Provider>[] = [
     accessorKey: 'contacto.email',
     header: 'Email',
     cell: ({ row }) => {
-      const email = row.original.contacto.email;
+      const email = row.original.contact.email;
       if (!email)
         return h('span', { class: 'text-sm text-gray-400' }, '-');
       return h('span', { class: 'text-sm' }, email);
@@ -291,7 +291,7 @@ const columns: TableColumn<Provider>[] = [
       <template #body>
         <ProviderForm
           :provider="editingProvider"
-          :fixed-categoria="PROVIDER_CATEGORY.TRANSPORTE"
+          :fixed-categoria="PROVIDER_CATEGORY.TRANSPORTATION"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />

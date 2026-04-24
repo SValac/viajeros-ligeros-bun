@@ -8,7 +8,7 @@ export const useBusStore = defineStore('buses', () => {
   const error = ref<string | null>(null);
 
   // Getters
-  const activeBuses = computed(() => buses.value.filter(b => b.activo));
+  const activeBuses = computed(() => buses.value.filter(b => b.active));
 
   const getBusById = computed(() => {
     return (id: string): Bus | undefined => buses.value.find(b => b.id === id);
@@ -17,7 +17,7 @@ export const useBusStore = defineStore('buses', () => {
   // Pre-computes the map so the returned function just does a lookup (preserves caching)
   const getBusesByProvider = computed(() => {
     const map = new Map<string, Bus[]>();
-    buses.value.filter(b => b.activo).forEach((b) => {
+    buses.value.filter(b => b.active).forEach((b) => {
       const list = map.get(b.providerId) ?? [];
       list.push(b);
       map.set(b.providerId, list);
@@ -25,7 +25,7 @@ export const useBusStore = defineStore('buses', () => {
     return (providerId: string): Bus[] => map.get(providerId) ?? [];
   });
 
-  const totalBuses = computed(() => buses.value.filter(b => b.activo).length);
+  const totalBuses = computed(() => buses.value.filter(b => b.active).length);
 
   // Actions
   function addBus(data: BusFormData): Bus {
@@ -86,7 +86,7 @@ export const useBusStore = defineStore('buses', () => {
       return false;
     }
 
-    return updateBus(id, { activo: !bus.activo });
+    return updateBus(id, { active: !bus.active });
   }
 
   return {

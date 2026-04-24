@@ -1,28 +1,28 @@
 <script setup lang="ts">
 import { z } from 'zod';
 
-import type { CotizacionProveedor, CotizacionProveedorFormData, TipoDivisionCosto } from '~/types/cotizacion';
+import type { CostSplitType, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionId: string;
-  proveedorCotizacion?: CotizacionProveedor | null;
+  quotationId: string;
+  proveedorCotizacion?: QuotationProvider | null;
 };
 
-const { cotizacionId, proveedorCotizacion = null } = defineProps<Props>();
+const { quotationId, proveedorCotizacion = null } = defineProps<Props>();
 
 const emit = defineEmits<{
-  submit: [data: CotizacionProveedorFormData];
+  submit: [data: QuotationProviderFormData];
   cancel: [];
 }>();
 
 const schema = z.object({
   providerId: z.string().min(1, 'Selecciona un proveedor'),
-  descripcionServicio: z.string().min(3, 'Mínimo 3 caracteres').max(200, 'Máximo 200 caracteres'),
-  costoTotal: z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0'),
-  metodoPago: z.enum(['cash', 'transfer']),
-  tipoDivision: z.enum(['minimo', 'total']),
-  observaciones: z.string().max(500, 'Máximo 500 caracteres').optional(),
-  confirmado: z.boolean(),
+  serviceDescription: z.string().min(3, 'Mínimo 3 caracteres').max(200, 'Máximo 200 caracteres'),
+  totalCost: z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0'),
+  paymentMethod: z.enum(['cash', 'transfer']),
+  splitType: z.enum(['minimum', 'total']),
+  remarks: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  confirmed: z.boolean(),
 });
 
 type FormSchema = z.output<typeof schema>;
@@ -32,19 +32,19 @@ const metodoPagoOptions = [
   { label: 'Transferencia', value: 'transfer' },
 ];
 
-const tipoDivisionOptions: { label: string; value: TipoDivisionCosto }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimo' },
+const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
+  { label: 'Asientos mínimos objetivo', value: 'minimum' },
   { label: 'Capacidad total del bus', value: 'total' },
 ];
 
 const state = reactive<Partial<FormSchema>>({
   providerId: proveedorCotizacion?.providerId ?? undefined,
-  descripcionServicio: proveedorCotizacion?.descripcionServicio ?? '',
-  costoTotal: proveedorCotizacion?.costoTotal ?? undefined,
-  metodoPago: proveedorCotizacion?.metodoPago ?? 'cash',
-  tipoDivision: proveedorCotizacion?.tipoDivision ?? 'minimo',
-  observaciones: proveedorCotizacion?.observaciones ?? '',
-  confirmado: proveedorCotizacion?.confirmado ?? false,
+  serviceDescription: proveedorCotizacion?.serviceDescription ?? '',
+  totalCost: proveedorCotizacion?.totalCost ?? undefined,
+  paymentMethod: proveedorCotizacion?.paymentMethod ?? 'cash',
+  splitType: proveedorCotizacion?.splitType ?? 'minimum',
+  remarks: proveedorCotizacion?.remarks ?? '',
+  confirmed: proveedorCotizacion?.confirmed ?? false,
 });
 
 function onSubmit() {
@@ -52,9 +52,9 @@ function onSubmit() {
   if (!result.success)
     return;
 
-  const data: CotizacionProveedorFormData = {
+  const data: QuotationProviderFormData = {
     ...result.data,
-    cotizacionId,
+    quotationId,
     ...(proveedorCotizacion?.id ? { id: proveedorCotizacion.id } : {}),
   };
 
@@ -77,7 +77,7 @@ function onSubmit() {
     >
       <ProviderSelector
         v-model="state.providerId"
-        :exclude-categories="['hospedaje', 'agencias-autobus']"
+        :exclude-categories="['accommodation', 'bus_agencies']"
       />
     </UFormField>
 
@@ -88,7 +88,7 @@ function onSubmit() {
       required
     >
       <UInput
-        v-model="state.descripcionServicio"
+        v-model="state.serviceDescription"
         placeholder="Ej. Servicio de transporte Ciudad de México - Puebla"
         class="w-full"
       />
@@ -101,7 +101,7 @@ function onSubmit() {
       required
     >
       <UInput
-        v-model.number="state.costoTotal"
+        v-model.number="state.totalCost"
         type="number"
         placeholder="0.00"
         class="w-full"
@@ -115,7 +115,7 @@ function onSubmit() {
       required
     >
       <USelect
-        v-model="state.tipoDivision"
+        v-model="state.splitType"
         :items="tipoDivisionOptions"
         class="w-full"
       />
@@ -128,7 +128,7 @@ function onSubmit() {
       required
     >
       <USelect
-        v-model="state.metodoPago"
+        v-model="state.paymentMethod"
         :items="metodoPagoOptions"
         class="w-full"
       />
@@ -137,7 +137,7 @@ function onSubmit() {
     <!-- Observaciones -->
     <UFormField label="Observaciones" name="observaciones">
       <UTextarea
-        v-model="state.observaciones"
+        v-model="state.remarks"
         placeholder="Notas adicionales sobre este servicio..."
         :rows="3"
         class="w-full"
@@ -147,7 +147,7 @@ function onSubmit() {
     <!-- Confirmado -->
     <UFormField name="confirmado">
       <UCheckbox
-        v-model="state.confirmado"
+        v-model="state.confirmed"
         label="Servicio confirmado por el proveedor"
       />
     </UFormField>

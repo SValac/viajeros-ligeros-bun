@@ -18,7 +18,7 @@ const proveedores = computed(() => {
 });
 
 function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.nombre ?? 'Proveedor desconocido';
+  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
 }
 
 function goToCotizacion() {
@@ -42,8 +42,8 @@ function goToCotizacion() {
               </div>
               <div class="text-right shrink-0">
                 <UBadge
-                  :label="proveedor.confirmado ? 'Confirmado' : 'No confirmado'"
-                  :color="proveedor.confirmado ? 'success' : 'warning'"
+                  :label="proveedor.confirmed ? 'Confirmado' : 'No confirmado'"
+                  :color="proveedor.confirmed ? 'success' : 'warning'"
                   variant="subtle"
                   size="xs"
                 />
@@ -52,7 +52,7 @@ function goToCotizacion() {
           </template>
           <div class="flex justify-between items-center gap-4">
             <div class="text-sm text-muted mt-0.5">
-              {{ proveedor.descripcionServicio }}
+              {{ proveedor.serviceDescription }}
             </div>
           </div>
         </UCard>

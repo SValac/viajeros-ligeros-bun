@@ -4,8 +4,8 @@ import type { TravelActivity } from '~/types/travel';
 // Props
 type Props = {
   modelValue: TravelActivity[];
-  fechaInicio: string;
-  fechaFin: string;
+  startDate: string;
+  endDate: string;
 };
 
 const props = defineProps<Props>();
@@ -25,17 +25,17 @@ const toast = useToast();
 
 // Calcular duración del viaje en días
 const duracionViaje = computed(() => {
-  if (!props.fechaInicio || !props.fechaFin)
+  if (!props.startDate || !props.endDate)
     return 0;
-  const inicio = new Date(props.fechaInicio);
-  const fin = new Date(props.fechaFin);
+  const inicio = new Date(props.startDate);
+  const fin = new Date(props.endDate);
   const diff = fin.getTime() - inicio.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir ambos días
 });
 
 // Actividades ordenadas por día
 const sortedActivities = computed(() => {
-  return [...activities.value].sort((a, b) => a.dia - b.dia);
+  return [...activities.value].sort((a, b) => a.day - b.day);
 });
 
 // Handlers
@@ -87,7 +87,7 @@ function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
 
 function deleteActivity(activity: TravelActivity) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Eliminar la actividad "${activity.titulo}"?`)) {
+  if (confirm(`¿Eliminar la actividad "${activity.title}"?`)) {
     activities.value = activities.value.filter(a => a.id !== activity.id);
     emit('update:modelValue', activities.value);
 
@@ -160,33 +160,33 @@ function formatHora(hora?: string) {
             <!-- Día y hora -->
             <div class="flex items-center gap-2 text-sm text-muted">
               <span class="i-lucide-calendar-days w-4 h-4" />
-              <span class="font-medium">Día {{ activity.dia }}</span>
+              <span class="font-medium">Día {{ activity.day }}</span>
               <span
-                v-if="activity.hora"
+                v-if="activity.time"
                 class="flex items-center gap-1"
               >
                 <span class="i-lucide-clock w-3.5 h-3.5" />
-                {{ formatHora(activity.hora) }}
+                {{ formatHora(activity.time) }}
               </span>
             </div>
 
             <!-- Título -->
             <div class="font-medium text-base">
-              {{ activity.titulo }}
+              {{ activity.title }}
             </div>
 
             <!-- Descripción -->
             <div class="text-sm text-muted">
-              {{ activity.descripcion }}
+              {{ activity.description }}
             </div>
 
             <!-- Ubicación -->
             <div
-              v-if="activity.ubicacion"
+              v-if="activity.location"
               class="flex items-center gap-1.5 text-sm text-muted"
             >
               <span class="i-lucide-map-pin w-3.5 h-3.5" />
-              {{ activity.ubicacion }}
+              {{ activity.location }}
             </div>
           </div>
 

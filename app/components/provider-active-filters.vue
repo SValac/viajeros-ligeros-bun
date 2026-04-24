@@ -15,12 +15,12 @@ const emit = defineEmits<{
 }>();
 
 const categoryLabels: Record<ProviderCategory, string> = {
-  'guias': 'Guías',
-  'transporte': 'Transporte',
-  'hospedaje': 'Hospedaje',
-  'agencias-autobus': 'Agencias de Autobús',
-  'comidas': 'Comidas',
-  'otros': 'Otros',
+  guides: 'Guías',
+  transportation: 'Transporte',
+  accommodation: 'Hospedaje',
+  bus_agencies: 'Agencias de Autobús',
+  food_services: 'Comidas',
+  other: 'Otros',
 };
 
 type ActiveChip = {
@@ -31,17 +31,17 @@ type ActiveChip = {
 const activeChips = computed<ActiveChip[]>(() => {
   const chips: ActiveChip[] = [];
 
-  if (props.filters.categoria) {
+  if (props.filters.category) {
     chips.push({
-      key: 'categoria',
-      label: `Categoría: ${categoryLabels[props.filters.categoria]}`,
+      key: 'category',
+      label: `Categoría: ${categoryLabels[props.filters.category]}`,
     });
   }
-  if (props.filters.ciudad) {
-    chips.push({ key: 'ciudad', label: `Ciudad: ${props.filters.ciudad}` });
+  if (props.filters.city) {
+    chips.push({ key: 'city', label: `Ciudad: ${props.filters.city}` });
   }
-  if (props.filters.estado) {
-    chips.push({ key: 'estado', label: `Estado: ${props.filters.estado}` });
+  if (props.filters.state) {
+    chips.push({ key: 'state', label: `Estado: ${props.filters.state}` });
   }
   if (props.filters.searchTerm) {
     chips.push({ key: 'searchTerm', label: `Búsqueda: "${props.filters.searchTerm}"` });

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { z } from 'zod';
 
-import type { CotizacionBus, CotizacionBusFormData, TipoDivisionCosto } from '~/types/cotizacion';
+import type { CostSplitType, QuotationBus, QuotationBusFormData } from '~/types/quotation';
 
 type Props = {
-  bus: CotizacionBus;
+  bus: QuotationBus;
 };
 
 const { bus } = defineProps<Props>();
 
 const emit = defineEmits<{
-  submit: [data: Partial<CotizacionBusFormData>];
+  submit: [data: Partial<QuotationBusFormData>];
   cancel: [];
 }>();
 
@@ -19,27 +19,27 @@ const metodoPagoOptions = [
   { label: 'Transferencia', value: 'transfer' },
 ];
 
-const tipoDivisionOptions: { label: string; value: TipoDivisionCosto }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimo' },
+const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
+  { label: 'Asientos mínimos objetivo', value: 'minimum' },
   { label: 'Capacidad total del bus', value: 'total' },
 ];
 
 const schema = z.object({
-  costoTotal: z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0'),
-  tipoDivision: z.enum(['minimo', 'total']),
-  metodoPago: z.enum(['cash', 'transfer']),
-  observaciones: z.string().max(500).optional(),
-  confirmado: z.boolean(),
+  totalCost: z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0'),
+  splitType: z.enum(['minimum', 'total']),
+  paymentMethod: z.enum(['cash', 'transfer']),
+  remarks: z.string().max(500).optional(),
+  confirmed: z.boolean(),
 });
 
 type FormSchema = z.output<typeof schema>;
 
 const state = reactive<Partial<FormSchema>>({
-  costoTotal: bus.costoTotal ?? undefined,
-  tipoDivision: bus.tipoDivision ?? 'minimo',
-  metodoPago: bus.metodoPago ?? 'cash',
-  observaciones: bus.observaciones ?? '',
-  confirmado: bus.confirmado ?? false,
+  totalCost: bus.totalCost ?? undefined,
+  splitType: bus.splitType ?? 'minimum',
+  paymentMethod: bus.paymentMethod ?? 'cash',
+  remarks: bus.remarks ?? '',
+  confirmed: bus.confirmed ?? false,
 });
 
 function onSubmit() {
@@ -62,10 +62,10 @@ function onSubmit() {
       <span class="i-lucide-bus w-5 h-5 text-muted" />
       <div>
         <p class="font-medium text-sm">
-          {{ bus.numeroUnidad }}
+          {{ bus.unitNumber }}
         </p>
         <p class="text-xs text-muted">
-          {{ bus.capacidad }} asientos
+          {{ bus.capacity }} asientos
         </p>
       </div>
     </div>
@@ -77,7 +77,7 @@ function onSubmit() {
       required
     >
       <UInput
-        v-model.number="state.costoTotal"
+        v-model.number="state.totalCost"
         type="number"
         placeholder="0.00"
         class="w-full"
@@ -91,7 +91,7 @@ function onSubmit() {
       required
     >
       <USelect
-        v-model="state.tipoDivision"
+        v-model="state.splitType"
         :items="tipoDivisionOptions"
         class="w-full"
       />
@@ -104,7 +104,7 @@ function onSubmit() {
       required
     >
       <USelect
-        v-model="state.metodoPago"
+        v-model="state.paymentMethod"
         :items="metodoPagoOptions"
         class="w-full"
       />
@@ -113,7 +113,7 @@ function onSubmit() {
     <!-- Observaciones -->
     <UFormField label="Observaciones" name="observaciones">
       <UTextarea
-        v-model="state.observaciones"
+        v-model="state.remarks"
         placeholder="Notas sobre el servicio de este autobús..."
         :rows="3"
         class="w-full"
@@ -123,7 +123,7 @@ function onSubmit() {
     <!-- Confirmado -->
     <UFormField name="confirmado">
       <UCheckbox
-        v-model="state.confirmado"
+        v-model="state.confirmed"
         label="Servicio confirmado por el proveedor"
       />
     </UFormField>

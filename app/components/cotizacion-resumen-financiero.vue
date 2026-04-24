@@ -1,31 +1,31 @@
 <script setup lang="ts">
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   acumuladoViajeros: number;
 };
 
-const { cotizacionId, acumuladoViajeros } = defineProps<Props>();
+const { quotationId, acumuladoViajeros } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 
 const cotizacion = computed(() =>
-  cotizacionStore.cotizaciones.find(c => c.id === cotizacionId),
+  cotizacionStore.cotizaciones.find(c => c.id === quotationId),
 );
 
-const costoProveedores = computed(() => cotizacionStore.getCostoTotal(cotizacionId));
-const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(cotizacionId));
-const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(cotizacionId));
-const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(cotizacionId));
-const costoBuses = computed(() => cotizacionStore.getTotalCostoBuses(cotizacionId));
-const costoBusesTipoMinimo = computed(() => cotizacionStore.getCostoBusesTipoMinimo(cotizacionId));
-const costoBusesTipoTotal = computed(() => cotizacionStore.getCostoBusesTipoTotal(cotizacionId));
+const costoProveedores = computed(() => cotizacionStore.getCostoTotal(quotationId));
+const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(quotationId));
+const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(quotationId));
+const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(quotationId));
+const costoBuses = computed(() => cotizacionStore.getTotalCostoBuses(quotationId));
+const costoBusesTipoMinimo = computed(() => cotizacionStore.getCostoBusesTipoMinimo(quotationId));
+const costoBusesTipoTotal = computed(() => cotizacionStore.getCostoBusesTipoTotal(quotationId));
 const costoTotal = computed(() => costoProveedores.value + costoBuses.value);
 const costoMinimoConBuses = computed(() => costoTipoMinimo.value + costoBusesTipoMinimo.value);
 const costoCapacidadConBuses = computed(() => costoTipoTotal.value + costoBusesTipoTotal.value);
-const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(cotizacionId));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(cotizacionId));
-const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(cotizacionId));
-const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(cotizacionId));
+const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(quotationId));
+const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(quotationId));
+const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(quotationId));
+const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(quotationId));
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
@@ -106,7 +106,7 @@ function formatCurrency(amount: number): string {
           Precio por Asiento
         </p>
         <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
-          {{ formatCurrency(cotizacion?.precioAsiento ?? 0) }}
+          {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}
         </p>
         <div class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
           <span class="text-xs text-muted">
@@ -132,10 +132,10 @@ function formatCurrency(amount: number): string {
           Asiento Mínimo Objetivo
         </p>
         <p class="text-2xl font-bold text-warning">
-          {{ cotizacion?.asientoMinimoObjetivo ?? 0 }}
+          {{ cotizacion?.minimumSeatTarget ?? 0 }}
         </p>
         <p class="text-xs text-muted">
-          Ganancia a partir del asiento {{ (cotizacion?.asientoMinimoObjetivo ?? 0) + 1 }}
+          Ganancia a partir del asiento {{ (cotizacion?.minimumSeatTarget ?? 0) + 1 }}
         </p>
       </div>
     </UCard>
@@ -151,7 +151,7 @@ function formatCurrency(amount: number): string {
           {{ formatCurrency(gananciaProyectada) }}
         </p>
         <p class="text-xs text-muted pt-1">
-          ({{ cotizacion?.capacidadAutobus ?? 0 }} asientos × {{ formatCurrency(cotizacion?.precioAsiento ?? 0) }}) − costo total
+          ({{ cotizacion?.busCapacity ?? 0 }} asientos × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}) − costo total
         </p>
       </div>
     </UCard>

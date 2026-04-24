@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { z } from 'zod';
 
-import type { CotizacionHospedajeDetalleFormData, CotizacionHospedajeFormData } from '~/types/cotizacion';
 import type { HotelRoomType } from '~/types/hotel-room';
+import type { QuotationAccommodationDetailFormData, QuotationAccommodationFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   open: boolean;
 };
 
@@ -25,18 +25,18 @@ const toast = useToast();
 // IDs de hoteles ya agregados a esta cotización
 const hotelsYaAgregados = computed(() => {
   return new Set(
-    cotizacionStore.getHospedajesByCotizacion(props.cotizacionId).map(h => h.providerId),
+    cotizacionStore.getHospedajesByQuotation(props.quotationId).map(h => h.providerId),
   );
 });
 
-// Hoteles disponibles (providers con categoría 'hospedaje', activos y no duplicados)
+// Hoteles disponibles (providers con categoría 'accommodation', activos y no duplicados)
 const hotelesDisponibles = computed(() => {
-  return providerStore.getProvidersByCategory('hospedaje')
-    .filter(p => p.activo && !hotelsYaAgregados.value.has(p.id));
+  return providerStore.getProvidersByCategory('accommodation')
+    .filter(p => p.active && !hotelsYaAgregados.value.has(p.id));
 });
 
 const hotelesSelectItems = computed(() =>
-  hotelesDisponibles.value.map(p => ({ value: p.id, label: p.nombre })),
+  hotelesDisponibles.value.map(p => ({ value: p.id, label: p.name })),
 );
 
 const metodoPagoOptions = [
@@ -46,28 +46,28 @@ const metodoPagoOptions = [
 
 // Esquema de validación
 const formSchema = z.object({
-  cotizacionId: z.string(),
+  quotationId: z.string(),
   providerId: z.string({ message: 'Selecciona un hotel' }),
-  cantidadNoches: z.number({ message: 'Ingresa la cantidad de noches' })
+  nightCount: z.number({ message: 'Ingresa la cantidad de noches' })
     .int()
     .positive('Debe ser mayor a 0'),
-  metodoPago: z.enum(['cash', 'transfer']),
-  detalles: z.array(z.object({
-    habitacionTipoId: z.string(),
-    cantidad: z.number().int().positive('Debe ser mayor a 0'),
-    precioPorNoche: z.number().positive(),
-    ocupacionMaxima: z.number().int().positive(),
+  paymentMethod: z.enum(['cash', 'transfer']),
+  details: z.array(z.object({
+    roomTypeId: z.string(),
+    quantity: z.number().int().positive('Debe ser mayor a 0'),
+    pricePerNight: z.number().positive(),
+    maxOccupancy: z.number().int().positive(),
   })).min(1, 'Selecciona al menos un tipo de habitación'),
 });
 
 type FormSchema = z.infer<typeof formSchema>;
 
 const formState = reactive<Partial<FormSchema>>({
-  cotizacionId: props.cotizacionId,
+  quotationId: props.quotationId,
   providerId: '',
-  cantidadNoches: 1,
-  metodoPago: 'cash',
-  detalles: [],
+  nightCount: 1,
+  paymentMethod: 'cash',
+  details: [],
 });
 
 // Tipos de habitación del hotel seleccionado
@@ -82,59 +82,59 @@ const tiposHabitacionSeleccionado = computed(() => {
 
 // Mapa de qué tipos están seleccionados
 const detallesMap = computed(() => {
-  const map = new Map<string, CotizacionHospedajeDetalleFormData>();
-  for (const detalle of formState.detalles ?? []) {
-    map.set(detalle.habitacionTipoId, detalle);
+  const map = new Map<string, QuotationAccommodationDetailFormData>();
+  for (const detalle of formState.details ?? []) {
+    map.set(detalle.roomTypeId, detalle);
   }
   return map;
 });
 
 // Al cambiar de hotel, reiniciar detalles
 watch(() => formState.providerId, () => {
-  formState.detalles = [];
+  formState.details = [];
 });
 
 // Toggle selección de tipo de habitación
 function toggleTipoHabitacion(tipo: HotelRoomType) {
-  if (!formState.detalles)
-    formState.detalles = [];
+  if (!formState.details)
+    formState.details = [];
 
   const existe = detallesMap.value.has(tipo.id);
   if (existe) {
-    formState.detalles = formState.detalles.filter(d => d.habitacionTipoId !== tipo.id);
+    formState.details = formState.details.filter(d => d.roomTypeId !== tipo.id);
   }
   else {
-    formState.detalles.push({
-      habitacionTipoId: tipo.id,
-      cantidad: 1,
-      precioPorNoche: tipo.precioPorNoche,
-      ocupacionMaxima: tipo.ocupacionMaxima,
+    formState.details.push({
+      roomTypeId: tipo.id,
+      quantity: 1,
+      pricePerNight: tipo.pricePerNight,
+      maxOccupancy: tipo.maxOccupancy,
     });
   }
 }
 
 // Actualizar cantidad de habitaciones
-function actualizarCantidad(tipoId: string, cantidad: number) {
-  const detalle = formState.detalles?.find(d => d.habitacionTipoId === tipoId);
-  if (!detalle || cantidad <= 0)
+function actualizarCantidad(tipoId: string, count: number) {
+  const detalle = formState.details?.find(d => d.roomTypeId === tipoId);
+  if (!detalle || count <= 0)
     return;
   const tipo = tiposHabitacionSeleccionado.value.find(t => t.id === tipoId);
-  detalle.cantidad = tipo ? Math.min(cantidad, tipo.cantidadHabitaciones) : cantidad;
+  detalle.quantity = tipo ? Math.min(count, tipo.roomCount) : count;
 }
 
 // Calcular costo por persona
-function calcularCostoPorPersona(detalle: CotizacionHospedajeDetalleFormData): number {
-  return detalle.precioPorNoche / detalle.ocupacionMaxima;
+function calcularCostoPorPersona(detalle: QuotationAccommodationDetailFormData): number {
+  return detalle.pricePerNight / detalle.maxOccupancy;
 }
 
 // Calcular costo total (por noche * noches * cantidad)
-function calcularCostoTotal(detalle: CotizacionHospedajeDetalleFormData): number {
-  return (detalle.precioPorNoche * (formState.cantidadNoches ?? 1)) * detalle.cantidad;
+function calcularCostoTotal(detalle: QuotationAccommodationDetailFormData): number {
+  return (detalle.pricePerNight * (formState.nightCount ?? 1)) * detalle.quantity;
 }
 
 // Calcular costo total de todas las habitaciones
 const costoTotalHospedaje = computed(() => {
-  return (formState.detalles ?? []).reduce((sum, detalle) => {
+  return (formState.details ?? []).reduce((sum, detalle) => {
     return sum + calcularCostoTotal(detalle);
   }, 0);
 });
@@ -150,7 +150,7 @@ function handleSubmit() {
     return;
   }
 
-  const response = cotizacionStore.addHospedajeCotizacion(result.data as CotizacionHospedajeFormData);
+  const response = cotizacionStore.addHospedajeQuotation(result.data as QuotationAccommodationFormData);
   if ('error' in response) {
     toast.add({
       title: 'Error',
@@ -166,22 +166,22 @@ function handleSubmit() {
   });
 
   // Reiniciar form
-  formState.cotizacionId = props.cotizacionId;
+  formState.quotationId = props.quotationId;
   formState.providerId = '';
-  formState.cantidadNoches = 1;
-  formState.metodoPago = 'cash';
-  formState.detalles = [];
+  formState.nightCount = 1;
+  formState.paymentMethod = 'cash';
+  formState.details = [];
 
   emit('hospedajeAgregado');
   emit('update:open', false);
 }
 
 function handleCancel() {
-  formState.cotizacionId = props.cotizacionId;
+  formState.quotationId = props.quotationId;
   formState.providerId = '';
-  formState.cantidadNoches = 1;
-  formState.metodoPago = 'cash';
-  formState.detalles = [];
+  formState.nightCount = 1;
+  formState.paymentMethod = 'cash';
+  formState.details = [];
   emit('update:open', false);
 }
 </script>
@@ -216,7 +216,7 @@ function handleCancel() {
         <!-- Cantidad de Noches -->
         <UFormField label="Cantidad de Noches" required>
           <UInput
-            v-model.number="formState.cantidadNoches"
+            v-model.number="formState.nightCount"
             type="number"
             min="1"
             placeholder="Ej. 3"
@@ -226,7 +226,7 @@ function handleCancel() {
         <!-- Método de Pago -->
         <UFormField label="Método de Pago" required>
           <USelect
-            v-model="formState.metodoPago"
+            v-model="formState.paymentMethod"
             :items="metodoPagoOptions"
           />
         </UFormField>
@@ -256,10 +256,10 @@ function handleCancel() {
                 />
                 <div class="flex-1">
                   <p class="font-medium">
-                    {{ tipo.ocupacionMaxima }} personas - ${{ tipo.precioPorNoche.toFixed(2) }}/noche
+                    {{ tipo.maxOccupancy }} personas - ${{ tipo.pricePerNight.toFixed(2) }}/noche
                   </p>
                   <p class="text-xs text-muted">
-                    Cama(s): {{ tipo.camas.map((c: any) => `${c.cantidad} ${c.tamaño}`).join(', ') }}
+                    Cama(s): {{ tipo.beds.map((c: any) => `${c.quantity} ${c.size}`).join(', ') }}
                   </p>
                 </div>
               </div>
@@ -268,12 +268,12 @@ function handleCancel() {
               <div v-if="detallesMap.has(tipo.id)" class="ml-8 space-y-2 border-l-2 border-primary pl-4">
                 <div class="grid grid-cols-2 gap-2 text-sm">
                   <div>
-                    <label class="text-xs text-muted">Cantidad de Habitaciones (máx. {{ tipo.cantidadHabitaciones }})</label>
+                    <label class="text-xs text-muted">Cantidad de Habitaciones (máx. {{ tipo.roomCount }})</label>
                     <UInput
-                      :model-value="detallesMap.get(tipo.id)?.cantidad ?? 1"
+                      :model-value="detallesMap.get(tipo.id)?.quantity ?? 1"
                       type="number"
                       min="1"
-                      :max="tipo.cantidadHabitaciones"
+                      :max="tipo.roomCount"
                       size="sm"
                       @update:model-value="(v) => actualizarCantidad(tipo.id, v)"
                     />
@@ -289,7 +289,7 @@ function handleCancel() {
                 <!-- Desglose: costo total por tipo -->
                 <div class="text-xs bg-muted/20 rounded px-2 py-1">
                   <p>
-                    {{ tipo.precioPorNoche.toFixed(2) }} × {{ formState.cantidadNoches }} noches × {{ detallesMap.get(tipo.id)?.cantidad ?? 1 }} hab = <span class="font-medium">${{ calcularCostoTotal(detallesMap.get(tipo.id)!).toFixed(2) }}</span>
+                    {{ tipo.pricePerNight.toFixed(2) }} × {{ formState.nightCount }} noches × {{ detallesMap.get(tipo.id)?.quantity ?? 1 }} hab = <span class="font-medium">${{ calcularCostoTotal(detallesMap.get(tipo.id)!).toFixed(2) }}</span>
                   </p>
                 </div>
               </div>
@@ -298,7 +298,7 @@ function handleCancel() {
         </div>
 
         <!-- Resumen de costos -->
-        <div v-if="(formState.detalles?.length ?? 0) > 0" class="bg-primary/10 rounded-lg p-4">
+        <div v-if="(formState.details?.length ?? 0) > 0" class="bg-primary/10 rounded-lg p-4">
           <div class="flex justify-between items-center">
             <span class="font-semibold">Costo Total del Hospedaje</span>
             <span class="text-lg font-bold">${{ costoTotalHospedaje.toFixed(2) }}</span>

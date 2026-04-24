@@ -1,5 +1,5 @@
 import type {
-  AjusteItem,
+  AdjustmentItem,
   Payment,
   PaymentFilters,
   PaymentFormData,
@@ -62,7 +62,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     return (travelerId: string, travelId: string, travelPrice: number): TravelerPaymentSummary => {
       const config = getAccountConfig.value(travelerId, travelId);
       const travelerType = config?.travelerType ?? 'adult';
-      const appliedPrice = config?.precioPublicoMonto ?? (
+      const appliedPrice = config?.publicPriceAmount ?? (
         travelerType === 'child' && config?.childPrice != null
           ? config.childPrice
           : travelPrice
@@ -71,7 +71,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       const discounts = config?.discounts ?? [];
       const surcharges = config?.surcharges ?? [];
 
-      function calcAmount(item: AjusteItem, base: number) {
+      function calcAmount(item: AdjustmentItem, base: number) {
         return item.type === 'percentage' ? base * item.amount / 100 : item.amount;
       }
 
@@ -149,7 +149,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     const existingPayments = getPaymentsByTravelerAndTravel.value(data.travelerId, data.travelId);
     const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
 
-    const appliedPrice = config.precioPublicoMonto ?? (
+    const appliedPrice = config.publicPriceAmount ?? (
       config.travelerType === 'child' && config.childPrice != null
         ? config.childPrice
         : 0

@@ -21,20 +21,20 @@ const emit = defineEmits<{
 
 // Schema de validación Zod
 const schema = z.object({
-  dia: z.number()
+  day: z.number()
     .min(1, 'El día debe ser al menos 1')
     .max(maxDia, `El día no puede ser mayor a ${maxDia}`),
-  titulo: z.string()
+  title: z.string()
     .min(3, 'Mínimo 3 caracteres')
     .max(100, 'Máximo 100 caracteres'),
-  descripcion: z.string()
+  description: z.string()
     .min(10, 'Mínimo 10 caracteres')
     .max(500, 'Máximo 500 caracteres'),
-  hora: z.string()
+  time: z.string()
     .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, 'Formato: HH:MM')
     .optional()
     .or(z.literal('')),
-  ubicacion: z.string()
+  location: z.string()
     .max(200, 'Máximo 200 caracteres')
     .optional()
     .or(z.literal('')),
@@ -46,20 +46,20 @@ type Schema = z.output<typeof schema>;
 const initialState = computed((): Schema => {
   if (activity) {
     return {
-      dia: activity.dia,
-      titulo: activity.titulo,
-      descripcion: activity.descripcion,
-      hora: activity.hora || '',
-      ubicacion: activity.ubicacion || '',
+      day: activity.day,
+      title: activity.title,
+      description: activity.description,
+      time: activity.time || '',
+      location: activity.location || '',
     };
   }
 
   return {
-    dia: 1,
-    titulo: '',
-    descripcion: '',
-    hora: '',
-    ubicacion: '',
+    day: 1,
+    title: '',
+    description: '',
+    time: '',
+    location: '',
   };
 });
 
@@ -73,11 +73,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
   try {
     const activityData: Omit<TravelActivity, 'id'> = {
-      dia: event.data.dia,
-      titulo: event.data.titulo,
-      descripcion: event.data.descripcion,
-      hora: event.data.hora || undefined,
-      ubicacion: event.data.ubicacion || undefined,
+      day: event.data.day,
+      title: event.data.title,
+      description: event.data.description,
+      time: event.data.time || undefined,
+      location: event.data.location || undefined,
     };
 
     emit('submit', activityData);
@@ -107,7 +107,7 @@ function onCancel() {
       :description="`El viaje dura ${maxDia} día${maxDia !== 1 ? 's' : ''}`"
     >
       <UInput
-        v-model.number="state.dia"
+        v-model.number="state.day"
         type="number"
         min="1"
         :max="maxDia"
@@ -122,7 +122,7 @@ function onCancel() {
       required
     >
       <UInput
-        v-model="state.titulo"
+        v-model="state.title"
         placeholder="Visita a la Torre Eiffel"
         icon="i-lucide-map-pin"
       />
@@ -135,7 +135,7 @@ function onCancel() {
       description="Opcional - Formato 24 horas (HH:MM)"
     >
       <UInput
-        v-model="state.hora"
+        v-model="state.time"
         type="time"
         icon="i-lucide-clock"
         placeholder="10:00"
@@ -149,7 +149,7 @@ function onCancel() {
       description="Opcional"
     >
       <UInput
-        v-model="state.ubicacion"
+        v-model="state.location"
         placeholder="Champ de Mars, París"
         icon="i-lucide-map"
       />
@@ -162,7 +162,7 @@ function onCancel() {
       required
     >
       <UTextarea
-        v-model="state.descripcion"
+        v-model="state.description"
         placeholder="Describe la actividad, qué se hará, qué incluye..."
         :rows="4"
       />

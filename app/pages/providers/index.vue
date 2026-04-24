@@ -24,7 +24,7 @@ type CategoryInfo = {
 
 const categories: CategoryInfo[] = [
   {
-    key: PROVIDER_CATEGORY.GUIAS,
+    key: PROVIDER_CATEGORY.GUIDES,
     label: 'Guías',
     icon: 'i-lucide-user-search',
     color: 'blue',
@@ -33,7 +33,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/guides',
   },
   {
-    key: PROVIDER_CATEGORY.TRANSPORTE,
+    key: PROVIDER_CATEGORY.TRANSPORTATION,
     label: 'Transporte',
     icon: 'i-lucide-car',
     color: 'purple',
@@ -42,7 +42,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/transportation',
   },
   {
-    key: PROVIDER_CATEGORY.HOSPEDAJE,
+    key: PROVIDER_CATEGORY.ACCOMMODATION,
     label: 'Hospedaje',
     icon: 'i-lucide-hotel',
     color: 'green',
@@ -51,7 +51,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/accommodation',
   },
   {
-    key: PROVIDER_CATEGORY.AGENCIAS_AUTOBUS,
+    key: PROVIDER_CATEGORY.BUS_AGENCIES,
     label: 'Agencias de Autobús',
     icon: 'i-lucide-bus',
     color: 'orange',
@@ -60,7 +60,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/bus-agencies',
   },
   {
-    key: PROVIDER_CATEGORY.COMIDAS,
+    key: PROVIDER_CATEGORY.FOOD_SERVICES,
     label: 'Comidas',
     icon: 'i-lucide-utensils',
     color: 'amber',
@@ -69,7 +69,7 @@ const categories: CategoryInfo[] = [
     route: '/providers/food-services',
   },
   {
-    key: PROVIDER_CATEGORY.OTROS,
+    key: PROVIDER_CATEGORY.OTHER,
     label: 'Otros',
     icon: 'i-lucide-package',
     color: 'gray',

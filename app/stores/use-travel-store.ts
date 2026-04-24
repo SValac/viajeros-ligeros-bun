@@ -2,11 +2,11 @@ import type { Travel, TravelBus, TravelFormData, TravelStatus, TravelUpdateData 
 
 type TravelStats = {
   total: number;
-  pendiente: number;
-  confirmado: number;
-  enCurso: number;
-  completado: number;
-  cancelado: number;
+  pending: number;
+  confirmed: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
 };
 
 export const useTravelsStore = defineStore('useTravelsStore', () => {
@@ -30,25 +30,25 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
   const getTravelsByStatus = computed(() => {
     return (status: TravelStatus): Travel[] => {
-      return travels.value.filter(travel => travel.estado === status);
+      return travels.value.filter(travel => travel.status === status);
     };
   });
 
   const stats = computed((): TravelStats => {
     return {
       total: travels.value.length,
-      pendiente: travels.value.filter(t => t.estado === 'pendiente').length,
-      confirmado: travels.value.filter(t => t.estado === 'confirmado').length,
-      enCurso: travels.value.filter(t => t.estado === 'en-curso').length,
-      completado: travels.value.filter(t => t.estado === 'completado').length,
-      cancelado: travels.value.filter(t => t.estado === 'cancelado').length,
+      pending: travels.value.filter(t => t.status === 'pending').length,
+      confirmed: travels.value.filter(t => t.status === 'confirmed').length,
+      inProgress: travels.value.filter(t => t.status === 'in_progress').length,
+      completed: travels.value.filter(t => t.status === 'completed').length,
+      cancelled: travels.value.filter(t => t.status === 'cancelled').length,
     };
   });
 
   const totalRevenue = computed((): number => {
     return travels.value
-      .filter(t => t.estado === 'confirmado' || t.estado === 'completado')
-      .reduce((sum, travel) => sum + travel.precio, 0);
+      .filter(t => t.status === 'confirmed' || t.status === 'completed')
+      .reduce((sum, travel) => sum + travel.price, 0);
   });
 
   // Actions (funciones)
@@ -104,7 +104,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   }
 
   function updateTravelStatus(id: string, status: TravelStatus): boolean {
-    return updateTravel(id, { estado: status });
+    return updateTravel(id, { status });
   }
 
   function addBusToTravel(travelId: string, data: Omit<TravelBus, 'id'>): TravelBus | null {
@@ -127,12 +127,12 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     if (!resolvedBusId) {
       const catalogBus = busStore.addBus({
         providerId: data.providerId,
-        marca: data.marca,
-        modelo: data.modelo,
-        año: data.año,
-        cantidadAsientos: data.cantidadAsientos,
-        precioRenta: data.precioRenta,
-        activo: true,
+        brand: data.brand,
+        model: data.model,
+        year: data.year,
+        seatCount: data.seatCount,
+        rentalPrice: data.rentalPrice,
+        active: true,
       });
       resolvedBusId = catalogBus.id;
     }
@@ -145,7 +145,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
     travels.value[index] = {
       ...existingTravel,
-      autobuses: [...(existingTravel.autobuses ?? []), newBus],
+      buses: [...(existingTravel.buses ?? []), newBus],
       updatedAt: new Date().toISOString(),
     };
 
@@ -166,19 +166,19 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return false;
     }
 
-    const busIndex = (existingTravel.autobuses ?? []).findIndex(b => b.id === busId);
+    const busIndex = (existingTravel.buses ?? []).findIndex(b => b.id === busId);
     if (busIndex === -1) {
       error.value = 'Autobús no encontrado en el viaje';
       return false;
     }
 
-    const existingBus = (existingTravel.autobuses ?? [])[busIndex];
+    const existingBus = (existingTravel.buses ?? [])[busIndex];
     if (!existingBus) {
       error.value = 'Autobús no encontrado en el viaje';
       return false;
     }
 
-    const currentBuses = existingTravel.autobuses ?? [];
+    const currentBuses = existingTravel.buses ?? [];
     const updatedBuses = [
       ...currentBuses.slice(0, busIndex),
       { ...existingBus, ...data },
@@ -187,7 +187,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
     travels.value[travelIndex] = {
       ...existingTravel,
-      autobuses: updatedBuses,
+      buses: updatedBuses,
       updatedAt: new Date().toISOString(),
     };
 
@@ -208,7 +208,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return false;
     }
 
-    const currentBuses = existingTravel.autobuses ?? [];
+    const currentBuses = existingTravel.buses ?? [];
     const busExists = currentBuses.some(b => b.id === busId);
     if (!busExists) {
       error.value = 'Autobús no encontrado en el viaje';
@@ -217,7 +217,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
     travels.value[travelIndex] = {
       ...existingTravel,
-      autobuses: currentBuses.filter(b => b.id !== busId),
+      buses: currentBuses.filter(b => b.id !== busId),
       updatedAt: new Date().toISOString(),
     };
 

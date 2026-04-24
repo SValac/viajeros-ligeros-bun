@@ -1,6 +1,6 @@
 <script setup lang="ts">
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   readonly?: boolean;
 };
 
@@ -16,7 +16,7 @@ defineProps<Props>();
       </h2>
     </template>
     <CotizacionProveedorTabla
-      :cotizacion-id="cotizacionId"
+      :quotation-id="quotationId"
       :readonly="readonly ?? false"
     />
   </UCard>
