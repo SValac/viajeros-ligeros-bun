@@ -45,6 +45,8 @@ import {
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const supabase = useSupabase();
+  const travelFetchCache = new Set<string>();
+  const travelFetchInFlight = new Map<string, Promise<void>>();
 
   // State
   const cotizaciones = ref<Quotation[]>([]);
@@ -557,142 +559,166 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
   }
 
-  async function fetchByTravel(travelId: string): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      const { data: quotRow, error: quotErr } = await supabase
-        .from('quotations')
-        .select('*')
-        .eq('travel_id', travelId)
-        .maybeSingle();
-      if (quotErr)
-        throw quotErr;
+  async function fetchByTravel(travelId: string, options?: { force?: boolean }): Promise<void> {
+    const force = options?.force === true;
 
-      if (!quotRow) {
-        const existing = cotizaciones.value.find(c => c.travelId === travelId);
-        if (existing) {
-          const qId = existing.id;
-          cotizaciones.value = cotizaciones.value.filter(c => c.id !== qId);
-          proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.quotationId !== qId);
-          pagosProveedor.value = pagosProveedor.value.filter(p =>
-            !proveedoresQuotation.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
-          );
-          hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.quotationId !== qId);
-          pagosHospedaje.value = pagosHospedaje.value.filter(p =>
-            !hospedajesQuotation.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
-          );
-          preciosPublicos.value = preciosPublicos.value.filter(p => p.quotationId !== qId);
-          busesApartados.value = busesApartados.value.filter(b => b.quotationId !== qId);
-          pagosBus.value = pagosBus.value.filter(p =>
-            !busesApartados.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
-          );
-        }
+    if (!force && travelFetchCache.has(travelId)) {
+      return;
+    }
+
+    if (!force) {
+      const inflight = travelFetchInFlight.get(travelId);
+      if (inflight) {
+        await inflight;
         return;
       }
+    }
 
-      const quotationId = quotRow.id;
-
-      const [
-        providersResult,
-        accommodationsResult,
-        publicPricesResult,
-        busesResult,
-      ] = await Promise.all([
-        supabase
-          .from('quotation_providers')
-          .select('*, provider_payments(*)')
-          .eq('quotation_id', quotationId),
-        supabase
-          .from('quotation_accommodations')
-          .select('*, quotation_accommodation_details(*), accommodation_payments(*)')
-          .eq('quotation_id', quotationId),
-        supabase
-          .from('quotation_public_prices')
+    const run = async () => {
+      loading.value = true;
+      error.value = null;
+      try {
+        const { data: quotRow, error: quotErr } = await supabase
+          .from('quotations')
           .select('*')
-          .eq('quotation_id', quotationId),
-        supabase
-          .from('quotation_buses')
-          .select('*, bus_payments(*)')
-          .eq('quotation_id', quotationId),
-      ]);
+          .eq('travel_id', travelId)
+          .maybeSingle();
+        if (quotErr)
+          throw quotErr;
 
-      if (providersResult.error)
-        throw providersResult.error;
-      if (accommodationsResult.error)
-        throw accommodationsResult.error;
-      if (publicPricesResult.error)
-        throw publicPricesResult.error;
-      if (busesResult.error)
-        throw busesResult.error;
+        if (!quotRow) {
+          const existing = cotizaciones.value.find(c => c.travelId === travelId);
+          if (existing) {
+            const qId = existing.id;
+            cotizaciones.value = cotizaciones.value.filter(c => c.id !== qId);
+            proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.quotationId !== qId);
+            pagosProveedor.value = pagosProveedor.value.filter(p =>
+              !proveedoresQuotation.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
+            );
+            hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.quotationId !== qId);
+            pagosHospedaje.value = pagosHospedaje.value.filter(p =>
+              !hospedajesQuotation.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
+            );
+            preciosPublicos.value = preciosPublicos.value.filter(p => p.quotationId !== qId);
+            busesApartados.value = busesApartados.value.filter(b => b.quotationId !== qId);
+            pagosBus.value = pagosBus.value.filter(p =>
+              !busesApartados.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
+            );
+          }
+          travelFetchCache.add(travelId);
+          return;
+        }
 
-      const providers = (providersResult.data ?? []).map((row) => {
-        const { provider_payments: _pp, ...provRow } = row;
-        return mapQuotationProviderRowToDomain(provRow as Tables<'quotation_providers'>);
-      });
-      const newPagosProveedor = (providersResult.data ?? []).flatMap(row =>
-        (row.provider_payments ?? []).map(mapProviderPaymentRowToDomain),
-      );
+        const quotationId = quotRow.id;
 
-      const accommodations = (accommodationsResult.data ?? []).map((row) => {
-        const { quotation_accommodation_details: detRows, accommodation_payments: _ap, ...accRow } = row;
-        const details = (detRows ?? []).map(d => ({
-          ...mapQuotationAccommodationDetailRowToDomain(d as Tables<'quotation_accommodation_details'>),
-          costPerPerson: d.price_per_night / d.max_occupancy,
-        }));
-        return mapQuotationAccommodationRowToDomain(accRow as Tables<'quotation_accommodations'>, details);
-      });
-      const newPagosHospedaje = (accommodationsResult.data ?? []).flatMap(row =>
-        (row.accommodation_payments ?? []).map(mapAccommodationPaymentRowToDomain),
-      );
+        const [
+          providersResult,
+          accommodationsResult,
+          publicPricesResult,
+          busesResult,
+        ] = await Promise.all([
+          supabase
+            .from('quotation_providers')
+            .select('*, provider_payments(*)')
+            .eq('quotation_id', quotationId),
+          supabase
+            .from('quotation_accommodations')
+            .select('*, quotation_accommodation_details(*), accommodation_payments(*)')
+            .eq('quotation_id', quotationId),
+          supabase
+            .from('quotation_public_prices')
+            .select('*')
+            .eq('quotation_id', quotationId),
+          supabase
+            .from('quotation_buses')
+            .select('*, bus_payments(*)')
+            .eq('quotation_id', quotationId),
+        ]);
 
-      const buses = (busesResult.data ?? []).map((row) => {
-        const { bus_payments: _bp, ...busRow } = row;
-        return mapQuotationBusRowToDomain(busRow as Tables<'quotation_buses'>);
-      });
-      const newPagosBus = (busesResult.data ?? []).flatMap(row =>
-        (row.bus_payments ?? []).map(mapBusPaymentRowToDomain),
-      );
+        if (providersResult.error)
+          throw providersResult.error;
+        if (accommodationsResult.error)
+          throw accommodationsResult.error;
+        if (publicPricesResult.error)
+          throw publicPricesResult.error;
+        if (busesResult.error)
+          throw busesResult.error;
 
-      cotizaciones.value = [
-        ...cotizaciones.value.filter(c => c.travelId !== travelId),
-        mapQuotationRowToDomain(quotRow),
-      ];
-      proveedoresQuotation.value = [
-        ...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId),
-        ...providers,
-      ];
-      pagosProveedor.value = [
-        ...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)),
-        ...newPagosProveedor,
-      ];
-      hospedajesQuotation.value = [
-        ...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId),
-        ...accommodations,
-      ];
-      pagosHospedaje.value = [
-        ...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)),
-        ...newPagosHospedaje,
-      ];
-      preciosPublicos.value = [
-        ...preciosPublicos.value.filter(p => p.quotationId !== quotationId),
-        ...(publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
-      ];
-      busesApartados.value = [
-        ...busesApartados.value.filter(b => b.quotationId !== quotationId),
-        ...buses,
-      ];
-      pagosBus.value = [
-        ...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)),
-        ...newPagosBus,
-      ];
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      loading.value = false;
-    }
+        const providers = (providersResult.data ?? []).map((row) => {
+          const { provider_payments: _pp, ...provRow } = row;
+          return mapQuotationProviderRowToDomain(provRow as Tables<'quotation_providers'>);
+        });
+        const newPagosProveedor = (providersResult.data ?? []).flatMap(row =>
+          (row.provider_payments ?? []).map(mapProviderPaymentRowToDomain),
+        );
+
+        const accommodations = (accommodationsResult.data ?? []).map((row) => {
+          const { quotation_accommodation_details: detRows, accommodation_payments: _ap, ...accRow } = row;
+          const details = (detRows ?? []).map(d => ({
+            ...mapQuotationAccommodationDetailRowToDomain(d as Tables<'quotation_accommodation_details'>),
+            costPerPerson: d.price_per_night / d.max_occupancy,
+          }));
+          return mapQuotationAccommodationRowToDomain(accRow as Tables<'quotation_accommodations'>, details);
+        });
+        const newPagosHospedaje = (accommodationsResult.data ?? []).flatMap(row =>
+          (row.accommodation_payments ?? []).map(mapAccommodationPaymentRowToDomain),
+        );
+
+        const buses = (busesResult.data ?? []).map((row) => {
+          const { bus_payments: _bp, ...busRow } = row;
+          return mapQuotationBusRowToDomain(busRow as Tables<'quotation_buses'>);
+        });
+        const newPagosBus = (busesResult.data ?? []).flatMap(row =>
+          (row.bus_payments ?? []).map(mapBusPaymentRowToDomain),
+        );
+
+        cotizaciones.value = [
+          ...cotizaciones.value.filter(c => c.travelId !== travelId),
+          mapQuotationRowToDomain(quotRow),
+        ];
+        proveedoresQuotation.value = [
+          ...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId),
+          ...providers,
+        ];
+        pagosProveedor.value = [
+          ...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)),
+          ...newPagosProveedor,
+        ];
+        hospedajesQuotation.value = [
+          ...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId),
+          ...accommodations,
+        ];
+        pagosHospedaje.value = [
+          ...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)),
+          ...newPagosHospedaje,
+        ];
+        preciosPublicos.value = [
+          ...preciosPublicos.value.filter(p => p.quotationId !== quotationId),
+          ...(publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
+        ];
+        busesApartados.value = [
+          ...busesApartados.value.filter(b => b.quotationId !== quotationId),
+          ...buses,
+        ];
+        pagosBus.value = [
+          ...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)),
+          ...newPagosBus,
+        ];
+
+        travelFetchCache.add(travelId);
+      }
+      catch (e) {
+        error.value = e instanceof Error ? e.message : 'Error desconocido';
+      }
+      finally {
+        loading.value = false;
+      }
+    };
+
+    const pending = run();
+    travelFetchInFlight.set(travelId, pending);
+    await pending;
+    travelFetchInFlight.delete(travelId);
   }
 
   async function createQuotation(data: QuotationFormData): Promise<Quotation> {
@@ -713,6 +739,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       const quotation = mapQuotationRowToDomain(row);
       cotizaciones.value.push(quotation);
+      travelFetchCache.add(data.travelId);
       return quotation;
     }
     catch (e) {
