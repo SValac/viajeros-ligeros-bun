@@ -120,7 +120,7 @@ function getRowActions(travel: Travel) {
 // Columnas de la tabla
 const columns: TableColumn<Travel>[] = [
   {
-    accessorKey: 'destino',
+    accessorKey: 'destination',
     header: 'Destino',
     cell: ({ row }) =>
       h(resolveComponent('NuxtLink'), {
@@ -128,7 +128,7 @@ const columns: TableColumn<Travel>[] = [
         class: 'flex items-center gap-2 hover:text-primary transition-colors group',
       }, () => [
         h('span', { class: 'i-lucide-map-pin w-4 h-4 text-muted group-hover:text-primary' }),
-        h('span', { class: 'font-medium' }, row.getValue('destino')),
+        h('span', { class: 'font-medium' }, row.getValue('destination')),
       ]),
   },
   {
@@ -149,7 +149,7 @@ const columns: TableColumn<Travel>[] = [
     },
   },
   {
-    accessorKey: 'fechas',
+    accessorKey: 'startDate',
     header: 'Fechas',
     cell: ({ row }) => {
       const travel = row.original;
@@ -168,10 +168,10 @@ const columns: TableColumn<Travel>[] = [
     },
   },
   {
-    accessorKey: 'precio',
+    accessorKey: 'price',
     header: 'Precio',
     cell: ({ row }) => {
-      return h('span', { class: 'font-semibold text-gray-900 dark:text-white' }, formatCurrency(row.getValue('precio')));
+      return h('span', { class: 'font-semibold text-gray-900 dark:text-white' }, formatCurrency(row.getValue('price')));
     },
   },
   {
