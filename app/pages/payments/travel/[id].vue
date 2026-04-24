@@ -336,7 +336,19 @@ const columns: TableColumn<TravelerWithChildren>[] = [
 ];
 
 onMounted(async () => {
-  await paymentStore.fetchByTravel(travelId.value);
+  await Promise.all([
+    paymentStore.fetchByTravel(travelId.value),
+    cotizacionStore.fetchByTravel(travelId.value),
+  ]);
+});
+
+watch(travelId, async (id) => {
+  if (!id)
+    return;
+  await Promise.all([
+    paymentStore.fetchByTravel(id),
+    cotizacionStore.fetchByTravel(id),
+  ]);
 });
 </script>
 

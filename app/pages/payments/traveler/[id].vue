@@ -30,6 +30,22 @@ const travelerName = computed(() =>
   traveler.value ? `${traveler.value.firstName} ${traveler.value.lastName}` : '',
 );
 
+const loadedCotizacionTravelIds = shallowRef(new Set<string>());
+
+async function ensureCotizacionesLoaded(travelIds: string[]) {
+  const pending = travelIds.filter((id) => {
+    return !!id && !loadedCotizacionTravelIds.value.has(id);
+  });
+
+  if (pending.length === 0)
+    return;
+
+  await Promise.all(pending.map(async (id) => {
+    await cotizacionStore.fetchByTravel(id);
+    loadedCotizacionTravelIds.value.add(id);
+  }));
+}
+
 // All travel IDs this traveler has account configs or payments for
 const travelerTravelIds = computed((): string[] => {
   const paymentTravelIds = paymentStore.getPaymentsByTraveler(travelerId.value).map((p: Payment) => p.travelId);
@@ -214,6 +230,11 @@ const editMaxAmount = computed(() => {
 
 onMounted(async () => {
   await paymentStore.fetchByTraveler(travelerId.value);
+  await ensureCotizacionesLoaded(travelerTravelIds.value);
+});
+
+watch(travelerTravelIds, (ids) => {
+  void ensureCotizacionesLoaded(ids);
 });
 </script>
 
