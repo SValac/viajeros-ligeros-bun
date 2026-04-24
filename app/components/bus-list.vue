@@ -34,17 +34,17 @@ function closeModal() {
   editingBus.value = null;
 }
 
-function handleFormSubmit(data: BusFormData) {
+async function handleFormSubmit(data: BusFormData) {
   try {
     if (editingBus.value) {
-      const success = busStore.updateBus(editingBus.value.id, data);
+      const success = await busStore.updateBus(editingBus.value.id, data);
       if (success) {
         toast.add({ title: 'Unidad actualizada', color: 'primary' });
         closeModal();
       }
     }
     else {
-      busStore.addBus(data);
+      await busStore.addBus(data);
       toast.add({ title: 'Unidad registrada', color: 'primary' });
       closeModal();
     }
@@ -54,19 +54,19 @@ function handleFormSubmit(data: BusFormData) {
   }
 }
 
-function handleDelete(bus: Bus) {
+async function handleDelete(bus: Bus) {
   const label = [bus.brand, bus.model].filter(Boolean).join(' ') || 'esta unidad';
   // eslint-disable-next-line no-alert
   if (confirm(`¿Eliminar ${label}?`)) {
-    const success = busStore.deleteBus(bus.id);
+    const success = await busStore.deleteBus(bus.id);
     if (success) {
       toast.add({ title: 'Unidad eliminada', color: 'warning' });
     }
   }
 }
 
-function handleToggleStatus(bus: Bus) {
-  const success = busStore.toggleBusStatus(bus.id);
+async function handleToggleStatus(bus: Bus) {
+  const success = await busStore.toggleBusStatus(bus.id);
   if (success) {
     toast.add({
       title: 'Estado actualizado',

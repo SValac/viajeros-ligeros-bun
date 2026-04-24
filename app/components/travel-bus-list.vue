@@ -38,23 +38,23 @@ function openEditModal(bus: TravelBus) {
   isBusModalOpen.value = true;
 }
 
-function handleSubmit(data: Omit<TravelBus, 'id'>) {
+async function handleSubmit(data: Omit<TravelBus, 'id'>) {
   if (editingBus.value) {
-    travelsStore.updateTravelBus(travelId, editingBus.value.id, data);
+    await travelsStore.updateTravelBus(travelId, editingBus.value.id, data);
     toast.add({ title: 'Autobús actualizado', color: 'success', icon: 'i-lucide-check-circle' });
   }
   else {
-    travelsStore.addBusToTravel(travelId, data);
+    await travelsStore.addBusToTravel(travelId, data);
     toast.add({ title: 'Autobús agregado', color: 'success', icon: 'i-lucide-check-circle' });
   }
   isBusModalOpen.value = false;
 }
 
-function deleteBus(bus: TravelBus) {
+async function deleteBus(bus: TravelBus) {
   const label = [bus.brand, bus.model].filter(Boolean).join(' ') || 'este autobús';
   // eslint-disable-next-line no-alert
   if (confirm(`¿Eliminar ${label}?`)) {
-    travelsStore.removeBusFromTravel(travelId, bus.id);
+    await travelsStore.removeBusFromTravel(travelId, bus.id);
     toast.add({ title: 'Autobús eliminado', color: 'warning', icon: 'i-lucide-trash-2' });
   }
 }
