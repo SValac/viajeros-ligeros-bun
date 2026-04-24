@@ -12,9 +12,9 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 | Fase 2 — Diseño de Esquema y Migraciones SQL | ✅ Completada |
 | Fase 2.5 — Rename a inglés + fix TypeScript | ✅ Completada |
 | Fase 3 — Capa de Mapeo y Utilidades | ✅ Completada |
-| Fase 4 — Migración de Stores Simples | ⬜ Pendiente |
-| Fase 5 — Migración de Stores con una FK | ⬜ Pendiente |
-| Fase 6 — Migración de Stores con Hijas Normalizadas | ⬜ Pendiente |
+| Fase 4 — Migración de Stores Simples | ✅ Completada |
+| Fase 5 — Migración de Stores con una FK | ✅ Completada |
+| Fase 6 — Migración de Stores con Hijas Normalizadas | ✅ Completada |
 | Fase 7 — Migración de Stores Dependientes | ⬜ Pendiente |
 | Fase 8 — Limpieza, Tipado y Validación | ⬜ Pendiente |
 
@@ -163,61 +163,57 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 
 ---
 
-### FASE 4 — Migración de Stores Simples (sin dependencias)
+### ✅ FASE 4 — Migración de Stores Simples (sin dependencias)
 
-> U14 y U15 pueden ejecutarse en paralelo.
+> U14 y U15 ejecutados en paralelo.
 
-#### U14 - Migrar `use-provider-store.ts`
+#### ✅ U14 - Migrar `use-provider-store.ts`
 - **Archivos**: `app/stores/use-provider-store.ts`
-- Mappers ya disponibles en `app/utils/mappers.ts`
-- Estado: `providers: Provider[]`, `loading: boolean`
-- `fetchAll()`: carga desde Supabase
-- CRUD: cada acción llama Supabase y actualiza el array local tras éxito
-- Desactivar `persist: true`
-- Conservar firmas públicas exactas de getters y acciones
-- Nota: acciones se vuelven `async` — los componentes deben `await` en handlers
-- Depende de: U12
+- `fetchAll()` carga desde Supabase ordenado por `name`
+- `updateProvider` construye `TablesUpdate<'providers'>` campo por campo para soportar updates parciales con objetos anidados (`location`, `contact`)
+- `deleteProvider` mantiene llamada a `hotelRoomStore.deleteProviderRooms(id)` para estado en memoria mientras ese store no esté migrado (DB ya tiene `ON DELETE CASCADE`)
+- Acciones async, persist eliminado
+- Callers actualizados: 7 páginas de categorías + `provider-selector.vue`
 
-#### U15 - Migrar `use-coordinator-store.ts`
+#### ✅ U15 - Migrar `use-coordinator-store.ts`
 - **Archivos**: `app/stores/use-coordinator-store.ts`
-- Mappers ya disponibles en `app/utils/mappers.ts`
-- Mismo patrón que U14. Estructura plana, mapeo directo
-- Desactivar persist
-- Depende de: U12
+- `fetchAll()` ordenado por `created_at DESC` para respetar sort de `allCoordinators`
+- `updateCoordinator` construye `TablesUpdate<'coordinators'>` desde `CoordinatorUpdateData` parcial
+- Acciones async, persist eliminado
 
 ---
 
-### FASE 5 — Migración de Stores con una FK
+### ✅ FASE 5 — Migración de Stores con una FK
 
-> U16 y U17 pueden ejecutarse en paralelo.
+> U16 y U17 ejecutados en paralelo.
 
-#### U16 - Migrar `use-bus-store.ts`
+#### ✅ U16 - Migrar `use-bus-store.ts`
 - **Archivos**: `app/stores/use-bus-store.ts`
-- FK a `providers`. Validación de FK delegada a la DB
-- Mappers en `app/utils/mappers.ts`. Desactivar persist
-- Depende de: U14
+- `updateBus` con `TablesUpdate<'buses'>` para campos opcionales (`brand`, `model`, `year`)
+- `addBusToTravel` en `use-travel-store.ts` propagado a async para consumir `await busStore.addBus(...)`
+- Callers actualizados: `bus-list.vue`, `travel-bus-list.vue`
 
-#### U17 - Migrar `use-hotel-room-store.ts`
+#### ✅ U17 - Migrar `use-hotel-room-store.ts`
 - **Archivos**: `app/stores/use-hotel-room-store.ts`
-- `fetchAll()`: `select('*, hotel_room_types(*)')` → mapear a `HotelRoomData` con `roomTypes[]`
-- `create`: insert `hotel_rooms` + bulk insert `hotel_room_types`
-- `update`: actualizar `hotel_rooms` + diff de `hotel_room_types` (altas/bajas/cambios)
-- `delete`: cascade limpia los tipos automáticamente
-- Acciones granulares `addRoomType`, `updateRoomType`, `removeRoomType` — preservar firmas
-- `camas[]` es JSONB: ida-y-vuelta sin procesamiento
-- Depende de: U14
+- `fetchAll()` con `select('*, hotel_room_types(*)')` y mapeo anidado
+- `initRoomData` inserta en `hotel_rooms` si no existe (idempotente, check en memoria primero)
+- `addRoomType` / `updateRoomType` / `deleteRoomType` — CRUD sobre `hotel_room_types` con `hotel_room_id` del `HotelRoomData.id`
+- `deleteProviderRooms` sigue siendo síncrono — solo limpia estado local, el cascade DB ya actuó
+- Persist eliminado
 
 ---
 
-### FASE 6 — Migración de Stores con Hijas Normalizadas
+### ✅ FASE 6 — Migración de Stores con Hijas Normalizadas
 
-#### U18 - Migrar `use-travel-store.ts`
-- **Archivos**: `app/stores/use-travel-store.ts`, `supabase/migrations/<timestamp>_travel_rpcs.sql`
-- `fetchAll()`: `select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_coordinators(coordinator_id)')` con order en activities por `orden`
-- **Decisión de transacciones**: crear funciones SQL `create_travel(jsonb)` y `update_travel(jsonb)` invocadas con `.rpc()` para operaciones atómicas multi-tabla
-- Acciones sobre sub-colecciones (`addActivity`, `updateActivity`, `removeActivity`, `addService`, etc.) traducidas a CRUD sobre tablas hijas
-- `coordinadorIds`: delete + insert en `travel_coordinators` cuando cambie
-- Depende de: U15, U16
+#### ✅ U18 - Migrar `use-travel-store.ts`
+- **Archivos**: `app/stores/use-travel-store.ts`
+- `fetchAll()`: `select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_coordinators(coordinator_id)')` ordenado por `created_at DESC`, activities ordenadas por `day`
+- `addTravel`: inserts secuenciales (travels → activities → services → buses → coordinators)
+- `updateTravel`: actualiza row principal con `TablesUpdate<'travels'>` + delete-then-reinsert para cada sub-colección cuando está presente en el update
+- `deleteTravel`: delete simple (cascade borra todas las hijas)
+- Sin RPCs — inserts secuenciales suficiente para MVP
+- Acciones async, persist eliminado
+- Callers actualizados: `new.vue`, `dashboard.vue`, `[id]/edit.vue`, `[id]/index.vue`, `travel-bus-list.vue`
 
 #### U19 - Migrar `use-traveler-store.ts`
 - **Archivos**: `app/stores/use-traveler-store.ts`
@@ -278,9 +274,9 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 | 10 | U11 | secuencial | ✅ |
 | 10.5 | Rename a inglés + fix TS | secuencial | ✅ |
 | 11 | U12, U13 | paralelo | ✅ U12, ⬜ U13 |
-| 12 | U14, U15 | paralelo | ⬜ |
-| 13 | U16, U17 | paralelo | ⬜ |
-| 14 | U18 | secuencial | ⬜ |
+| 12 | U14, U15 | paralelo | ✅ |
+| 13 | U16, U17 | paralelo | ✅ |
+| 14 | U18 | secuencial | ✅ |
 | 15 | U19 | secuencial | ⬜ |
 | 16 | U20 | secuencial | ⬜ |
 | 17 | U21 | secuencial | ⬜ |
