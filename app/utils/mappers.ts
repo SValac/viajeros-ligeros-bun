@@ -25,6 +25,8 @@ import type {
 import type { Travel, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
+import { normalizeBedConfigurations } from '~/utils/hotel-room-helpers';
+
 // ============================================================================
 // Provider
 // ============================================================================
@@ -275,7 +277,7 @@ export function mapHotelRoomTypeRowToDomain(row: Tables<'hotel_room_types'>): Ho
     id: row.id,
     maxOccupancy: row.max_occupancy,
     roomCount: row.room_count,
-    beds: (row.beds as BedConfiguration[]) ?? [],
+    beds: normalizeBedConfigurations(row.beds as BedConfiguration[]),
     pricePerNight: row.price_per_night,
     costPerPerson: row.cost_per_person,
     additionalDetails: row.additional_details ?? undefined,

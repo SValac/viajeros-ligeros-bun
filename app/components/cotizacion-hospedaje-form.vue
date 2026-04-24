@@ -4,6 +4,8 @@ import { z } from 'zod';
 import type { HotelRoomType } from '~/types/hotel-room';
 import type { QuotationAccommodationDetailFormData, QuotationAccommodationFormData } from '~/types/quotation';
 
+import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+
 type Props = {
   quotationId: string;
   open: boolean;
@@ -259,7 +261,7 @@ function handleCancel() {
                     {{ tipo.maxOccupancy }} personas - ${{ tipo.pricePerNight.toFixed(2) }}/noche
                   </p>
                   <p class="text-xs text-muted">
-                    Cama(s): {{ tipo.beds.map((c: any) => `${c.quantity} ${c.size}`).join(', ') }}
+                    Cama(s): {{ formatBedConfiguration(tipo.beds) }}
                   </p>
                 </div>
               </div>
