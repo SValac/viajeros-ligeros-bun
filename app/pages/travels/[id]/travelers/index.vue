@@ -27,8 +27,9 @@ const editingTraveler = shallowRef<Traveler | null>(null);
 const expanded = ref<ExpandedStateList>({});
 
 // Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
-onMounted(() => {
+onMounted(async () => {
   travelerStore.setFilters({ travelId: travelId.value });
+  await travelerStore.fetchByTravel(travelId.value);
 });
 
 watch(travelId, (id) => {
@@ -87,10 +88,10 @@ function closeModal() {
   editingTraveler.value = null;
 }
 
-function handleFormSubmit(data: TravelerFormData) {
+async function handleFormSubmit(data: TravelerFormData) {
   try {
     if (editingTraveler.value) {
-      const updated = travelerStore.updateTraveler(editingTraveler.value.id, data);
+      const updated = await travelerStore.updateTraveler(editingTraveler.value.id, data);
       if (updated) {
         toast.add({
           title: 'Viajero actualizado',
@@ -101,7 +102,7 @@ function handleFormSubmit(data: TravelerFormData) {
       }
     }
     else {
-      travelerStore.addTraveler(data);
+      await travelerStore.addTraveler(data);
       toast.add({
         title: 'Viajero creado',
         description: `${data.firstName} ${data.lastName} se registró correctamente`,
@@ -119,10 +120,10 @@ function handleFormSubmit(data: TravelerFormData) {
   }
 }
 
-function handleDelete(traveler: Traveler) {
+async function handleDelete(traveler: Traveler) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar a ${traveler.firstName} ${traveler.lastName}?`)) {
-    travelerStore.deleteTraveler(traveler.id);
+    await travelerStore.deleteTraveler(traveler.id);
     toast.add({
       title: 'Viajero eliminado',
       description: `${traveler.firstName} ${traveler.lastName} se eliminó correctamente`,

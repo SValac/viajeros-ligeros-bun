@@ -51,15 +51,15 @@ function openDeleteConfirm(pago: AccommodationPayment) {
   isDeleteModalOpen.value = true;
 }
 
-function handleSubmit(data: AccommodationPaymentFormData) {
+async function handleSubmit(data: AccommodationPaymentFormData) {
   if (selectedPago.value) {
-    const result = cotizacionStore.updatePagoHospedaje(selectedPago.value.id, data);
+    const result = await cotizacionStore.updatePagoHospedaje(selectedPago.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = cotizacionStore.addPagoHospedaje(data);
+    const result = await cotizacionStore.addPagoHospedaje(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -71,10 +71,10 @@ function handleSubmit(data: AccommodationPaymentFormData) {
   selectedPago.value = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!pagoToDelete.value)
     return;
-  cotizacionStore.deletePagoHospedaje(pagoToDelete.value.id);
+  await cotizacionStore.deletePagoHospedaje(pagoToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   pagoToDelete.value = null;

@@ -118,15 +118,15 @@ function openDeleteConfirm(proveedor: QuotationProvider) {
   isDeleteModalOpen.value = true;
 }
 
-function handleProveedorSubmit(data: QuotationProviderFormData) {
+async function handleProveedorSubmit(data: QuotationProviderFormData) {
   if (selectedProveedor.value) {
-    const result = cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
+    const result = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
     if (result) {
       toast.add({ title: 'Proveedor actualizado', color: 'success' });
     }
   }
   else {
-    const result = cotizacionStore.addProveedorQuotation(data);
+    const result = await cotizacionStore.addProveedorQuotation(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -138,16 +138,16 @@ function handleProveedorSubmit(data: QuotationProviderFormData) {
   selectedProveedor.value = null;
 }
 
-function handleToggleConfirmado(proveedor: QuotationProvider) {
+async function handleToggleConfirmado(proveedor: QuotationProvider) {
   if (readonly)
     return;
-  cotizacionStore.toggleConfirmadoProveedor(proveedor.id);
+  await cotizacionStore.toggleConfirmadoProveedor(proveedor.id);
 }
 
-function confirmDeleteProveedor() {
+async function confirmDeleteProveedor() {
   if (!proveedorToDelete.value)
     return;
-  cotizacionStore.deleteProveedorQuotation(proveedorToDelete.value.id);
+  await cotizacionStore.deleteProveedorQuotation(proveedorToDelete.value.id);
   toast.add({ title: 'Proveedor eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   proveedorToDelete.value = null;

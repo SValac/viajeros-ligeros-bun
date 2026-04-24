@@ -127,7 +127,7 @@ function resetForm() {
   busSeleccionado.value = null;
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   const result = busSchema.safeParse(formState);
   if (!result.success) {
     toast.add({
@@ -138,7 +138,7 @@ function handleSubmit() {
     return;
   }
 
-  const response = cotizacionStore.addBusQuotation({
+  const response = await cotizacionStore.addBusQuotation({
     quotationId: props.quotationId,
     ...result.data,
     notes: result.data.notes || undefined,

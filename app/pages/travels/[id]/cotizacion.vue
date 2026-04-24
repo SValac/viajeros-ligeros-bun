@@ -16,6 +16,10 @@ const paymentStore = usePaymentStore();
 
 const travelId = computed(() => route.params.id as string);
 
+onMounted(async () => {
+  await cotizacionStore.fetchByTravel(travelId.value);
+});
+
 const travel = computed(() => travelStore.getTravelById(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 const readonly = computed(() => cotizacion.value?.status === 'confirmed');
@@ -55,12 +59,12 @@ const isCrearModalOpen = shallowRef(false);
 const isAgregarHospedajeModalOpen = shallowRef(false);
 const isAgregarBusModalOpen = shallowRef(false);
 
-function handleCrearCotizacion() {
+async function handleCrearCotizacion() {
   const result = crearSchema.safeParse(crearState);
   if (!result.success)
     return;
 
-  cotizacionStore.createQuotation({
+  await cotizacionStore.createQuotation({
     travelId: travelId.value,
     seatPrice: 0,
     busCapacity: 0,
@@ -94,10 +98,10 @@ watch(cotizacion, (c) => {
   }
 }, { immediate: true });
 
-function guardarParametros() {
+async function guardarParametros() {
   if (!cotizacion.value)
     return;
-  cotizacionStore.updateQuotation(cotizacion.value.id, {
+  await cotizacionStore.updateQuotation(cotizacion.value.id, {
     busCapacity: paramsState.busCapacity,
     minimumSeatTarget: paramsState.minimumSeatTarget,
     notes: paramsState.notes,

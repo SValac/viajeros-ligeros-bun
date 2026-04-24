@@ -65,16 +65,16 @@ function openDeleteConfirm(bus: QuotationBus) {
   isDeleteModalOpen.value = true;
 }
 
-function handleToggleConfirmado(bus: QuotationBus) {
+async function handleToggleConfirmado(bus: QuotationBus) {
   if (readonly)
     return;
-  cotizacionStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
+  await cotizacionStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
 }
 
-function handleDetallesSubmit(data: Partial<import('~/types/quotation').QuotationBusFormData>) {
+async function handleDetallesSubmit(data: Partial<import('~/types/quotation').QuotationBusFormData>) {
   if (!selectedBus.value)
     return;
-  const result = cotizacionStore.updateBusQuotation(selectedBus.value.id, data);
+  const result = await cotizacionStore.updateBusQuotation(selectedBus.value.id, data);
   if (result) {
     toast.add({ title: 'Autobús actualizado', color: 'success' });
   }
@@ -82,10 +82,10 @@ function handleDetallesSubmit(data: Partial<import('~/types/quotation').Quotatio
   selectedBus.value = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!selectedBus.value)
     return;
-  cotizacionStore.deleteBusQuotation(selectedBus.value.id);
+  await cotizacionStore.deleteBusQuotation(selectedBus.value.id);
   toast.add({ title: 'Autobús eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   selectedBus.value = null;

@@ -244,7 +244,7 @@ function abrirEdicion(accommodation: QuotationAccommodation) {
 }
 
 // Guardar edición
-function guardarEdicion() {
+async function guardarEdicion() {
   if (!editingHospedaje.value)
     return;
 
@@ -258,7 +258,7 @@ function guardarEdicion() {
     return;
   }
 
-  const updated = cotizacionStore.updateHospedajeQuotation(editingHospedaje.value.id, {
+  const updated = await cotizacionStore.updateHospedajeQuotation(editingHospedaje.value.id, {
     nightCount: editFormState.nightCount,
     details: editFormState.details,
     totalCost: editFormState.details.reduce((sum, d) => {
@@ -285,8 +285,8 @@ function guardarEdicion() {
 }
 
 // Eliminar hospedaje
-function eliminarHospedaje(id: string) {
-  cotizacionStore.deleteHospedajeQuotation(id);
+async function eliminarHospedaje(id: string) {
+  await cotizacionStore.deleteHospedajeQuotation(id);
   toast.add({
     title: 'Hospedaje eliminado',
     color: 'success',

@@ -139,7 +139,7 @@ const costoTotalHospedaje = computed(() => {
   }, 0);
 });
 
-function handleSubmit() {
+async function handleSubmit() {
   const result = formSchema.safeParse(formState);
   if (!result.success) {
     toast.add({
@@ -150,7 +150,7 @@ function handleSubmit() {
     return;
   }
 
-  const response = cotizacionStore.addHospedajeQuotation(result.data as QuotationAccommodationFormData);
+  const response = await cotizacionStore.addHospedajeQuotation(result.data as QuotationAccommodationFormData);
   if ('error' in response) {
     toast.add({
       title: 'Error',

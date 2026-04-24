@@ -144,8 +144,8 @@ const selectedConfig = computed(() => {
   return paymentStore.getAccountConfig(selectedTraveler.value.id, travelId.value);
 });
 
-function handlePaymentSubmit(data: PaymentFormData) {
-  const result = paymentStore.addPayment(data);
+async function handlePaymentSubmit(data: PaymentFormData) {
+  const result = await paymentStore.addPayment(data);
   if ('error' in result) {
     toast.add({ title: 'Error', description: result.error, color: 'error' });
     return;
@@ -154,8 +154,8 @@ function handlePaymentSubmit(data: PaymentFormData) {
   closeModals();
 }
 
-function handleConfigSubmit(config: TravelerAccountConfig) {
-  paymentStore.setAccountConfig(config);
+async function handleConfigSubmit(config: TravelerAccountConfig) {
+  await paymentStore.setAccountConfig(config);
   toast.add({ title: 'Configuración guardada', color: 'success' });
   closeModals();
 }
@@ -335,8 +335,8 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   },
 ];
 
-onMounted(() => {
-
+onMounted(async () => {
+  await paymentStore.fetchByTravel(travelId.value);
 });
 </script>
 

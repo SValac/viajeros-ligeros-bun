@@ -52,15 +52,15 @@ function openDeleteConfirm(pago: ProviderPayment) {
   isDeleteModalOpen.value = true;
 }
 
-function handleSubmit(data: ProviderPaymentFormData) {
+async function handleSubmit(data: ProviderPaymentFormData) {
   if (selectedPago.value) {
-    const result = cotizacionStore.updateProviderPayment(selectedPago.value.id, data);
+    const result = await cotizacionStore.updateProviderPayment(selectedPago.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = cotizacionStore.addProviderPayment(data);
+    const result = await cotizacionStore.addProviderPayment(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -72,10 +72,10 @@ function handleSubmit(data: ProviderPaymentFormData) {
   selectedPago.value = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!pagoToDelete.value)
     return;
-  cotizacionStore.deleteProviderPayment(pagoToDelete.value.id);
+  await cotizacionStore.deleteProviderPayment(pagoToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   pagoToDelete.value = null;

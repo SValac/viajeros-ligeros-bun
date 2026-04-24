@@ -138,7 +138,7 @@ function abrirEdicion(price: QuotationPublicPrice) {
 }
 
 // Guardar (crear o actualizar)
-function guardarPrecio() {
+async function guardarPrecio() {
   const result = formSchema.safeParse(formState);
   if (!result.success) {
     toast.add({
@@ -151,7 +151,7 @@ function guardarPrecio() {
 
   if (editingPrecio.value) {
     // Actualizar
-    const updated = cotizacionStore.updatePrecioPublico(editingPrecio.value.id, {
+    const updated = await cotizacionStore.updatePrecioPublico(editingPrecio.value.id, {
       ...result.data,
     } as Partial<QuotationPublicPriceFormData>);
 
@@ -171,7 +171,7 @@ function guardarPrecio() {
   }
   else {
     // Crear
-    const response = cotizacionStore.addPrecioPublico({
+    const response = await cotizacionStore.addPrecioPublico({
       quotationId: props.quotationId,
       ...result.data,
     } as QuotationPublicPriceFormData);
@@ -196,8 +196,8 @@ function guardarPrecio() {
 }
 
 // Eliminar precio
-function eliminarPrecio(id: string) {
-  cotizacionStore.deletePrecioPublico(id);
+async function eliminarPrecio(id: string) {
+  await cotizacionStore.deletePrecioPublico(id);
   toast.add({
     title: 'Precio eliminado',
     color: 'success',

@@ -87,18 +87,18 @@ function closeEditModal() {
   editingPayment.value = null;
 }
 
-function handleEditSubmit(data: PaymentFormData) {
+async function handleEditSubmit(data: PaymentFormData) {
   if (!editingPayment.value)
     return;
-  paymentStore.updatePayment(editingPayment.value.id, data);
+  await paymentStore.updatePayment(editingPayment.value.id, data);
   toast.add({ title: 'Pago actualizado', color: 'success' });
   closeEditModal();
 }
 
-function handleDelete(payment: Payment) {
+async function handleDelete(payment: Payment) {
   // eslint-disable-next-line no-alert
   if (confirm('¿Eliminar este pago? Esta acción no se puede deshacer.')) {
-    paymentStore.deletePayment(payment.id);
+    await paymentStore.deletePayment(payment.id);
     toast.add({ title: 'Pago eliminado', color: 'warning' });
   }
 }
@@ -193,8 +193,8 @@ const editingConfigTravelPrice = computed(() =>
   editingConfigTravelId.value ? getTravelPrice(editingConfigTravelId.value) : 0,
 );
 
-function handleConfigSubmit(config: TravelerAccountConfig) {
-  paymentStore.setAccountConfig(config);
+async function handleConfigSubmit(config: TravelerAccountConfig) {
+  await paymentStore.setAccountConfig(config);
   toast.add({ title: 'Configuración guardada', color: 'success' });
   closeConfigModal();
 }
@@ -212,8 +212,8 @@ const editMaxAmount = computed(() => {
   return editingSummary.value.balance + editingPayment.value.amount;
 });
 
-onMounted(() => {
-
+onMounted(async () => {
+  await paymentStore.fetchByTraveler(travelerId.value);
 });
 </script>
 

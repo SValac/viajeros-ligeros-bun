@@ -33,7 +33,7 @@ function getEstadoLabel(status: string): string {
 
 async function confirmarQuotation() {
   isConfirmando.value = true;
-  const result = cotizacionStore.confirmarQuotation(quotationId, travelStore);
+  const result = await cotizacionStore.confirmarQuotation(quotationId, travelStore);
   isConfirmando.value = false;
   isConfirmarModalOpen.value = false;
 
