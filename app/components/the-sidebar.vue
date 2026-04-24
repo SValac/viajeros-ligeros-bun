@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui';
 
+import UserMenu from './user-menu.vue';
+
 const items: NavigationMenuItem[][] = [[{
   label: 'Inicio',
   icon: 'i-lucide-house',
@@ -112,16 +114,7 @@ const items: NavigationMenuItem[][] = [[{
     </template>
 
     <template #footer="{ collapsed }">
-      <UButton
-        :avatar="{
-          src: 'https://github.com/benjamincanac.png',
-        }"
-        :label="collapsed ? undefined : 'Benjamin'"
-        color="neutral"
-        variant="ghost"
-        class="w-full"
-        :block="collapsed"
-      />
+      <UserMenu :collapsed="collapsed" />
     </template>
   </UDashboardSidebar>
 </template>
