@@ -7,6 +7,12 @@ export type TravelActivity = {
   description: string;
   time?: string;
   location?: string;
+  mapLocation?: {
+    lat: number;
+    lng: number;
+    placeId?: string;
+    address?: string;
+  };
 };
 
 export type TravelBus = {
