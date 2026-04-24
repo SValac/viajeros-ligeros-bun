@@ -242,7 +242,7 @@ const columns: TableColumn<Provider>[] = [
         h('span', {
           class: `${categoryInfo.value.icon} w-4 h-4 text-gray-400`,
         }),
-        h('span', { class: 'font-medium' }, row.getValue('nombre')),
+        h('span', { class: 'font-medium' }, row.getValue('name')),
       ]);
     },
   },
