@@ -6,8 +6,8 @@ const travelsStore = useTravelsStore();
 const toast = useToast();
 
 // Handlers
-function handleSubmit(data: TravelFormData) {
-  const newTravel = travelsStore.addTravel(data);
+async function handleSubmit(data: TravelFormData) {
+  const newTravel = await travelsStore.addTravel(data);
 
   toast.add({
     title: 'Viaje creado',

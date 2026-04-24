@@ -73,10 +73,10 @@ function navigateToEdit(travelId: string) {
   router.push(`/travels/${travelId}/edit`);
 }
 
-function handleDelete(travel: Travel) {
+async function handleDelete(travel: Travel) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar el viaje a ${travel.destination}?`)) {
-    const success = travelsStore.deleteTravel(travel.id);
+    const success = await travelsStore.deleteTravel(travel.id);
     if (success) {
       toast.add({
         title: 'Viaje eliminado',

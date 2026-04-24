@@ -100,7 +100,7 @@ async function deleteTravel() {
   const confirmed = confirm(`¿Eliminar el viaje a ${travel.value.destination}? Esta acción no se puede deshacer.`);
 
   if (confirmed) {
-    travelsStore.deleteTravel(travel.value.id);
+    await travelsStore.deleteTravel(travel.value.id);
     toast.add({
       title: 'Viaje eliminado',
       description: 'El viaje se ha eliminado correctamente',

@@ -26,8 +26,8 @@ onMounted(() => {
 });
 
 // Handlers
-function handleSubmit(data: TravelFormData) {
-  const success = travelsStore.updateTravel(travelId, data);
+async function handleSubmit(data: TravelFormData) {
+  const success = await travelsStore.updateTravel(travelId, data);
 
   if (success) {
     toast.add({
