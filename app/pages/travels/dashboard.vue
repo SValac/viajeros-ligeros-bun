@@ -204,10 +204,6 @@ const columns: TableColumn<Travel>[] = [
     },
   },
 ];
-
-// Lifecycle
-onMounted(() => {
-});
 </script>
 
 <template>

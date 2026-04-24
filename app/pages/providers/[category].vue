@@ -300,10 +300,6 @@ const columns: TableColumn<Provider>[] = [
   },
 ];
 
-// Lifecycle
-onMounted(() => {
-});
-
 // Set page meta
 definePageMeta({
   name: 'providers-category',

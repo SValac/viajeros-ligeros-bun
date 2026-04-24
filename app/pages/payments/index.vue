@@ -114,10 +114,6 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     },
   },
 ];
-
-onMounted(() => {
-
-});
 </script>
 
 <template>
