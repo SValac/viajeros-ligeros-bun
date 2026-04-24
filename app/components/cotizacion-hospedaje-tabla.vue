@@ -35,7 +35,7 @@ const editSchema = z.object({
   nightCount: z.number().int().positive(),
   details: z.array(z.object({
     roomTypeId: z.string(),
-    count: z.number().int().positive(),
+    quantity: z.number().int().positive(),
     pricePerNight: z.number().positive(),
     maxOccupancy: z.number().int().positive(),
   })).min(1),
