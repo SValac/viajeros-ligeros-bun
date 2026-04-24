@@ -15,8 +15,8 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 | Fase 4 — Migración de Stores Simples | ✅ Completada |
 | Fase 5 — Migración de Stores con una FK | ✅ Completada |
 | Fase 6 — Migración de Stores con Hijas Normalizadas | ✅ Completada |
-| Fase 7 — Migración de Stores Dependientes | ⬜ Pendiente |
-| Fase 8 — Limpieza, Tipado y Validación | ⬜ Pendiente |
+| Fase 7 — Migración de Stores Dependientes | ✅ Completada |
+| Fase 8 — Limpieza, Tipado y Validación | ✅ Completada |
 
 ---
 
@@ -215,30 +215,36 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 - Acciones async, persist eliminado
 - Callers actualizados: `new.vue`, `dashboard.vue`, `[id]/edit.vue`, `[id]/index.vue`, `travel-bus-list.vue`
 
-#### U19 - Migrar `use-traveler-store.ts`
-- **Archivos**: `app/stores/use-traveler-store.ts`
-- `fetchByTravel(travelId)` como acción principal (viajeros cargados por viaje, no todos)
-- CRUD standard + lógica árbol representante/acompañantes (leer store actual para política de eliminación)
-- Self-FK `representante_id` — respetar política existente del store al eliminar representante
+#### ✅ U19 - Migrar `use-traveler-store.ts`
+- **Archivos**: `app/stores/use-traveler-store.ts`, `app/pages/travels/[id]/travelers/index.vue`
+- `fetchByTravel(travelId)` — query por `travel_id`, ordena por `created_at DESC`
+- `addTraveler` / `updateTraveler` / `deleteTraveler` — async con `loading`/`error`
+- `deleteTraveler`: desvincula acompañantes (`representative_id=null, is_representative=false`) antes de borrar si era representante
+- Persist eliminado; `index.vue` actualizado con `await` y `onMounted` async
 - Depende de: U18
 
 ---
 
 ### FASE 7 — Migración de Stores Dependientes
 
-#### U20 - Migrar `use-payment-store.ts`
-- **Archivos**: `app/stores/use-payment-store.ts`
-- `payments` + `traveler_account_configs`
-- `traveler_account_configs`: PK compuesta → usar upsert con `onConflict: 'travel_id,traveler_id'`
-- `discounts`/`surcharges` como JSONB: cast explícito de tipo en el mapper
+#### ✅ U20 - Migrar `use-payment-store.ts`
+- **Archivos**: `app/stores/use-payment-store.ts`, `app/utils/mappers.ts`, `app/pages/payments/travel/[id].vue`, `app/pages/payments/traveler/[id].vue`
+- `fetchByTravel` / `fetchByTraveler` — cargan payments + account configs para el contexto dado (merge con datos de otros travels/travelers en memoria)
+- `setAccountConfig` — upsert con `onConflict: 'travel_id,traveler_id'`
+- `mapTravelerAccountConfigToUpsert` agregado en mappers.ts
+- Lógica de validación de balance en `addPayment` se mantiene antes del insert DB
+- Persist eliminado; callers actualizados con `await` y `onMounted` fetch
 - Depende de: U19
 
-#### U21 - Migrar `use-cotizacion-store.ts`
-- **Archivos**: `app/stores/use-cotizacion-store.ts`, `supabase/migrations/<timestamp>_cotizacion_rpcs.sql`
-- `fetchByTravel(travelId)`: query con select anidado de todas las sub-tablas en una sola llamada
-- Acciones granulares por sub-entidad (leer store actual para enumerar: `addProveedor`, `addPagoProveedor`, `addHospedaje`, `addHospedajeDetalle`, `addBus`, `addPagoBus`, `addPrecioPublico`, etc.)
-- RPCs `create_cotizacion(jsonb)` y `update_cotizacion(jsonb)` para operaciones root multi-tabla
-- Getters calculados (totales, acumulados) se mantienen en Pinia — Supabase solo persiste datos crudos
+#### ✅ U21 - Migrar `use-cotizacion-store.ts`
+- **Archivos**: `app/stores/use-cotizacion-store.ts` + 11 callers (cotizacion.vue, 10 componentes)
+- `fetchByTravel`: carga las 8 tablas con nested selects en un solo `Promise.all`
+- `_syncPrecioToTravel` → async: actualiza `quotations.seat_price` en DB y llama `travelStore.updateTravel`
+- Sin RPCs — inserts secuenciales suficientes para MVP
+- `addHospedajeQuotation` / `updateHospedajeQuotation`: delete-reinsert de `quotation_accommodation_details`
+- `costPerPerson` enriquecido post-mapping (campo calculado, no almacenado en DB)
+- Todas las acciones (26) convertidas a async; persist eliminado
+- `cotizacion-hospedaje-form.vue` también actualizado (caller faltante del plan original)
 - Depende de: U20
 
 ---
@@ -277,12 +283,12 @@ Migrar la aplicación Nuxt 4 de persistencia en `localStorage` (via `@pinia-plug
 | 12 | U14, U15 | paralelo | ✅ |
 | 13 | U16, U17 | paralelo | ✅ |
 | 14 | U18 | secuencial | ✅ |
-| 15 | U19 | secuencial | ⬜ |
-| 16 | U20 | secuencial | ⬜ |
-| 17 | U21 | secuencial | ⬜ |
-| 18 | U22 | secuencial | ⬜ |
-| 19 | U23 | secuencial | ⬜ |
-| 20 | U24 | secuencial | ⬜ |
+| 15 | U19 | secuencial | ✅ |
+| 16 | U20 | secuencial | ✅ |
+| 17 | U21 | secuencial | ✅ |
+| 18 | U22 | secuencial | ✅ |
+| 19 | U23 | secuencial | ✅ |
+| 20 | U24 | secuencial | ✅ |
 
 ---
 
