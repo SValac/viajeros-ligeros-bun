@@ -358,6 +358,7 @@ function onCancel() {
           v-model="itinerario"
           :start-date="state.startDate"
           :end-date="state.endDate"
+          :travel-id="travel?.id"
         />
       </UCard>
     </section>

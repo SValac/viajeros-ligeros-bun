@@ -6,6 +6,7 @@ type Props = {
   modelValue: TravelActivity[];
   startDate: string;
   endDate: string;
+  travelId?: string;
 };
 
 const props = defineProps<Props>();
@@ -14,6 +15,8 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   'update:modelValue': [activities: TravelActivity[]];
 }>();
+
+const travelsStore = useTravelsStore();
 
 // Estado local
 const activities = ref<TravelActivity[]>([...props.modelValue]);
@@ -49,21 +52,44 @@ function openEditModal(activity: TravelActivity) {
   isActivityModalOpen.value = true;
 }
 
-function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
+async function persistActivities(nextActivities: TravelActivity[]): Promise<boolean> {
+  if (!props.travelId) {
+    activities.value = nextActivities;
+    emit('update:modelValue', activities.value);
+    return true;
+  }
+
+  const previousActivities = [...activities.value];
+  activities.value = nextActivities;
+  emit('update:modelValue', activities.value);
+
+  const saved = await travelsStore.updateTravel(props.travelId, { itinerary: nextActivities });
+  if (!saved) {
+    activities.value = previousActivities;
+    emit('update:modelValue', activities.value);
+    toast.add({
+      title: 'Error al guardar',
+      description: travelsStore.error ?? 'No se pudo guardar el itinerario',
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
+    return false;
+  }
+
+  return true;
+}
+
+async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
+  let nextActivities = [...activities.value];
+
   if (editingActivity.value) {
     // Editar actividad existente
     const index = activities.value.findIndex(a => a.id === editingActivity.value!.id);
     if (index !== -1) {
-      activities.value[index] = {
+      nextActivities[index] = {
         ...activityData,
         id: editingActivity.value.id,
       };
-
-      toast.add({
-        title: 'Actividad actualizada',
-        color: 'success',
-        icon: 'i-lucide-check-circle',
-      });
     }
   }
   else {
@@ -72,24 +98,28 @@ function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
       ...activityData,
       id: crypto.randomUUID(),
     };
-    activities.value.push(newActivity);
-
-    toast.add({
-      title: 'Actividad agregada',
-      color: 'success',
-      icon: 'i-lucide-check-circle',
-    });
+    nextActivities = [...nextActivities, newActivity];
   }
 
-  emit('update:modelValue', activities.value);
+  const saved = await persistActivities(nextActivities);
+  if (!saved)
+    return;
+
+  toast.add({
+    title: editingActivity.value ? 'Actividad actualizada' : 'Actividad agregada',
+    color: 'success',
+    icon: 'i-lucide-check-circle',
+  });
   isActivityModalOpen.value = false;
 }
 
-function deleteActivity(activity: TravelActivity) {
+async function deleteActivity(activity: TravelActivity) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Eliminar la actividad "${activity.title}"?`)) {
-    activities.value = activities.value.filter(a => a.id !== activity.id);
-    emit('update:modelValue', activities.value);
+    const nextActivities = activities.value.filter(a => a.id !== activity.id);
+    const saved = await persistActivities(nextActivities);
+    if (!saved)
+      return;
 
     toast.add({
       title: 'Actividad eliminada',

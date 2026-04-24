@@ -1,4 +1,4 @@
-import type { TablesUpdate } from '~/types/database.types';
+import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { Travel, TravelActivity, TravelBus, TravelFormData, TravelService, TravelStatus, TravelUpdateData } from '~/types/travel';
 
 type TravelStats = {
@@ -54,6 +54,27 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       .reduce((sum, travel) => sum + travel.price, 0);
   });
 
+  function mapItineraryForInsert(travelId: string, itinerary: TravelActivity[]) {
+    return itinerary.map((activity) => {
+      const day = Number(activity.day);
+      const title = activity.title?.trim();
+      const description = activity.description?.trim();
+
+      if (!Number.isInteger(day) || day <= 0 || !title || !description) {
+        throw new Error('Actividad de itinerario inválida');
+      }
+
+      return {
+        travel_id: travelId,
+        day,
+        title,
+        description,
+        time: activity.time ?? null,
+        location: activity.location ?? null,
+      };
+    });
+  }
+
   // Actions
   async function fetchAll(): Promise<void> {
     loading.value = true;
@@ -106,18 +127,10 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
     let insertedActivities: TravelActivity[] = [];
     if (data.itinerary.length > 0) {
+      const itineraryInserts = mapItineraryForInsert(travelId, data.itinerary);
       const { data: actRows, error: actErr } = await supabase
         .from('travel_activities')
-        .insert(
-          data.itinerary.map(a => ({
-            travel_id: travelId,
-            day: a.day,
-            title: a.title,
-            description: a.description,
-            time: a.time ?? null,
-            location: a.location ?? null,
-          })),
-        )
+        .insert(itineraryInserts)
         .select();
 
       if (actErr) {
@@ -215,6 +228,11 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       error.value = 'Viaje no encontrado';
       return false;
     }
+    const existingTravel = travels.value[index];
+    if (!existingTravel) {
+      error.value = 'Viaje no encontrado';
+      return false;
+    }
 
     const update: TablesUpdate<'travels'> = {};
     if (data.destination !== undefined)
@@ -242,35 +260,39 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     if ('accumulatedTravelers' in data)
       update.accumulated_travelers = data.accumulatedTravelers ?? null;
 
-    const { data: travelRow, error: travelErr } = await supabase
-      .from('travels')
-      .update(update)
-      .eq('id', id)
-      .select()
-      .single();
+    let travelRow: Tables<'travels'> | null = null;
+    if (Object.keys(update).length > 0) {
+      const { data: updatedTravelRow, error: travelErr } = await supabase
+        .from('travels')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
 
-    if (travelErr) {
-      error.value = travelErr.message;
-      return false;
+      if (travelErr) {
+        error.value = travelErr.message;
+        return false;
+      }
+
+      travelRow = updatedTravelRow;
     }
 
     let itinerary = travels.value[index]?.itinerary ?? [];
     if (data.itinerary !== undefined) {
-      await supabase.from('travel_activities').delete().eq('travel_id', id);
+      const { error: deleteActivitiesError } = await supabase
+        .from('travel_activities')
+        .delete()
+        .eq('travel_id', id);
+      if (deleteActivitiesError) {
+        error.value = deleteActivitiesError.message;
+        return false;
+      }
 
       if (data.itinerary.length > 0) {
+        const itineraryInserts = mapItineraryForInsert(id, data.itinerary);
         const { data: actRows, error: actErr } = await supabase
           .from('travel_activities')
-          .insert(
-            data.itinerary.map(a => ({
-              travel_id: id,
-              day: a.day,
-              title: a.title,
-              description: a.description,
-              time: a.time ?? null,
-              location: a.location ?? null,
-            })),
-          )
+          .insert(itineraryInserts)
           .select();
 
         if (actErr) {
@@ -374,12 +396,20 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       coordinatorIds = data.coordinatorIds;
     }
 
-    travels.value[index] = mapTravelRowToDomain(travelRow, {
-      coordinatorIds,
-      itinerary,
-      services,
-      buses,
-    });
+    travels.value[index] = travelRow
+      ? mapTravelRowToDomain(travelRow, {
+          coordinatorIds,
+          itinerary,
+          services,
+          buses,
+        })
+      : {
+          ...existingTravel,
+          coordinatorIds,
+          itinerary,
+          services,
+          buses,
+        };
 
     error.value = null;
     return true;
