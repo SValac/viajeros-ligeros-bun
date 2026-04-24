@@ -115,37 +115,6 @@ const items = computed<DropdownMenuItem[][]>(() => ([[{
     },
   }],
 }], [{
-  label: 'Templates',
-  icon: 'i-lucide-layout-template',
-  children: [{
-    label: 'Starter',
-    to: 'https://starter-template.nuxt.dev/',
-  }, {
-    label: 'Landing',
-    to: 'https://landing-template.nuxt.dev/',
-  }, {
-    label: 'Docs',
-    to: 'https://docs-template.nuxt.dev/',
-  }, {
-    label: 'SaaS',
-    to: 'https://saas-template.nuxt.dev/',
-  }, {
-    label: 'Dashboard',
-    to: 'https://dashboard-template.nuxt.dev/',
-    color: 'primary',
-    checked: true,
-    type: 'checkbox',
-  }, {
-    label: 'Chat',
-    to: 'https://chat-template.nuxt.dev/',
-  }, {
-    label: 'Portfolio',
-    to: 'https://portfolio-template.nuxt.dev/',
-  }, {
-    label: 'Changelog',
-    to: 'https://changelog-template.nuxt.dev/',
-  }],
-}], [{
   label: 'Log out',
   icon: 'i-lucide-log-out',
   onSelect: handleLogout,
