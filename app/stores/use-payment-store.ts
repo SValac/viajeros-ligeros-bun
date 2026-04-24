@@ -1,3 +1,4 @@
+import type { TablesUpdate } from '~/types/database.types';
 import type {
   AdjustmentItem,
   Payment,
@@ -9,7 +10,16 @@ import type {
   TravelerPaymentSummary,
 } from '~/types/payment';
 
+import {
+  mapPaymentRowToDomain,
+  mapPaymentToInsert,
+  mapTravelerAccountConfigRowToDomain,
+  mapTravelerAccountConfigToUpsert,
+} from '~/utils/mappers';
+
 export const usePaymentStore = defineStore('usePaymentStore', () => {
+  const supabase = useSupabase();
+
   // State
   const payments = ref<Payment[]>([]);
   const accountConfigs = ref<TravelerAccountConfig[]>([]);
@@ -137,15 +147,75 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
   });
 
   // Actions
-  function addPayment(data: PaymentFormData): Payment | { error: string } {
+  async function fetchByTravel(travelId: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data, error: err } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('travel_id', travelId)
+        .order('payment_date', { ascending: false });
+      if (err)
+        throw err;
+      const otherPayments = payments.value.filter(p => p.travelId !== travelId);
+      payments.value = [...otherPayments, ...data.map(mapPaymentRowToDomain)];
+
+      const { data: configData, error: configErr } = await supabase
+        .from('traveler_account_configs')
+        .select('*')
+        .eq('travel_id', travelId);
+      if (configErr)
+        throw configErr;
+      const otherConfigs = accountConfigs.value.filter(c => c.travelId !== travelId);
+      accountConfigs.value = [...otherConfigs, ...configData.map(mapTravelerAccountConfigRowToDomain)];
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function fetchByTraveler(travelerId: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data, error: err } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('traveler_id', travelerId)
+        .order('payment_date', { ascending: false });
+      if (err)
+        throw err;
+      const otherPayments = payments.value.filter(p => p.travelerId !== travelerId);
+      payments.value = [...otherPayments, ...data.map(mapPaymentRowToDomain)];
+
+      const { data: configData, error: configErr } = await supabase
+        .from('traveler_account_configs')
+        .select('*')
+        .eq('traveler_id', travelerId);
+      if (configErr)
+        throw configErr;
+      const otherConfigs = accountConfigs.value.filter(c => c.travelerId !== travelerId);
+      accountConfigs.value = [...otherConfigs, ...configData.map(mapTravelerAccountConfigRowToDomain)];
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function addPayment(data: PaymentFormData): Promise<Payment | { error: string }> {
     // Validate traveler has an account config (enrolled in travel)
     const config = getAccountConfig.value(data.travelerId, data.travelId);
     if (!config) {
       return { error: 'El viajero no tiene una cuenta configurada para este viaje.' };
     }
 
-    // We need travelPrice to validate; callers should ensure the config exists first.
-    // For validation we'll get the summary using appliedPrice from config.
     const existingPayments = getPaymentsByTravelerAndTravel.value(data.travelerId, data.travelId);
     const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
 
@@ -171,64 +241,112 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       return { error: `El monto no puede superar el saldo pendiente (${balance}).` };
     }
 
-    const now = new Date().toISOString();
-    const newPayment: Payment = {
-      ...data,
-      id: crypto.randomUUID(),
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    payments.value.push(newPayment);
+    loading.value = true;
     error.value = null;
-    return newPayment;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('payments')
+        .insert(mapPaymentToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
+      const payment = mapPaymentRowToDomain(row);
+      payments.value.push(payment);
+      return payment;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value ?? 'Error desconocido' };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updatePayment(id: string, data: PaymentUpdateData): Payment | undefined {
-    const index = payments.value.findIndex(p => p.id === id);
-    if (index === -1) {
-      error.value = 'Pago no encontrado';
+  async function updatePayment(id: string, data: PaymentUpdateData): Promise<Payment | undefined> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'payments'> = {};
+      if (data.amount !== undefined)
+        update.amount = data.amount;
+      if (data.paymentDate !== undefined)
+        update.payment_date = data.paymentDate;
+      if (data.paymentType !== undefined)
+        update.payment_type = data.paymentType;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
+
+      const { data: row, error: err } = await supabase
+        .from('payments')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const payment = mapPaymentRowToDomain(row);
+      const index = payments.value.findIndex(p => p.id === id);
+      if (index !== -1) {
+        payments.value[index] = payment;
+      }
+      return payment;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
       return undefined;
     }
-
-    const existing = payments.value[index];
-    if (!existing) {
-      error.value = 'Pago no encontrado';
-      return undefined;
+    finally {
+      loading.value = false;
     }
-
-    const updated: Payment = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
-
-    payments.value[index] = updated;
-    error.value = null;
-    return updated;
   }
 
-  function deletePayment(id: string): void {
-    const index = payments.value.findIndex(p => p.id === id);
-    if (index === -1) {
-      error.value = 'Pago no encontrado';
-      return;
-    }
-    payments.value.splice(index, 1);
+  async function deletePayment(id: string): Promise<void> {
+    loading.value = true;
     error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+      payments.value = payments.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function setAccountConfig(config: TravelerAccountConfig): void {
-    const index = accountConfigs.value.findIndex(
-      c => c.travelerId === config.travelerId && c.travelId === config.travelId,
-    );
-    if (index === -1) {
-      accountConfigs.value.push(config);
+  async function setAccountConfig(config: TravelerAccountConfig): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('traveler_account_configs')
+        .upsert(mapTravelerAccountConfigToUpsert(config), { onConflict: 'travel_id,traveler_id' });
+      if (err)
+        throw err;
+      const index = accountConfigs.value.findIndex(
+        c => c.travelerId === config.travelerId && c.travelId === config.travelId,
+      );
+      if (index === -1) {
+        accountConfigs.value.push(config);
+      }
+      else {
+        accountConfigs.value[index] = config;
+      }
     }
-    else {
-      accountConfigs.value[index] = config;
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
     }
   }
 
@@ -258,6 +376,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     filteredPayments,
     getTravelCashSummary,
     // Actions
+    fetchByTravel,
+    fetchByTraveler,
     addPayment,
     updatePayment,
     deletePayment,
@@ -265,9 +385,4 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     setFilters,
     clearFilters,
   };
-}, {
-  persist: {
-    key: 'viajeros-ligeros-payments',
-    storage: import.meta.client ? localStorage : undefined,
-  },
 });

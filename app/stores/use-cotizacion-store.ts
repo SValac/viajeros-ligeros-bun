@@ -1,3 +1,4 @@
+import type { Tables, TablesUpdate } from '~/types/database.types';
 import type {
   AccommodationPayment,
   AccommodationPaymentFormData,
@@ -23,8 +24,28 @@ import type {
 
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import {
+  mapAccommodationPaymentRowToDomain,
+  mapAccommodationPaymentToInsert,
+  mapBusPaymentRowToDomain,
+  mapBusPaymentToInsert,
+  mapProviderPaymentRowToDomain,
+  mapProviderPaymentToInsert,
+  mapQuotationAccommodationDetailRowToDomain,
+  mapQuotationAccommodationRowToDomain,
+  mapQuotationBusRowToDomain,
+  mapQuotationBusToInsert,
+  mapQuotationProviderRowToDomain,
+  mapQuotationProviderToInsert,
+  mapQuotationPublicPriceRowToDomain,
+  mapQuotationPublicPriceToInsert,
+  mapQuotationRowToDomain,
+  mapQuotationToInsert,
+} from '~/utils/mappers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
+  const supabase = useSupabase();
+
   // State
   const cotizaciones = ref<Quotation[]>([]);
   const proveedoresQuotation = ref<QuotationProvider[]>([]);
@@ -197,8 +218,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.price
-  // Incluye costos de proveedores, hospedajes y autobuses
   const getTotalCostoBuses = computed(() => {
     return (quotationId: string): number => {
       return busesApartados.value
@@ -223,6 +242,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.price
+  // Incluye costos de proveedores, hospedajes y autobuses
   const getPrecioAsientoCalculado = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
@@ -482,7 +503,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   // Helper interno — recalcula seatPrice y lo sincroniza a travel.price
-  function _syncPrecioToTravel(quotationId: string): void {
+  async function _syncPrecioToTravel(quotationId: string): Promise<void> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
     if (!cotizacion || cotizacion.status === 'confirmed')
       return;
@@ -493,7 +514,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (nuevoPrecio === 0)
       return;
 
-    // Actualizar seatPrice en la cotización directamente (evita recursión)
+    const { error: err } = await supabase
+      .from('quotations')
+      .update({ seat_price: nuevoPrecio })
+      .eq('id', quotationId);
+    if (err)
+      throw err;
+
     const index = cotizaciones.value.findIndex(c => c.id === quotationId);
     if (index !== -1 && cotizaciones.value[index]) {
       cotizaciones.value[index] = {
@@ -503,31 +530,180 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       };
     }
 
-    // Propagar a travel.price (cotización → viaje)
     const travelStore = useTravelsStore();
-    travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
+    await travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
   }
 
   // Actions
-  function createQuotation(data: QuotationFormData): Quotation {
+
+  async function fetchByTravel(travelId: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: quotRow, error: quotErr } = await supabase
+        .from('quotations')
+        .select('*')
+        .eq('travel_id', travelId)
+        .maybeSingle();
+      if (quotErr)
+        throw quotErr;
+
+      if (!quotRow) {
+        const existing = cotizaciones.value.find(c => c.travelId === travelId);
+        if (existing) {
+          const qId = existing.id;
+          cotizaciones.value = cotizaciones.value.filter(c => c.id !== qId);
+          proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.quotationId !== qId);
+          pagosProveedor.value = pagosProveedor.value.filter(p =>
+            !proveedoresQuotation.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
+          );
+          hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.quotationId !== qId);
+          pagosHospedaje.value = pagosHospedaje.value.filter(p =>
+            !hospedajesQuotation.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
+          );
+          preciosPublicos.value = preciosPublicos.value.filter(p => p.quotationId !== qId);
+          busesApartados.value = busesApartados.value.filter(b => b.quotationId !== qId);
+          pagosBus.value = pagosBus.value.filter(p =>
+            !busesApartados.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
+          );
+        }
+        return;
+      }
+
+      const quotationId = quotRow.id;
+
+      const [
+        providersResult,
+        accommodationsResult,
+        publicPricesResult,
+        busesResult,
+      ] = await Promise.all([
+        supabase
+          .from('quotation_providers')
+          .select('*, provider_payments(*)')
+          .eq('quotation_id', quotationId),
+        supabase
+          .from('quotation_accommodations')
+          .select('*, quotation_accommodation_details(*), accommodation_payments(*)')
+          .eq('quotation_id', quotationId),
+        supabase
+          .from('quotation_public_prices')
+          .select('*')
+          .eq('quotation_id', quotationId),
+        supabase
+          .from('quotation_buses')
+          .select('*, bus_payments(*)')
+          .eq('quotation_id', quotationId),
+      ]);
+
+      if (providersResult.error)
+        throw providersResult.error;
+      if (accommodationsResult.error)
+        throw accommodationsResult.error;
+      if (publicPricesResult.error)
+        throw publicPricesResult.error;
+      if (busesResult.error)
+        throw busesResult.error;
+
+      const providers = (providersResult.data ?? []).map((row) => {
+        const { provider_payments: _pp, ...provRow } = row;
+        return mapQuotationProviderRowToDomain(provRow as Tables<'quotation_providers'>);
+      });
+      const newPagosProveedor = (providersResult.data ?? []).flatMap(row =>
+        (row.provider_payments ?? []).map(mapProviderPaymentRowToDomain),
+      );
+
+      const accommodations = (accommodationsResult.data ?? []).map((row) => {
+        const { quotation_accommodation_details: detRows, accommodation_payments: _ap, ...accRow } = row;
+        const details = (detRows ?? []).map(d => ({
+          ...mapQuotationAccommodationDetailRowToDomain(d as Tables<'quotation_accommodation_details'>),
+          costPerPerson: d.price_per_night / d.max_occupancy,
+        }));
+        return mapQuotationAccommodationRowToDomain(accRow as Tables<'quotation_accommodations'>, details);
+      });
+      const newPagosHospedaje = (accommodationsResult.data ?? []).flatMap(row =>
+        (row.accommodation_payments ?? []).map(mapAccommodationPaymentRowToDomain),
+      );
+
+      const buses = (busesResult.data ?? []).map((row) => {
+        const { bus_payments: _bp, ...busRow } = row;
+        return mapQuotationBusRowToDomain(busRow as Tables<'quotation_buses'>);
+      });
+      const newPagosBus = (busesResult.data ?? []).flatMap(row =>
+        (row.bus_payments ?? []).map(mapBusPaymentRowToDomain),
+      );
+
+      cotizaciones.value = [
+        ...cotizaciones.value.filter(c => c.travelId !== travelId),
+        mapQuotationRowToDomain(quotRow),
+      ];
+      proveedoresQuotation.value = [
+        ...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId),
+        ...providers,
+      ];
+      pagosProveedor.value = [
+        ...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)),
+        ...newPagosProveedor,
+      ];
+      hospedajesQuotation.value = [
+        ...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId),
+        ...accommodations,
+      ];
+      pagosHospedaje.value = [
+        ...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)),
+        ...newPagosHospedaje,
+      ];
+      preciosPublicos.value = [
+        ...preciosPublicos.value.filter(p => p.quotationId !== quotationId),
+        ...(publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
+      ];
+      busesApartados.value = [
+        ...busesApartados.value.filter(b => b.quotationId !== quotationId),
+        ...buses,
+      ];
+      pagosBus.value = [
+        ...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)),
+        ...newPagosBus,
+      ];
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function createQuotation(data: QuotationFormData): Promise<Quotation> {
     const existing = cotizaciones.value.find(c => c.travelId === data.travelId);
     if (existing)
       return existing;
 
-    const now = new Date().toISOString();
-    const newQuotation: Quotation = {
-      ...data,
-      id: `cotizacion-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    cotizaciones.value.push(newQuotation);
+    loading.value = true;
     error.value = null;
-    return newQuotation;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotations')
+        .insert(mapQuotationToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const quotation = mapQuotationRowToDomain(row);
+      cotizaciones.value.push(quotation);
+      return quotation;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateQuotation(id: string, data: Partial<QuotationFormData>): Quotation | undefined {
+  async function updateQuotation(id: string, data: Partial<QuotationFormData>): Promise<Quotation | undefined> {
     const index = cotizaciones.value.findIndex(c => c.id === id);
     if (index === -1) {
       error.value = 'Cotización no encontrada';
@@ -538,29 +714,52 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: Quotation = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
-
-    cotizaciones.value[index] = updated;
+    loading.value = true;
     error.value = null;
+    try {
+      const update: TablesUpdate<'quotations'> = {};
+      if (data.busCapacity !== undefined)
+        update.bus_capacity = data.busCapacity;
+      if (data.minimumSeatTarget !== undefined)
+        update.minimum_seat_target = data.minimumSeatTarget;
+      if (data.seatPrice !== undefined)
+        update.seat_price = data.seatPrice;
+      if (data.status !== undefined)
+        update.status = data.status;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    // Si cambió el asiento mínimo, recalcular precio y sincronizar al viaje
-    if ('minimumSeatTarget' in data) {
-      _syncPrecioToTravel(id);
+      const { data: row, error: err } = await supabase
+        .from('quotations')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationRowToDomain(row);
+      cotizaciones.value[index] = updated;
+
+      if ('minimumSeatTarget' in data) {
+        await _syncPrecioToTravel(id);
+      }
+
+      return updated;
     }
-
-    return updated;
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function confirmarQuotation(
+  async function confirmarQuotation(
     id: string,
     travelStore: ReturnType<typeof useTravelsStore>,
-  ): { success: boolean; error?: string } {
+  ): Promise<{ success: boolean; error?: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === id);
     if (!cotizacion)
       return { success: false, error: 'Cotización no encontrada' };
@@ -569,46 +768,70 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { success: false, error: 'Todos los proveedores deben estar confirmados' };
     }
 
-    // Crear TravelService[] para el viaje a partir de los proveedores
-    const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === id);
-    const services = proveedores.map(p => ({
-      id: `serv-cotizacion-${p.id}`,
-      name: p.serviceDescription,
-      description: p.remarks,
-      included: true,
-      providerId: p.providerId,
-    }));
+    loading.value = true;
+    error.value = null;
+    try {
+      const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === id);
+      const services = proveedores.map(p => ({
+        id: `serv-cotizacion-${p.id}`,
+        name: p.serviceDescription,
+        description: p.remarks,
+        included: true,
+        providerId: p.providerId,
+      }));
 
-    const updated = travelStore.updateTravel(cotizacion.travelId, { services });
-    if (!updated) {
-      return { success: false, error: 'No se pudo actualizar el viaje' };
+      const updated = await travelStore.updateTravel(cotizacion.travelId, { services });
+      if (!updated)
+        return { success: false, error: 'No se pudo actualizar el viaje' };
+
+      await updateQuotation(id, { status: 'confirmed' });
+      return { success: true };
     }
-
-    updateQuotation(id, { status: 'confirmed' });
-    return { success: true };
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { success: false, error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addProveedorQuotation(data: QuotationProviderFormData): QuotationProvider | { error: string } {
+  async function addProveedorQuotation(data: QuotationProviderFormData): Promise<QuotationProvider | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
     if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    const newProveedor: QuotationProvider = {
-      ...data,
-      id: `cot-prov-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotation_providers')
+        .insert(mapQuotationProviderToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    proveedoresQuotation.value.push(newProveedor);
-    _syncPrecioToTravel(data.quotationId);
-    return newProveedor;
+      const newProveedor = mapQuotationProviderRowToDomain(row);
+      proveedoresQuotation.value.push(newProveedor);
+      await _syncPrecioToTravel(data.quotationId);
+      return newProveedor;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateProveedorQuotation(
+  async function updateProveedorQuotation(
     id: string,
     data: Partial<QuotationProviderFormData>,
-  ): QuotationProvider | undefined {
+  ): Promise<QuotationProvider | undefined> {
     const index = proveedoresQuotation.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -621,19 +844,49 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    const updated: QuotationProvider = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      quotationId: existing.quotationId,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'quotation_providers'> = {};
+      if (data.providerId !== undefined)
+        update.provider_id = data.providerId;
+      if (data.serviceDescription !== undefined)
+        update.service_description = data.serviceDescription;
+      if (data.remarks !== undefined)
+        update.remarks = data.remarks ?? null;
+      if (data.totalCost !== undefined)
+        update.total_cost = data.totalCost;
+      if (data.paymentMethod !== undefined)
+        update.payment_method = data.paymentMethod;
+      if (data.splitType !== undefined)
+        update.split_type = data.splitType;
+      if (data.confirmed !== undefined)
+        update.confirmed = data.confirmed;
 
-    proveedoresQuotation.value[index] = updated;
-    _syncPrecioToTravel(existing.quotationId);
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('quotation_providers')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationProviderRowToDomain(row);
+      proveedoresQuotation.value[index] = updated;
+      await _syncPrecioToTravel(existing.quotationId);
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteProveedorQuotation(id: string): void {
+  async function deleteProveedorQuotation(id: string): Promise<void> {
     const proveedor = proveedoresQuotation.value.find(p => p.id === id);
     if (!proveedor)
       return;
@@ -643,17 +896,30 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
 
     const quotationId = proveedor.quotationId;
-    proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
-    pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
-    _syncPrecioToTravel(quotationId);
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_providers')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
+      pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
+      await _syncPrecioToTravel(quotationId);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function toggleConfirmadoProveedor(id: string): void {
-    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
-    if (index === -1)
-      return;
-
-    const proveedor = proveedoresQuotation.value[index];
+  async function toggleConfirmadoProveedor(id: string): Promise<void> {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === id);
     if (!proveedor)
       return;
 
@@ -661,10 +927,30 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return;
 
-    proveedoresQuotation.value[index] = { ...proveedor, confirmed: !proveedor.confirmed };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_providers')
+        .update({ confirmed: !proveedor.confirmed })
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      const index = proveedoresQuotation.value.findIndex(p => p.id === id);
+      if (index !== -1 && proveedoresQuotation.value[index]) {
+        proveedoresQuotation.value[index] = { ...proveedoresQuotation.value[index]!, confirmed: !proveedor.confirmed };
+      }
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addProviderPayment(data: ProviderPaymentFormData): ProviderPayment | { error: string } {
+  async function addProviderPayment(data: ProviderPaymentFormData): Promise<ProviderPayment | { error: string }> {
     const proveedor = proveedoresQuotation.value.find(p => p.id === data.quotationProviderId);
     if (!proveedor)
       return { error: 'Proveedor no encontrado' };
@@ -681,18 +967,31 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
     }
 
-    const now = new Date().toISOString();
-    const newPago: ProviderPayment = {
-      ...data,
-      id: `pago-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('provider_payments')
+        .insert(mapProviderPaymentToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    pagosProveedor.value.push(newPago);
-    return newPago;
+      const newPago = mapProviderPaymentRowToDomain(row);
+      pagosProveedor.value.push(newPago);
+      return newPago;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateProviderPayment(id: string, data: Partial<ProviderPaymentFormData>): ProviderPayment | undefined {
+  async function updateProviderPayment(id: string, data: Partial<ProviderPaymentFormData>): Promise<ProviderPayment | undefined> {
     const index = pagosProveedor.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -701,18 +1000,44 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: ProviderPayment = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'provider_payments'> = {};
+      if (data.amount !== undefined)
+        update.amount = data.amount;
+      if (data.paymentDate !== undefined)
+        update.payment_date = data.paymentDate;
+      if (data.paymentType !== undefined)
+        update.payment_type = data.paymentType;
+      if (data.concept !== undefined)
+        update.concept = data.concept ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    pagosProveedor.value[index] = updated;
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('provider_payments')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapProviderPaymentRowToDomain(row);
+      pagosProveedor.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteProviderPayment(id: string): void {
+  async function deleteProviderPayment(id: string): Promise<void> {
     const pago = pagosProveedor.value.find(p => p.id === id);
     if (!pago)
       return;
@@ -722,7 +1047,24 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return;
 
-    pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('provider_payments')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   function setFilters(f: QuotationProviderFilters): void {
@@ -737,14 +1079,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Hospedaje Actions
   // ============================================================================
 
-  function addHospedajeQuotation(data: QuotationAccommodationFormData): QuotationAccommodation | { error: string } {
+  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
     if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    // Calcular totalCost y enriquecer detalles con costPerPerson
     const detallesEnriquecidos = data.details.map(d => ({
       ...d,
       id: d.id ?? crypto.randomUUID(),
@@ -755,24 +1096,60 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return sum + (detalle.pricePerNight * data.nightCount * detalle.quantity);
     }, 0);
 
-    const newHospedaje: QuotationAccommodation = {
-      ...data,
-      details: detallesEnriquecidos,
-      id: `cot-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      totalCost,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: accRow, error: accErr } = await supabase
+        .from('quotation_accommodations')
+        .insert({
+          quotation_id: data.quotationId,
+          provider_id: data.providerId,
+          night_count: data.nightCount,
+          total_cost: totalCost,
+          payment_method: data.paymentMethod,
+          confirmed: data.confirmed,
+        })
+        .select()
+        .single();
+      if (accErr)
+        throw accErr;
 
-    hospedajesQuotation.value.push(newHospedaje);
-    _syncPrecioToTravel(data.quotationId);
-    return newHospedaje;
+      const detailInserts = detallesEnriquecidos.map(d => ({
+        quotation_accommodation_id: accRow.id,
+        hotel_room_type_id: d.roomTypeId,
+        quantity: d.quantity,
+        price_per_night: d.pricePerNight,
+        max_occupancy: d.maxOccupancy,
+      }));
+      const { data: detailRows, error: detErr } = await supabase
+        .from('quotation_accommodation_details')
+        .insert(detailInserts)
+        .select();
+      if (detErr)
+        throw detErr;
+
+      const details = (detailRows ?? []).map(d => ({
+        ...mapQuotationAccommodationDetailRowToDomain(d),
+        costPerPerson: d.price_per_night / d.max_occupancy,
+      }));
+      const newHospedaje = mapQuotationAccommodationRowToDomain(accRow, details);
+      hospedajesQuotation.value.push(newHospedaje);
+      await _syncPrecioToTravel(data.quotationId);
+      return newHospedaje;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateHospedajeQuotation(
+  async function updateHospedajeQuotation(
     id: string,
     data: Partial<QuotationAccommodationFormData>,
-  ): QuotationAccommodation | undefined {
+  ): Promise<QuotationAccommodation | undefined> {
     const index = hospedajesQuotation.value.findIndex(h => h.id === id);
     if (index === -1)
       return undefined;
@@ -785,7 +1162,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    // Calcular totalCost y enriquecer detalles con costPerPerson
     const detallesBase = data.details ?? existing.details;
     const detallesEnriquecidos = detallesBase.map(d => ({
       ...d,
@@ -797,23 +1173,68 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return sum + (detalle.pricePerNight * (data.nightCount ?? existing.nightCount) * detalle.quantity);
     }, 0);
 
-    const updated: QuotationAccommodation = {
-      ...existing,
-      ...data,
-      details: detallesEnriquecidos,
-      id: existing.id,
-      quotationId: existing.quotationId,
-      createdAt: existing.createdAt,
-      totalCost,
-      updatedAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const accUpdate: TablesUpdate<'quotation_accommodations'> = { total_cost: totalCost };
+      if (data.providerId !== undefined)
+        accUpdate.provider_id = data.providerId;
+      if (data.nightCount !== undefined)
+        accUpdate.night_count = data.nightCount;
+      if (data.paymentMethod !== undefined)
+        accUpdate.payment_method = data.paymentMethod;
+      if (data.confirmed !== undefined)
+        accUpdate.confirmed = data.confirmed;
 
-    hospedajesQuotation.value[index] = updated;
-    _syncPrecioToTravel(existing.quotationId);
-    return updated;
+      const { data: updatedRow, error: accErr } = await supabase
+        .from('quotation_accommodations')
+        .update(accUpdate)
+        .eq('id', id)
+        .select()
+        .single();
+      if (accErr)
+        throw accErr;
+
+      const { error: delErr } = await supabase
+        .from('quotation_accommodation_details')
+        .delete()
+        .eq('quotation_accommodation_id', id);
+      if (delErr)
+        throw delErr;
+
+      const detailInserts = detallesEnriquecidos.map(d => ({
+        quotation_accommodation_id: id,
+        hotel_room_type_id: d.roomTypeId,
+        quantity: d.quantity,
+        price_per_night: d.pricePerNight,
+        max_occupancy: d.maxOccupancy,
+      }));
+      const { data: newDetailRows, error: detErr } = await supabase
+        .from('quotation_accommodation_details')
+        .insert(detailInserts)
+        .select();
+      if (detErr)
+        throw detErr;
+
+      const details = (newDetailRows ?? []).map(d => ({
+        ...mapQuotationAccommodationDetailRowToDomain(d),
+        costPerPerson: d.price_per_night / d.max_occupancy,
+      }));
+      const updated = mapQuotationAccommodationRowToDomain(updatedRow, details);
+      hospedajesQuotation.value[index] = updated;
+      await _syncPrecioToTravel(existing.quotationId);
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteHospedajeQuotation(id: string): void {
+  async function deleteHospedajeQuotation(id: string): Promise<void> {
     const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
       return;
@@ -823,17 +1244,30 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
 
     const quotationId = hospedaje.quotationId;
-    hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
-    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
-    _syncPrecioToTravel(quotationId);
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_accommodations')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
+      pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
+      await _syncPrecioToTravel(quotationId);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function toggleConfirmadoHospedaje(id: string): void {
-    const index = hospedajesQuotation.value.findIndex(h => h.id === id);
-    if (index === -1)
-      return;
-
-    const hospedaje = hospedajesQuotation.value[index];
+  async function toggleConfirmadoHospedaje(id: string): Promise<void> {
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
       return;
 
@@ -841,10 +1275,30 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return;
 
-    hospedajesQuotation.value[index] = { ...hospedaje, confirmed: !hospedaje.confirmed };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_accommodations')
+        .update({ confirmed: !hospedaje.confirmed })
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      const index = hospedajesQuotation.value.findIndex(h => h.id === id);
+      if (index !== -1 && hospedajesQuotation.value[index]) {
+        hospedajesQuotation.value[index] = { ...hospedajesQuotation.value[index]!, confirmed: !hospedaje.confirmed };
+      }
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addPagoHospedaje(data: AccommodationPaymentFormData): AccommodationPayment | { error: string } {
+  async function addPagoHospedaje(data: AccommodationPaymentFormData): Promise<AccommodationPayment | { error: string }> {
     const hospedaje = hospedajesQuotation.value.find(h => h.id === data.quotationAccommodationId);
     if (!hospedaje)
       return { error: 'Hospedaje no encontrado' };
@@ -860,17 +1314,31 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (data.amount > saldoPendiente)
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
 
-    const newPago: AccommodationPayment = {
-      ...data,
-      id: `pago-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('accommodation_payments')
+        .insert(mapAccommodationPaymentToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    pagosHospedaje.value.push(newPago);
-    return newPago;
+      const newPago = mapAccommodationPaymentRowToDomain(row);
+      pagosHospedaje.value.push(newPago);
+      return newPago;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updatePagoHospedaje(id: string, data: Partial<AccommodationPaymentFormData>): AccommodationPayment | undefined {
+  async function updatePagoHospedaje(id: string, data: Partial<AccommodationPaymentFormData>): Promise<AccommodationPayment | undefined> {
     const index = pagosHospedaje.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -879,18 +1347,44 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: AccommodationPayment = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'accommodation_payments'> = {};
+      if (data.amount !== undefined)
+        update.amount = data.amount;
+      if (data.paymentDate !== undefined)
+        update.payment_date = data.paymentDate;
+      if (data.paymentType !== undefined)
+        update.payment_type = data.paymentType;
+      if (data.concept !== undefined)
+        update.concept = data.concept ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    pagosHospedaje.value[index] = updated;
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('accommodation_payments')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapAccommodationPaymentRowToDomain(row);
+      pagosHospedaje.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deletePagoHospedaje(id: string): void {
+  async function deletePagoHospedaje(id: string): Promise<void> {
     const pago = pagosHospedaje.value.find(p => p.id === id);
     if (!pago)
       return;
@@ -900,32 +1394,60 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return;
 
-    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('accommodation_payments')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   // ============================================================================
   // Precio al Público Actions
   // ============================================================================
 
-  function addPrecioPublico(data: QuotationPublicPriceFormData): QuotationPublicPrice | { error: string } {
+  async function addPrecioPublico(data: QuotationPublicPriceFormData): Promise<QuotationPublicPrice | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
 
-    const now = new Date().toISOString();
-    const newPrecio: QuotationPublicPrice = {
-      ...data,
-      id: `precio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    preciosPublicos.value.push(newPrecio);
+    loading.value = true;
     error.value = null;
-    return newPrecio;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotation_public_prices')
+        .insert(mapQuotationPublicPriceToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const newPrecio = mapQuotationPublicPriceRowToDomain(row);
+      preciosPublicos.value.push(newPrecio);
+      return newPrecio;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updatePrecioPublico(id: string, data: Partial<QuotationPublicPriceFormData>): QuotationPublicPrice | undefined {
+  async function updatePrecioPublico(id: string, data: Partial<QuotationPublicPriceFormData>): Promise<QuotationPublicPrice | undefined> {
     const index = preciosPublicos.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -934,29 +1456,71 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: QuotationPublicPrice = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      quotationId: existing.quotationId,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
-
-    preciosPublicos.value[index] = updated;
+    loading.value = true;
     error.value = null;
-    return updated;
+    try {
+      const update: TablesUpdate<'quotation_public_prices'> = {};
+      if (data.priceType !== undefined)
+        update.price_type = data.priceType;
+      if (data.description !== undefined)
+        update.description = data.description;
+      if (data.pricePerPerson !== undefined)
+        update.price_per_person = data.pricePerPerson;
+      if (data.roomType !== undefined)
+        update.room_type = data.roomType ?? null;
+      if (data.ageGroup !== undefined)
+        update.age_group = data.ageGroup ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
+
+      const { data: row, error: err } = await supabase
+        .from('quotation_public_prices')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationPublicPriceRowToDomain(row);
+      preciosPublicos.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deletePrecioPublico(id: string): void {
-    preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
+  async function deletePrecioPublico(id: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_public_prices')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   // ============================================================================
   // Autobuses Apartados Actions
   // ============================================================================
 
-  function addBusQuotation(data: QuotationBusFormData): QuotationBus | { error: string } {
+  async function addBusQuotation(data: QuotationBusFormData): Promise<QuotationBus | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
@@ -971,20 +1535,32 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (duplicado)
       return { error: 'Este número de unidad ya existe para este proveedor en la cotización' };
 
-    const now = new Date().toISOString();
-    const newBus: QuotationBus = {
-      ...data,
-      id: `cot-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotation_buses')
+        .insert(mapQuotationBusToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    busesApartados.value.push(newBus);
-    _syncPrecioToTravel(data.quotationId);
-    return newBus;
+      const newBus = mapQuotationBusRowToDomain(row);
+      busesApartados.value.push(newBus);
+      await _syncPrecioToTravel(data.quotationId);
+      return newBus;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateBusQuotation(id: string, data: Partial<QuotationBusFormData>): QuotationBus | undefined {
+  async function updateBusQuotation(id: string, data: Partial<QuotationBusFormData>): Promise<QuotationBus | undefined> {
     const index = busesApartados.value.findIndex(b => b.id === id);
     if (index === -1)
       return undefined;
@@ -997,21 +1573,57 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    const updated: QuotationBus = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      quotationId: existing.quotationId,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'quotation_buses'> = {};
+      if (data.providerId !== undefined)
+        update.provider_id = data.providerId;
+      if (data.unitNumber !== undefined)
+        update.unit_number = data.unitNumber;
+      if (data.capacity !== undefined)
+        update.capacity = data.capacity;
+      if (data.status !== undefined)
+        update.status = data.status;
+      if (data.totalCost !== undefined)
+        update.total_cost = data.totalCost;
+      if (data.splitType !== undefined)
+        update.split_type = data.splitType;
+      if (data.paymentMethod !== undefined)
+        update.payment_method = data.paymentMethod;
+      if (data.remarks !== undefined)
+        update.remarks = data.remarks ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
+      if (data.confirmed !== undefined)
+        update.confirmed = data.confirmed;
+      if (data.coordinatorIds !== undefined)
+        update.coordinator_ids = data.coordinatorIds as unknown as import('~/types/database.types').Json;
 
-    busesApartados.value[index] = updated;
-    _syncPrecioToTravel(existing.quotationId);
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('quotation_buses')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationBusRowToDomain(row);
+      busesApartados.value[index] = updated;
+      await _syncPrecioToTravel(existing.quotationId);
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteBusQuotation(id: string): void {
+  async function deleteBusQuotation(id: string): Promise<void> {
     const bus = busesApartados.value.find(b => b.id === id);
     if (!bus)
       return;
@@ -1021,12 +1633,29 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
 
     const quotationId = bus.quotationId;
-    busesApartados.value = busesApartados.value.filter(b => b.id !== id);
-    pagosBus.value = pagosBus.value.filter(p => p.quotationBusId !== id);
-    _syncPrecioToTravel(quotationId);
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_buses')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      busesApartados.value = busesApartados.value.filter(b => b.id !== id);
+      pagosBus.value = pagosBus.value.filter(p => p.quotationBusId !== id);
+      await _syncPrecioToTravel(quotationId);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addBusPayment(data: BusPaymentFormData): BusPayment | { error: string } {
+  async function addBusPayment(data: BusPaymentFormData): Promise<BusPayment | { error: string }> {
     const bus = busesApartados.value.find(b => b.id === data.quotationBusId);
     if (!bus)
       return { error: 'Autobús no encontrado' };
@@ -1042,17 +1671,31 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (data.amount > saldoPendiente)
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
 
-    const newPago: BusPayment = {
-      ...data,
-      id: `pago-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('bus_payments')
+        .insert(mapBusPaymentToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    pagosBus.value.push(newPago);
-    return newPago;
+      const newPago = mapBusPaymentRowToDomain(row);
+      pagosBus.value.push(newPago);
+      return newPago;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateBusPayment(id: string, data: Partial<BusPaymentFormData>): BusPayment | undefined {
+  async function updateBusPayment(id: string, data: Partial<BusPaymentFormData>): Promise<BusPayment | undefined> {
     const index = pagosBus.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -1061,19 +1704,62 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: BusPayment = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'bus_payments'> = {};
+      if (data.amount !== undefined)
+        update.amount = data.amount;
+      if (data.paymentDate !== undefined)
+        update.payment_date = data.paymentDate;
+      if (data.paymentType !== undefined)
+        update.payment_type = data.paymentType;
+      if (data.concept !== undefined)
+        update.concept = data.concept ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    pagosBus.value[index] = updated;
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('bus_payments')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapBusPaymentRowToDomain(row);
+      pagosBus.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteBusPayment(id: string): void {
-    pagosBus.value = pagosBus.value.filter(p => p.id !== id);
+  async function deleteBusPayment(id: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('bus_payments')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      pagosBus.value = pagosBus.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   return {
@@ -1129,6 +1815,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getBusPaymentStatus,
     getCostoPerPersonaBus,
     // Actions
+    fetchByTravel,
     createQuotation,
     updateQuotation,
     confirmarQuotation,
@@ -1158,9 +1845,4 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     updateBusPayment,
     deleteBusPayment,
   };
-}, {
-  persist: {
-    key: 'viajeros-ligeros-cotizacion',
-    storage: import.meta.client ? localStorage : undefined,
-  },
 });

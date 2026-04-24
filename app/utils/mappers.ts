@@ -1,6 +1,6 @@
 import type { Bus, BusFormData } from '~/types/bus';
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
-import type { Tables } from '~/types/database.types';
+import type { Json, Tables, TablesInsert } from '~/types/database.types';
 import type { BedConfiguration, HotelRoomData, HotelRoomType } from '~/types/hotel-room';
 import type { AdjustmentItem, Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
 import type { Provider, ProviderFormData } from '~/types/provider';
@@ -323,6 +323,19 @@ export function mapTravelerAccountConfigRowToDomain(row: Tables<'traveler_accoun
     surcharges: (row.surcharges as AdjustmentItem[]) ?? [],
     publicPriceId: row.public_price_id ?? undefined,
     publicPriceAmount: row.public_price_amount ?? undefined,
+  };
+}
+
+export function mapTravelerAccountConfigToUpsert(config: TravelerAccountConfig): TablesInsert<'traveler_account_configs'> {
+  return {
+    travel_id: config.travelId,
+    traveler_id: config.travelerId,
+    traveler_type: config.travelerType,
+    child_price: config.childPrice ?? null,
+    discounts: config.discounts as unknown as Json,
+    surcharges: config.surcharges as unknown as Json,
+    public_price_id: config.publicPriceId ?? null,
+    public_price_amount: config.publicPriceAmount ?? null,
   };
 }
 
