@@ -92,6 +92,26 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   });
 
   // Actions
+  async function fetchAll(): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data, error: err } = await supabase
+        .from('travelers')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (err)
+        throw err;
+      travelers.value = data.map(mapTravelerRowToDomain);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
   async function fetchByTravel(travelId: string): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -103,7 +123,11 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
         .order('created_at', { ascending: false });
       if (err)
         throw err;
-      travelers.value = data.map(mapTravelerRowToDomain);
+      const fetched = data.map(mapTravelerRowToDomain);
+      travelers.value = [
+        ...travelers.value.filter(t => t.travelId !== travelId),
+        ...fetched,
+      ];
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -253,6 +277,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     filteredTravelers,
     filteredGroupedTravelers,
     // Actions
+    fetchAll,
     fetchByTravel,
     addTraveler,
     updateTraveler,
