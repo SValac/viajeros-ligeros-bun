@@ -23,12 +23,12 @@ const selectedProviderId = ref(modelValue);
 
 // Opciones de categoría
 const allCategoryOptions = [
-  { value: 'guias', label: 'Guías', icon: 'i-lucide-user-search' },
-  { value: 'transporte', label: 'Transporte', icon: 'i-lucide-car' },
-  { value: 'hospedaje', label: 'Hospedaje', icon: 'i-lucide-hotel' },
-  { value: 'agencias-autobus', label: 'Agencias de Autobús', icon: 'i-lucide-bus' },
-  { value: 'comidas', label: 'Comidas', icon: 'i-lucide-utensils' },
-  { value: 'otros', label: 'Otros', icon: 'i-lucide-package' },
+  { value: 'guides', label: 'Guías', icon: 'i-lucide-user-search' },
+  { value: 'transportation', label: 'Transporte', icon: 'i-lucide-car' },
+  { value: 'accommodation', label: 'Hospedaje', icon: 'i-lucide-hotel' },
+  { value: 'bus_agencies', label: 'Agencias de Autobús', icon: 'i-lucide-bus' },
+  { value: 'food_services', label: 'Comidas', icon: 'i-lucide-utensils' },
+  { value: 'other', label: 'Otros', icon: 'i-lucide-package' },
 ];
 
 const categoryOptions = computed(() =>
@@ -44,7 +44,7 @@ const availableProviders = computed(() => {
   }
 
   return providerStore.activeProviders.filter(
-    p => p.categoria === selectedCategory.value,
+    p => p.category === selectedCategory.value,
   );
 });
 
@@ -52,22 +52,22 @@ const availableProviders = computed(() => {
 const providerOptions = computed(() => {
   return availableProviders.value.map(provider => ({
     value: provider.id,
-    label: provider.nombre,
-    icon: getCategoryIcon(provider.categoria),
+    label: provider.name,
+    icon: getCategoryIcon(provider.category),
   }));
 });
 
 // Función auxiliar para obtener icono de categoría
-function getCategoryIcon(categoria: ProviderCategory): string {
+function getCategoryIcon(category: ProviderCategory): string {
   const icons: Record<ProviderCategory, string> = {
-    'guias': 'i-lucide-user-search',
-    'transporte': 'i-lucide-car',
-    'hospedaje': 'i-lucide-hotel',
-    'agencias-autobus': 'i-lucide-bus',
-    'comidas': 'i-lucide-utensils',
-    'otros': 'i-lucide-package',
+    guides: 'i-lucide-user-search',
+    transportation: 'i-lucide-car',
+    accommodation: 'i-lucide-hotel',
+    bus_agencies: 'i-lucide-bus',
+    food_services: 'i-lucide-utensils',
+    other: 'i-lucide-package',
   };
-  return icons[categoria] || 'i-lucide-package';
+  return icons[category] || 'i-lucide-package';
 }
 
 // Handlers
@@ -91,17 +91,17 @@ function openAddModal() {
   isAddModalOpen.value = true;
 }
 
-function handleProviderSubmit(data: ProviderFormData) {
+async function handleProviderSubmit(data: ProviderFormData) {
   // Si hay categoría seleccionada, forzarla
   if (selectedCategory.value) {
-    data.categoria = selectedCategory.value;
+    data.category = selectedCategory.value;
   }
 
-  const newProvider = providerStore.addProvider(data);
+  const newProvider = await providerStore.addProvider(data);
 
   toast.add({
     title: 'Proveedor creado',
-    description: `${data.nombre} se creó correctamente`,
+    description: `${data.name} se creó correctamente`,
     color: 'primary',
   });
 
@@ -120,7 +120,7 @@ watch(() => modelValue, (newValue) => {
   if (newValue) {
     const provider = providerStore.getProviderById(newValue);
     if (provider) {
-      selectedCategory.value = provider.categoria;
+      selectedCategory.value = provider.category;
     }
   }
 });
@@ -131,7 +131,7 @@ onMounted(() => {
   if (modelValue) {
     const provider = providerStore.getProviderById(modelValue);
     if (provider) {
-      selectedCategory.value = provider.categoria;
+      selectedCategory.value = provider.category;
     }
   }
 });

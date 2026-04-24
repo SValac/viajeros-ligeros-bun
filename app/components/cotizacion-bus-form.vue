@@ -2,10 +2,10 @@
 import { z } from 'zod';
 
 import type { Bus } from '~/types/bus';
-import type { CotizacionBusEstado, TipoDivisionCosto } from '~/types/cotizacion';
+import type { CostSplitType, QuotationBusStatus } from '~/types/quotation';
 
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   open: boolean;
 };
 
@@ -24,17 +24,17 @@ const toast = useToast();
 
 // Agencias de autobús disponibles
 const agenciasDisponibles = computed(() =>
-  providerStore.getProvidersByCategory('agencias-autobus').filter(p => p.activo),
+  providerStore.getProvidersByCategory('bus_agencies').filter(p => p.active),
 );
 
 const agenciasSelectItems = computed(() =>
-  agenciasDisponibles.value.map(p => ({ value: p.id, label: p.nombre })),
+  agenciasDisponibles.value.map(p => ({ value: p.id, label: p.name })),
 );
 
-const estadoOptions: { label: string; value: CotizacionBusEstado }[] = [
-  { label: 'Apartado', value: 'apartado' },
-  { label: 'Confirmado', value: 'confirmado' },
-  { label: 'Pendiente', value: 'pendiente' },
+const estadoOptions: { label: string; value: QuotationBusStatus }[] = [
+  { label: 'Apartado', value: 'reserved' },
+  { label: 'Confirmado', value: 'confirmed' },
+  { label: 'Pendiente', value: 'pending' },
 ];
 
 const metodoPagoOptions = [
@@ -42,92 +42,92 @@ const metodoPagoOptions = [
   { label: 'Transferencia', value: 'transfer' },
 ];
 
-const tipoDivisionOptions: { label: string; value: TipoDivisionCosto }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimo' },
+const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
+  { label: 'Asientos mínimos objetivo', value: 'minimum' },
   { label: 'Capacidad total del bus', value: 'total' },
 ];
 
 const busSchema = z.object({
-  proveedorId: z.string({ message: 'Selecciona una agencia' }).min(1, 'Selecciona una agencia'),
-  numeroUnidad: z.string({ message: 'Número de unidad es requerido' }).min(1).max(50),
-  capacidad: z.number({ message: 'Ingresa la capacidad' }).int().positive('Debe ser mayor a 0'),
-  estado: z.enum(['apartado', 'confirmado', 'pendiente']),
-  costoTotal: z.number({ message: 'Ingresa el costo total' }).positive('El costo debe ser mayor a 0'),
-  tipoDivision: z.enum(['minimo', 'total']),
-  metodoPago: z.enum(['cash', 'transfer']),
-  observaciones: z.string().max(500).optional(),
-  confirmado: z.boolean(),
-  notas: z.string().max(500).optional(),
+  providerId: z.string({ message: 'Selecciona una agencia' }).min(1, 'Selecciona una agencia'),
+  unitNumber: z.string({ message: 'Número de unidad es requerido' }).min(1).max(50),
+  capacity: z.number({ message: 'Ingresa la capacidad' }).int().positive('Debe ser mayor a 0'),
+  status: z.enum(['reserved', 'confirmed', 'pending']),
+  totalCost: z.number({ message: 'Ingresa el costo total' }).positive('El costo debe ser mayor a 0'),
+  splitType: z.enum(['minimum', 'total']),
+  paymentMethod: z.enum(['cash', 'transfer']),
+  remarks: z.string().max(500).optional(),
+  confirmed: z.boolean(),
+  notes: z.string().max(500).optional(),
 });
 
 type BusSchema = z.infer<typeof busSchema>;
 
 const formState = reactive<Partial<BusSchema>>({
-  proveedorId: '',
-  numeroUnidad: '',
-  capacidad: undefined,
-  estado: 'apartado',
-  costoTotal: undefined,
-  tipoDivision: 'minimo',
-  metodoPago: 'cash',
-  observaciones: '',
-  confirmado: false,
-  notas: '',
+  providerId: '',
+  unitNumber: '',
+  capacity: undefined,
+  status: 'reserved',
+  totalCost: undefined,
+  splitType: 'minimum',
+  paymentMethod: 'cash',
+  remarks: '',
+  confirmed: false,
+  notes: '',
 });
 
 const busSeleccionado = ref<Bus | null>(null);
 
 // Unidades del catálogo para la agencia seleccionada
 const unidadesAgencia = computed<Bus[]>(() => {
-  if (!formState.proveedorId)
+  if (!formState.providerId)
     return [];
-  return busStore.getBusesByProvider(formState.proveedorId);
+  return busStore.getBusesByProvider(formState.providerId);
 });
 
 // Al cambiar agencia, limpiar selección de unidad
-watch(() => formState.proveedorId, () => {
+watch(() => formState.providerId, () => {
   busSeleccionado.value = null;
-  formState.numeroUnidad = '';
-  formState.capacidad = undefined;
+  formState.unitNumber = '';
+  formState.capacity = undefined;
 });
 
 function seleccionarUnidad(bus: Bus) {
   busSeleccionado.value = bus;
-  const partes = [bus.marca, bus.modelo, bus.año ? `(${bus.año})` : null].filter(Boolean);
-  formState.numeroUnidad = partes.length > 0 ? partes.join(' ') : `Unidad ${bus.id.slice(-6)}`;
-  formState.capacidad = bus.cantidadAsientos;
+  const partes = [bus.brand, bus.model, bus.year ? `(${bus.year})` : null].filter(Boolean);
+  formState.unitNumber = partes.length > 0 ? partes.join(' ') : `Unidad ${bus.id.slice(-6)}`;
+  formState.capacity = bus.seatCount;
   // Pre-llenar costo con precio de renta del catálogo si existe
-  if (bus.precioRenta && !formState.costoTotal) {
-    formState.costoTotal = bus.precioRenta;
+  if (bus.rentalPrice && !formState.totalCost) {
+    formState.totalCost = bus.rentalPrice;
   }
 }
 
 function deseleccionarUnidad() {
   busSeleccionado.value = null;
-  formState.numeroUnidad = '';
-  formState.capacidad = undefined;
+  formState.unitNumber = '';
+  formState.capacity = undefined;
 }
 
 function getBusLabel(bus: Bus): string {
-  const partes = [bus.marca, bus.modelo, bus.año ? `(${bus.año})` : null].filter(Boolean);
+  const partes = [bus.brand, bus.model, bus.year ? `(${bus.year})` : null].filter(Boolean);
   return partes.length > 0 ? partes.join(' ') : 'Sin identificación';
 }
 
 function resetForm() {
-  formState.proveedorId = '';
-  formState.numeroUnidad = '';
-  formState.capacidad = undefined;
-  formState.estado = 'apartado';
-  formState.costoTotal = undefined;
-  formState.tipoDivision = 'minimo';
-  formState.metodoPago = 'cash';
-  formState.observaciones = '';
-  formState.confirmado = false;
-  formState.notas = '';
+  formState.providerId = '';
+  formState.unitNumber = '';
+  formState.capacity = undefined;
+  formState.status = 'reserved';
+  formState.totalCost = undefined;
+  formState.splitType = 'minimum';
+  formState.paymentMethod = 'cash';
+  formState.remarks = '';
+  formState.confirmed = false;
+  formState.notes = '';
   busSeleccionado.value = null;
 }
 
-function handleSubmit() {
+async function handleSubmit() {
   const result = busSchema.safeParse(formState);
   if (!result.success) {
     toast.add({
@@ -138,11 +138,11 @@ function handleSubmit() {
     return;
   }
 
-  const response = cotizacionStore.addBusCotizacion({
-    cotizacionId: props.cotizacionId,
+  const response = await cotizacionStore.addBusQuotation({
+    quotationId: props.quotationId,
     ...result.data,
-    notas: result.data.notas || undefined,
-    observaciones: result.data.observaciones || undefined,
+    notes: result.data.notes || undefined,
+    remarks: result.data.remarks || undefined,
   });
 
   if ('error' in response) {
@@ -183,14 +183,14 @@ function handleCancel() {
           />
           <USelect
             v-else
-            v-model="formState.proveedorId"
+            v-model="formState.providerId"
             :items="agenciasSelectItems"
             placeholder="Selecciona una agencia"
           />
         </UFormField>
 
         <!-- Unidades de la agencia -->
-        <template v-if="formState.proveedorId">
+        <template v-if="formState.providerId">
           <div class="space-y-3">
             <label class="text-sm font-medium">Unidad <span class="text-error">*</span></label>
 
@@ -212,7 +212,7 @@ function handleCancel() {
                   variant="outline"
                   icon="i-lucide-external-link"
                   label="Ir a la agencia"
-                  :to="`/providers/bus-agencies/${formState.proveedorId}`"
+                  :to="`/providers/bus-agencies/${formState.providerId}`"
                   target="_blank"
                 />
               </template>
@@ -231,9 +231,9 @@ function handleCancel() {
                       {{ getBusLabel(busSeleccionado) }}
                     </p>
                     <p class="text-sm text-muted">
-                      {{ busSeleccionado.cantidadAsientos }} asientos
-                      <template v-if="busSeleccionado.precioRenta">
-                        · ${{ busSeleccionado.precioRenta.toLocaleString('es-MX') }} renta ref.
+                      {{ busSeleccionado.seatCount }} asientos
+                      <template v-if="busSeleccionado.rentalPrice">
+                        · ${{ busSeleccionado.rentalPrice.toLocaleString('es-MX') }} renta ref.
                       </template>
                     </p>
                   </div>
@@ -261,9 +261,9 @@ function handleCancel() {
                       {{ getBusLabel(bus) }}
                     </p>
                     <p class="text-xs text-muted">
-                      {{ bus.cantidadAsientos }} asientos
-                      <template v-if="bus.precioRenta">
-                        · ${{ bus.precioRenta.toLocaleString('es-MX') }}
+                      {{ bus.seatCount }} asientos
+                      <template v-if="bus.rentalPrice">
+                        · ${{ bus.rentalPrice.toLocaleString('es-MX') }}
                       </template>
                     </p>
                   </div>
@@ -279,19 +279,19 @@ function handleCancel() {
           <USeparator label="Identificación" />
 
           <UFormField label="Identificador de la Unidad" required>
-            <UInput v-model="formState.numeroUnidad" placeholder="Ej. BUS-001 o Marca Modelo" />
+            <UInput v-model="formState.unitNumber" placeholder="Ej. BUS-001 o Marca Modelo" />
           </UFormField>
 
           <div class="grid grid-cols-2 gap-4">
             <UFormField label="Capacidad (asientos)" required>
               <UInput
-                v-model.number="formState.capacidad"
+                v-model.number="formState.capacity"
                 type="number"
                 min="1"
               />
             </UFormField>
             <UFormField label="Estado">
-              <USelect v-model="formState.estado" :items="estadoOptions" />
+              <USelect v-model="formState.status" :items="estadoOptions" />
             </UFormField>
           </div>
 
@@ -299,30 +299,30 @@ function handleCancel() {
 
           <UFormField label="Costo Total" required>
             <UInput
-              v-model.number="formState.costoTotal"
+              v-model.number="formState.totalCost"
               type="number"
               placeholder="0.00"
             />
           </UFormField>
 
           <UFormField label="Dividir entre" required>
-            <USelect v-model="formState.tipoDivision" :items="tipoDivisionOptions" />
+            <USelect v-model="formState.splitType" :items="tipoDivisionOptions" />
           </UFormField>
 
           <UFormField label="Método de Pago" required>
-            <USelect v-model="formState.metodoPago" :items="metodoPagoOptions" />
+            <USelect v-model="formState.paymentMethod" :items="metodoPagoOptions" />
           </UFormField>
 
           <UFormField label="Observaciones">
             <UTextarea
-              v-model="formState.observaciones"
+              v-model="formState.remarks"
               placeholder="Notas sobre el servicio..."
               :rows="2"
             />
           </UFormField>
 
           <UFormField name="confirmado">
-            <UCheckbox v-model="formState.confirmado" label="Servicio confirmado por el proveedor" />
+            <UCheckbox v-model="formState.confirmed" label="Servicio confirmado por el proveedor" />
           </UFormField>
         </template>
 

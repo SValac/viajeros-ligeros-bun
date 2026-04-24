@@ -1,60 +1,60 @@
 <script setup lang="ts">
-import type { CotizacionProveedor, CotizacionProveedorFormData, EstadoPagoProveedor } from '~/types/cotizacion';
+import type { ProviderPaymentStatus, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   readonly?: boolean;
 };
 
-const { cotizacionId, readonly = false } = defineProps<Props>();
+const { quotationId, readonly = false } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const toast = useToast();
 
 // Derived data
-const proveedores = computed(() => cotizacionStore.filteredProveedores(cotizacionId));
+const proveedores = computed(() => cotizacionStore.filteredProveedores(quotationId));
 
 // Filter state (local — synced to store)
-const filterEstadoPago = shallowRef<EstadoPagoProveedor | 'todos'>('todos');
-const filterConfirmado = shallowRef<'todos' | 'si' | 'no'>('todos');
-const filterMetodoPago = shallowRef<'todos' | 'cash' | 'transfer'>('todos');
+const filterEstadoPago = shallowRef<ProviderPaymentStatus | 'all'>('all');
+const filterConfirmado = shallowRef<'all' | 'si' | 'no'>('all');
+const filterMetodoPago = shallowRef<'all' | 'cash' | 'transfer'>('all');
 
 watch([filterEstadoPago, filterConfirmado, filterMetodoPago], () => {
   cotizacionStore.setFilters({
-    estadoPago: filterEstadoPago.value,
-    confirmado: filterConfirmado.value === 'todos'
-      ? 'todos'
+    paymentStatus: filterEstadoPago.value,
+    confirmed: filterConfirmado.value === 'all'
+      ? 'all'
       : filterConfirmado.value === 'si',
-    metodoPago: filterMetodoPago.value,
+    paymentMethod: filterMetodoPago.value,
   });
 });
 
 // Modal state
 const isProveedorFormOpen = shallowRef(false);
-const selectedProveedor = shallowRef<CotizacionProveedor | null>(null);
+const selectedProveedor = shallowRef<QuotationProvider | null>(null);
 const isHistorialOpen = shallowRef(false);
 const historialProveedorId = shallowRef<string>('');
 const historialProveedorNombre = shallowRef<string>('');
 const isDeleteModalOpen = shallowRef(false);
-const proveedorToDelete = shallowRef<CotizacionProveedor | null>(null);
+const proveedorToDelete = shallowRef<QuotationProvider | null>(null);
 
 // Filter options
 const estadoPagoOptions = [
-  { label: 'Todos', value: 'todos' },
-  { label: 'Pendiente', value: 'pendiente' },
-  { label: 'Anticipo', value: 'anticipo' },
+  { label: 'Todos', value: 'all' },
+  { label: 'Pendiente', value: 'pending' },
+  { label: 'Anticipo', value: 'partial' },
   { label: 'Liquidado', value: 'liquidado' },
 ];
 
 const confirmadoOptions = [
-  { label: 'Todos', value: 'todos' },
+  { label: 'Todos', value: 'all' },
   { label: 'Sí', value: 'si' },
   { label: 'No', value: 'no' },
 ];
 
 const metodoPagoOptions = [
-  { label: 'Todos', value: 'todos' },
+  { label: 'Todos', value: 'all' },
   { label: 'Efectivo', value: 'cash' },
   { label: 'Transferencia', value: 'transfer' },
 ];
@@ -66,29 +66,29 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function getEstadoPagoColor(estado: EstadoPagoProveedor): 'warning' | 'info' | 'success' {
-  if (estado === 'pendiente')
+function getEstadoPagoColor(status: ProviderPaymentStatus): 'warning' | 'info' | 'success' {
+  if (status === 'pending')
     return 'warning';
-  if (estado === 'anticipo')
+  if (status === 'partial')
     return 'info';
   return 'success';
 }
 
-function getEstadoPagoLabel(estado: EstadoPagoProveedor): string {
-  if (estado === 'pendiente')
+function getEstadoPagoLabel(status: ProviderPaymentStatus): string {
+  if (status === 'pending')
     return 'Pendiente';
-  if (estado === 'anticipo')
+  if (status === 'partial')
     return 'Anticipo';
   return 'Liquidado';
 }
 
 function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.nombre ?? 'Proveedor desconocido';
+  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
 }
 
 function isProviderInactive(providerId: string): boolean {
   const provider = providerStore.getProviderById(providerId);
-  return provider ? !provider.activo : false;
+  return provider ? !provider.active : false;
 }
 
 function openNewProveedor() {
@@ -96,37 +96,37 @@ function openNewProveedor() {
   isProveedorFormOpen.value = true;
 }
 
-function openEditProveedor(proveedor: CotizacionProveedor) {
+function openEditProveedor(proveedor: QuotationProvider) {
   selectedProveedor.value = proveedor;
   isProveedorFormOpen.value = true;
 }
 
-function openHistorial(proveedor: CotizacionProveedor) {
+function openHistorial(proveedor: QuotationProvider) {
   historialProveedorId.value = proveedor.id;
   historialProveedorNombre.value = getProviderName(proveedor.providerId);
   isHistorialOpen.value = true;
 }
 
-function openRegistrarPago(proveedor: CotizacionProveedor) {
+function openRegistrarPago(proveedor: QuotationProvider) {
   historialProveedorId.value = proveedor.id;
   historialProveedorNombre.value = getProviderName(proveedor.providerId);
   isHistorialOpen.value = true;
 }
 
-function openDeleteConfirm(proveedor: CotizacionProveedor) {
+function openDeleteConfirm(proveedor: QuotationProvider) {
   proveedorToDelete.value = proveedor;
   isDeleteModalOpen.value = true;
 }
 
-function handleProveedorSubmit(data: CotizacionProveedorFormData) {
+async function handleProveedorSubmit(data: QuotationProviderFormData) {
   if (selectedProveedor.value) {
-    const result = cotizacionStore.updateProveedorCotizacion(selectedProveedor.value.id, data);
+    const result = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
     if (result) {
       toast.add({ title: 'Proveedor actualizado', color: 'success' });
     }
   }
   else {
-    const result = cotizacionStore.addProveedorCotizacion(data);
+    const result = await cotizacionStore.addProveedorQuotation(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -138,22 +138,22 @@ function handleProveedorSubmit(data: CotizacionProveedorFormData) {
   selectedProveedor.value = null;
 }
 
-function handleToggleConfirmado(proveedor: CotizacionProveedor) {
+async function handleToggleConfirmado(proveedor: QuotationProvider) {
   if (readonly)
     return;
-  cotizacionStore.toggleConfirmadoProveedor(proveedor.id);
+  await cotizacionStore.toggleConfirmadoProveedor(proveedor.id);
 }
 
-function confirmDeleteProveedor() {
+async function confirmDeleteProveedor() {
   if (!proveedorToDelete.value)
     return;
-  cotizacionStore.deleteProveedorCotizacion(proveedorToDelete.value.id);
+  await cotizacionStore.deleteProveedorQuotation(proveedorToDelete.value.id);
   toast.add({ title: 'Proveedor eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   proveedorToDelete.value = null;
 }
 
-function getProveedorActions(proveedor: CotizacionProveedor) {
+function getProveedorActions(proveedor: QuotationProvider) {
   const readActions = [
     {
       label: 'Ver historial de pagos',
@@ -178,8 +178,8 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
       onSelect: () => openEditProveedor(proveedor),
     },
     {
-      label: proveedor.confirmado ? 'Marcar sin confirmar' : 'Marcar como confirmado',
-      icon: proveedor.confirmado ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
+      label: proveedor.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
+      icon: proveedor.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
       onSelect: () => handleToggleConfirmado(proveedor),
     },
   ];
@@ -299,14 +299,14 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
 
             <!-- Servicio -->
             <td class="py-3 pr-4 max-w-40">
-              <span class="truncate block">{{ proveedor.descripcionServicio }}</span>
+              <span class="truncate block">{{ proveedor.serviceDescription }}</span>
             </td>
 
             <!-- División -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="(proveedor.tipoDivision ?? 'minimo') === 'minimo' ? 'Asientos min.' : 'Cap. bus'"
-                :color="(proveedor.tipoDivision ?? 'minimo') === 'minimo' ? 'info' : 'neutral'"
+                :label="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Cap. bus'"
+                :color="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
                 size="xs"
               />
@@ -314,7 +314,7 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
 
             <!-- Costo Total -->
             <td class="py-3 pr-4 font-medium">
-              {{ formatCurrency(proveedor.costoTotal) }}
+              {{ formatCurrency(proveedor.totalCost) }}
             </td>
 
             <!-- Costo/persona -->
@@ -337,8 +337,8 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
             <!-- Método -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="proveedor.metodoPago === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="proveedor.metodoPago === 'cash' ? 'success' : 'info'"
+                :label="proveedor.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
+                :color="proveedor.paymentMethod === 'cash' ? 'success' : 'info'"
                 variant="subtle"
                 size="xs"
               />
@@ -347,8 +347,8 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
             <!-- Estado Pago -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="getEstadoPagoLabel(cotizacionStore.getEstadoPagoProveedor(proveedor.id))"
-                :color="getEstadoPagoColor(cotizacionStore.getEstadoPagoProveedor(proveedor.id))"
+                :label="getEstadoPagoLabel(cotizacionStore.getProviderPaymentStatus(proveedor.id))"
+                :color="getEstadoPagoColor(cotizacionStore.getProviderPaymentStatus(proveedor.id))"
                 variant="subtle"
                 size="xs"
               />
@@ -357,8 +357,8 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
             <!-- Confirmado -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="proveedor.confirmado ? 'Sí' : 'No'"
-                :color="proveedor.confirmado ? 'success' : 'neutral'"
+                :label="proveedor.confirmed ? 'Sí' : 'No'"
+                :color="proveedor.confirmed ? 'success' : 'neutral'"
                 variant="subtle"
                 size="xs"
               />
@@ -406,7 +406,7 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
   >
     <template #body>
       <CotizacionProveedorForm
-        :cotizacion-id="cotizacionId"
+        :quotation-id="quotationId"
         :proveedor-cotizacion="selectedProveedor"
         @submit="handleProveedorSubmit"
         @cancel="isProveedorFormOpen = false"
@@ -424,9 +424,9 @@ function getProveedorActions(proveedor: CotizacionProveedor) {
     <template #body>
       <div class="p-4">
         <PagoProveedorHistorial
-          :cotizacion-proveedor-id="historialProveedorId"
+          :quotation-provider-id="historialProveedorId"
           :readonly="readonly"
-          :proveedor-nombre="historialProveedorNombre"
+          :proveedor-name="historialProveedorNombre"
         />
       </div>
     </template>

@@ -31,15 +31,15 @@ const groupedByOccupancy = computed((): RoomTypesByOccupancy[] => {
   const map = new Map<number, RoomTypesByOccupancy>();
 
   for (const rt of roomTypes.value) {
-    if (!map.has(rt.ocupacionMaxima)) {
-      map.set(rt.ocupacionMaxima, { ocupacion: rt.ocupacionMaxima, totalHabitaciones: 0, tipos: [] });
+    if (!map.has(rt.maxOccupancy)) {
+      map.set(rt.maxOccupancy, { occupancy: rt.maxOccupancy, totalRooms: 0, types: [] });
     }
-    const group = map.get(rt.ocupacionMaxima)!;
-    group.tipos.push(rt);
-    group.totalHabitaciones += rt.cantidadHabitaciones;
+    const group = map.get(rt.maxOccupancy)!;
+    group.types.push(rt);
+    group.totalRooms += rt.roomCount;
   }
 
-  return [...map.values()].sort((a, b) => a.ocupacion - b.ocupacion);
+  return [...map.values()].sort((a, b) => a.occupancy - b.occupancy);
 });
 
 onMounted(() => {
@@ -99,7 +99,7 @@ function handleDelete(rt: HotelRoomType) {
     <div class="flex flex-wrap justify-between items-start gap-4">
       <div>
         <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-          Habitaciones — {{ provider.nombre }}
+          Habitaciones — {{ provider.name }}
         </h2>
         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
           Gestiona los tipos de habitación del hotel
@@ -160,22 +160,22 @@ function handleDelete(rt: HotelRoomType) {
     <div v-else class="space-y-6">
       <div
         v-for="group in groupedByOccupancy"
-        :key="group.ocupacion"
+        :key="group.occupancy"
         class="space-y-3"
       >
         <div class="flex items-center gap-2">
           <UIcon name="i-lucide-users" class="w-4 h-4 text-gray-400" />
           <span class="font-semibold text-gray-900 dark:text-white">
-            {{ group.ocupacion }} {{ group.ocupacion === 1 ? 'persona' : 'personas' }}
+            {{ group.occupancy }} {{ group.occupancy === 1 ? 'persona' : 'personas' }}
           </span>
           <UBadge variant="subtle">
-            {{ group.totalHabitaciones }} hab
+            {{ group.totalRooms }} hab
           </UBadge>
         </div>
 
         <div class="space-y-2">
           <HotelRoomTypeCard
-            v-for="rt in group.tipos"
+            v-for="rt in group.types"
             :key="rt.id"
             :room-type="rt"
             @edit="openEditForm(rt)"

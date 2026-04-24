@@ -19,6 +19,6 @@ const roomTypesCount = computed(() => roomData.value?.roomTypes.length ?? 0);
     color="primary"
     size="sm"
   >
-    {{ roomData?.totalHabitaciones }} hab · {{ roomTypesCount }} tipos
+    {{ roomData?.totalRooms }} hab · {{ roomTypesCount }} tipos
   </UBadge>
 </template>

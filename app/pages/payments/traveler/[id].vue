@@ -27,8 +27,24 @@ watchEffect(() => {
 });
 
 const travelerName = computed(() =>
-  traveler.value ? `${traveler.value.nombre} ${traveler.value.apellido}` : '',
+  traveler.value ? `${traveler.value.firstName} ${traveler.value.lastName}` : '',
 );
+
+const loadedCotizacionTravelIds = shallowRef(new Set<string>());
+
+async function ensureCotizacionesLoaded(travelIds: string[]) {
+  const pending = travelIds.filter((id) => {
+    return !!id && !loadedCotizacionTravelIds.value.has(id);
+  });
+
+  if (pending.length === 0)
+    return;
+
+  await Promise.all(pending.map(async (id) => {
+    await cotizacionStore.fetchByTravel(id);
+    loadedCotizacionTravelIds.value.add(id);
+  }));
+}
 
 // All travel IDs this traveler has account configs or payments for
 const travelerTravelIds = computed((): string[] => {
@@ -49,16 +65,16 @@ const travelOptions = computed(() => [
   { label: 'Todos los viajes', value: 'all' },
   ...travelerTravelIds.value.map((id) => {
     const t = travelStore.getTravelById(id);
-    return { label: t?.destino ?? id, value: id };
+    return { label: t?.destination ?? id, value: id };
   }),
 ]);
 
 function getTravelName(id: string) {
-  return travelStore.getTravelById(id)?.destino ?? id;
+  return travelStore.getTravelById(id)?.destination ?? id;
 }
 
 function getTravelPrice(id: string) {
-  return travelStore.getTravelById(id)?.precio ?? 0;
+  return travelStore.getTravelById(id)?.price ?? 0;
 }
 
 const filteredPayments = computed(() => {
@@ -87,18 +103,18 @@ function closeEditModal() {
   editingPayment.value = null;
 }
 
-function handleEditSubmit(data: PaymentFormData) {
+async function handleEditSubmit(data: PaymentFormData) {
   if (!editingPayment.value)
     return;
-  paymentStore.updatePayment(editingPayment.value.id, data);
+  await paymentStore.updatePayment(editingPayment.value.id, data);
   toast.add({ title: 'Pago actualizado', color: 'success' });
   closeEditModal();
 }
 
-function handleDelete(payment: Payment) {
+async function handleDelete(payment: Payment) {
   // eslint-disable-next-line no-alert
   if (confirm('¿Eliminar este pago? Esta acción no se puede deshacer.')) {
-    paymentStore.deletePayment(payment.id);
+    await paymentStore.deletePayment(payment.id);
     toast.add({ title: 'Pago eliminado', color: 'warning' });
   }
 }
@@ -186,15 +202,15 @@ const editingConfigPreciosPublicos = computed(() => {
   if (!editingConfigTravelId.value)
     return [];
   const cotizacion = cotizacionStore.getCotizacionByTravel(editingConfigTravelId.value);
-  return cotizacion ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.id) : [];
+  return cotizacion ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.id) : [];
 });
 
 const editingConfigTravelPrice = computed(() =>
   editingConfigTravelId.value ? getTravelPrice(editingConfigTravelId.value) : 0,
 );
 
-function handleConfigSubmit(config: TravelerAccountConfig) {
-  paymentStore.setAccountConfig(config);
+async function handleConfigSubmit(config: TravelerAccountConfig) {
+  await paymentStore.setAccountConfig(config);
   toast.add({ title: 'Configuración guardada', color: 'success' });
   closeConfigModal();
 }
@@ -212,8 +228,13 @@ const editMaxAmount = computed(() => {
   return editingSummary.value.balance + editingPayment.value.amount;
 });
 
-onMounted(() => {
+onMounted(async () => {
+  await paymentStore.fetchByTraveler(travelerId.value);
+  await ensureCotizacionesLoaded(travelerTravelIds.value);
+});
 
+watch(travelerTravelIds, (ids) => {
+  void ensureCotizacionesLoaded(ids);
 });
 </script>
 

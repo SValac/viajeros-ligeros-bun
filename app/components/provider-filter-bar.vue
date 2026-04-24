@@ -17,12 +17,12 @@ const emit = defineEmits<{
 }>();
 
 const categoryOptions = [
-  { label: 'Guías', value: 'guias' },
-  { label: 'Transporte', value: 'transporte' },
-  { label: 'Hospedaje', value: 'hospedaje' },
-  { label: 'Agencias de Autobús', value: 'agencias-autobus' },
-  { label: 'Comidas', value: 'comidas' },
-  { label: 'Otros', value: 'otros' },
+  { label: 'Guías', value: 'guides' },
+  { label: 'Transporte', value: 'transportation' },
+  { label: 'Hospedaje', value: 'accommodation' },
+  { label: 'Agencias de Autobús', value: 'bus_agencies' },
+  { label: 'Comidas', value: 'food_services' },
+  { label: 'Otros', value: 'other' },
 ];
 
 const searchTerm = ref(props.modelValue.searchTerm ?? '');
@@ -52,21 +52,21 @@ const estadoOptions = computed(() =>
 function onCategoryChange(val: string | undefined) {
   emit('update:modelValue', {
     ...props.modelValue,
-    categoria: val as ProviderCategory | undefined,
+    category: val as ProviderCategory | undefined,
   });
 }
 
 function onCiudadChange(val: string | undefined) {
   emit('update:modelValue', {
     ...props.modelValue,
-    ciudad: val,
+    city: val,
   });
 }
 
 function onEstadoChange(val: string | undefined) {
   emit('update:modelValue', {
     ...props.modelValue,
-    estado: val,
+    state: val,
   });
 }
 
@@ -92,7 +92,7 @@ const hasFilters = computed(() =>
 
     <USelect
       v-if="showCategoryFilter"
-      :model-value="modelValue.categoria"
+      :model-value="modelValue.category"
       :items="categoryOptions"
       value-key="value"
       label-key="label"
@@ -102,7 +102,7 @@ const hasFilters = computed(() =>
     />
 
     <USelect
-      :model-value="modelValue.ciudad"
+      :model-value="modelValue.city"
       :items="ciudadOptions"
       value-key="value"
       label-key="label"
@@ -112,7 +112,7 @@ const hasFilters = computed(() =>
     />
 
     <USelect
-      :model-value="modelValue.estado"
+      :model-value="modelValue.state"
       :items="estadoOptions"
       value-key="value"
       label-key="label"

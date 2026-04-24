@@ -22,9 +22,9 @@ const coordinators = computed(() => {
     return coordinatorStore.allCoordinators;
   return coordinatorStore.allCoordinators.filter(
     c =>
-      c.nombre.toLowerCase().includes(term)
+      c.name.toLowerCase().includes(term)
       || c.email.toLowerCase().includes(term)
-      || c.telefono.includes(term),
+      || c.phone.includes(term),
   );
 });
 
@@ -47,11 +47,11 @@ function handleFormSubmit(data: CoordinatorFormData) {
   try {
     if (editingCoordinator.value) {
       coordinatorStore.updateCoordinator(editingCoordinator.value.id, data);
-      toast.add({ title: 'Coordinador actualizado', description: `${data.nombre} se actualizó correctamente`, color: 'primary' });
+      toast.add({ title: 'Coordinador actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
     }
     else {
       coordinatorStore.addCoordinator(data);
-      toast.add({ title: 'Coordinador creado', description: `${data.nombre} se creó correctamente`, color: 'primary' });
+      toast.add({ title: 'Coordinador creado', description: `${data.name} se creó correctamente`, color: 'primary' });
     }
     closeModal();
   }
@@ -62,9 +62,9 @@ function handleFormSubmit(data: CoordinatorFormData) {
 
 function handleDelete(coordinator: Coordinator) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${coordinator.nombre}?`)) {
+  if (confirm(`¿Estás seguro de eliminar a ${coordinator.name}?`)) {
     coordinatorStore.deleteCoordinator(coordinator.id);
-    toast.add({ title: 'Coordinador eliminado', description: `${coordinator.nombre} se eliminó correctamente`, color: 'warning' });
+    toast.add({ title: 'Coordinador eliminado', description: `${coordinator.name} se eliminó correctamente`, color: 'warning' });
   }
 }
 
@@ -89,25 +89,25 @@ function getRowActions(coordinator: Coordinator) {
 
 const columns: TableColumn<Coordinator>[] = [
   {
-    accessorKey: 'nombre',
+    accessorKey: 'name',
     header: 'Nombre',
     cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-2' }, [
         h('span', { class: 'i-lucide-user-star w-4 h-4 text-gray-400' }),
-        h('span', { class: 'font-medium' }, row.getValue('nombre')),
+        h('span', { class: 'font-medium' }, row.getValue('name')),
       ]),
   },
   {
-    accessorKey: 'edad',
+    accessorKey: 'age',
     header: 'Edad',
     cell: ({ row }) =>
-      h('span', { class: 'text-sm' }, `${row.getValue('edad')} años`),
+      h('span', { class: 'text-sm' }, `${row.getValue('age')} años`),
   },
   {
-    accessorKey: 'telefono',
+    accessorKey: 'phone',
     header: 'Teléfono',
     cell: ({ row }) =>
-      h('span', { class: 'text-sm' }, row.getValue('telefono')),
+      h('span', { class: 'text-sm' }, row.getValue('phone')),
   },
   {
     accessorKey: 'email',
@@ -116,13 +116,13 @@ const columns: TableColumn<Coordinator>[] = [
       h('span', { class: 'text-sm' }, row.getValue('email')),
   },
   {
-    accessorKey: 'notas',
+    accessorKey: 'notes',
     header: 'Notas',
     cell: ({ row }) => {
-      const notas = row.getValue('notas') as string | undefined;
-      if (!notas)
+      const notes = row.getValue('notes') as string | undefined;
+      if (!notes)
         return h('span', { class: 'text-sm text-gray-400' }, '-');
-      return h('span', { class: 'text-sm text-gray-600 dark:text-gray-300 line-clamp-1' }, notas);
+      return h('span', { class: 'text-sm text-gray-600 dark:text-gray-300 line-clamp-1' }, notes);
     },
   },
   {
@@ -166,7 +166,7 @@ const columns: TableColumn<Coordinator>[] = [
     <UInput
       v-model="searchTerm"
       icon="i-lucide-search"
-      placeholder="Buscar por nombre, email o teléfono..."
+      placeholder="Buscar por name, email o teléfono..."
       class="max-w-sm"
     />
 

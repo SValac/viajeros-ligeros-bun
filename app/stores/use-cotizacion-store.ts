@@ -1,109 +1,132 @@
+import type { Tables, TablesUpdate } from '~/types/database.types';
 import type {
-  Cotizacion,
-  CotizacionBus,
-  CotizacionBusFormData,
-  CotizacionFormData,
-  CotizacionHospedaje,
-  CotizacionHospedajeFormData,
-  CotizacionPrecioPublico,
-  CotizacionPrecioPublicoFormData,
-  CotizacionProveedor,
-  CotizacionProveedorFilters,
-  CotizacionProveedorFormData,
-  EstadoPagoBus,
-  EstadoPagoHospedaje,
-  EstadoPagoProveedor,
-  PagoBus,
-  PagoBusFormData,
-  PagoHospedaje,
-  PagoHospedajeFormData,
-  PagoProveedor,
-  PagoProveedorFormData,
-} from '~/types/cotizacion';
+  AccommodationPayment,
+  AccommodationPaymentFormData,
+  AccommodationPaymentStatus,
+  BusPayment,
+  BusPaymentFormData,
+  BusPaymentStatus,
+  ProviderPayment,
+  ProviderPaymentFormData,
+  ProviderPaymentStatus,
+  Quotation,
+  QuotationAccommodation,
+  QuotationAccommodationFormData,
+  QuotationBus,
+  QuotationBusFormData,
+  QuotationFormData,
+  QuotationProvider,
+  QuotationProviderFilters,
+  QuotationProviderFormData,
+  QuotationPublicPrice,
+  QuotationPublicPriceFormData,
+} from '~/types/quotation';
 
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import {
+  mapAccommodationPaymentRowToDomain,
+  mapAccommodationPaymentToInsert,
+  mapBusPaymentRowToDomain,
+  mapBusPaymentToInsert,
+  mapProviderPaymentRowToDomain,
+  mapProviderPaymentToInsert,
+  mapQuotationAccommodationDetailRowToDomain,
+  mapQuotationAccommodationRowToDomain,
+  mapQuotationBusRowToDomain,
+  mapQuotationBusToInsert,
+  mapQuotationProviderRowToDomain,
+  mapQuotationProviderToInsert,
+  mapQuotationPublicPriceRowToDomain,
+  mapQuotationPublicPriceToInsert,
+  mapQuotationRowToDomain,
+  mapQuotationToInsert,
+} from '~/utils/mappers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
+  const supabase = useSupabase();
+  const travelFetchCache = new Set<string>();
+  const travelFetchInFlight = new Map<string, Promise<void>>();
+
   // State
-  const cotizaciones = ref<Cotizacion[]>([]);
-  const proveedoresCotizacion = ref<CotizacionProveedor[]>([]);
-  const pagosProveedor = ref<PagoProveedor[]>([]);
-  const hospedajesCotizacion = ref<CotizacionHospedaje[]>([]);
-  const pagosHospedaje = ref<PagoHospedaje[]>([]);
-  const preciosPublicos = ref<CotizacionPrecioPublico[]>([]);
-  const busesApartados = ref<CotizacionBus[]>([]);
-  const pagosBus = ref<PagoBus[]>([]);
+  const cotizaciones = ref<Quotation[]>([]);
+  const proveedoresQuotation = ref<QuotationProvider[]>([]);
+  const pagosProveedor = ref<ProviderPayment[]>([]);
+  const hospedajesQuotation = ref<QuotationAccommodation[]>([]);
+  const pagosHospedaje = ref<AccommodationPayment[]>([]);
+  const preciosPublicos = ref<QuotationPublicPrice[]>([]);
+  const busesApartados = ref<QuotationBus[]>([]);
+  const pagosBus = ref<BusPayment[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
-  const filters = ref<CotizacionProveedorFilters>({});
+  const filters = ref<QuotationProviderFilters>({});
 
   // Getters
   const getCotizacionByTravel = computed(() => {
-    return (travelId: string): Cotizacion | undefined => {
+    return (travelId: string): Quotation | undefined => {
       return cotizaciones.value.find(c => c.travelId === travelId);
     };
   });
 
-  const getProveedoresByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionProveedor[] => {
-      return proveedoresCotizacion.value.filter(p => p.cotizacionId === cotizacionId);
+  const getProveedoresByQuotation = computed(() => {
+    return (quotationId: string): QuotationProvider[] => {
+      return proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
     };
   });
 
   const getPagosByProveedor = computed(() => {
-    return (cotizacionProveedorId: string): PagoProveedor[] => {
-      return [...pagosProveedor.value.filter(p => p.cotizacionProveedorId === cotizacionProveedorId)]
-        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    return (quotationProviderId: string): ProviderPayment[] => {
+      return [...pagosProveedor.value.filter(p => p.quotationProviderId === quotationProviderId)]
+        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getCostoTotal = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId)
-        .reduce((sum, p) => sum + p.costoTotal, 0);
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId)
+        .reduce((sum, p) => sum + p.totalCost, 0);
     };
   });
 
   const getCostoTipoMinimo = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId && (p.tipoDivision ?? 'minimo') === 'minimo')
-        .reduce((sum, p) => sum + p.costoTotal, 0);
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId && (p.splitType ?? 'minimum') === 'minimum')
+        .reduce((sum, p) => sum + p.totalCost, 0);
     };
   });
 
   const getCostoTipoTotal = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId && (p.tipoDivision ?? 'minimo') === 'total')
-        .reduce((sum, p) => sum + p.costoTotal, 0);
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId && (p.splitType ?? 'minimum') === 'total')
+        .reduce((sum, p) => sum + p.totalCost, 0);
     };
   });
 
-  const getHospedajesByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionHospedaje[] => {
-      return hospedajesCotizacion.value.filter(h => h.cotizacionId === cotizacionId);
+  const getHospedajesByQuotation = computed(() => {
+    return (quotationId: string): QuotationAccommodation[] => {
+      return hospedajesQuotation.value.filter(h => h.quotationId === quotationId);
     };
   });
 
   const getTotalCostoHospedajes = computed(() => {
-    return (cotizacionId: string): number => {
-      return hospedajesCotizacion.value
-        .filter(h => h.cotizacionId === cotizacionId)
-        .reduce((sum, h) => sum + h.costoTotal, 0);
+    return (quotationId: string): number => {
+      return hospedajesQuotation.value
+        .filter(h => h.quotationId === quotationId)
+        .reduce((sum, h) => sum + h.totalCost, 0);
     };
   });
 
   const getTotalHabitacionesPorTipo = computed(() => {
-    return (cotizacionId: string): { [tipoId: string]: number } => {
+    return (quotationId: string): { [tipoId: string]: number } => {
       const resultado: { [tipoId: string]: number } = {};
-      const hospedajes = getHospedajesByCotizacion.value(cotizacionId);
+      const hospedajes = getHospedajesByQuotation.value(quotationId);
 
       for (const hospedaje of hospedajes) {
-        for (const detalle of hospedaje.detalles) {
-          resultado[detalle.habitacionTipoId] = (resultado[detalle.habitacionTipoId] ?? 0) + detalle.cantidad;
+        for (const detalle of hospedaje.details) {
+          resultado[detalle.roomTypeId] = (resultado[detalle.roomTypeId] ?? 0) + detalle.quantity;
         }
       }
 
@@ -111,76 +134,76 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const getPreciosPublicosByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionPrecioPublico[] => {
-      return preciosPublicos.value.filter(p => p.cotizacionId === cotizacionId);
+  const getPreciosPublicosByQuotation = computed(() => {
+    return (quotationId: string): QuotationPublicPrice[] => {
+      return preciosPublicos.value.filter(p => p.quotationId === quotationId);
     };
   });
 
-  // Matriz de precios de referencia: precioAsiento + hospedaje agrupado por ocupacionMaxima
+  // Matriz de precios de referencia: seatPrice + hospedaje agrupado por maxOccupancy
   const getMatrizPreciosReferencia = computed(() => {
-    return (cotizacionId: string): Array<{
-      ocupacionMaxima: number;
-      precioPorPersona: number;
-      desglose: {
-        precioAsiento: number;
-        hospedaje: Array<{
-          hotelNombre: string;
-          tipoHabitacion: string;
-          costoPorPersona: number;
+    return (quotationId: string): Array<{
+      maxOccupancy: number;
+      pricePerPerson: number;
+      breakdown: {
+        seatPrice: number;
+        accommodation: Array<{
+          hotelName: string;
+          roomType: string;
+          costPerPerson: number;
         }>;
-        totalHospedaje: number;
+        totalAccommodation: number;
       };
     }> => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return [];
 
-      const precioAsiento = cotizacion.precioAsiento;
-      const hospedajes = getHospedajesByCotizacion.value(cotizacionId);
+      const seatPrice = cotizacion.seatPrice;
+      const hospedajes = getHospedajesByQuotation.value(quotationId);
       const providerStore = useProviderStore();
       const hotelRoomStore = useHotelRoomStore();
 
-      // Agrupar entradas por ocupacionMaxima
+      // Agrupar entradas por maxOccupancy
       const porOcupacion: Map<number, Array<{
-        hotelNombre: string;
-        tipoHabitacion: string;
-        costoPorPersona: number;
+        hotelName: string;
+        roomType: string;
+        costPerPerson: number;
       }>> = new Map();
 
       for (const hospedaje of hospedajes) {
         const hotelProvider = providerStore.getProviderById(hospedaje.providerId);
-        const hotelNombre = hotelProvider?.nombre ?? `Hotel ${hospedaje.providerId}`;
+        const hotelName = hotelProvider?.name ?? `Hotel ${hospedaje.providerId}`;
         const roomData = hotelRoomStore.getRoomDataByProviderId(hospedaje.providerId);
 
-        for (const detalle of hospedaje.detalles) {
-          const ocupacion = detalle.ocupacionMaxima;
-          const costoPorPersona = detalle.precioPorNoche / detalle.ocupacionMaxima;
+        for (const detalle of hospedaje.details) {
+          const ocupacion = detalle.maxOccupancy;
+          const costPerPerson = detalle.pricePerNight / detalle.maxOccupancy;
 
-          const roomType = roomData?.roomTypes.find(rt => rt.id === detalle.habitacionTipoId);
-          const tipoHabitacion = roomType
-            ? formatBedConfiguration(roomType.camas)
+          const roomTypeRecord = roomData?.roomTypes.find(rt => rt.id === detalle.roomTypeId);
+          const roomType = roomTypeRecord
+            ? formatBedConfiguration(roomTypeRecord.beds)
             : `${ocupacion} persona${ocupacion > 1 ? 's' : ''}`;
 
           if (!porOcupacion.has(ocupacion)) {
             porOcupacion.set(ocupacion, []);
           }
-          porOcupacion.get(ocupacion)!.push({ hotelNombre, tipoHabitacion, costoPorPersona });
+          porOcupacion.get(ocupacion)!.push({ hotelName, roomType, costPerPerson });
         }
       }
 
-      // Construir resultado ordenado por ocupacionMaxima ascendente
+      // Construir resultado ordenado por maxOccupancy ascendente
       return [...porOcupacion.entries()]
         .sort((a, b) => a[0] - b[0])
-        .map(([ocupacionMaxima, hoteles]) => {
-          const totalHospedaje = hoteles.reduce((sum, h) => sum + h.costoPorPersona, 0);
+        .map(([maxOccupancy, hoteles]) => {
+          const totalAccommodation = hoteles.reduce((sum, h) => sum + h.costPerPerson, 0);
           return {
-            ocupacionMaxima,
-            precioPorPersona: precioAsiento + totalHospedaje,
-            desglose: {
-              precioAsiento,
-              hospedaje: hoteles,
-              totalHospedaje,
+            maxOccupancy,
+            pricePerPerson: seatPrice + totalAccommodation,
+            breakdown: {
+              seatPrice,
+              accommodation: hoteles,
+              totalAccommodation,
             },
           };
         });
@@ -188,57 +211,57 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   const getAsientoMinimoCalculado = computed(() => {
-    return (cotizacionId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion || cotizacion.precioAsiento === 0)
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion || cotizacion.seatPrice === 0)
         return 0;
-      const costoTotal = getCostoTotal.value(cotizacionId);
-      return Math.ceil(costoTotal / cotizacion.precioAsiento);
+      const costoTotal = getCostoTotal.value(quotationId);
+      return Math.ceil(costoTotal / cotizacion.seatPrice);
     };
   });
 
-  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.precio
-  // Incluye costos de proveedores, hospedajes y autobuses
   const getTotalCostoBuses = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId)
-        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+        .filter(b => b.quotationId === quotationId)
+        .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
   });
 
   const getCostoBusesTipoMinimo = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId && (b.tipoDivision ?? 'minimo') === 'minimo')
-        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+        .filter(b => b.quotationId === quotationId && (b.splitType ?? 'minimum') === 'minimum')
+        .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
   });
 
   const getCostoBusesTipoTotal = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId && (b.tipoDivision ?? 'minimo') === 'total')
-        .reduce((sum, b) => sum + (b.costoTotal ?? 0), 0);
+        .filter(b => b.quotationId === quotationId && (b.splitType ?? 'minimum') === 'total')
+        .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
   });
 
+  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.price
+  // Incluye costos de proveedores, hospedajes y autobuses
   const getPrecioAsientoCalculado = computed(() => {
-    return (cotizacionId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return 0;
 
-      const costoMinimo = getCostoTipoMinimo.value(cotizacionId);
-      const costoCapacidad = getCostoTipoTotal.value(cotizacionId);
-      const costoBusesMinimo = getCostoBusesTipoMinimo.value(cotizacionId);
-      const costoBusesTotal = getCostoBusesTipoTotal.value(cotizacionId);
+      const costoMinimo = getCostoTipoMinimo.value(quotationId);
+      const costoCapacidad = getCostoTipoTotal.value(quotationId);
+      const costoBusesMinimo = getCostoBusesTipoMinimo.value(quotationId);
+      const costoBusesTotal = getCostoBusesTipoTotal.value(quotationId);
 
-      const parteMinimo = cotizacion.asientoMinimoObjetivo > 0
-        ? (costoMinimo + costoBusesMinimo) / cotizacion.asientoMinimoObjetivo
+      const parteMinimo = cotizacion.minimumSeatTarget > 0
+        ? (costoMinimo + costoBusesMinimo) / cotizacion.minimumSeatTarget
         : 0;
-      const parteCapacidad = cotizacion.capacidadAutobus > 0
-        ? (costoCapacidad + costoBusesTotal) / cotizacion.capacidadAutobus
+      const parteCapacidad = cotizacion.busCapacity > 0
+        ? (costoCapacidad + costoBusesTotal) / cotizacion.busCapacity
         : 0;
 
       if (parteMinimo === 0 && parteCapacidad === 0)
@@ -248,286 +271,487 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   const getGananciaProyectada = computed(() => {
-    return (cotizacionId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-      if (!cotizacion || cotizacion.capacidadAutobus === 0)
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion || cotizacion.busCapacity === 0)
         return 0;
-      const precioAsiento = getPrecioAsientoCalculado.value(cotizacionId);
-      const costoTotal = getCostoTotal.value(cotizacionId)
-        + getTotalCostoBuses.value(cotizacionId)
-        + getTotalCostoHospedajes.value(cotizacionId);
-      return (cotizacion.capacidadAutobus * precioAsiento) - costoTotal;
+      const seatPrice = getPrecioAsientoCalculado.value(quotationId);
+      const costoTotal = getCostoTotal.value(quotationId)
+        + getTotalCostoBuses.value(quotationId)
+        + getTotalCostoHospedajes.value(quotationId);
+      return (cotizacion.busCapacity * seatPrice) - costoTotal;
     };
   });
 
   const getAnticipadoProveedor = computed(() => {
-    return (cotizacionProveedorId: string): number => {
+    return (quotationProviderId: string): number => {
       return pagosProveedor.value
-        .filter(p => p.cotizacionProveedorId === cotizacionProveedorId)
-        .reduce((sum, p) => sum + p.monto, 0);
+        .filter(p => p.quotationProviderId === quotationProviderId)
+        .reduce((sum, p) => sum + p.amount, 0);
     };
   });
 
   const getCostoPerPersonaProveedor = computed(() => {
-    return (cotizacionProveedorId: string): number => {
-      const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
+    return (quotationProviderId: string): number => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
 
-      const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
+      const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
       if (!cotizacion)
         return 0;
 
-      const tipoDivision = proveedor.tipoDivision ?? 'minimo';
-      const divisor = tipoDivision === 'total'
-        ? cotizacion.capacidadAutobus
-        : cotizacion.asientoMinimoObjetivo;
+      const splitType = proveedor.splitType ?? 'minimum';
+      const divisor = splitType === 'total'
+        ? cotizacion.busCapacity
+        : cotizacion.minimumSeatTarget;
 
       if (divisor === 0)
         return 0;
-      return proveedor.costoTotal / divisor;
+      return proveedor.totalCost / divisor;
     };
   });
 
   const getSaldoPendienteProveedor = computed(() => {
-    return (cotizacionProveedorId: string): number => {
-      const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
+    return (quotationProviderId: string): number => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
-      const anticipado = getAnticipadoProveedor.value(cotizacionProveedorId);
-      return proveedor.costoTotal - anticipado;
+      const anticipado = getAnticipadoProveedor.value(quotationProviderId);
+      return proveedor.totalCost - anticipado;
     };
   });
 
-  const getEstadoPagoProveedor = computed(() => {
-    return (cotizacionProveedorId: string): EstadoPagoProveedor => {
-      const proveedor = proveedoresCotizacion.value.find(p => p.id === cotizacionProveedorId);
+  const getProviderPaymentStatus = computed(() => {
+    return (quotationProviderId: string): ProviderPaymentStatus => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
-        return 'pendiente';
-      const anticipado = getAnticipadoProveedor.value(cotizacionProveedorId);
+        return 'pending';
+      const anticipado = getAnticipadoProveedor.value(quotationProviderId);
       if (anticipado <= 0)
-        return 'pendiente';
-      if (anticipado >= proveedor.costoTotal)
-        return 'liquidado';
-      return 'anticipo';
+        return 'pending';
+      if (anticipado >= proveedor.totalCost)
+        return 'paid';
+      return 'partial';
     };
   });
 
   const getSaldoTotalPendiente = computed(() => {
-    return (cotizacionId: string): number => {
-      return proveedoresCotizacion.value
-        .filter(p => p.cotizacionId === cotizacionId)
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId)
         .reduce((sum, p) => sum + getSaldoPendienteProveedor.value(p.id), 0);
     };
   });
 
   const getPagosByHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): PagoHospedaje[] => {
-      return [...pagosHospedaje.value.filter(p => p.cotizacionHospedajeId === cotizacionHospedajeId)]
-        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    return (quotationAccommodationId: string): AccommodationPayment[] => {
+      return [...pagosHospedaje.value.filter(p => p.quotationAccommodationId === quotationAccommodationId)]
+        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getAnticipadoHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): number => {
+    return (quotationAccommodationId: string): number => {
       return pagosHospedaje.value
-        .filter(p => p.cotizacionHospedajeId === cotizacionHospedajeId)
-        .reduce((sum, p) => sum + p.monto, 0);
+        .filter(p => p.quotationAccommodationId === quotationAccommodationId)
+        .reduce((sum, p) => sum + p.amount, 0);
     };
   });
 
   const getSaldoPendienteHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): number => {
-      const hospedaje = hospedajesCotizacion.value.find(h => h.id === cotizacionHospedajeId);
+    return (quotationAccommodationId: string): number => {
+      const hospedaje = hospedajesQuotation.value.find(h => h.id === quotationAccommodationId);
       if (!hospedaje)
         return 0;
-      return hospedaje.costoTotal - getAnticipadoHospedaje.value(cotizacionHospedajeId);
+      return hospedaje.totalCost - getAnticipadoHospedaje.value(quotationAccommodationId);
     };
   });
 
-  const getEstadoPagoHospedaje = computed(() => {
-    return (cotizacionHospedajeId: string): EstadoPagoHospedaje => {
-      const hospedaje = hospedajesCotizacion.value.find(h => h.id === cotizacionHospedajeId);
+  const getAccommodationPaymentStatus = computed(() => {
+    return (quotationAccommodationId: string): AccommodationPaymentStatus => {
+      const hospedaje = hospedajesQuotation.value.find(h => h.id === quotationAccommodationId);
       if (!hospedaje)
-        return 'pendiente';
-      const anticipado = getAnticipadoHospedaje.value(cotizacionHospedajeId);
+        return 'pending';
+      const anticipado = getAnticipadoHospedaje.value(quotationAccommodationId);
       if (anticipado <= 0)
-        return 'pendiente';
-      if (anticipado >= hospedaje.costoTotal)
-        return 'liquidado';
-      return 'anticipo';
+        return 'pending';
+      if (anticipado >= hospedaje.totalCost)
+        return 'paid';
+      return 'partial';
     };
   });
 
   const getSaldoTotalPendienteHospedajes = computed(() => {
-    return (cotizacionId: string): number => {
-      return hospedajesCotizacion.value
-        .filter(h => h.cotizacionId === cotizacionId)
+    return (quotationId: string): number => {
+      return hospedajesQuotation.value
+        .filter(h => h.quotationId === quotationId)
         .reduce((sum, h) => sum + getSaldoPendienteHospedaje.value(h.id), 0);
     };
   });
 
   const puedeConfirmar = computed(() => {
-    return (cotizacionId: string): boolean => {
-      const proveedores = proveedoresCotizacion.value.filter(p => p.cotizacionId === cotizacionId);
+    return (quotationId: string): boolean => {
+      const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
       if (proveedores.length === 0)
         return false;
-      return proveedores.every(p => p.confirmado === true);
+      return proveedores.every(p => p.confirmed === true);
     };
   });
 
-  const hasCotizacion = computed(() => {
+  const hasQuotation = computed(() => {
     return (travelId: string): boolean => {
       return cotizaciones.value.some(c => c.travelId === travelId);
     };
   });
 
   const filteredProveedores = computed(() => {
-    return (cotizacionId: string): CotizacionProveedor[] => {
-      let result = proveedoresCotizacion.value.filter(p => p.cotizacionId === cotizacionId);
+    return (quotationId: string): QuotationProvider[] => {
+      let result = proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
 
       const f = filters.value;
 
-      if (f.estadoPago && f.estadoPago !== 'todos') {
-        result = result.filter(p => getEstadoPagoProveedor.value(p.id) === f.estadoPago);
+      if (f.paymentStatus && f.paymentStatus !== 'all') {
+        result = result.filter(p => getProviderPaymentStatus.value(p.id) === f.paymentStatus);
       }
 
-      if (f.confirmado !== undefined && f.confirmado !== 'todos') {
-        result = result.filter(p => p.confirmado === f.confirmado);
+      if (f.confirmed !== undefined && f.confirmed !== 'all') {
+        result = result.filter(p => p.confirmed === f.confirmed);
       }
 
-      if (f.metodoPago && f.metodoPago !== 'todos') {
-        result = result.filter(p => p.metodoPago === f.metodoPago);
+      if (f.paymentMethod && f.paymentMethod !== 'all') {
+        result = result.filter(p => p.paymentMethod === f.paymentMethod);
       }
 
       return result;
     };
   });
 
-  const getBusesByCotizacion = computed(() => {
-    return (cotizacionId: string): CotizacionBus[] => {
-      return busesApartados.value.filter(b => b.cotizacionId === cotizacionId);
+  const getBusesByQuotation = computed(() => {
+    return (quotationId: string): QuotationBus[] => {
+      return busesApartados.value.filter(b => b.quotationId === quotationId);
     };
   });
 
-  const getBusesByProveedorEnCotizacion = computed(() => {
-    return (cotizacionId: string, proveedorId: string): CotizacionBus[] => {
+  const getBusesByProveedorEnQuotation = computed(() => {
+    return (quotationId: string, providerId: string): QuotationBus[] => {
       return busesApartados.value.filter(
-        b => b.cotizacionId === cotizacionId && b.proveedorId === proveedorId,
+        b => b.quotationId === quotationId && b.providerId === providerId,
       );
     };
   });
 
   const getPagosByBus = computed(() => {
-    return (cotizacionBusId: string): PagoBus[] => {
-      return [...pagosBus.value.filter(p => p.cotizacionBusId === cotizacionBusId)]
-        .sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+    return (quotationBusId: string): BusPayment[] => {
+      return [...pagosBus.value.filter(p => p.quotationBusId === quotationBusId)]
+        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getAnticipadoBus = computed(() => {
-    return (cotizacionBusId: string): number => {
+    return (quotationBusId: string): number => {
       return pagosBus.value
-        .filter(p => p.cotizacionBusId === cotizacionBusId)
-        .reduce((sum, p) => sum + p.monto, 0);
+        .filter(p => p.quotationBusId === quotationBusId)
+        .reduce((sum, p) => sum + p.amount, 0);
     };
   });
 
   const getSaldoPendienteBus = computed(() => {
-    return (cotizacionBusId: string): number => {
-      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+    return (quotationBusId: string): number => {
+      const bus = busesApartados.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 0;
-      return bus.costoTotal - getAnticipadoBus.value(cotizacionBusId);
+      return bus.totalCost - getAnticipadoBus.value(quotationBusId);
     };
   });
 
   const getSaldoTotalPendienteBuses = computed(() => {
-    return (cotizacionId: string): number => {
+    return (quotationId: string): number => {
       return busesApartados.value
-        .filter(b => b.cotizacionId === cotizacionId)
+        .filter(b => b.quotationId === quotationId)
         .reduce((sum, b) => sum + getSaldoPendienteBus.value(b.id), 0);
     };
   });
 
-  const getEstadoPagoBus = computed(() => {
-    return (cotizacionBusId: string): EstadoPagoBus => {
-      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+  const getBusPaymentStatus = computed(() => {
+    return (quotationBusId: string): BusPaymentStatus => {
+      const bus = busesApartados.value.find(b => b.id === quotationBusId);
       if (!bus)
-        return 'pendiente';
-      const anticipado = getAnticipadoBus.value(cotizacionBusId);
+        return 'pending';
+      const anticipado = getAnticipadoBus.value(quotationBusId);
       if (anticipado <= 0)
-        return 'pendiente';
-      if (anticipado >= bus.costoTotal)
-        return 'liquidado';
-      return 'anticipo';
+        return 'pending';
+      if (anticipado >= bus.totalCost)
+        return 'paid';
+      return 'partial';
     };
   });
 
   const getCostoPerPersonaBus = computed(() => {
-    return (cotizacionBusId: string): number => {
-      const bus = busesApartados.value.find(b => b.id === cotizacionBusId);
+    return (quotationBusId: string): number => {
+      const bus = busesApartados.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 0;
-      const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
+      const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
       if (!cotizacion)
         return 0;
-      const divisor = bus.tipoDivision === 'total'
-        ? cotizacion.capacidadAutobus
-        : cotizacion.asientoMinimoObjetivo;
+      const divisor = bus.splitType === 'total'
+        ? cotizacion.busCapacity
+        : cotizacion.minimumSeatTarget;
       if (divisor === 0)
         return 0;
-      return bus.costoTotal / divisor;
+      return bus.totalCost / divisor;
     };
   });
 
-  // Helper interno — recalcula precioAsiento y lo sincroniza a travel.precio
-  function _syncPrecioToTravel(cotizacionId: string): void {
-    const cotizacion = cotizaciones.value.find(c => c.id === cotizacionId);
-    if (!cotizacion || cotizacion.estado === 'confirmada')
+  // Helper interno — recalcula seatPrice y lo sincroniza a travel.price
+  async function _syncPrecioToTravel(quotationId: string): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    if (!cotizacion || cotizacion.status === 'confirmed')
       return;
-    if (cotizacion.asientoMinimoObjetivo === 0)
+    if (cotizacion.minimumSeatTarget === 0)
       return;
 
-    const nuevoPrecio = getPrecioAsientoCalculado.value(cotizacionId);
+    const nuevoPrecio = getPrecioAsientoCalculado.value(quotationId);
     if (nuevoPrecio === 0)
       return;
 
-    // Actualizar precioAsiento en la cotización directamente (evita recursión)
-    const index = cotizaciones.value.findIndex(c => c.id === cotizacionId);
+    const { error: err } = await supabase
+      .from('quotations')
+      .update({ seat_price: nuevoPrecio })
+      .eq('id', quotationId);
+    if (err)
+      throw err;
+
+    const index = cotizaciones.value.findIndex(c => c.id === quotationId);
     if (index !== -1 && cotizaciones.value[index]) {
       cotizaciones.value[index] = {
         ...cotizaciones.value[index]!,
-        precioAsiento: nuevoPrecio,
+        seatPrice: nuevoPrecio,
         updatedAt: new Date().toISOString(),
       };
     }
 
-    // Propagar a travel.precio (cotización → viaje)
     const travelStore = useTravelsStore();
-    travelStore.updateTravel(cotizacion.travelId, { precio: nuevoPrecio });
+    await travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
   }
 
   // Actions
-  function createCotizacion(data: CotizacionFormData): Cotizacion {
+
+  async function fetchAll(): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data, error: err } = await supabase
+        .from('quotations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (err)
+        throw err;
+
+      cotizaciones.value = (data ?? []).map(mapQuotationRowToDomain);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function fetchByTravel(travelId: string, options?: { force?: boolean }): Promise<void> {
+    const force = options?.force === true;
+
+    if (!force && travelFetchCache.has(travelId)) {
+      return;
+    }
+
+    if (!force) {
+      const inflight = travelFetchInFlight.get(travelId);
+      if (inflight) {
+        await inflight;
+        return;
+      }
+    }
+
+    const run = async () => {
+      loading.value = true;
+      error.value = null;
+      try {
+        const { data: quotRow, error: quotErr } = await supabase
+          .from('quotations')
+          .select('*')
+          .eq('travel_id', travelId)
+          .maybeSingle();
+        if (quotErr)
+          throw quotErr;
+
+        if (!quotRow) {
+          const existing = cotizaciones.value.find(c => c.travelId === travelId);
+          if (existing) {
+            const qId = existing.id;
+            cotizaciones.value = cotizaciones.value.filter(c => c.id !== qId);
+            proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.quotationId !== qId);
+            pagosProveedor.value = pagosProveedor.value.filter(p =>
+              !proveedoresQuotation.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
+            );
+            hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.quotationId !== qId);
+            pagosHospedaje.value = pagosHospedaje.value.filter(p =>
+              !hospedajesQuotation.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
+            );
+            preciosPublicos.value = preciosPublicos.value.filter(p => p.quotationId !== qId);
+            busesApartados.value = busesApartados.value.filter(b => b.quotationId !== qId);
+            pagosBus.value = pagosBus.value.filter(p =>
+              !busesApartados.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
+            );
+          }
+          travelFetchCache.add(travelId);
+          return;
+        }
+
+        const quotationId = quotRow.id;
+
+        const [
+          providersResult,
+          accommodationsResult,
+          publicPricesResult,
+          busesResult,
+        ] = await Promise.all([
+          supabase
+            .from('quotation_providers')
+            .select('*, provider_payments(*)')
+            .eq('quotation_id', quotationId),
+          supabase
+            .from('quotation_accommodations')
+            .select('*, quotation_accommodation_details(*), accommodation_payments(*)')
+            .eq('quotation_id', quotationId),
+          supabase
+            .from('quotation_public_prices')
+            .select('*')
+            .eq('quotation_id', quotationId),
+          supabase
+            .from('quotation_buses')
+            .select('*, bus_payments(*)')
+            .eq('quotation_id', quotationId),
+        ]);
+
+        if (providersResult.error)
+          throw providersResult.error;
+        if (accommodationsResult.error)
+          throw accommodationsResult.error;
+        if (publicPricesResult.error)
+          throw publicPricesResult.error;
+        if (busesResult.error)
+          throw busesResult.error;
+
+        const providers = (providersResult.data ?? []).map((row) => {
+          const { provider_payments: _pp, ...provRow } = row;
+          return mapQuotationProviderRowToDomain(provRow as Tables<'quotation_providers'>);
+        });
+        const newPagosProveedor = (providersResult.data ?? []).flatMap(row =>
+          (row.provider_payments ?? []).map(mapProviderPaymentRowToDomain),
+        );
+
+        const accommodations = (accommodationsResult.data ?? []).map((row) => {
+          const { quotation_accommodation_details: detRows, accommodation_payments: _ap, ...accRow } = row;
+          const details = (detRows ?? []).map(d => ({
+            ...mapQuotationAccommodationDetailRowToDomain(d as Tables<'quotation_accommodation_details'>),
+            costPerPerson: d.price_per_night / d.max_occupancy,
+          }));
+          return mapQuotationAccommodationRowToDomain(accRow as Tables<'quotation_accommodations'>, details);
+        });
+        const newPagosHospedaje = (accommodationsResult.data ?? []).flatMap(row =>
+          (row.accommodation_payments ?? []).map(mapAccommodationPaymentRowToDomain),
+        );
+
+        const buses = (busesResult.data ?? []).map((row) => {
+          const { bus_payments: _bp, ...busRow } = row;
+          return mapQuotationBusRowToDomain(busRow as Tables<'quotation_buses'>);
+        });
+        const newPagosBus = (busesResult.data ?? []).flatMap(row =>
+          (row.bus_payments ?? []).map(mapBusPaymentRowToDomain),
+        );
+
+        cotizaciones.value = [
+          ...cotizaciones.value.filter(c => c.travelId !== travelId),
+          mapQuotationRowToDomain(quotRow),
+        ];
+        proveedoresQuotation.value = [
+          ...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId),
+          ...providers,
+        ];
+        pagosProveedor.value = [
+          ...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)),
+          ...newPagosProveedor,
+        ];
+        hospedajesQuotation.value = [
+          ...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId),
+          ...accommodations,
+        ];
+        pagosHospedaje.value = [
+          ...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)),
+          ...newPagosHospedaje,
+        ];
+        preciosPublicos.value = [
+          ...preciosPublicos.value.filter(p => p.quotationId !== quotationId),
+          ...(publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
+        ];
+        busesApartados.value = [
+          ...busesApartados.value.filter(b => b.quotationId !== quotationId),
+          ...buses,
+        ];
+        pagosBus.value = [
+          ...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)),
+          ...newPagosBus,
+        ];
+
+        travelFetchCache.add(travelId);
+      }
+      catch (e) {
+        error.value = e instanceof Error ? e.message : 'Error desconocido';
+      }
+      finally {
+        loading.value = false;
+      }
+    };
+
+    const pending = run();
+    travelFetchInFlight.set(travelId, pending);
+    await pending;
+    travelFetchInFlight.delete(travelId);
+  }
+
+  async function createQuotation(data: QuotationFormData): Promise<Quotation> {
     const existing = cotizaciones.value.find(c => c.travelId === data.travelId);
     if (existing)
       return existing;
 
-    const now = new Date().toISOString();
-    const newCotizacion: Cotizacion = {
-      ...data,
-      id: `cotizacion-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    cotizaciones.value.push(newCotizacion);
+    loading.value = true;
     error.value = null;
-    return newCotizacion;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotations')
+        .insert(mapQuotationToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const quotation = mapQuotationRowToDomain(row);
+      cotizaciones.value.push(quotation);
+      travelFetchCache.add(data.travelId);
+      return quotation;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateCotizacion(id: string, data: Partial<CotizacionFormData>): Cotizacion | undefined {
+  async function updateQuotation(id: string, data: Partial<QuotationFormData>): Promise<Quotation | undefined> {
     const index = cotizaciones.value.findIndex(c => c.id === id);
     if (index === -1) {
       error.value = 'Cotización no encontrada';
@@ -538,29 +762,52 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: Cotizacion = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
-
-    cotizaciones.value[index] = updated;
+    loading.value = true;
     error.value = null;
+    try {
+      const update: TablesUpdate<'quotations'> = {};
+      if (data.busCapacity !== undefined)
+        update.bus_capacity = data.busCapacity;
+      if (data.minimumSeatTarget !== undefined)
+        update.minimum_seat_target = data.minimumSeatTarget;
+      if (data.seatPrice !== undefined)
+        update.seat_price = data.seatPrice;
+      if (data.status !== undefined)
+        update.status = data.status;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    // Si cambió el asiento mínimo, recalcular precio y sincronizar al viaje
-    if ('asientoMinimoObjetivo' in data) {
-      _syncPrecioToTravel(id);
+      const { data: row, error: err } = await supabase
+        .from('quotations')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationRowToDomain(row);
+      cotizaciones.value[index] = updated;
+
+      if ('minimumSeatTarget' in data) {
+        await _syncPrecioToTravel(id);
+      }
+
+      return updated;
     }
-
-    return updated;
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function confirmarCotizacion(
+  async function confirmarQuotation(
     id: string,
     travelStore: ReturnType<typeof useTravelsStore>,
-  ): { success: boolean; error?: string } {
+  ): Promise<{ success: boolean; error?: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === id);
     if (!cotizacion)
       return { success: false, error: 'Cotización no encontrada' };
@@ -569,130 +816,230 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { success: false, error: 'Todos los proveedores deben estar confirmados' };
     }
 
-    // Crear TravelService[] para el viaje a partir de los proveedores
-    const proveedores = proveedoresCotizacion.value.filter(p => p.cotizacionId === id);
-    const servicios = proveedores.map(p => ({
-      id: `serv-cotizacion-${p.id}`,
-      nombre: p.descripcionServicio,
-      descripcion: p.observaciones,
-      incluido: true,
-      providerId: p.providerId,
-    }));
+    loading.value = true;
+    error.value = null;
+    try {
+      const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === id);
+      const services = proveedores.map(p => ({
+        id: `serv-cotizacion-${p.id}`,
+        name: p.serviceDescription,
+        description: p.remarks,
+        included: true,
+        providerId: p.providerId,
+      }));
 
-    const updated = travelStore.updateTravel(cotizacion.travelId, { servicios });
-    if (!updated) {
-      return { success: false, error: 'No se pudo actualizar el viaje' };
+      const updated = await travelStore.updateTravel(cotizacion.travelId, { services });
+      if (!updated)
+        return { success: false, error: 'No se pudo actualizar el viaje' };
+
+      await updateQuotation(id, { status: 'confirmed' });
+      return { success: true };
     }
-
-    updateCotizacion(id, { estado: 'confirmada' });
-    return { success: true };
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { success: false, error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addProveedorCotizacion(data: CotizacionProveedorFormData): CotizacionProveedor | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  async function addProveedorQuotation(data: QuotationProviderFormData): Promise<QuotationProvider | { error: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
-    if (cotizacion.estado === 'confirmada')
+    if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    const newProveedor: CotizacionProveedor = {
-      ...data,
-      id: `cot-prov-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotation_providers')
+        .insert(mapQuotationProviderToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    proveedoresCotizacion.value.push(newProveedor);
-    _syncPrecioToTravel(data.cotizacionId);
-    return newProveedor;
+      const newProveedor = mapQuotationProviderRowToDomain(row);
+      proveedoresQuotation.value.push(newProveedor);
+      await _syncPrecioToTravel(data.quotationId);
+      return newProveedor;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateProveedorCotizacion(
+  async function updateProveedorQuotation(
     id: string,
-    data: Partial<CotizacionProveedorFormData>,
-  ): CotizacionProveedor | undefined {
-    const index = proveedoresCotizacion.value.findIndex(p => p.id === id);
+    data: Partial<QuotationProviderFormData>,
+  ): Promise<QuotationProvider | undefined> {
+    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = proveedoresCotizacion.value[index];
+    const existing = proveedoresQuotation.value[index];
     if (!existing)
       return undefined;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    const updated: CotizacionProveedor = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      cotizacionId: existing.cotizacionId,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'quotation_providers'> = {};
+      if (data.providerId !== undefined)
+        update.provider_id = data.providerId;
+      if (data.serviceDescription !== undefined)
+        update.service_description = data.serviceDescription;
+      if (data.remarks !== undefined)
+        update.remarks = data.remarks ?? null;
+      if (data.totalCost !== undefined)
+        update.total_cost = data.totalCost;
+      if (data.paymentMethod !== undefined)
+        update.payment_method = data.paymentMethod;
+      if (data.splitType !== undefined)
+        update.split_type = data.splitType;
+      if (data.confirmed !== undefined)
+        update.confirmed = data.confirmed;
 
-    proveedoresCotizacion.value[index] = updated;
-    _syncPrecioToTravel(existing.cotizacionId);
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('quotation_providers')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationProviderRowToDomain(row);
+      proveedoresQuotation.value[index] = updated;
+      await _syncPrecioToTravel(existing.quotationId);
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteProveedorCotizacion(id: string): void {
-    const proveedor = proveedoresCotizacion.value.find(p => p.id === id);
+  async function deleteProveedorQuotation(id: string): Promise<void> {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === id);
     if (!proveedor)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    const cotizacionId = proveedor.cotizacionId;
-    proveedoresCotizacion.value = proveedoresCotizacion.value.filter(p => p.id !== id);
-    pagosProveedor.value = pagosProveedor.value.filter(p => p.cotizacionProveedorId !== id);
-    _syncPrecioToTravel(cotizacionId);
+    const quotationId = proveedor.quotationId;
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_providers')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
+      pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
+      await _syncPrecioToTravel(quotationId);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function toggleConfirmadoProveedor(id: string): void {
-    const index = proveedoresCotizacion.value.findIndex(p => p.id === id);
-    if (index === -1)
-      return;
-
-    const proveedor = proveedoresCotizacion.value[index];
+  async function toggleConfirmadoProveedor(id: string): Promise<void> {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === id);
     if (!proveedor)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    proveedoresCotizacion.value[index] = { ...proveedor, confirmado: !proveedor.confirmado };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_providers')
+        .update({ confirmed: !proveedor.confirmed })
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      const index = proveedoresQuotation.value.findIndex(p => p.id === id);
+      if (index !== -1 && proveedoresQuotation.value[index]) {
+        proveedoresQuotation.value[index] = { ...proveedoresQuotation.value[index]!, confirmed: !proveedor.confirmed };
+      }
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addPagoProveedor(data: PagoProveedorFormData): PagoProveedor | { error: string } {
-    const proveedor = proveedoresCotizacion.value.find(p => p.id === data.cotizacionProveedorId);
+  async function addProviderPayment(data: ProviderPaymentFormData): Promise<ProviderPayment | { error: string }> {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === data.quotationProviderId);
     if (!proveedor)
       return { error: 'Proveedor no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    if (data.monto <= 0)
+    if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
-    const saldoPendiente = getSaldoPendienteProveedor.value(data.cotizacionProveedorId);
-    if (data.monto > saldoPendiente) {
+    const saldoPendiente = getSaldoPendienteProveedor.value(data.quotationProviderId);
+    if (data.amount > saldoPendiente) {
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
     }
 
-    const now = new Date().toISOString();
-    const newPago: PagoProveedor = {
-      ...data,
-      id: `pago-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('provider_payments')
+        .insert(mapProviderPaymentToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    pagosProveedor.value.push(newPago);
-    return newPago;
+      const newPago = mapProviderPaymentRowToDomain(row);
+      pagosProveedor.value.push(newPago);
+      return newPago;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updatePagoProveedor(id: string, data: Partial<PagoProveedorFormData>): PagoProveedor | undefined {
+  async function updateProviderPayment(id: string, data: Partial<ProviderPaymentFormData>): Promise<ProviderPayment | undefined> {
     const index = pagosProveedor.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -701,31 +1048,74 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: PagoProveedor = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'provider_payments'> = {};
+      if (data.amount !== undefined)
+        update.amount = data.amount;
+      if (data.paymentDate !== undefined)
+        update.payment_date = data.paymentDate;
+      if (data.paymentType !== undefined)
+        update.payment_type = data.paymentType;
+      if (data.concept !== undefined)
+        update.concept = data.concept ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    pagosProveedor.value[index] = updated;
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('provider_payments')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapProviderPaymentRowToDomain(row);
+      pagosProveedor.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deletePagoProveedor(id: string): void {
+  async function deleteProviderPayment(id: string): Promise<void> {
     const pago = pagosProveedor.value.find(p => p.id === id);
     if (!pago)
       return;
 
-    const proveedor = proveedoresCotizacion.value.find(p => p.id === pago.cotizacionProveedorId);
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor?.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const proveedor = proveedoresQuotation.value.find(p => p.id === pago.quotationProviderId);
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor?.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('provider_payments')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function setFilters(f: CotizacionProveedorFilters): void {
+  function setFilters(f: QuotationProviderFilters): void {
     filters.value = { ...f };
   }
 
@@ -737,140 +1127,266 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Hospedaje Actions
   // ============================================================================
 
-  function addHospedajeCotizacion(data: CotizacionHospedajeFormData): CotizacionHospedaje | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
-    if (cotizacion.estado === 'confirmada')
+    if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    // Calcular costoTotal y enriquecer detalles con costoPorPersona
-    const detallesEnriquecidos = data.detalles.map(d => ({
+    const detallesEnriquecidos = data.details.map(d => ({
       ...d,
       id: d.id ?? crypto.randomUUID(),
-      costoPorPersona: d.precioPorNoche / d.ocupacionMaxima,
+      costPerPerson: d.pricePerNight / d.maxOccupancy,
     }));
 
-    const costoTotal = detallesEnriquecidos.reduce((sum, detalle) => {
-      return sum + (detalle.precioPorNoche * data.cantidadNoches * detalle.cantidad);
+    const totalCost = detallesEnriquecidos.reduce((sum, detalle) => {
+      return sum + (detalle.pricePerNight * data.nightCount * detalle.quantity);
     }, 0);
 
-    const newHospedaje: CotizacionHospedaje = {
-      ...data,
-      detalles: detallesEnriquecidos,
-      id: `cot-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      costoTotal,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: accRow, error: accErr } = await supabase
+        .from('quotation_accommodations')
+        .insert({
+          quotation_id: data.quotationId,
+          provider_id: data.providerId,
+          night_count: data.nightCount,
+          total_cost: totalCost,
+          payment_method: data.paymentMethod,
+          confirmed: data.confirmed,
+        })
+        .select()
+        .single();
+      if (accErr)
+        throw accErr;
 
-    hospedajesCotizacion.value.push(newHospedaje);
-    _syncPrecioToTravel(data.cotizacionId);
-    return newHospedaje;
+      const detailInserts = detallesEnriquecidos.map(d => ({
+        quotation_accommodation_id: accRow.id,
+        hotel_room_type_id: d.roomTypeId,
+        quantity: d.quantity,
+        price_per_night: d.pricePerNight,
+        max_occupancy: d.maxOccupancy,
+      }));
+      const { data: detailRows, error: detErr } = await supabase
+        .from('quotation_accommodation_details')
+        .insert(detailInserts)
+        .select();
+      if (detErr)
+        throw detErr;
+
+      const details = (detailRows ?? []).map(d => ({
+        ...mapQuotationAccommodationDetailRowToDomain(d),
+        costPerPerson: d.price_per_night / d.max_occupancy,
+      }));
+      const newHospedaje = mapQuotationAccommodationRowToDomain(accRow, details);
+      hospedajesQuotation.value.push(newHospedaje);
+      await _syncPrecioToTravel(data.quotationId);
+      return newHospedaje;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateHospedajeCotizacion(
+  async function updateHospedajeQuotation(
     id: string,
-    data: Partial<CotizacionHospedajeFormData>,
-  ): CotizacionHospedaje | undefined {
-    const index = hospedajesCotizacion.value.findIndex(h => h.id === id);
+    data: Partial<QuotationAccommodationFormData>,
+  ): Promise<QuotationAccommodation | undefined> {
+    const index = hospedajesQuotation.value.findIndex(h => h.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = hospedajesCotizacion.value[index];
+    const existing = hospedajesQuotation.value[index];
     if (!existing)
       return undefined;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    // Calcular costoTotal y enriquecer detalles con costoPorPersona
-    const detallesBase = data.detalles ?? existing.detalles;
+    const detallesBase = data.details ?? existing.details;
     const detallesEnriquecidos = detallesBase.map(d => ({
       ...d,
       id: d.id ?? crypto.randomUUID(),
-      costoPorPersona: d.precioPorNoche / d.ocupacionMaxima,
+      costPerPerson: d.pricePerNight / d.maxOccupancy,
     }));
 
-    const costoTotal = detallesEnriquecidos.reduce((sum, detalle) => {
-      return sum + (detalle.precioPorNoche * (data.cantidadNoches ?? existing.cantidadNoches) * detalle.cantidad);
+    const totalCost = detallesEnriquecidos.reduce((sum, detalle) => {
+      return sum + (detalle.pricePerNight * (data.nightCount ?? existing.nightCount) * detalle.quantity);
     }, 0);
 
-    const updated: CotizacionHospedaje = {
-      ...existing,
-      ...data,
-      detalles: detallesEnriquecidos,
-      id: existing.id,
-      cotizacionId: existing.cotizacionId,
-      createdAt: existing.createdAt,
-      costoTotal,
-      updatedAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const accUpdate: TablesUpdate<'quotation_accommodations'> = { total_cost: totalCost };
+      if (data.providerId !== undefined)
+        accUpdate.provider_id = data.providerId;
+      if (data.nightCount !== undefined)
+        accUpdate.night_count = data.nightCount;
+      if (data.paymentMethod !== undefined)
+        accUpdate.payment_method = data.paymentMethod;
+      if (data.confirmed !== undefined)
+        accUpdate.confirmed = data.confirmed;
 
-    hospedajesCotizacion.value[index] = updated;
-    _syncPrecioToTravel(existing.cotizacionId);
-    return updated;
+      const { data: updatedRow, error: accErr } = await supabase
+        .from('quotation_accommodations')
+        .update(accUpdate)
+        .eq('id', id)
+        .select()
+        .single();
+      if (accErr)
+        throw accErr;
+
+      const { error: delErr } = await supabase
+        .from('quotation_accommodation_details')
+        .delete()
+        .eq('quotation_accommodation_id', id);
+      if (delErr)
+        throw delErr;
+
+      const detailInserts = detallesEnriquecidos.map(d => ({
+        quotation_accommodation_id: id,
+        hotel_room_type_id: d.roomTypeId,
+        quantity: d.quantity,
+        price_per_night: d.pricePerNight,
+        max_occupancy: d.maxOccupancy,
+      }));
+      const { data: newDetailRows, error: detErr } = await supabase
+        .from('quotation_accommodation_details')
+        .insert(detailInserts)
+        .select();
+      if (detErr)
+        throw detErr;
+
+      const details = (newDetailRows ?? []).map(d => ({
+        ...mapQuotationAccommodationDetailRowToDomain(d),
+        costPerPerson: d.price_per_night / d.max_occupancy,
+      }));
+      const updated = mapQuotationAccommodationRowToDomain(updatedRow, details);
+      hospedajesQuotation.value[index] = updated;
+      await _syncPrecioToTravel(existing.quotationId);
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteHospedajeCotizacion(id: string): void {
-    const hospedaje = hospedajesCotizacion.value.find(h => h.id === id);
+  async function deleteHospedajeQuotation(id: string): Promise<void> {
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    const cotizacionId = hospedaje.cotizacionId;
-    hospedajesCotizacion.value = hospedajesCotizacion.value.filter(h => h.id !== id);
-    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.cotizacionHospedajeId !== id);
-    _syncPrecioToTravel(cotizacionId);
+    const quotationId = hospedaje.quotationId;
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_accommodations')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
+      pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
+      await _syncPrecioToTravel(quotationId);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function toggleConfirmadoHospedaje(id: string): void {
-    const index = hospedajesCotizacion.value.findIndex(h => h.id === id);
-    if (index === -1)
-      return;
-
-    const hospedaje = hospedajesCotizacion.value[index];
+  async function toggleConfirmadoHospedaje(id: string): Promise<void> {
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    hospedajesCotizacion.value[index] = { ...hospedaje, confirmado: !hospedaje.confirmado };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_accommodations')
+        .update({ confirmed: !hospedaje.confirmed })
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      const index = hospedajesQuotation.value.findIndex(h => h.id === id);
+      if (index !== -1 && hospedajesQuotation.value[index]) {
+        hospedajesQuotation.value[index] = { ...hospedajesQuotation.value[index]!, confirmed: !hospedaje.confirmed };
+      }
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addPagoHospedaje(data: PagoHospedajeFormData): PagoHospedaje | { error: string } {
-    const hospedaje = hospedajesCotizacion.value.find(h => h.id === data.cotizacionHospedajeId);
+  async function addPagoHospedaje(data: AccommodationPaymentFormData): Promise<AccommodationPayment | { error: string }> {
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === data.quotationAccommodationId);
     if (!hospedaje)
       return { error: 'Hospedaje no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    if (data.monto <= 0)
+    if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
-    const saldoPendiente = getSaldoPendienteHospedaje.value(data.cotizacionHospedajeId);
-    if (data.monto > saldoPendiente)
+    const saldoPendiente = getSaldoPendienteHospedaje.value(data.quotationAccommodationId);
+    if (data.amount > saldoPendiente)
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
 
-    const newPago: PagoHospedaje = {
-      ...data,
-      id: `pago-hosp-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('accommodation_payments')
+        .insert(mapAccommodationPaymentToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    pagosHospedaje.value.push(newPago);
-    return newPago;
+      const newPago = mapAccommodationPaymentRowToDomain(row);
+      pagosHospedaje.value.push(newPago);
+      return newPago;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updatePagoHospedaje(id: string, data: Partial<PagoHospedajeFormData>): PagoHospedaje | undefined {
+  async function updatePagoHospedaje(id: string, data: Partial<AccommodationPaymentFormData>): Promise<AccommodationPayment | undefined> {
     const index = pagosHospedaje.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -879,53 +1395,107 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: PagoHospedaje = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'accommodation_payments'> = {};
+      if (data.amount !== undefined)
+        update.amount = data.amount;
+      if (data.paymentDate !== undefined)
+        update.payment_date = data.paymentDate;
+      if (data.paymentType !== undefined)
+        update.payment_type = data.paymentType;
+      if (data.concept !== undefined)
+        update.concept = data.concept ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    pagosHospedaje.value[index] = updated;
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('accommodation_payments')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapAccommodationPaymentRowToDomain(row);
+      pagosHospedaje.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deletePagoHospedaje(id: string): void {
+  async function deletePagoHospedaje(id: string): Promise<void> {
     const pago = pagosHospedaje.value.find(p => p.id === id);
     if (!pago)
       return;
 
-    const hospedaje = hospedajesCotizacion.value.find(h => h.id === pago.cotizacionHospedajeId);
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje?.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const hospedaje = hospedajesQuotation.value.find(h => h.id === pago.quotationAccommodationId);
+    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje?.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('accommodation_payments')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   // ============================================================================
   // Precio al Público Actions
   // ============================================================================
 
-  function addPrecioPublico(data: CotizacionPrecioPublicoFormData): CotizacionPrecioPublico | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  async function addPrecioPublico(data: QuotationPublicPriceFormData): Promise<QuotationPublicPrice | { error: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
 
-    const now = new Date().toISOString();
-    const newPrecio: CotizacionPrecioPublico = {
-      ...data,
-      id: `precio-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    preciosPublicos.value.push(newPrecio);
+    loading.value = true;
     error.value = null;
-    return newPrecio;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotation_public_prices')
+        .insert(mapQuotationPublicPriceToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const newPrecio = mapQuotationPublicPriceRowToDomain(row);
+      preciosPublicos.value.push(newPrecio);
+      return newPrecio;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updatePrecioPublico(id: string, data: Partial<CotizacionPrecioPublicoFormData>): CotizacionPrecioPublico | undefined {
+  async function updatePrecioPublico(id: string, data: Partial<QuotationPublicPriceFormData>): Promise<QuotationPublicPrice | undefined> {
     const index = preciosPublicos.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -934,57 +1504,111 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: CotizacionPrecioPublico = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      cotizacionId: existing.cotizacionId,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
-
-    preciosPublicos.value[index] = updated;
+    loading.value = true;
     error.value = null;
-    return updated;
+    try {
+      const update: TablesUpdate<'quotation_public_prices'> = {};
+      if (data.priceType !== undefined)
+        update.price_type = data.priceType;
+      if (data.description !== undefined)
+        update.description = data.description;
+      if (data.pricePerPerson !== undefined)
+        update.price_per_person = data.pricePerPerson;
+      if (data.roomType !== undefined)
+        update.room_type = data.roomType ?? null;
+      if (data.ageGroup !== undefined)
+        update.age_group = data.ageGroup ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
+
+      const { data: row, error: err } = await supabase
+        .from('quotation_public_prices')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationPublicPriceRowToDomain(row);
+      preciosPublicos.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deletePrecioPublico(id: string): void {
-    preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
+  async function deletePrecioPublico(id: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_public_prices')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   // ============================================================================
   // Autobuses Apartados Actions
   // ============================================================================
 
-  function addBusCotizacion(data: CotizacionBusFormData): CotizacionBus | { error: string } {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.cotizacionId);
+  async function addBusQuotation(data: QuotationBusFormData): Promise<QuotationBus | { error: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
-    if (cotizacion.estado === 'confirmada')
+    if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
     const duplicado = busesApartados.value.find(
-      b => b.cotizacionId === data.cotizacionId
-        && b.proveedorId === data.proveedorId
-        && b.numeroUnidad === data.numeroUnidad,
+      b => b.quotationId === data.quotationId
+        && b.providerId === data.providerId
+        && b.unitNumber === data.unitNumber,
     );
     if (duplicado)
       return { error: 'Este número de unidad ya existe para este proveedor en la cotización' };
 
-    const now = new Date().toISOString();
-    const newBus: CotizacionBus = {
-      ...data,
-      id: `cot-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: now,
-      updatedAt: now,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('quotation_buses')
+        .insert(mapQuotationBusToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    busesApartados.value.push(newBus);
-    _syncPrecioToTravel(data.cotizacionId);
-    return newBus;
+      const newBus = mapQuotationBusRowToDomain(row);
+      busesApartados.value.push(newBus);
+      await _syncPrecioToTravel(data.quotationId);
+      return newBus;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updateBusCotizacion(id: string, data: Partial<CotizacionBusFormData>): CotizacionBus | undefined {
+  async function updateBusQuotation(id: string, data: Partial<QuotationBusFormData>): Promise<QuotationBus | undefined> {
     const index = busesApartados.value.findIndex(b => b.id === id);
     if (index === -1)
       return undefined;
@@ -993,66 +1617,133 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    const updated: CotizacionBus = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      cotizacionId: existing.cotizacionId,
-      createdAt: existing.createdAt,
-      updatedAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'quotation_buses'> = {};
+      if (data.providerId !== undefined)
+        update.provider_id = data.providerId;
+      if (data.unitNumber !== undefined)
+        update.unit_number = data.unitNumber;
+      if (data.capacity !== undefined)
+        update.capacity = data.capacity;
+      if (data.status !== undefined)
+        update.status = data.status;
+      if (data.totalCost !== undefined)
+        update.total_cost = data.totalCost;
+      if (data.splitType !== undefined)
+        update.split_type = data.splitType;
+      if (data.paymentMethod !== undefined)
+        update.payment_method = data.paymentMethod;
+      if (data.remarks !== undefined)
+        update.remarks = data.remarks ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
+      if (data.confirmed !== undefined)
+        update.confirmed = data.confirmed;
+      if (data.coordinatorIds !== undefined)
+        update.coordinator_ids = data.coordinatorIds as unknown as import('~/types/database.types').Json;
 
-    busesApartados.value[index] = updated;
-    _syncPrecioToTravel(existing.cotizacionId);
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('quotation_buses')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapQuotationBusRowToDomain(row);
+      busesApartados.value[index] = updated;
+      await _syncPrecioToTravel(existing.quotationId);
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deleteBusCotizacion(id: string): void {
+  async function deleteBusQuotation(id: string): Promise<void> {
     const bus = busesApartados.value.find(b => b.id === id);
     if (!bus)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return;
 
-    const cotizacionId = bus.cotizacionId;
-    busesApartados.value = busesApartados.value.filter(b => b.id !== id);
-    pagosBus.value = pagosBus.value.filter(p => p.cotizacionBusId !== id);
-    _syncPrecioToTravel(cotizacionId);
+    const quotationId = bus.quotationId;
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('quotation_buses')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      busesApartados.value = busesApartados.value.filter(b => b.id !== id);
+      pagosBus.value = pagosBus.value.filter(p => p.quotationBusId !== id);
+      await _syncPrecioToTravel(quotationId);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function addPagoBus(data: PagoBusFormData): PagoBus | { error: string } {
-    const bus = busesApartados.value.find(b => b.id === data.cotizacionBusId);
+  async function addBusPayment(data: BusPaymentFormData): Promise<BusPayment | { error: string }> {
+    const bus = busesApartados.value.find(b => b.id === data.quotationBusId);
     if (!bus)
       return { error: 'Autobús no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === bus.cotizacionId);
-    if (cotizacion?.estado === 'confirmada')
+    const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
+    if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    if (data.monto <= 0)
+    if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
-    const saldoPendiente = getSaldoPendienteBus.value(data.cotizacionBusId);
-    if (data.monto > saldoPendiente)
+    const saldoPendiente = getSaldoPendienteBus.value(data.quotationBusId);
+    if (data.amount > saldoPendiente)
       return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
 
-    const newPago: PagoBus = {
-      ...data,
-      id: `pago-bus-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      createdAt: new Date().toISOString(),
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('bus_payments')
+        .insert(mapBusPaymentToInsert(data))
+        .select()
+        .single();
+      if (err)
+        throw err;
 
-    pagosBus.value.push(newPago);
-    return newPago;
+      const newPago = mapBusPaymentRowToDomain(row);
+      pagosBus.value.push(newPago);
+      return newPago;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function updatePagoBus(id: string, data: Partial<PagoBusFormData>): PagoBus | undefined {
+  async function updateBusPayment(id: string, data: Partial<BusPaymentFormData>): Promise<BusPayment | undefined> {
     const index = pagosBus.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
@@ -1061,27 +1752,70 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
-    const updated: PagoBus = {
-      ...existing,
-      ...data,
-      id: existing.id,
-      createdAt: existing.createdAt,
-    };
+    loading.value = true;
+    error.value = null;
+    try {
+      const update: TablesUpdate<'bus_payments'> = {};
+      if (data.amount !== undefined)
+        update.amount = data.amount;
+      if (data.paymentDate !== undefined)
+        update.payment_date = data.paymentDate;
+      if (data.paymentType !== undefined)
+        update.payment_type = data.paymentType;
+      if (data.concept !== undefined)
+        update.concept = data.concept ?? null;
+      if (data.notes !== undefined)
+        update.notes = data.notes ?? null;
 
-    pagosBus.value[index] = updated;
-    return updated;
+      const { data: row, error: err } = await supabase
+        .from('bus_payments')
+        .update(update)
+        .eq('id', id)
+        .select()
+        .single();
+      if (err)
+        throw err;
+
+      const updated = mapBusPaymentRowToDomain(row);
+      pagosBus.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return undefined;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
-  function deletePagoBus(id: string): void {
-    pagosBus.value = pagosBus.value.filter(p => p.id !== id);
+  async function deleteBusPayment(id: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { error: err } = await supabase
+        .from('bus_payments')
+        .delete()
+        .eq('id', id);
+      if (err)
+        throw err;
+
+      pagosBus.value = pagosBus.value.filter(p => p.id !== id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   return {
     // State
     cotizaciones,
-    proveedoresCotizacion,
+    proveedoresQuotation,
     pagosProveedor,
-    hospedajesCotizacion,
+    hospedajesQuotation,
     pagosHospedaje,
     preciosPublicos,
     busesApartados,
@@ -1091,7 +1825,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     filters,
     // Getters
     getCotizacionByTravel,
-    getProveedoresByCotizacion,
+    getProveedoresByQuotation,
     getPagosByProveedor,
     getCostoTotal,
     getCostoTipoMinimo,
@@ -1102,48 +1836,50 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getAnticipadoProveedor,
     getCostoPerPersonaProveedor,
     getSaldoPendienteProveedor,
-    getEstadoPagoProveedor,
+    getProviderPaymentStatus,
     getSaldoTotalPendiente,
     getPagosByHospedaje,
     getAnticipadoHospedaje,
     getSaldoPendienteHospedaje,
-    getEstadoPagoHospedaje,
+    getAccommodationPaymentStatus,
     getSaldoTotalPendienteHospedajes,
     puedeConfirmar,
-    hasCotizacion,
+    hasQuotation,
     filteredProveedores,
-    getHospedajesByCotizacion,
+    getHospedajesByQuotation,
     getTotalCostoHospedajes,
     getTotalHabitacionesPorTipo,
-    getPreciosPublicosByCotizacion,
+    getPreciosPublicosByQuotation,
     getMatrizPreciosReferencia,
     getTotalCostoBuses,
     getCostoBusesTipoMinimo,
     getCostoBusesTipoTotal,
     getSaldoTotalPendienteBuses,
-    getBusesByCotizacion,
-    getBusesByProveedorEnCotizacion,
+    getBusesByQuotation,
+    getBusesByProveedorEnQuotation,
     getPagosByBus,
     getAnticipadoBus,
     getSaldoPendienteBus,
-    getEstadoPagoBus,
+    getBusPaymentStatus,
     getCostoPerPersonaBus,
     // Actions
-    createCotizacion,
-    updateCotizacion,
-    confirmarCotizacion,
-    addProveedorCotizacion,
-    updateProveedorCotizacion,
-    deleteProveedorCotizacion,
+    fetchAll,
+    fetchByTravel,
+    createQuotation,
+    updateQuotation,
+    confirmarQuotation,
+    addProveedorQuotation,
+    updateProveedorQuotation,
+    deleteProveedorQuotation,
     toggleConfirmadoProveedor,
-    addPagoProveedor,
-    updatePagoProveedor,
-    deletePagoProveedor,
+    addProviderPayment,
+    updateProviderPayment,
+    deleteProviderPayment,
     setFilters,
     clearFilters,
-    addHospedajeCotizacion,
-    updateHospedajeCotizacion,
-    deleteHospedajeCotizacion,
+    addHospedajeQuotation,
+    updateHospedajeQuotation,
+    deleteHospedajeQuotation,
     toggleConfirmadoHospedaje,
     addPagoHospedaje,
     updatePagoHospedaje,
@@ -1151,16 +1887,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addPrecioPublico,
     updatePrecioPublico,
     deletePrecioPublico,
-    addBusCotizacion,
-    updateBusCotizacion,
-    deleteBusCotizacion,
-    addPagoBus,
-    updatePagoBus,
-    deletePagoBus,
+    addBusQuotation,
+    updateBusQuotation,
+    deleteBusQuotation,
+    addBusPayment,
+    updateBusPayment,
+    deleteBusPayment,
   };
-}, {
-  persist: {
-    key: 'viajeros-ligeros-cotizacion',
-    storage: import.meta.client ? localStorage : undefined,
-  },
 });

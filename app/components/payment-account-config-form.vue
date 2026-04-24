@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { CotizacionPrecioPublico } from '~/types/cotizacion';
-import type { AjusteItem, DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
+import type { AdjustmentItem, DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
+import type { QuotationPublicPrice } from '~/types/quotation';
 
 const props = defineProps<{
   travelerId: string;
   travelId: string;
   travelBasePrice: number;
-  preciosPublicos: CotizacionPrecioPublico[];
+  preciosPublicos: QuotationPublicPrice[];
   config?: TravelerAccountConfig;
 }>();
 
@@ -17,13 +17,13 @@ const emit = defineEmits<{
 
 const travelerType = ref<TravelerType>(props.config?.travelerType ?? 'adult');
 const selectedPrecioPublicoId = ref<string | undefined>(
-  props.config?.precioPublicoId ?? undefined,
+  props.config?.publicPriceId ?? undefined,
 );
 
-const discounts = ref<AjusteItem[]>(
+const discounts = ref<AdjustmentItem[]>(
   props.config?.discounts ? props.config.discounts.map(d => ({ ...d })) : [],
 );
-const surcharges = ref<AjusteItem[]>(
+const surcharges = ref<AdjustmentItem[]>(
   props.config?.surcharges ? props.config.surcharges.map(s => ({ ...s })) : [],
 );
 
@@ -34,7 +34,7 @@ const travelerTypeOptions = [
 
 const precioPublicoOptions = computed(() =>
   props.preciosPublicos.map(p => ({
-    label: `${p.tipo} — ${formatCurrency(p.precioPorPersona)}`,
+    label: `${p.priceType} — ${formatCurrency(p.pricePerPerson)}`,
     value: p.id,
   })),
 );
@@ -48,7 +48,7 @@ const ajusteTypeOptions = [
   { label: 'Porcentaje (%)', value: 'percentage' },
 ];
 
-const appliedPrice = computed(() => selectedPrecio.value?.precioPorPersona ?? 0);
+const appliedPrice = computed(() => selectedPrecio.value?.pricePerPerson ?? 0);
 
 const finalCost = computed(() => {
   const base = appliedPrice.value;
@@ -86,8 +86,8 @@ function handleSubmit() {
     travelId: props.travelId,
     travelerId: props.travelerId,
     travelerType: travelerType.value,
-    precioPublicoId: selectedPrecio.value?.id,
-    precioPublicoMonto: selectedPrecio.value?.precioPorPersona,
+    publicPriceId: selectedPrecio.value?.id,
+    publicPriceAmount: selectedPrecio.value?.pricePerPerson,
     discounts: discounts.value
       .filter(d => d.amount > 0)
       .map(d => ({ amount: d.amount, type: d.type, description: d.description || undefined })),

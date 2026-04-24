@@ -20,14 +20,14 @@ const emit = defineEmits<{
 
 // Schema de validación Zod
 const schema = z.object({
-  nombre: z.string()
+  name: z.string()
     .min(3, 'Mínimo 3 caracteres')
     .max(100, 'Máximo 100 caracteres'),
-  descripcion: z.string()
+  description: z.string()
     .max(300, 'Máximo 300 caracteres')
     .optional()
     .or(z.literal('')),
-  incluido: z.boolean(),
+  included: z.boolean(),
   providerId: z.string().optional(),
 });
 
@@ -37,17 +37,17 @@ type Schema = z.output<typeof schema>;
 const initialState = computed((): Schema => {
   if (service) {
     return {
-      nombre: service.nombre,
-      descripcion: service.descripcion || '',
-      incluido: service.incluido,
+      name: service.name,
+      description: service.description || '',
+      included: service.included,
       providerId: service.providerId,
     };
   }
 
   return {
-    nombre: '',
-    descripcion: '',
-    incluido: true, // Por defecto marcado como incluido
+    name: '',
+    description: '',
+    included: true, // Por defecto marcado como incluido
     providerId: undefined,
   };
 });
@@ -62,9 +62,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
   try {
     const serviceData: Omit<TravelService, 'id'> = {
-      nombre: event.data.nombre,
-      descripcion: event.data.descripcion || undefined,
-      incluido: event.data.incluido,
+      name: event.data.name,
+      description: event.data.description || undefined,
+      included: event.data.included,
       providerId: event.data.providerId,
     };
 
@@ -94,7 +94,7 @@ function onCancel() {
       required
     >
       <UInput
-        v-model="state.nombre"
+        v-model="state.name"
         placeholder="Vuelos ida y vuelta"
         icon="i-lucide-package"
       />
@@ -118,7 +118,7 @@ function onCancel() {
       description="Opcional - Detalles adicionales del servicio"
     >
       <UTextarea
-        v-model="state.descripcion"
+        v-model="state.description"
         placeholder="Incluye equipaje de 23kg, asientos preferenciales..."
         :rows="3"
       />
@@ -130,7 +130,7 @@ function onCancel() {
       name="incluido"
     >
       <UCheckbox
-        v-model="state.incluido"
+        v-model="state.included"
         label="Este servicio está incluido en el paquete"
       />
     </UFormField>

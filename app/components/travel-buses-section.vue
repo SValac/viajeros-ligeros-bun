@@ -18,58 +18,58 @@ const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId
 const buses = computed(() => {
   if (!cotizacion.value)
     return [];
-  return cotizacionStore.getBusesByCotizacion(cotizacion.value.id);
+  return cotizacionStore.getBusesByQuotation(cotizacion.value.id);
 });
 
 // IDs de coordinadores ya asignados a algún bus (excluyendo el bus actual)
 function coordinadoresOcupados(excludeBusId: string): string[] {
   return buses.value
     .filter(b => b.id !== excludeBusId)
-    .flatMap(b => b.coordinadorIds ?? []);
+    .flatMap(b => b.coordinatorIds ?? []);
 }
 
 // Opciones filtradas: solo coordinadores del viaje, no ocupados en otros buses
 function getCoordinadorOptions(busId: string) {
-  const delViaje = travel.value?.coordinadorIds ?? [];
+  const delViaje = travel.value?.coordinatorIds ?? [];
   const ocupados = coordinadoresOcupados(busId);
   return coordinatorStore.allCoordinators
     .filter(c => delViaje.includes(c.id) && !ocupados.includes(c.id))
-    .map(c => ({ value: c.id, label: c.nombre }));
+    .map(c => ({ value: c.id, label: c.name }));
 }
 
 function getProviderName(proveedorId: string): string {
-  return providerStore.getProviderById(proveedorId)?.nombre ?? 'Proveedor desconocido';
+  return providerStore.getProviderById(proveedorId)?.name ?? 'Proveedor desconocido';
 }
 
-function getEstadoColor(estado: string): 'success' | 'warning' | 'neutral' {
-  if (estado === 'confirmado')
+function getEstadoColor(status: string): 'success' | 'warning' | 'neutral' {
+  if (status === 'confirmed')
     return 'success';
-  if (estado === 'apartado')
+  if (status === 'reserved')
     return 'warning';
   return 'neutral';
 }
 
-function getEstadoLabel(estado: string): string {
+function getEstadoLabel(status: string): string {
   const labels: Record<string, string> = {
-    confirmado: 'Confirmado',
+    confirmed: 'Confirmado',
     apartado: 'Apartado',
     pendiente: 'Pendiente',
   };
-  return labels[estado] ?? estado;
+  return labels[status] ?? status;
 }
 
 function getBusCoordinadorIds(busId: string): string[] {
   const bus = buses.value.find(b => b.id === busId);
-  return bus?.coordinadorIds ? [...bus.coordinadorIds] : [];
+  return bus?.coordinatorIds ? [...bus.coordinatorIds] : [];
 }
 
 function getCoordinadorName(id: string): string {
-  return coordinatorStore.getCoordinatorById(id)?.nombre ?? 'Desconocido';
+  return coordinatorStore.getCoordinatorById(id)?.name ?? 'Desconocido';
 }
 
 function onCoordinadoresChange(busId: string, selected: string[]) {
   const capped = selected.slice(0, 2) as [] | [string] | [string, string];
-  cotizacionStore.updateBusCotizacion(busId, { coordinadorIds: capped });
+  cotizacionStore.updateBusQuotation(busId, { coordinatorIds: capped });
 }
 
 function goToCotizacion() {
@@ -89,17 +89,17 @@ function goToCotizacion() {
             <div class="flex justify-between items-center gap-4">
               <div class="flex items-center gap-2">
                 <span class="i-lucide-bus w-4 h-4 text-muted" />
-                <span class="font-medium">{{ getProviderName(bus.proveedorId) }}</span>
-                <span v-if="bus.numeroUnidad" class="text-sm text-muted">· Unidad {{ bus.numeroUnidad }}</span>
+                <span class="font-medium">{{ getProviderName(bus.providerId) }}</span>
+                <span v-if="bus.unitNumber" class="text-sm text-muted">· Unidad {{ bus.unitNumber }}</span>
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <div class="flex items-center gap-1 text-sm text-muted">
                   <span class="i-lucide-users w-3.5 h-3.5" />
-                  <span>{{ bus.capacidad }}</span>
+                  <span>{{ bus.capacity }}</span>
                 </div>
                 <UBadge
-                  :label="getEstadoLabel(bus.estado)"
-                  :color="getEstadoColor(bus.estado)"
+                  :label="getEstadoLabel(bus.status)"
+                  :color="getEstadoColor(bus.status)"
                   variant="subtle"
                   size="xs"
                 />
@@ -138,13 +138,13 @@ function goToCotizacion() {
           </div>
 
           <!-- Coordinadores (modo lectura) -->
-          <div v-else-if="bus.coordinadorIds && bus.coordinadorIds.length > 0">
+          <div v-else-if="bus.coordinatorIds && bus.coordinatorIds.length > 0">
             <div class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
               Coordinadores
             </div>
             <div class="flex items-center gap-4">
               <div
-                v-for="cId in bus.coordinadorIds"
+                v-for="cId in bus.coordinatorIds"
                 :key="cId"
                 class="flex items-center gap-2"
               >
@@ -163,8 +163,8 @@ function goToCotizacion() {
             Sin coordinadores asignados
           </div>
 
-          <p v-if="bus.notas || bus.observaciones" class="text-sm text-muted mt-2 italic">
-            {{ bus.notas || bus.observaciones }}
+          <p v-if="bus.notes || bus.remarks" class="text-sm text-muted mt-2 italic">
+            {{ bus.notes || bus.remarks }}
           </p>
         </UCard>
       </div>

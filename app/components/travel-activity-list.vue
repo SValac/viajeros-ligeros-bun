@@ -4,8 +4,9 @@ import type { TravelActivity } from '~/types/travel';
 // Props
 type Props = {
   modelValue: TravelActivity[];
-  fechaInicio: string;
-  fechaFin: string;
+  startDate: string;
+  endDate: string;
+  travelId?: string;
 };
 
 const props = defineProps<Props>();
@@ -14,6 +15,8 @@ const props = defineProps<Props>();
 const emit = defineEmits<{
   'update:modelValue': [activities: TravelActivity[]];
 }>();
+
+const travelsStore = useTravelsStore();
 
 // Estado local
 const activities = ref<TravelActivity[]>([...props.modelValue]);
@@ -25,17 +28,17 @@ const toast = useToast();
 
 // Calcular duración del viaje en días
 const duracionViaje = computed(() => {
-  if (!props.fechaInicio || !props.fechaFin)
+  if (!props.startDate || !props.endDate)
     return 0;
-  const inicio = new Date(props.fechaInicio);
-  const fin = new Date(props.fechaFin);
+  const inicio = new Date(props.startDate);
+  const fin = new Date(props.endDate);
   const diff = fin.getTime() - inicio.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir ambos días
 });
 
 // Actividades ordenadas por día
 const sortedActivities = computed(() => {
-  return [...activities.value].sort((a, b) => a.dia - b.dia);
+  return [...activities.value].sort((a, b) => a.day - b.day);
 });
 
 // Handlers
@@ -49,21 +52,44 @@ function openEditModal(activity: TravelActivity) {
   isActivityModalOpen.value = true;
 }
 
-function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
+async function persistActivities(nextActivities: TravelActivity[]): Promise<boolean> {
+  if (!props.travelId) {
+    activities.value = nextActivities;
+    emit('update:modelValue', activities.value);
+    return true;
+  }
+
+  const previousActivities = [...activities.value];
+  activities.value = nextActivities;
+  emit('update:modelValue', activities.value);
+
+  const saved = await travelsStore.updateTravel(props.travelId, { itinerary: nextActivities });
+  if (!saved) {
+    activities.value = previousActivities;
+    emit('update:modelValue', activities.value);
+    toast.add({
+      title: 'Error al guardar',
+      description: travelsStore.error ?? 'No se pudo guardar el itinerario',
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
+    return false;
+  }
+
+  return true;
+}
+
+async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
+  let nextActivities = [...activities.value];
+
   if (editingActivity.value) {
     // Editar actividad existente
     const index = activities.value.findIndex(a => a.id === editingActivity.value!.id);
     if (index !== -1) {
-      activities.value[index] = {
+      nextActivities[index] = {
         ...activityData,
         id: editingActivity.value.id,
       };
-
-      toast.add({
-        title: 'Actividad actualizada',
-        color: 'success',
-        icon: 'i-lucide-check-circle',
-      });
     }
   }
   else {
@@ -72,24 +98,28 @@ function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
       ...activityData,
       id: crypto.randomUUID(),
     };
-    activities.value.push(newActivity);
-
-    toast.add({
-      title: 'Actividad agregada',
-      color: 'success',
-      icon: 'i-lucide-check-circle',
-    });
+    nextActivities = [...nextActivities, newActivity];
   }
 
-  emit('update:modelValue', activities.value);
+  const saved = await persistActivities(nextActivities);
+  if (!saved)
+    return;
+
+  toast.add({
+    title: editingActivity.value ? 'Actividad actualizada' : 'Actividad agregada',
+    color: 'success',
+    icon: 'i-lucide-check-circle',
+  });
   isActivityModalOpen.value = false;
 }
 
-function deleteActivity(activity: TravelActivity) {
+async function deleteActivity(activity: TravelActivity) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Eliminar la actividad "${activity.titulo}"?`)) {
-    activities.value = activities.value.filter(a => a.id !== activity.id);
-    emit('update:modelValue', activities.value);
+  if (confirm(`¿Eliminar la actividad "${activity.title}"?`)) {
+    const nextActivities = activities.value.filter(a => a.id !== activity.id);
+    const saved = await persistActivities(nextActivities);
+    if (!saved)
+      return;
 
     toast.add({
       title: 'Actividad eliminada',
@@ -160,33 +190,33 @@ function formatHora(hora?: string) {
             <!-- Día y hora -->
             <div class="flex items-center gap-2 text-sm text-muted">
               <span class="i-lucide-calendar-days w-4 h-4" />
-              <span class="font-medium">Día {{ activity.dia }}</span>
+              <span class="font-medium">Día {{ activity.day }}</span>
               <span
-                v-if="activity.hora"
+                v-if="activity.time"
                 class="flex items-center gap-1"
               >
                 <span class="i-lucide-clock w-3.5 h-3.5" />
-                {{ formatHora(activity.hora) }}
+                {{ formatHora(activity.time) }}
               </span>
             </div>
 
             <!-- Título -->
             <div class="font-medium text-base">
-              {{ activity.titulo }}
+              {{ activity.title }}
             </div>
 
             <!-- Descripción -->
             <div class="text-sm text-muted">
-              {{ activity.descripcion }}
+              {{ activity.description }}
             </div>
 
             <!-- Ubicación -->
             <div
-              v-if="activity.ubicacion"
+              v-if="activity.location"
               class="flex items-center gap-1.5 text-sm text-muted"
             >
               <span class="i-lucide-map-pin w-3.5 h-3.5" />
-              {{ activity.ubicacion }}
+              {{ activity.location }}
             </div>
           </div>
 

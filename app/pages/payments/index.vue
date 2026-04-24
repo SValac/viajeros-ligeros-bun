@@ -18,7 +18,7 @@ const travelSummaries = computed(() => {
   return allTravels.value.map((travel) => {
     const travelers = travelerStore.getTravelersByTravel(travel.id);
     const summaries = travelers.map(t =>
-      paymentStore.getTravelerPaymentSummary(t.id, travel.id, travel.precio),
+      paymentStore.getTravelerPaymentSummary(t.id, travel.id, travel.price),
     );
 
     const totalExpected = summaries.reduce((sum: number, s) => sum + s.finalCost, 0);
@@ -62,7 +62,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
       class: 'flex items-center gap-2 hover:text-primary transition-colors group',
     }, () => [
       h('span', { class: 'i-lucide-map-pin w-4 h-4 text-muted group-hover:text-primary' }),
-      h('span', { class: 'font-medium' }, row.original.travel.destino),
+      h('span', { class: 'font-medium' }, row.original.travel.destination),
     ]),
   },
   {
@@ -114,10 +114,6 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     },
   },
 ];
-
-onMounted(() => {
-
-});
 </script>
 
 <template>

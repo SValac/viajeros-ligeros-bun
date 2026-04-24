@@ -3,12 +3,12 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { CotizacionHospedaje } from '~/types/cotizacion';
+import type { QuotationAccommodation } from '~/types/quotation';
 
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
 };
 
 const props = defineProps<Props>();
@@ -17,17 +17,17 @@ const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 
-const hospedajes = computed(() => cotizacionStore.getHospedajesByCotizacion(props.cotizacionId));
-const totalCosto = computed(() => cotizacionStore.getTotalCostoHospedajes(props.cotizacionId));
+const hospedajes = computed(() => cotizacionStore.getHospedajesByQuotation(props.quotationId));
+const totalCosto = computed(() => cotizacionStore.getTotalCostoHospedajes(props.quotationId));
 
 function getNombreHotel(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.nombre ?? 'Desconocido';
+  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
 // Items del accordion — uno por hospedaje
-function getDesgloseHabitaciones(hospedaje: CotizacionHospedaje): string {
-  return hospedaje.detalles
-    .map(d => `${d.cantidad} hab (${d.ocupacionMaxima} p)`)
+function getDesgloseHabitaciones(accommodation: QuotationAccommodation): string {
+  return accommodation.details
+    .map(d => `${d.quantity} hab (${d.maxOccupancy} p)`)
     .join(' · ');
 }
 
@@ -44,8 +44,8 @@ const defaultValue = computed(() => hospedajes.value.map(h => h.id));
 const costoPromedioPorPersona = computed(() => {
   let totalPersonas = 0;
   for (const h of hospedajes.value) {
-    for (const d of h.detalles) {
-      totalPersonas += d.cantidad * d.ocupacionMaxima;
+    for (const d of h.details) {
+      totalPersonas += d.quantity * d.maxOccupancy;
     }
   }
   return totalPersonas > 0 ? totalCosto.value / totalPersonas : 0;
@@ -57,10 +57,10 @@ type DetalleRow = {
   id: string;
   camasLabel: string;
   ocupacion: number;
-  cantidad: number;
-  precioPorNoche: number;
-  costoPorPersona: number | undefined;
-  costoTotal: number;
+  count: number;
+  pricePerNight: number;
+  costPerPerson: number | undefined;
+  totalCost: number;
 };
 
 const columns: TableColumn<DetalleRow>[] = [
@@ -74,40 +74,40 @@ const columns: TableColumn<DetalleRow>[] = [
       ]),
   },
   {
-    accessorKey: 'cantidad',
+    accessorKey: 'count',
     header: 'Habitaciones',
-    cell: ({ row }) => h('div', { class: 'text-right' }, `${row.original.cantidad} hab`),
+    cell: ({ row }) => h('div', { class: 'text-right' }, `${row.original.count} hab`),
   },
   {
     accessorKey: 'precioPorNoche',
     header: 'Precio/noche',
-    cell: ({ row }) => h('div', { class: 'text-right' }, `$${row.original.precioPorNoche.toFixed(2)}`),
+    cell: ({ row }) => h('div', { class: 'text-right' }, `$${row.original.pricePerNight.toFixed(2)}`),
   },
   {
-    accessorKey: 'costoPorPersona',
+    accessorKey: 'costPerPerson',
     header: 'Precio/Persona',
     cell: ({ row }) =>
-      h('div', { class: 'text-right' }, row.original.costoPorPersona != null ? `$${row.original.costoPorPersona.toFixed(2)}` : '—'),
+      h('div', { class: 'text-right' }, row.original.costPerPerson != null ? `$${row.original.costPerPerson.toFixed(2)}` : '—'),
   },
   {
     accessorKey: 'costoTotal',
     header: 'Subtotal',
-    cell: ({ row }) => h('div', { class: 'text-right font-semibold' }, `$${row.original.costoTotal.toFixed(2)}`),
+    cell: ({ row }) => h('div', { class: 'text-right font-semibold' }, `$${row.original.totalCost.toFixed(2)}`),
   },
 ];
 
-function getDetalleRows(hospedaje: CotizacionHospedaje): DetalleRow[] {
-  return hospedaje.detalles.map((d) => {
-    const roomData = hotelRoomStore.getRoomDataByProviderId(hospedaje.providerId);
-    const tipoInfo = roomData?.roomTypes.find(t => t.id === d.habitacionTipoId) ?? null;
+function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
+  return accommodation.details.map((d) => {
+    const roomData = hotelRoomStore.getRoomDataByProviderId(accommodation.providerId);
+    const tipoInfo = roomData?.roomTypes.find(t => t.id === d.roomTypeId) ?? null;
     return {
       id: d.id,
-      camasLabel: formatBedConfiguration(tipoInfo?.camas ?? []),
-      ocupacion: d.ocupacionMaxima,
-      cantidad: d.cantidad,
-      precioPorNoche: d.precioPorNoche,
-      costoPorPersona: d.costoPorPersona,
-      costoTotal: d.precioPorNoche * hospedaje.cantidadNoches * d.cantidad,
+      camasLabel: formatBedConfiguration(tipoInfo?.beds ?? []),
+      ocupacion: d.maxOccupancy,
+      count: d.quantity,
+      pricePerNight: d.pricePerNight,
+      costPerPerson: d.costPerPerson,
+      totalCost: d.pricePerNight * accommodation.nightCount * d.quantity,
     };
   });
 }
@@ -131,7 +131,7 @@ function getDetalleRows(hospedaje: CotizacionHospedaje): DetalleRow[] {
             Habitaciones Totales
           </p>
           <p class="text-2xl font-bold">
-            {{ hospedajes.reduce((s, h) => s + h.detalles.reduce((ss, d) => ss + d.cantidad, 0), 0) }}
+            {{ hospedajes.reduce((s, h) => s + h.details.reduce((ss, d) => ss + d.quantity, 0), 0) }}
           </p>
         </div>
         <div>
@@ -166,8 +166,8 @@ function getDetalleRows(hospedaje: CotizacionHospedaje): DetalleRow[] {
         >
           <UTable :data="getDetalleRows(hospedaje)" :columns="columns" />
           <div class="px-4 py-2 bg-muted/10 flex justify-between items-center text-sm font-semibold border-t">
-            <span>Total ({{ hospedaje.cantidadNoches }} noche{{ hospedaje.cantidadNoches !== 1 ? 's' : '' }})</span>
-            <span class="text-primary">${{ hospedaje.costoTotal.toFixed(2) }}</span>
+            <span>Total ({{ hospedaje.nightCount }} noche{{ hospedaje.nightCount !== 1 ? 's' : '' }})</span>
+            <span class="text-primary">${{ hospedaje.totalCost.toFixed(2) }}</span>
           </div>
         </template>
       </UAccordion>

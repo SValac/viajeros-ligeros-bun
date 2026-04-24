@@ -11,16 +11,32 @@ const travelId = computed(() => route.params.id as string);
 
 // Get travel data from store
 const travel = computed(() => travelsStore.getTravelById(travelId.value));
-const tieneCotizacion = computed(() => cotizacionStore.hasCotizacion(travelId.value));
+const tieneCotizacion = computed(() => cotizacionStore.hasQuotation(travelId.value));
 
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 const preciosPublicos = computed(() =>
-  cotizacion.value ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.value.id) : [],
+  cotizacion.value ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.value.id) : [],
 );
 
 const coordinadoresDelViaje = computed(() => {
-  const ids = travel.value?.coordinadorIds ?? [];
+  const ids = travel.value?.coordinatorIds ?? [];
   return ids.map(id => coordinatorStore.getCoordinatorById(id)).filter(Boolean);
+});
+
+async function loadCotizacionData(id: string) {
+  await cotizacionStore.fetchByTravel(id);
+}
+
+onMounted(() => {
+  if (travelId.value) {
+    void loadCotizacionData(travelId.value);
+  }
+});
+
+watch(travelId, (id) => {
+  if (id) {
+    void loadCotizacionData(id);
+  }
 });
 
 // Redirect to dashboard if travel not found
@@ -38,22 +54,22 @@ watchEffect(() => {
 // Helper functions
 function getStatusColor(status: string): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' {
   const colors: Record<string, 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'> = {
-    'pendiente': 'warning',
-    'confirmado': 'info',
-    'en-curso': 'primary',
-    'completado': 'success',
-    'cancelado': 'error',
+    pending: 'warning',
+    confirmed: 'info',
+    in_progress: 'primary',
+    completed: 'success',
+    cancelled: 'error',
   };
   return colors[status] || 'neutral';
 }
 
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
-    'pendiente': 'Pendiente',
-    'confirmado': 'Confirmado',
-    'en-curso': 'En Curso',
-    'completado': 'Completado',
-    'cancelado': 'Cancelado',
+    pending: 'Pendiente',
+    confirmed: 'Confirmado',
+    in_progress: 'En Curso',
+    completed: 'Completado',
+    cancelled: 'Cancelado',
   };
   return labels[status] || status;
 }
@@ -97,10 +113,10 @@ async function deleteTravel() {
     return;
 
   // eslint-disable-next-line no-alert
-  const confirmed = confirm(`¿Eliminar el viaje a ${travel.value.destino}? Esta acción no se puede deshacer.`);
+  const confirmed = confirm(`¿Eliminar el viaje a ${travel.value.destination}? Esta acción no se puede deshacer.`);
 
   if (confirmed) {
-    travelsStore.deleteTravel(travel.value.id);
+    await travelsStore.deleteTravel(travel.value.id);
     toast.add({
       title: 'Viaje eliminado',
       description: 'El viaje se ha eliminado correctamente',
@@ -183,12 +199,12 @@ definePageMeta({
             <div class="space-y-4">
               <!-- Image -->
               <div
-                v-if="travel.imagenUrl"
+                v-if="travel.imageUrl"
                 class="w-full h-64 rounded-lg overflow-hidden bg-muted"
               >
                 <img
-                  :src="travel.imagenUrl"
-                  :alt="travel.destino"
+                  :src="travel.imageUrl"
+                  :alt="travel.destination"
                   class="w-full h-full object-cover"
                 >
               </div>
@@ -202,7 +218,7 @@ definePageMeta({
                       class="w-6 h-6 text-primary"
                     />
                     <h1 class="text-3xl font-bold">
-                      {{ travel.destino }}
+                      {{ travel.destination }}
                     </h1>
                   </div>
                   <!-- Footer Metadata -->
@@ -230,7 +246,7 @@ definePageMeta({
                       class="flex items-center gap-2"
                     >
                       <UIcon name="i-lucide-user-star" class=" w-4 h-4 text-muted shrink-0" />
-                      <span class="font-medium">{{ c!.nombre }}</span>
+                      <span class="font-medium">{{ c!.name }}</span>
                     </div>
                     <span
                       v-if="coordinadoresDelViaje.length === 0"
@@ -246,7 +262,7 @@ definePageMeta({
                   <div class="flex items-center gap-2">
                     <UIcon name="i-lucide-calendar" class="w-4 h-4 text-muted" />
                     <span class="font-medium">
-                      {{ calculateDuration(travel.fechaInicio, travel.fechaFin) }} días
+                      {{ calculateDuration(travel.startDate, travel.endDate) }} días
                     </span>
                   </div>
                 </div>
@@ -257,11 +273,11 @@ definePageMeta({
                   </div>
                   <div class="flex items-center gap-2">
                     <UBadge
-                      :color="getStatusColor(travel.estado)"
+                      :color="getStatusColor(travel.status)"
                       variant="subtle"
                       size="lg"
                     >
-                      {{ getStatusLabel(travel.estado) }}
+                      {{ getStatusLabel(travel.status) }}
                     </UBadge>
                   </div>
                 </div>
@@ -275,7 +291,7 @@ definePageMeta({
               <div class="flex-1">
                 <div class="flex items-center gap-2 mb-2">
                   <RichContent
-                    :html="travel.descripcion"
+                    :html="travel.description"
                     class="text-muted"
                   />
                 </div>
@@ -302,7 +318,7 @@ definePageMeta({
                   Fecha de Inicio
                 </div>
                 <div class="text-lg font-medium">
-                  {{ formatDate(travel.fechaInicio) }}
+                  {{ formatDate(travel.startDate) }}
                 </div>
               </div>
               <div class="p-4 bg-elevated rounded-lg">
@@ -310,7 +326,7 @@ definePageMeta({
                   Fecha de Fin
                 </div>
                 <div class="text-lg font-medium">
-                  {{ formatDate(travel.fechaFin) }}
+                  {{ formatDate(travel.endDate) }}
                 </div>
               </div>
             </div>
@@ -332,29 +348,29 @@ definePageMeta({
                 >
                   <div class="flex-1 min-w-0">
                     <div class="font-medium">
-                      {{ precio.tipo }}
+                      {{ precio.priceType }}
                     </div>
                     <div class="text-sm text-muted mt-0.5">
-                      {{ precio.descripcion }}
+                      {{ precio.description }}
                     </div>
-                    <div v-if="precio.tipoHabitacion || precio.grupoEdad" class="flex items-center gap-2 mt-1.5">
+                    <div v-if="precio.roomType || precio.ageGroup" class="flex items-center gap-2 mt-1.5">
                       <UBadge
-                        v-if="precio.tipoHabitacion"
-                        :label="precio.tipoHabitacion"
+                        v-if="precio.roomType"
+                        :label="precio.roomType"
                         color="neutral"
                         variant="subtle"
                         size="xs"
                       />
                       <UBadge
-                        v-if="precio.grupoEdad"
-                        :label="precio.grupoEdad"
+                        v-if="precio.ageGroup"
+                        :label="precio.ageGroup"
                         color="neutral"
                         variant="subtle"
                         size="xs"
                       />
                     </div>
-                    <div v-if="precio.notas" class="text-xs text-muted mt-1.5 italic">
-                      {{ precio.notas }}
+                    <div v-if="precio.notes" class="text-xs text-muted mt-1.5 italic">
+                      {{ precio.notes }}
                     </div>
                   </div>
                   <div class="text-right shrink-0">
@@ -362,7 +378,7 @@ definePageMeta({
                       Por persona
                     </div>
                     <div class="text-lg font-bold text-primary">
-                      {{ formatCurrency(precio.precioPorPersona) }}
+                      {{ formatCurrency(precio.pricePerPerson) }}
                     </div>
                   </div>
                 </div>
@@ -402,7 +418,7 @@ definePageMeta({
 
           <!-- Internal Notes Section -->
           <section
-            v-if="travel.notasInternas"
+            v-if="travel.internalNotes"
             id="notas"
           >
             <TheSeparator
@@ -412,7 +428,7 @@ definePageMeta({
             />
             <div class="p-4 bg-elevated rounded-lg">
               <p class="text-sm whitespace-pre-wrap">
-                {{ travel.notasInternas }}
+                {{ travel.internalNotes }}
               </p>
             </div>
           </section>
@@ -428,10 +444,10 @@ definePageMeta({
               text="Itinerario"
               icon="i-lucide-route"
             />
-            <div v-if="travel.itinerario.length > 0" class="mb-6">
+            <div v-if="travel.itinerary.length > 0" class="mb-6">
               <div class="space-y-4">
                 <div
-                  v-for="(activity, index) in travel.itinerario"
+                  v-for="(activity, index) in travel.itinerary"
                   :key="activity.id"
                   class="relative pl-8"
                 >
@@ -439,7 +455,7 @@ definePageMeta({
                   <div class="absolute left-0 top-0 flex flex-col items-center">
                     <div class="w-4 h-4 rounded-full bg-primary border-2 border-background" />
                     <div
-                      v-if="index < travel.itinerario.length - 1"
+                      v-if="index < travel.itinerary.length - 1"
                       class="w-0.5 h-full bg-default mt-1"
                     />
                   </div>
@@ -450,22 +466,22 @@ definePageMeta({
                       <div class="flex-1">
                         <div class="flex items-center gap-2 mb-2">
                           <UBadge color="primary" variant="subtle">
-                            Día {{ activity.dia }}
+                            Día {{ activity.day }}
                           </UBadge>
-                          <span v-if="activity.hora" class="text-sm text-muted flex items-center gap-1">
+                          <span v-if="activity.time" class="text-sm text-muted flex items-center gap-1">
                             <span class="i-lucide-clock w-3 h-3" />
-                            {{ activity.hora }}
+                            {{ activity.time }}
                           </span>
                         </div>
                         <h3 class="font-semibold text-lg mb-1">
-                          {{ activity.titulo }}
+                          {{ activity.title }}
                         </h3>
                         <p class="text-muted text-sm mb-2">
-                          {{ activity.descripcion }}
+                          {{ activity.description }}
                         </p>
-                        <div v-if="activity.ubicacion" class="flex items-center gap-1 text-sm text-muted">
+                        <div v-if="activity.location" class="flex items-center gap-1 text-sm text-muted">
                           <span class="i-lucide-map-pin w-3 h-3" />
-                          {{ activity.ubicacion }}
+                          {{ activity.location }}
                         </div>
                       </div>
                     </div>

@@ -26,31 +26,31 @@ const hasCoordinators = computed(() => allCoordinators.value.length > 0);
 const coordinatorItems = computed(() =>
   allCoordinators.value.map((c: Coordinator) => ({
     value: c.id,
-    label: `${c.nombre} — ${c.telefono}`,
+    label: `${c.name} — ${c.phone}`,
   })),
 );
 
 // Si el viaje tiene cotización activa, el precio es de solo lectura (lo gestiona la cotización)
 const cotizacionStore = useCotizacionStore();
-const tieneCotizacion = computed(() => travel ? cotizacionStore.hasCotizacion(travel.id) : false);
+const tieneCotizacion = computed(() => travel ? cotizacionStore.hasQuotation(travel.id) : false);
 
 // El precio solo se muestra en modo edición; en creación lo gestiona la cotización
 const mostrarPrecio = computed(() => travel !== null);
 
 // Schema de validación Zod
 const schema = z.object({
-  destino: z.string().min(3, 'Mínimo 3 caracteres').max(100, 'Máximo 100 caracteres'),
-  coordinadorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
-  fechaInicio: z.string().min(1, 'Fecha requerida'),
-  fechaFin: z.string().min(1, 'Fecha requerida'),
-  precio: z.number().min(0, 'Precio debe ser positivo').max(999999, 'Precio máximo: 999,999'),
-  descripcion: z.string().min(10, 'Mínimo 10 caracteres').max(3000, 'Máximo 1000 caracteres'),
-  imagenUrl: z.string().url('URL inválida').optional().or(z.literal('')),
-  estado: z.enum(['pendiente', 'confirmado', 'en-curso', 'completado', 'cancelado']),
-  notasInternas: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  destination: z.string().min(3, 'Mínimo 3 caracteres').max(100, 'Máximo 100 caracteres'),
+  coordinatorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
+  startDate: z.string().min(1, 'Fecha requerida'),
+  endDate: z.string().min(1, 'Fecha requerida'),
+  price: z.number().min(0, 'Precio debe ser positivo').max(999999, 'Precio máximo: 999,999'),
+  description: z.string().min(10, 'Mínimo 10 caracteres').max(3000, 'Máximo 1000 caracteres'),
+  imageUrl: z.string().url('URL inválida').optional().or(z.literal('')),
+  status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+  internalNotes: z.string().max(500, 'Máximo 500 caracteres').optional(),
 }).refine(
-  data => new Date(data.fechaFin) >= new Date(data.fechaInicio),
-  { message: 'Fecha fin debe ser mayor o igual a fecha inicio', path: ['fechaFin'] },
+  data => new Date(data.endDate) >= new Date(data.startDate),
+  { message: 'Fecha fin debe ser mayor o igual a fecha inicio', path: ['endDate'] },
 );
 
 type Schema = z.output<typeof schema>;
@@ -59,44 +59,44 @@ type Schema = z.output<typeof schema>;
 const initialState = computed((): Schema => {
   if (travel) {
     return {
-      destino: travel.destino,
-      coordinadorIds: travel.coordinadorIds ?? [],
-      fechaInicio: travel.fechaInicio,
-      fechaFin: travel.fechaFin,
-      precio: travel.precio,
-      descripcion: travel.descripcion,
-      imagenUrl: travel.imagenUrl || '',
-      estado: travel.estado,
-      notasInternas: travel.notasInternas || '',
+      destination: travel.destination,
+      coordinatorIds: travel.coordinatorIds ?? [],
+      startDate: travel.startDate,
+      endDate: travel.endDate,
+      price: travel.price,
+      description: travel.description,
+      imageUrl: travel.imageUrl || '',
+      status: travel.status,
+      internalNotes: travel.internalNotes || '',
     };
   }
 
   return {
-    destino: '',
-    coordinadorIds: [],
-    fechaInicio: '',
-    fechaFin: '',
-    precio: 0,
-    descripcion: '',
-    imagenUrl: '',
-    estado: 'pendiente',
-    notasInternas: '',
+    destination: '',
+    coordinatorIds: [],
+    startDate: '',
+    endDate: '',
+    price: 0,
+    description: '',
+    imageUrl: '',
+    status: 'pending',
+    internalNotes: '',
   };
 });
 
 const state = ref<Schema>({ ...initialState.value });
 
 // Estado para itinerario y servicios (separados del schema Zod)
-const itinerario = ref(travel?.itinerario || []);
-const servicios = ref(travel?.servicios || []);
+const itinerario = ref(travel?.itinerary || []);
+const servicios = ref(travel?.services || []);
 
 // Opciones de estado para el select
 const estadoOptions: SelectItem[] = [
-  { value: 'pendiente', label: 'Pendiente' },
-  { value: 'confirmado', label: 'Confirmado' },
-  { value: 'en-curso', label: 'En Curso' },
-  { value: 'completado', label: 'Completado' },
-  { value: 'cancelado', label: 'Cancelado' },
+  { value: 'pending', label: 'Pendiente' },
+  { value: 'confirmed', label: 'Confirmado' },
+  { value: 'in_progress', label: 'En Curso' },
+  { value: 'completed', label: 'Completado' },
+  { value: 'cancelled', label: 'Cancelado' },
 ];
 
 // Handlers
@@ -108,9 +108,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     const formData: TravelFormData = {
       ...event.data,
-      itinerario: itinerario.value,
-      servicios: servicios.value,
-      autobuses: travel?.autobuses ?? [],
+      itinerary: itinerario.value,
+      services: servicios.value,
+      buses: travel?.buses ?? [],
     };
 
     emit('submit', formData);
@@ -121,13 +121,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 }
 
 const selectedCoordinators = computed(() =>
-  state.value.coordinadorIds
+  state.value.coordinatorIds
     .map(id => coordinatorStore.getCoordinatorById(id))
     .filter((c): c is Coordinator => c !== undefined),
 );
 
 function removeCoordinator(id: string) {
-  state.value.coordinadorIds = state.value.coordinadorIds.filter(cid => cid !== id);
+  state.value.coordinatorIds = state.value.coordinatorIds.filter(cid => cid !== id);
 }
 
 function onCancel() {
@@ -151,11 +151,11 @@ function onCancel() {
         </template>
         <UFormField
           label="Destino"
-          name="destino"
+          name="destination"
           required
         >
           <UInput
-            v-model="state.destino"
+            v-model="state.destination"
             placeholder="París, Francia"
             icon="i-lucide-map-pin"
           />
@@ -164,7 +164,7 @@ function onCancel() {
         <!-- Coordinadores -->
         <UFormField
           label="Coordinadores"
-          name="coordinadorIds"
+          name="coordinatorIds"
           required
         >
           <template v-if="!hasCoordinators">
@@ -189,7 +189,7 @@ function onCancel() {
           </template>
           <template v-else>
             <USelectMenu
-              v-model="state.coordinadorIds"
+              v-model="state.coordinatorIds"
               :items="coordinatorItems"
               multiple
               placeholder="Seleccionar coordinadores"
@@ -214,11 +214,11 @@ function onCancel() {
                     />
                     <div class="min-w-0">
                       <p class="font-medium text-sm truncate">
-                        {{ c.nombre }}
+                        {{ c.name }}
                       </p>
                       <div class="flex items-center gap-3 mt-0.5">
                         <UBadge
-                          :label="c.telefono"
+                          :label="c.phone"
                           icon="i-lucide-phone"
                           color="neutral"
                           variant="subtle"
@@ -251,11 +251,11 @@ function onCancel() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <UFormField
             label="Fecha Inicio"
-            name="fechaInicio"
+            name="startDate"
             required
           >
             <UInput
-              v-model="state.fechaInicio"
+              v-model="state.startDate"
               type="date"
               icon="i-lucide-calendar"
             />
@@ -263,11 +263,11 @@ function onCancel() {
 
           <UFormField
             label="Fecha Fin"
-            name="fechaFin"
+            name="endDate"
             required
           >
             <UInput
-              v-model="state.fechaFin"
+              v-model="state.endDate"
               type="date"
               icon="i-lucide-calendar"
             />
@@ -279,12 +279,12 @@ function onCancel() {
           <UFormField
             v-if="mostrarPrecio"
             label="Precio (MX)"
-            name="precio"
+            name="price"
             :description="tieneCotizacion ? 'Gestionado por la cotización del viaje' : undefined"
             required
           >
             <UInput
-              v-model.number="state.precio"
+              v-model.number="state.price"
               type="number"
               min="0"
               step="0.01"
@@ -296,11 +296,11 @@ function onCancel() {
 
           <UFormField
             label="Estado"
-            name="estado"
+            name="status"
             required
           >
             <USelect
-              v-model="state.estado"
+              v-model="state.status"
               :items="estadoOptions"
               icon="i-lucide-circle-dot"
             />
@@ -310,10 +310,10 @@ function onCancel() {
           <!-- URL Imagen -->
           <UFormField
             label="URL de Imagen"
-            name="imagenUrl"
+            name="imageUrl"
           >
             <UInput
-              v-model="state.imagenUrl"
+              v-model="state.imageUrl"
               type="url"
               placeholder="https://example.com/image.jpg"
               icon="i-lucide-image"
@@ -322,11 +322,11 @@ function onCancel() {
           <!-- Notas Internas -->
           <UFormField
             label="Notas Internas"
-            name="notasInternas"
+            name="internalNotes"
             description="Información privada solo para el equipo"
           >
             <UTextarea
-              v-model="state.notasInternas"
+              v-model="state.internalNotes"
               placeholder="Preferencias del cliente, observaciones especiales..."
               :rows="5"
             />
@@ -334,11 +334,11 @@ function onCancel() {
         </div>
         <UFormField
           label="Descripción"
-          name="descripcion"
+          name="description"
           required
         >
           <RichTextEditor
-            v-model="state.descripcion"
+            v-model="state.description"
             placeholder="Describe el viaje, actividades incluidas, etc."
           />
         </UFormField>
@@ -346,18 +346,19 @@ function onCancel() {
     </section>
 
     <!-- Itinerario del Viaje -->
-    <section id="servicios">
+    <section id="itinerary">
       <UCard>
         <template #header>
           <div class="flex items-center gap-2">
             <UIcon name="i-lucide-list-check" class="w-5 h-5 text-muted" />
-            <h2>Servicios</h2>
+            <h2>Itinerario</h2>
           </div>
         </template>
         <TravelActivityList
           v-model="itinerario"
-          :fecha-inicio="state.fechaInicio"
-          :fecha-fin="state.fechaFin"
+          :start-date="state.startDate"
+          :end-date="state.endDate"
+          :travel-id="travel?.id"
         />
       </UCard>
     </section>

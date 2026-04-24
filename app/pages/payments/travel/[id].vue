@@ -25,7 +25,7 @@ const travel = computed(() => travelStore.getTravelById(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 const preciosPublicos = computed(() =>
   cotizacion.value
-    ? cotizacionStore.getPreciosPublicosByCotizacion(cotizacion.value.id)
+    ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.value.id)
     : [],
 );
 
@@ -39,7 +39,7 @@ const enrolledTravelers = computed(() =>
   travelerStore.getTravelersByTravel(travelId.value),
 );
 
-const travelPrice = computed(() => travel.value?.precio ?? 0);
+const travelPrice = computed(() => travel.value?.price ?? 0);
 
 const expanded = ref<ExpandedStateList>({});
 
@@ -53,12 +53,12 @@ const statusFilterOptions = [
 ];
 
 const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
-  // Group ALL enrolled travelers by representanteId to preserve the tree structure.
+  // Group ALL enrolled travelers by representativeId to preserve the tree structure.
   // Filtering by status applies only to which representative rows are shown at root level.
   const all = enrolledTravelers.value;
-  const grouped = Object.groupBy(all, t => t.representanteId ?? '');
+  const grouped = Object.groupBy(all, t => t.representativeId ?? '');
   const acompañantesIds = new Set(
-    all.filter(t => t.representanteId).map(t => t.id),
+    all.filter(t => t.representativeId).map(t => t.id),
   );
 
   const result: TravelerWithChildren[] = [];
@@ -98,7 +98,7 @@ watchEffect(() => {
 // Caja del viaje
 const cashSummary = computed(() => {
   const summaries = enrolledTravelers.value
-    .filter((t: Traveler) => !!paymentStore.getAccountConfig(t.id, travelId.value)?.precioPublicoId)
+    .filter((t: Traveler) => !!paymentStore.getAccountConfig(t.id, travelId.value)?.publicPriceId)
     .map((t: Traveler) =>
       paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value),
     );
@@ -144,8 +144,8 @@ const selectedConfig = computed(() => {
   return paymentStore.getAccountConfig(selectedTraveler.value.id, travelId.value);
 });
 
-function handlePaymentSubmit(data: PaymentFormData) {
-  const result = paymentStore.addPayment(data);
+async function handlePaymentSubmit(data: PaymentFormData) {
+  const result = await paymentStore.addPayment(data);
   if ('error' in result) {
     toast.add({ title: 'Error', description: result.error, color: 'error' });
     return;
@@ -154,8 +154,8 @@ function handlePaymentSubmit(data: PaymentFormData) {
   closeModals();
 }
 
-function handleConfigSubmit(config: TravelerAccountConfig) {
-  paymentStore.setAccountConfig(config);
+async function handleConfigSubmit(config: TravelerAccountConfig) {
+  await paymentStore.setAccountConfig(config);
   toast.add({ title: 'Configuración guardada', color: 'success' });
   closeModals();
 }
@@ -178,11 +178,11 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     cell: ({ row }) => {
       const depth = row.depth;
       const traveler = row.original;
-      const nombre = `${traveler.nombre} ${traveler.apellido}`;
+      const name = `${traveler.firstName} ${traveler.lastName}`;
       const link = h(resolveComponent('NuxtLink'), {
         to: { name: 'payments-traveler', params: { id: traveler.id } },
         class: 'font-medium hover:text-primary transition-colors',
-      }, () => nombre);
+      }, () => name);
 
       if (row.getCanExpand()) {
         return h('div', { class: 'flex items-center gap-1' }, [
@@ -218,10 +218,10 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Precio',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      if (config?.precioPublicoId) {
-        const precio = preciosPublicos.value.find(p => p.id === config.precioPublicoId);
+      if (config?.publicPriceId) {
+        const precio = preciosPublicos.value.find(p => p.id === config.publicPriceId);
         if (precio) {
-          return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => precio.tipo);
+          return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => precio.priceType);
         }
       }
       const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
@@ -233,7 +233,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Costo final',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      if (!config?.precioPublicoId)
+      if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: 'text-sm' }, formatCurrency(s.finalCost));
@@ -244,7 +244,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Descuento',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      if (!config?.precioPublicoId)
+      if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       if (s.totalDiscountAmount <= 0)
@@ -257,7 +257,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Incremento',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      if (!config?.precioPublicoId)
+      if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       if (s.totalSurchargeAmount <= 0)
@@ -270,7 +270,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Abonado',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      if (!config?.precioPublicoId)
+      if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalPaid));
@@ -281,7 +281,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Saldo pendiente',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      if (!config?.precioPublicoId)
+      if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       return h('span', { class: s.balance > 0 ? 'text-sm text-error' : 'text-sm text-success' }, formatCurrency(s.balance));
@@ -292,7 +292,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Estado',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      if (!config?.precioPublicoId)
+      if (!config?.publicPriceId)
         return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => 'Sin configurar');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
       const cfg = statusConfig[s.status] ?? { color: 'neutral', label: s.status };
@@ -311,7 +311,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
               {
                 label: 'Registrar abono',
                 icon: 'i-lucide-plus-circle',
-                disabled: !paymentStore.getAccountConfig(row.original.id, travelId.value)?.precioPublicoId,
+                disabled: !paymentStore.getAccountConfig(row.original.id, travelId.value)?.publicPriceId,
                 onSelect: () => openPaymentModal(row.original),
               },
               {
@@ -335,8 +335,20 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   },
 ];
 
-onMounted(() => {
+onMounted(async () => {
+  await Promise.all([
+    paymentStore.fetchByTravel(travelId.value),
+    cotizacionStore.fetchByTravel(travelId.value),
+  ]);
+});
 
+watch(travelId, async (id) => {
+  if (!id)
+    return;
+  await Promise.all([
+    paymentStore.fetchByTravel(id),
+    cotizacionStore.fetchByTravel(id),
+  ]);
 });
 </script>
 
@@ -354,7 +366,7 @@ onMounted(() => {
             @click="router.push({ name: 'payments-index' })"
           />
           <h1 class="text-3xl font-bold">
-            Pagos — {{ travel.destino }}
+            Pagos — {{ travel.destination }}
           </h1>
         </div>
         <p class="text-muted ml-9">
@@ -458,11 +470,11 @@ onMounted(() => {
     <UModal
       v-model:open="isPaymentModalOpen"
       title="Registrar abono"
-      :description="selectedTraveler ? `${selectedTraveler.nombre} ${selectedTraveler.apellido}` : ''"
+      :description="selectedTraveler ? `${selectedTraveler.firstName} ${selectedTraveler.lastName}` : ''"
     >
       <template #body>
         <PaymentForm
-          v-if="selectedTraveler && selectedConfig?.precioPublicoId && selectedSummary"
+          v-if="selectedTraveler && selectedConfig?.publicPriceId && selectedSummary"
           :traveler-id="selectedTraveler.id"
           :travel-id="travelId"
           :max-amount="selectedSummary.balance"
@@ -492,7 +504,7 @@ onMounted(() => {
     <UModal
       v-model:open="isConfigModalOpen"
       title="Configurar cuenta"
-      :description="selectedTraveler ? `${selectedTraveler.nombre} ${selectedTraveler.apellido}` : ''"
+      :description="selectedTraveler ? `${selectedTraveler.firstName} ${selectedTraveler.lastName}` : ''"
     >
       <template #body>
         <PaymentAccountConfigForm

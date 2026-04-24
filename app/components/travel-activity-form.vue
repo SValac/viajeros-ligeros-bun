@@ -11,7 +11,7 @@ type Props = {
   maxDia: number;
 };
 
-const { activity = null, maxDia } = defineProps<Props>();
+const props = defineProps<Props>();
 
 // Emits
 const emit = defineEmits<{
@@ -20,46 +20,50 @@ const emit = defineEmits<{
 }>();
 
 // Schema de validación Zod
-const schema = z.object({
-  dia: z.number()
-    .min(1, 'El día debe ser al menos 1')
-    .max(maxDia, `El día no puede ser mayor a ${maxDia}`),
-  titulo: z.string()
-    .min(3, 'Mínimo 3 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
-  descripcion: z.string()
-    .min(10, 'Mínimo 10 caracteres')
-    .max(500, 'Máximo 500 caracteres'),
-  hora: z.string()
-    .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, 'Formato: HH:MM')
-    .optional()
-    .or(z.literal('')),
-  ubicacion: z.string()
-    .max(200, 'Máximo 200 caracteres')
-    .optional()
-    .or(z.literal('')),
-});
+function createSchema(maxDia: number) {
+  return z.object({
+    day: z.number()
+      .min(1, 'El día debe ser al menos 1')
+      .max(maxDia, `El día no puede ser mayor a ${maxDia}`),
+    title: z.string()
+      .min(3, 'Mínimo 3 caracteres')
+      .max(100, 'Máximo 100 caracteres'),
+    description: z.string()
+      .min(10, 'Mínimo 10 caracteres')
+      .max(500, 'Máximo 500 caracteres'),
+    time: z.string()
+      .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, 'Formato: HH:MM')
+      .optional()
+      .or(z.literal('')),
+    location: z.string()
+      .max(200, 'Máximo 200 caracteres')
+      .optional()
+      .or(z.literal('')),
+  });
+}
 
-type Schema = z.output<typeof schema>;
+const schema = computed(() => createSchema(Math.max(1, props.maxDia)));
+
+type Schema = z.output<ReturnType<typeof createSchema>>;
 
 // Estado inicial del formulario
 const initialState = computed((): Schema => {
-  if (activity) {
+  if (props.activity) {
     return {
-      dia: activity.dia,
-      titulo: activity.titulo,
-      descripcion: activity.descripcion,
-      hora: activity.hora || '',
-      ubicacion: activity.ubicacion || '',
+      day: props.activity.day,
+      title: props.activity.title,
+      description: props.activity.description,
+      time: props.activity.time || '',
+      location: props.activity.location || '',
     };
   }
 
   return {
-    dia: 1,
-    titulo: '',
-    descripcion: '',
-    hora: '',
-    ubicacion: '',
+    day: 1,
+    title: '',
+    description: '',
+    time: '',
+    location: '',
   };
 });
 
@@ -73,11 +77,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
   try {
     const activityData: Omit<TravelActivity, 'id'> = {
-      dia: event.data.dia,
-      titulo: event.data.titulo,
-      descripcion: event.data.descripcion,
-      hora: event.data.hora || undefined,
-      ubicacion: event.data.ubicacion || undefined,
+      day: event.data.day,
+      title: event.data.title,
+      description: event.data.description,
+      time: event.data.time || undefined,
+      location: event.data.location || undefined,
     };
 
     emit('submit', activityData);
@@ -102,15 +106,15 @@ function onCancel() {
     <!-- Día -->
     <UFormField
       label="Día del itinerario"
-      name="dia"
+      name="day"
       required
-      :description="`El viaje dura ${maxDia} día${maxDia !== 1 ? 's' : ''}`"
+      :description="`El viaje dura ${props.maxDia} día${props.maxDia !== 1 ? 's' : ''}`"
     >
       <UInput
-        v-model.number="state.dia"
+        v-model.number="state.day"
         type="number"
         min="1"
-        :max="maxDia"
+        :max="props.maxDia"
         icon="i-lucide-calendar-days"
       />
     </UFormField>
@@ -118,11 +122,11 @@ function onCancel() {
     <!-- Título -->
     <UFormField
       label="Título de la actividad"
-      name="titulo"
+      name="title"
       required
     >
       <UInput
-        v-model="state.titulo"
+        v-model="state.title"
         placeholder="Visita a la Torre Eiffel"
         icon="i-lucide-map-pin"
       />
@@ -131,11 +135,11 @@ function onCancel() {
     <!-- Hora (opcional) -->
     <UFormField
       label="Hora"
-      name="hora"
+      name="time"
       description="Opcional - Formato 24 horas (HH:MM)"
     >
       <UInput
-        v-model="state.hora"
+        v-model="state.time"
         type="time"
         icon="i-lucide-clock"
         placeholder="10:00"
@@ -145,11 +149,11 @@ function onCancel() {
     <!-- Ubicación (opcional) -->
     <UFormField
       label="Ubicación"
-      name="ubicacion"
+      name="location"
       description="Opcional"
     >
       <UInput
-        v-model="state.ubicacion"
+        v-model="state.location"
         placeholder="Champ de Mars, París"
         icon="i-lucide-map"
       />
@@ -158,11 +162,11 @@ function onCancel() {
     <!-- Descripción -->
     <UFormField
       label="Descripción"
-      name="descripcion"
+      name="description"
       required
     >
       <UTextarea
-        v-model="state.descripcion"
+        v-model="state.description"
         placeholder="Describe la actividad, qué se hará, qué incluye..."
         :rows="4"
       />
@@ -183,7 +187,7 @@ function onCancel() {
         color="primary"
         :loading="isSubmitting"
       >
-        {{ activity ? 'Actualizar' : 'Agregar' }} Actividad
+        {{ props.activity ? 'Actualizar' : 'Agregar' }} Actividad
       </UButton>
     </div>
   </UForm>

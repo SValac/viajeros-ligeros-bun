@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import type { PagoBus, PagoBusFormData } from '~/types/cotizacion';
+import type { BusPayment, BusPaymentFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionBusId: string;
+  quotationBusId: string;
   readonly?: boolean;
   busLabel?: string;
 };
 
-const { cotizacionBusId, readonly = false, busLabel } = defineProps<Props>();
+const { quotationBusId, readonly = false, busLabel } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 
-const pagos = computed(() => cotizacionStore.getPagosByBus(cotizacionBusId));
-const anticipado = computed(() => cotizacionStore.getAnticipadoBus(cotizacionBusId));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteBus(cotizacionBusId));
+const pagos = computed(() => cotizacionStore.getPagosByBus(quotationBusId));
+const anticipado = computed(() => cotizacionStore.getAnticipadoBus(quotationBusId));
+const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteBus(quotationBusId));
 
 const isFormModalOpen = shallowRef(false);
-const selectedPago = shallowRef<PagoBus | null>(null);
+const selectedPago = shallowRef<BusPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const pagoToDelete = shallowRef<PagoBus | null>(null);
+const pagoToDelete = shallowRef<BusPayment | null>(null);
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
@@ -38,25 +38,25 @@ function openNewPago() {
   isFormModalOpen.value = true;
 }
 
-function openEditPago(pago: PagoBus) {
+function openEditPago(pago: BusPayment) {
   selectedPago.value = pago;
   isFormModalOpen.value = true;
 }
 
-function openDeleteConfirm(pago: PagoBus) {
+function openDeleteConfirm(pago: BusPayment) {
   pagoToDelete.value = pago;
   isDeleteModalOpen.value = true;
 }
 
-function handleSubmit(data: PagoBusFormData) {
+async function handleSubmit(data: BusPaymentFormData) {
   if (selectedPago.value) {
-    const result = cotizacionStore.updatePagoBus(selectedPago.value.id, data);
+    const result = await cotizacionStore.updateBusPayment(selectedPago.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = cotizacionStore.addPagoBus(data);
+    const result = await cotizacionStore.addBusPayment(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -68,10 +68,10 @@ function handleSubmit(data: PagoBusFormData) {
   selectedPago.value = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!pagoToDelete.value)
     return;
-  cotizacionStore.deletePagoBus(pagoToDelete.value.id);
+  await cotizacionStore.deleteBusPayment(pagoToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   pagoToDelete.value = null;
@@ -129,24 +129,24 @@ function confirmDelete() {
             class="border-b border-default/50 hover:bg-elevated/50"
           >
             <td class="py-2 pr-4">
-              {{ formatDate(pago.fechaPago) }}
+              {{ formatDate(pago.paymentDate) }}
             </td>
             <td class="py-2 pr-4">
-              {{ pago.concepto || '—' }}
+              {{ pago.concept || '—' }}
             </td>
             <td class="py-2 pr-4">
               <UBadge
-                :label="pago.tipoPago === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="pago.tipoPago === 'cash' ? 'success' : 'info'"
+                :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
+                :color="pago.paymentType === 'cash' ? 'success' : 'info'"
                 variant="subtle"
                 size="xs"
               />
             </td>
             <td class="py-2 pr-4 font-medium">
-              {{ formatCurrency(pago.monto) }}
+              {{ formatCurrency(pago.amount) }}
             </td>
             <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
-              {{ pago.notas || '—' }}
+              {{ pago.notes || '—' }}
             </td>
             <td v-if="!readonly" class="py-2">
               <div class="flex items-center gap-1">
@@ -210,8 +210,8 @@ function confirmDelete() {
   >
     <template #body>
       <PagoBusForm
-        :cotizacion-bus-id="cotizacionBusId"
-        :max-monto="selectedPago ? selectedPago.monto + saldoPendiente : saldoPendiente"
+        :quotation-bus-id="quotationBusId"
+        :max-monto="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
         :pago="selectedPago"
         @submit="handleSubmit"
         @cancel="isFormModalOpen = false"

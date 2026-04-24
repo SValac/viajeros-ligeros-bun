@@ -1,10 +1,10 @@
 <script setup lang="ts">
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   readonly: boolean;
 };
 
-const { cotizacionId, readonly } = defineProps<Props>();
+const { quotationId, readonly } = defineProps<Props>();
 
 const emit = defineEmits<{
   cotizacionConfirmada: [];
@@ -15,25 +15,25 @@ const travelStore = useTravelsStore();
 const toast = useToast();
 
 const cotizacion = computed(() =>
-  cotizacionStore.cotizaciones.find(c => c.id === cotizacionId),
+  cotizacionStore.cotizaciones.find(c => c.id === quotationId),
 );
 
-const puedeConfirmar = computed(() => cotizacionStore.puedeConfirmar(cotizacionId));
+const puedeConfirmar = computed(() => cotizacionStore.puedeConfirmar(quotationId));
 
 const isConfirmarModalOpen = shallowRef(false);
 const isConfirmando = shallowRef(false);
 
-function getEstadoColor(estado: string): 'warning' | 'success' {
-  return estado === 'confirmada' ? 'success' : 'warning';
+function getEstadoColor(status: string): 'warning' | 'success' {
+  return status === 'confirmed' ? 'success' : 'warning';
 }
 
-function getEstadoLabel(estado: string): string {
-  return estado === 'confirmada' ? 'Confirmada' : 'Borrador';
+function getEstadoLabel(status: string): string {
+  return status === 'confirmed' ? 'Confirmada' : 'Borrador';
 }
 
-async function confirmarCotizacion() {
+async function confirmarQuotation() {
   isConfirmando.value = true;
-  const result = cotizacionStore.confirmarCotizacion(cotizacionId, travelStore);
+  const result = await cotizacionStore.confirmarQuotation(quotationId, travelStore);
   isConfirmando.value = false;
   isConfirmarModalOpen.value = false;
 
@@ -56,8 +56,8 @@ async function confirmarCotizacion() {
       </h2>
       <UBadge
         v-if="cotizacion"
-        :label="getEstadoLabel(cotizacion.estado)"
-        :color="getEstadoColor(cotizacion.estado)"
+        :label="getEstadoLabel(cotizacion.status)"
+        :color="getEstadoColor(cotizacion.status)"
         variant="subtle"
       />
     </div>
@@ -99,7 +99,7 @@ async function confirmarCotizacion() {
           color="success"
           label="Confirmar"
           :loading="isConfirmando"
-          @click="confirmarCotizacion"
+          @click="confirmarQuotation"
         />
       </div>
     </template>

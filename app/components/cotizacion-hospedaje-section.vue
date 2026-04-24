@@ -1,6 +1,6 @@
 <script setup lang="ts">
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   readonly?: boolean;
 };
 
@@ -32,13 +32,13 @@ defineEmits<Emits>();
     <div class="space-y-6">
       <!-- Tabla de hospedajes -->
       <CotizacionHospedajeTabla
-        :cotizacion-id="cotizacionId"
+        :quotation-id="quotationId"
         :readonly="readonly ?? false"
       />
 
       <!-- Resumen de hospedajes -->
       <CotizacionHospedajeResumen
-        :cotizacion-id="cotizacionId"
+        :quotation-id="quotationId"
       />
     </div>
   </UCard>

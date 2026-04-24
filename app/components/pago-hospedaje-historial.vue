@@ -1,25 +1,25 @@
 <script setup lang="ts">
-import type { PagoHospedaje, PagoHospedajeFormData } from '~/types/cotizacion';
+import type { AccommodationPayment, AccommodationPaymentFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionHospedajeId: string;
+  quotationAccommodationId: string;
   readonly?: boolean;
-  hotelNombre?: string;
+  hotelName?: string;
 };
 
-const { cotizacionHospedajeId, readonly = false, hotelNombre } = defineProps<Props>();
+const { quotationAccommodationId, readonly = false, hotelName } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 
-const pagos = computed(() => cotizacionStore.getPagosByHospedaje(cotizacionHospedajeId));
-const anticipado = computed(() => cotizacionStore.getAnticipadoHospedaje(cotizacionHospedajeId));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteHospedaje(cotizacionHospedajeId));
+const pagos = computed(() => cotizacionStore.getPagosByHospedaje(quotationAccommodationId));
+const anticipado = computed(() => cotizacionStore.getAnticipadoHospedaje(quotationAccommodationId));
+const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteHospedaje(quotationAccommodationId));
 
 const isFormModalOpen = shallowRef(false);
-const selectedPago = shallowRef<PagoHospedaje | null>(null);
+const selectedPago = shallowRef<AccommodationPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const pagoToDelete = shallowRef<PagoHospedaje | null>(null);
+const pagoToDelete = shallowRef<AccommodationPayment | null>(null);
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
@@ -41,25 +41,25 @@ function openNewPago() {
   isFormModalOpen.value = true;
 }
 
-function openEditPago(pago: PagoHospedaje) {
+function openEditPago(pago: AccommodationPayment) {
   selectedPago.value = pago;
   isFormModalOpen.value = true;
 }
 
-function openDeleteConfirm(pago: PagoHospedaje) {
+function openDeleteConfirm(pago: AccommodationPayment) {
   pagoToDelete.value = pago;
   isDeleteModalOpen.value = true;
 }
 
-function handleSubmit(data: PagoHospedajeFormData) {
+async function handleSubmit(data: AccommodationPaymentFormData) {
   if (selectedPago.value) {
-    const result = cotizacionStore.updatePagoHospedaje(selectedPago.value.id, data);
+    const result = await cotizacionStore.updatePagoHospedaje(selectedPago.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = cotizacionStore.addPagoHospedaje(data);
+    const result = await cotizacionStore.addPagoHospedaje(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -71,10 +71,10 @@ function handleSubmit(data: PagoHospedajeFormData) {
   selectedPago.value = null;
 }
 
-function confirmDelete() {
+async function confirmDelete() {
   if (!pagoToDelete.value)
     return;
-  cotizacionStore.deletePagoHospedaje(pagoToDelete.value.id);
+  await cotizacionStore.deletePagoHospedaje(pagoToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   pagoToDelete.value = null;
@@ -88,8 +88,8 @@ function confirmDelete() {
       <h3 class="font-semibold text-lg flex items-center gap-2">
         <span class="i-lucide-receipt w-5 h-5 text-muted" />
         Historial de Pagos
-        <span v-if="hotelNombre" class="text-muted font-normal">
-          — {{ hotelNombre }}
+        <span v-if="hotelName" class="text-muted font-normal">
+          — {{ hotelName }}
         </span>
       </h3>
       <UButton
@@ -133,24 +133,24 @@ function confirmDelete() {
             class="border-b border-default/50 hover:bg-elevated/50"
           >
             <td class="py-2 pr-4">
-              {{ formatDate(pago.fechaPago) }}
+              {{ formatDate(pago.paymentDate) }}
             </td>
             <td class="py-2 pr-4">
-              {{ pago.concepto || '—' }}
+              {{ pago.concept || '—' }}
             </td>
             <td class="py-2 pr-4">
               <UBadge
-                :label="pago.tipoPago === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="pago.tipoPago === 'cash' ? 'success' : 'info'"
+                :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
+                :color="pago.paymentType === 'cash' ? 'success' : 'info'"
                 variant="subtle"
                 size="xs"
               />
             </td>
             <td class="py-2 pr-4 font-medium">
-              {{ formatCurrency(pago.monto) }}
+              {{ formatCurrency(pago.amount) }}
             </td>
             <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
-              {{ pago.notas || '—' }}
+              {{ pago.notes || '—' }}
             </td>
             <td v-if="!readonly" class="py-2">
               <div class="flex items-center gap-1">
@@ -213,8 +213,8 @@ function confirmDelete() {
   >
     <template #body>
       <PagoHospedajeForm
-        :cotizacion-hospedaje-id="cotizacionHospedajeId"
-        :max-monto="selectedPago ? selectedPago.monto + saldoPendiente : saldoPendiente"
+        :quotation-accommodation-id="quotationAccommodationId"
+        :max-monto="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
         :pago="selectedPago"
         @submit="handleSubmit"
         @cancel="isFormModalOpen = false"

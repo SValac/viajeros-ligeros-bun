@@ -34,17 +34,17 @@ function closeModal() {
   editingBus.value = null;
 }
 
-function handleFormSubmit(data: BusFormData) {
+async function handleFormSubmit(data: BusFormData) {
   try {
     if (editingBus.value) {
-      const success = busStore.updateBus(editingBus.value.id, data);
+      const success = await busStore.updateBus(editingBus.value.id, data);
       if (success) {
         toast.add({ title: 'Unidad actualizada', color: 'primary' });
         closeModal();
       }
     }
     else {
-      busStore.addBus(data);
+      await busStore.addBus(data);
       toast.add({ title: 'Unidad registrada', color: 'primary' });
       closeModal();
     }
@@ -54,23 +54,23 @@ function handleFormSubmit(data: BusFormData) {
   }
 }
 
-function handleDelete(bus: Bus) {
-  const label = [bus.marca, bus.modelo].filter(Boolean).join(' ') || 'esta unidad';
+async function handleDelete(bus: Bus) {
+  const label = [bus.brand, bus.model].filter(Boolean).join(' ') || 'esta unidad';
   // eslint-disable-next-line no-alert
   if (confirm(`¿Eliminar ${label}?`)) {
-    const success = busStore.deleteBus(bus.id);
+    const success = await busStore.deleteBus(bus.id);
     if (success) {
       toast.add({ title: 'Unidad eliminada', color: 'warning' });
     }
   }
 }
 
-function handleToggleStatus(bus: Bus) {
-  const success = busStore.toggleBusStatus(bus.id);
+async function handleToggleStatus(bus: Bus) {
+  const success = await busStore.toggleBusStatus(bus.id);
   if (success) {
     toast.add({
       title: 'Estado actualizado',
-      description: `La unidad ahora está ${!bus.activo ? 'activa' : 'inactiva'}`,
+      description: `La unidad ahora está ${!bus.active ? 'activa' : 'inactiva'}`,
       color: 'primary',
     });
   }
@@ -85,8 +85,8 @@ function getRowActions(bus: Bus) {
         onSelect: () => openEditModal(bus),
       },
       {
-        label: bus.activo ? 'Desactivar' : 'Activar',
-        icon: bus.activo ? 'i-lucide-eye-off' : 'i-lucide-eye',
+        label: bus.active ? 'Desactivar' : 'Activar',
+        icon: bus.active ? 'i-lucide-eye-off' : 'i-lucide-eye',
         onSelect: () => handleToggleStatus(bus),
       },
     ],
@@ -102,34 +102,34 @@ function getRowActions(bus: Bus) {
 
 const columns: TableColumn<Bus>[] = [
   {
-    accessorKey: 'marca',
+    accessorKey: 'brand',
     header: 'Marca',
     cell: ({ row }) => {
-      const val = row.getValue('marca') as string | undefined;
+      const val = row.getValue('brand') as string | undefined;
       return val ? h('span', { class: 'font-medium' }, val) : h('span', { class: 'text-sm text-muted' }, '-');
     },
   },
   {
-    accessorKey: 'modelo',
+    accessorKey: 'model',
     header: 'Modelo',
     cell: ({ row }) => {
-      const val = row.getValue('modelo') as string | undefined;
+      const val = row.getValue('model') as string | undefined;
       return val ? h('span', { class: 'text-sm' }, val) : h('span', { class: 'text-sm text-muted' }, '-');
     },
   },
   {
-    accessorKey: 'año',
+    accessorKey: 'year',
     header: 'Año',
     cell: ({ row }) => {
-      const val = row.getValue('año') as number | undefined;
+      const val = row.getValue('year') as number | undefined;
       return val ? h('span', { class: 'text-sm' }, String(val)) : h('span', { class: 'text-sm text-muted' }, '-');
     },
   },
   {
-    accessorKey: 'cantidadAsientos',
+    accessorKey: 'seatCount',
     header: 'Asientos',
     cell: ({ row }) => {
-      const val = row.getValue('cantidadAsientos') as number;
+      const val = row.getValue('seatCount') as number;
       return h('div', { class: 'flex items-center gap-1' }, [
         h('span', { class: 'i-lucide-users w-3 h-3 text-muted' }),
         h('span', { class: 'text-sm' }, String(val)),
@@ -137,10 +137,10 @@ const columns: TableColumn<Bus>[] = [
     },
   },
   {
-    accessorKey: 'precioRenta',
+    accessorKey: 'rentalPrice',
     header: 'Precio de renta',
     cell: ({ row }) => {
-      const val = row.getValue('precioRenta') as number;
+      const val = row.getValue('rentalPrice') as number;
       const formatted = val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
       return h('span', { class: 'text-sm font-medium' }, formatted);
     },

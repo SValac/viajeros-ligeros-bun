@@ -4,11 +4,11 @@ import type { TableColumn } from '@nuxt/ui';
 import { h } from 'vue';
 import { z } from 'zod';
 
-import type { CotizacionHospedaje, CotizacionHospedajeDetalleHabitacion, CotizacionHospedajeFormData, EstadoPagoHospedaje } from '~/types/cotizacion';
 import type { BedConfiguration, HotelRoomType } from '~/types/hotel-room';
+import type { AccommodationPaymentStatus, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData } from '~/types/quotation';
 
 type Props = {
-  cotizacionId: string;
+  quotationId: string;
   readonly?: boolean;
 };
 
@@ -23,34 +23,34 @@ const toast = useToast();
 
 // Hospedajes de la cotización
 const hospedajes = computed(() => {
-  return cotizacionStore.getHospedajesByCotizacion(props.cotizacionId);
+  return cotizacionStore.getHospedajesByQuotation(props.quotationId);
 });
 
 // Modal estado
 const isEditModalOpen = ref(false);
-const editingHospedaje = ref<CotizacionHospedaje | null>(null);
+const editingHospedaje = ref<QuotationAccommodation | null>(null);
 
 // Schema para editar
 const editSchema = z.object({
-  cantidadNoches: z.number().int().positive(),
-  detalles: z.array(z.object({
-    habitacionTipoId: z.string(),
-    cantidad: z.number().int().positive(),
-    precioPorNoche: z.number().positive(),
-    ocupacionMaxima: z.number().int().positive(),
+  nightCount: z.number().int().positive(),
+  details: z.array(z.object({
+    roomTypeId: z.string(),
+    quantity: z.number().int().positive(),
+    pricePerNight: z.number().positive(),
+    maxOccupancy: z.number().int().positive(),
   })).min(1),
 });
 
 // Estado del form de edición
 const editFormState = reactive({
-  cantidadNoches: 0,
-  detalles: [] as CotizacionHospedajeDetalleHabitacion[],
+  nightCount: 0,
+  details: [] as QuotationAccommodationDetail[],
 });
 
 // Obtener camas de un detalle buscando el HotelRoomType en el store
-function getCamasDetalle(providerId: string, habitacionTipoId: string): BedConfiguration[] {
+function getCamasDetalle(providerId: string, roomTypeId: string): BedConfiguration[] {
   const roomData = hotelRoomStore.getRoomDataByProviderId(providerId);
-  return roomData?.roomTypes.find(rt => rt.id === habitacionTipoId)?.camas ?? [];
+  return roomData?.roomTypes.find(rt => rt.id === roomTypeId)?.beds ?? [];
 }
 
 // Tipos de habitación disponibles para el hospedaje en edición
@@ -62,9 +62,9 @@ const tiposHabitacionEdit = computed(() => {
 
 // Mapa de detalles seleccionados en edición
 const editDetallesMap = computed(() => {
-  const map = new Map<string, CotizacionHospedajeDetalleHabitacion>();
-  for (const detalle of editFormState.detalles) {
-    map.set(detalle.habitacionTipoId, detalle);
+  const map = new Map<string, QuotationAccommodationDetail>();
+  for (const detalle of editFormState.details) {
+    map.set(detalle.roomTypeId, detalle);
   }
   return map;
 });
@@ -73,39 +73,39 @@ const editDetallesMap = computed(() => {
 function toggleTipoHabitacionEdit(tipo: HotelRoomType) {
   const existe = editDetallesMap.value.has(tipo.id);
   if (existe) {
-    editFormState.detalles = editFormState.detalles.filter(d => d.habitacionTipoId !== tipo.id);
+    editFormState.details = editFormState.details.filter(d => d.roomTypeId !== tipo.id);
   }
   else {
-    editFormState.detalles.push({
+    editFormState.details.push({
       id: crypto.randomUUID(),
-      habitacionTipoId: tipo.id,
-      cantidad: 1,
-      precioPorNoche: tipo.precioPorNoche,
-      ocupacionMaxima: tipo.ocupacionMaxima,
+      roomTypeId: tipo.id,
+      quantity: 1,
+      pricePerNight: tipo.pricePerNight,
+      maxOccupancy: tipo.maxOccupancy,
     });
   }
 }
 
 // Actualizar cantidad en edición respetando el máximo del hotel
-function actualizarCantidadEdit(tipoId: string, cantidad: number) {
-  const detalle = editFormState.detalles.find(d => d.habitacionTipoId === tipoId);
-  if (!detalle || cantidad <= 0)
+function actualizarCantidadEdit(tipoId: string, count: number) {
+  const detalle = editFormState.details.find(d => d.roomTypeId === tipoId);
+  if (!detalle || count <= 0)
     return;
   const tipo = tiposHabitacionEdit.value.find(t => t.id === tipoId);
-  detalle.cantidad = tipo ? Math.min(cantidad, tipo.cantidadHabitaciones) : cantidad;
+  detalle.quantity = tipo ? Math.min(count, tipo.roomCount) : count;
 }
 
 // Obtener nombre del hotel
 function getNombreHotel(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.nombre ?? 'Desconocido';
+  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
 // Slideover historial de pagos
 const isHistorialOpen = ref(false);
-const historialHospedaje = ref<CotizacionHospedaje | null>(null);
+const historialHospedaje = ref<QuotationAccommodation | null>(null);
 
-function abrirHistorial(hospedaje: CotizacionHospedaje) {
-  historialHospedaje.value = hospedaje;
+function abrirHistorial(accommodation: QuotationAccommodation) {
+  historialHospedaje.value = accommodation;
   isHistorialOpen.value = true;
 }
 
@@ -114,39 +114,39 @@ function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
 }
 
-const estadoPagoBadge: Record<EstadoPagoHospedaje, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
-  pendiente: { label: 'Pendiente', color: 'warning' },
-  anticipo: { label: 'Anticipo', color: 'neutral' },
-  liquidado: { label: 'Liquidado', color: 'success' },
+const estadoPagoBadge: Record<AccommodationPaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
+  pending: { label: 'Pendiente', color: 'warning' },
+  partial: { label: 'Anticipo', color: 'neutral' },
+  paid: { label: 'Liquidado', color: 'success' },
 };
 
 // Acciones por fila
-function getRowActions(hospedaje: CotizacionHospedaje) {
-  const saldo = cotizacionStore.getSaldoPendienteHospedaje(hospedaje.id);
+function getRowActions(accommodation: QuotationAccommodation) {
+  const saldo = cotizacionStore.getSaldoPendienteHospedaje(accommodation.id);
   return [
     [
       {
         label: 'Ver historial de pagos',
         icon: 'i-lucide-receipt',
-        onSelect: () => abrirHistorial(hospedaje),
+        onSelect: () => abrirHistorial(accommodation),
       },
       {
         label: 'Registrar pago',
         icon: 'i-lucide-banknote',
         disabled: saldo <= 0,
-        onSelect: () => abrirHistorial(hospedaje),
+        onSelect: () => abrirHistorial(accommodation),
       },
     ],
     [
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
-        onSelect: () => abrirEdicion(hospedaje),
+        onSelect: () => abrirEdicion(accommodation),
       },
       {
-        label: hospedaje.confirmado ? 'Marcar sin confirmar' : 'Marcar como confirmado',
-        icon: hospedaje.confirmado ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-        onSelect: () => cotizacionStore.toggleConfirmadoHospedaje(hospedaje.id),
+        label: accommodation.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
+        icon: accommodation.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
+        onSelect: () => cotizacionStore.toggleConfirmadoHospedaje(accommodation.id),
       },
     ],
     [
@@ -154,15 +154,15 @@ function getRowActions(hospedaje: CotizacionHospedaje) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => eliminarHospedaje(hospedaje.id),
+        onSelect: () => eliminarHospedaje(accommodation.id),
       },
     ],
   ];
 }
 
 // Columnas de la tabla
-const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
-  const cols: TableColumn<CotizacionHospedaje>[] = [
+const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
+  const cols: TableColumn<QuotationAccommodation>[] = [
     {
       accessorKey: 'providerId',
       header: 'Hotel',
@@ -171,15 +171,15 @@ const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
     {
       accessorKey: 'cantidadNoches',
       header: 'Noches',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, String(row.original.cantidadNoches)),
+      cell: ({ row }) => h('span', { class: 'font-medium' }, String(row.original.nightCount)),
     },
     {
       accessorKey: 'costoTotal',
       header: 'Costo Total',
-      cell: ({ row }) => h('span', { class: 'font-bold' }, formatCurrency(row.original.costoTotal)),
+      cell: ({ row }) => h('span', { class: 'font-bold' }, formatCurrency(row.original.totalCost)),
     },
     {
-      id: 'pagado',
+      id: 'paid',
       header: 'Pagado',
       cell: ({ row }) => {
         const pagado = cotizacionStore.getAnticipadoHospedaje(row.original.id);
@@ -187,7 +187,7 @@ const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
       },
     },
     {
-      id: 'pendiente',
+      id: 'pending',
       header: 'Pendiente',
       cell: ({ row }) => {
         const saldo = cotizacionStore.getSaldoPendienteHospedaje(row.original.id);
@@ -198,18 +198,18 @@ const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
       id: 'estadoPago',
       header: 'Estado Pago',
       cell: ({ row }) => {
-        const estado = cotizacionStore.getEstadoPagoHospedaje(row.original.id);
-        const badge = estadoPagoBadge[estado];
+        const status = cotizacionStore.getAccommodationPaymentStatus(row.original.id);
+        const badge = estadoPagoBadge[status];
         return h(resolveComponent('UBadge'), { label: badge.label, color: badge.color, variant: 'subtle', size: 'xs' });
       },
     },
     {
-      id: 'confirmado',
+      id: 'confirmed',
       header: 'Confirmado',
       cell: ({ row }) =>
         h(resolveComponent('UBadge'), {
-          label: row.original.confirmado ? 'Sí' : 'No',
-          color: row.original.confirmado ? 'success' : 'neutral',
+          label: row.original.confirmed ? 'Sí' : 'No',
+          color: row.original.confirmed ? 'success' : 'neutral',
           variant: 'subtle',
           size: 'xs',
         }),
@@ -236,15 +236,15 @@ const columns = computed<TableColumn<CotizacionHospedaje>[]>(() => {
 });
 
 // Abrir modal de edición
-function abrirEdicion(hospedaje: CotizacionHospedaje) {
-  editingHospedaje.value = hospedaje;
-  editFormState.cantidadNoches = hospedaje.cantidadNoches;
-  editFormState.detalles = hospedaje.detalles.map(d => ({ ...d }));
+function abrirEdicion(accommodation: QuotationAccommodation) {
+  editingHospedaje.value = accommodation;
+  editFormState.nightCount = accommodation.nightCount;
+  editFormState.details = accommodation.details.map(d => ({ ...d }));
   isEditModalOpen.value = true;
 }
 
 // Guardar edición
-function guardarEdicion() {
+async function guardarEdicion() {
   if (!editingHospedaje.value)
     return;
 
@@ -258,13 +258,13 @@ function guardarEdicion() {
     return;
   }
 
-  const updated = cotizacionStore.updateHospedajeCotizacion(editingHospedaje.value.id, {
-    cantidadNoches: editFormState.cantidadNoches,
-    detalles: editFormState.detalles,
-    costoTotal: editFormState.detalles.reduce((sum, d) => {
-      return sum + (d.precioPorNoche * editFormState.cantidadNoches * d.cantidad);
+  const updated = await cotizacionStore.updateHospedajeQuotation(editingHospedaje.value.id, {
+    nightCount: editFormState.nightCount,
+    details: editFormState.details,
+    totalCost: editFormState.details.reduce((sum, d) => {
+      return sum + (d.pricePerNight * editFormState.nightCount * d.quantity);
     }, 0),
-  } as Partial<CotizacionHospedajeFormData>);
+  } as Partial<QuotationAccommodationFormData>);
 
   if (!updated) {
     toast.add({
@@ -285,8 +285,8 @@ function guardarEdicion() {
 }
 
 // Eliminar hospedaje
-function eliminarHospedaje(id: string) {
-  cotizacionStore.deleteHospedajeCotizacion(id);
+async function eliminarHospedaje(id: string) {
+  await cotizacionStore.deleteHospedajeQuotation(id);
   toast.add({
     title: 'Hospedaje eliminado',
     color: 'success',
@@ -332,7 +332,7 @@ function eliminarHospedaje(id: string) {
           <div>
             <label class="text-sm font-medium block mb-2">Cantidad de Noches</label>
             <UInput
-              v-model.number="editFormState.cantidadNoches"
+              v-model.number="editFormState.nightCount"
               type="number"
               min="1"
               placeholder="Ej. 3"
@@ -364,13 +364,13 @@ function eliminarHospedaje(id: string) {
                   />
                   <div class="flex-1">
                     <p>
-                      {{ tipo.ocupacionMaxima }} personas
+                      {{ tipo.maxOccupancy }} personas
                     </p>
                     <p class="text-sm">
                       {{ formatBedConfiguration(getCamasDetalle(editingHospedaje.providerId, tipo.id)) }}
                     </p>
                     <p class="text-xs text-muted">
-                      ${{ tipo.precioPorNoche.toFixed(2) }}/noche
+                      ${{ tipo.pricePerNight.toFixed(2) }}/noche
                     </p>
                   </div>
                 </div>
@@ -379,12 +379,12 @@ function eliminarHospedaje(id: string) {
                 <div v-if="editDetallesMap.has(tipo.id)" class="ml-8 space-y-2 border-l-2 border-primary pl-4">
                   <div class="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <label class="text-xs text-muted">Cantidad (máx. {{ tipo.cantidadHabitaciones }})</label>
+                      <label class="text-xs text-muted">Cantidad (máx. {{ tipo.roomCount }})</label>
                       <UInput
-                        :model-value="editDetallesMap.get(tipo.id)?.cantidad ?? 1"
+                        :model-value="editDetallesMap.get(tipo.id)?.quantity ?? 1"
                         type="number"
                         min="1"
-                        :max="tipo.cantidadHabitaciones"
+                        :max="tipo.roomCount"
                         size="sm"
                         @update:model-value="(v) => actualizarCantidadEdit(tipo.id, Number(v))"
                       />
@@ -392,14 +392,14 @@ function eliminarHospedaje(id: string) {
                     <div>
                       <label class="text-xs text-muted">Costo/Persona</label>
                       <div class="text-sm font-medium py-2">
-                        ${{ (tipo.precioPorNoche / tipo.ocupacionMaxima).toFixed(2) }}
+                        ${{ (tipo.pricePerNight / tipo.maxOccupancy).toFixed(2) }}
                       </div>
                     </div>
                   </div>
 
                   <div class="text-xs bg-muted/20 rounded px-2 py-1">
-                    ${{ tipo.precioPorNoche.toFixed(2) }} × {{ editFormState.cantidadNoches }} noches × {{ editDetallesMap.get(tipo.id)?.cantidad ?? 1 }} hab =
-                    <span class="font-semibold">${{ (tipo.precioPorNoche * editFormState.cantidadNoches * (editDetallesMap.get(tipo.id)?.cantidad ?? 1)).toFixed(2) }}</span>
+                    ${{ tipo.pricePerNight.toFixed(2) }} × {{ editFormState.nightCount }} noches × {{ editDetallesMap.get(tipo.id)?.quantity ?? 1 }} hab =
+                    <span class="font-semibold">${{ (tipo.pricePerNight * editFormState.nightCount * (editDetallesMap.get(tipo.id)?.quantity ?? 1)).toFixed(2) }}</span>
                   </div>
                 </div>
               </div>
@@ -407,11 +407,11 @@ function eliminarHospedaje(id: string) {
           </div>
 
           <!-- Costo total -->
-          <div v-if="editFormState.detalles.length > 0" class="bg-primary/10 rounded-lg p-4 border border-primary/20">
+          <div v-if="editFormState.details.length > 0" class="bg-primary/10 rounded-lg p-4 border border-primary/20">
             <div class="flex justify-between items-center">
               <span class="font-semibold">Costo Total</span>
               <span class="text-lg font-bold">
-                ${{ editFormState.detalles.reduce((sum, d) => sum + (d.precioPorNoche * editFormState.cantidadNoches * d.cantidad), 0).toFixed(2) }}
+                ${{ editFormState.details.reduce((sum, d) => sum + (d.pricePerNight * editFormState.nightCount * d.quantity), 0).toFixed(2) }}
               </span>
             </div>
           </div>
@@ -444,8 +444,8 @@ function eliminarHospedaje(id: string) {
       <template #body>
         <PagoHospedajeHistorial
           v-if="historialHospedaje"
-          :cotizacion-hospedaje-id="historialHospedaje.id"
-          :hotel-nombre="getNombreHotel(historialHospedaje.providerId)"
+          :quotation-accommodation-id="historialHospedaje.id"
+          :hotel-name="getNombreHotel(historialHospedaje.providerId)"
           :readonly="props.readonly"
         />
       </template>

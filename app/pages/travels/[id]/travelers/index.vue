@@ -14,7 +14,6 @@ const route = useRoute();
 const router = useRouter();
 const travelerStore = useTravelerStore();
 const travelStore = useTravelsStore();
-const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const toast = useToast();
 
@@ -27,8 +26,9 @@ const editingTraveler = shallowRef<Traveler | null>(null);
 const expanded = ref<ExpandedStateList>({});
 
 // Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
-onMounted(() => {
+onMounted(async () => {
   travelerStore.setFilters({ travelId: travelId.value });
+  await travelerStore.fetchByTravel(travelId.value);
 });
 
 watch(travelId, (id) => {
@@ -50,13 +50,13 @@ watchEffect(() => {
 
 const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
 const totalTravelers = computed(() => travelersOfTravel.value.length);
-const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.esRepresentante).length);
-const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.esRepresentante).length);
+const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
+const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
 
-const allBuses = computed(() => cotizacionStore.busesApartados);
+const allBuses = computed(() => travel.value?.buses ?? []);
 
 const representantes = computed(() =>
-  travelerStore.filteredTravelers.filter(t => t.esRepresentante),
+  travelerStore.filteredTravelers.filter(t => t.isRepresentative),
 );
 
 const filters = computed({
@@ -68,8 +68,9 @@ function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
   if (!bus)
     return travelBusId;
-  const agencia = providerStore.getProviderById(bus.proveedorId)?.nombre;
-  return agencia ? `${agencia} — Unidad ${bus.numeroUnidad}` : `Unidad ${bus.numeroUnidad}`;
+  const agencia = providerStore.getProviderById(bus.providerId)?.name;
+  const busName = [bus.brand, bus.model].filter(Boolean).join(' ').trim() || 'Camión';
+  return agencia ? `${agencia} — ${busName}` : busName;
 }
 
 function openCreateModal() {
@@ -87,24 +88,24 @@ function closeModal() {
   editingTraveler.value = null;
 }
 
-function handleFormSubmit(data: TravelerFormData) {
+async function handleFormSubmit(data: TravelerFormData) {
   try {
     if (editingTraveler.value) {
-      const updated = travelerStore.updateTraveler(editingTraveler.value.id, data);
+      const updated = await travelerStore.updateTraveler(editingTraveler.value.id, data);
       if (updated) {
         toast.add({
           title: 'Viajero actualizado',
-          description: `${data.nombre} ${data.apellido} se actualizó correctamente`,
+          description: `${data.firstName} ${data.lastName} se actualizó correctamente`,
           color: 'primary',
         });
         closeModal();
       }
     }
     else {
-      travelerStore.addTraveler(data);
+      await travelerStore.addTraveler(data);
       toast.add({
         title: 'Viajero creado',
-        description: `${data.nombre} ${data.apellido} se registró correctamente`,
+        description: `${data.firstName} ${data.lastName} se registró correctamente`,
         color: 'primary',
       });
       closeModal();
@@ -119,13 +120,13 @@ function handleFormSubmit(data: TravelerFormData) {
   }
 }
 
-function handleDelete(traveler: Traveler) {
+async function handleDelete(traveler: Traveler) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${traveler.nombre} ${traveler.apellido}?`)) {
-    travelerStore.deleteTraveler(traveler.id);
+  if (confirm(`¿Estás seguro de eliminar a ${traveler.firstName} ${traveler.lastName}?`)) {
+    await travelerStore.deleteTraveler(traveler.id);
     toast.add({
       title: 'Viajero eliminado',
-      description: `${traveler.nombre} ${traveler.apellido} se eliminó correctamente`,
+      description: `${traveler.firstName} ${traveler.lastName} se eliminó correctamente`,
       color: 'warning',
     });
   }
@@ -166,7 +167,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const depth = row.depth;
       const canExpand = row.getCanExpand();
 
-      const nameNode = h('span', { class: 'font-medium' }, `${t.nombre} ${t.apellido}`);
+      const nameNode = h('span', { class: 'font-medium' }, `${t.firstName} ${t.lastName}`);
 
       if (canExpand) {
         const isExpanded = row.getIsExpanded();
@@ -222,10 +223,10 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    accessorKey: 'esRepresentante',
+    accessorKey: 'isRepresentative',
     header: 'Representante',
     cell: ({ row }) => {
-      const esRep = row.getValue('esRepresentante') as boolean;
+      const esRep = row.getValue('isRepresentative') as boolean;
       return h(
         resolveComponent('UBadge'),
         {
@@ -271,7 +272,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
             Viajeros
           </h1>
           <p class="text-gray-500 dark:text-gray-400 mt-1">
-            {{ travel?.destino ?? travelId }}
+            {{ travel?.destination ?? travelId }}
           </p>
         </div>
       </div>
@@ -345,7 +346,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           name="i-lucide-inbox"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
         />
-        <template v-if="filters.travelBusId || filters.representanteId">
+        <template v-if="filters.travelBusId || filters.representativeId">
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
             Sin resultados para los filtros aplicados
           </h3>

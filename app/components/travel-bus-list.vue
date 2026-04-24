@@ -17,11 +17,11 @@ const editingBus = shallowRef<TravelBus | null>(null);
 
 // Derived: buses for this travel
 const buses = computed(
-  () => travelsStore.getTravelById(travelId)?.autobuses ?? [],
+  () => travelsStore.getTravelById(travelId)?.buses ?? [],
 );
 
 function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.nombre ?? 'Proveedor desconocido';
+  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
 }
 
 function formatCurrency(amount: number): string {
@@ -38,23 +38,23 @@ function openEditModal(bus: TravelBus) {
   isBusModalOpen.value = true;
 }
 
-function handleSubmit(data: Omit<TravelBus, 'id'>) {
+async function handleSubmit(data: Omit<TravelBus, 'id'>) {
   if (editingBus.value) {
-    travelsStore.updateTravelBus(travelId, editingBus.value.id, data);
+    await travelsStore.updateTravelBus(travelId, editingBus.value.id, data);
     toast.add({ title: 'Autobús actualizado', color: 'success', icon: 'i-lucide-check-circle' });
   }
   else {
-    travelsStore.addBusToTravel(travelId, data);
+    await travelsStore.addBusToTravel(travelId, data);
     toast.add({ title: 'Autobús agregado', color: 'success', icon: 'i-lucide-check-circle' });
   }
   isBusModalOpen.value = false;
 }
 
-function deleteBus(bus: TravelBus) {
-  const label = [bus.marca, bus.modelo].filter(Boolean).join(' ') || 'este autobús';
+async function deleteBus(bus: TravelBus) {
+  const label = [bus.brand, bus.model].filter(Boolean).join(' ') || 'este autobús';
   // eslint-disable-next-line no-alert
   if (confirm(`¿Eliminar ${label}?`)) {
-    travelsStore.removeBusFromTravel(travelId, bus.id);
+    await travelsStore.removeBusFromTravel(travelId, bus.id);
     toast.add({ title: 'Autobús eliminado', color: 'warning', icon: 'i-lucide-trash-2' });
   }
 }
@@ -119,7 +119,7 @@ function getBusActions(bus: TravelBus) {
                 {{ getProviderName(bus.providerId) }}
               </UBadge>
               <span class="font-medium">
-                {{ [bus.marca, bus.modelo, bus.año].filter(Boolean).join(' ') || 'Unidad sin identificar' }}
+                {{ [bus.brand, bus.model, bus.year].filter(Boolean).join(' ') || 'Unidad sin identificar' }}
               </span>
             </div>
 
@@ -127,11 +127,11 @@ function getBusActions(bus: TravelBus) {
             <div class="grid grid-cols-2 gap-4 text-sm">
               <div class="flex items-center gap-1.5 text-muted">
                 <span class="i-lucide-users w-4 h-4" />
-                <span>{{ bus.cantidadAsientos }} asientos</span>
+                <span>{{ bus.seatCount }} asientos</span>
               </div>
               <div class="flex items-center gap-1.5 text-muted">
                 <span class="i-lucide-banknote w-4 h-4" />
-                <span>{{ formatCurrency(bus.precioRenta) }}</span>
+                <span>{{ formatCurrency(bus.rentalPrice) }}</span>
               </div>
             </div>
 
@@ -142,21 +142,21 @@ function getBusActions(bus: TravelBus) {
               </div>
               <div class="flex items-center gap-1.5 text-sm">
                 <span class="i-lucide-user w-3 h-3 text-muted" />
-                <span class="font-medium">{{ bus.operador1Nombre }}</span>
+                <span class="font-medium">{{ bus.operator1Name }}</span>
                 <span class="i-lucide-phone w-3 h-3 text-muted ml-2" />
-                <span>{{ bus.operador1Telefono }}</span>
+                <span>{{ bus.operator1Phone }}</span>
               </div>
               <div
-                v-if="bus.operador2Nombre"
+                v-if="bus.operator2Name"
                 class="flex items-center gap-1.5 text-sm"
               >
                 <span class="i-lucide-user w-3 h-3 text-muted" />
-                <span class="font-medium">{{ bus.operador2Nombre }}</span>
+                <span class="font-medium">{{ bus.operator2Name }}</span>
                 <span
-                  v-if="bus.operador2Telefono"
+                  v-if="bus.operator2Phone"
                   class="i-lucide-phone w-3 h-3 text-muted ml-2"
                 />
-                <span v-if="bus.operador2Telefono">{{ bus.operador2Telefono }}</span>
+                <span v-if="bus.operator2Phone">{{ bus.operator2Phone }}</span>
               </div>
             </div>
           </div>

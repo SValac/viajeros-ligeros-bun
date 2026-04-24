@@ -24,39 +24,39 @@ const emit = defineEmits<{
 const toast = useToast();
 
 const schema = z.object({
-  ocupacionMaxima: z.number().int().min(1, 'Mínimo 1 persona').max(20, 'Máximo 20 personas'),
-  cantidadHabitaciones: z.number().int().min(1, 'Mínimo 1 habitación'),
-  camas: z.array(
+  maxOccupancy: z.number().int().min(1, 'Mínimo 1 persona').max(20, 'Máximo 20 personas'),
+  roomCount: z.number().int().min(1, 'Mínimo 1 habitación'),
+  beds: z.array(
     z.object({
-      tamaño: z.enum(['individual', 'matrimonial', 'queen', 'king']),
-      cantidad: z.number().int().min(1).max(10),
+      size: z.enum(['single', 'double', 'queen', 'king']),
+      count: z.number().int().min(1).max(10),
     }),
   ).min(1, 'Agrega al menos una cama'),
-  precioPorNoche: z.number().positive('El precio debe ser mayor a 0'),
-  detallesAdicionales: z.string().optional().or(z.literal('')),
+  pricePerNight: z.number().positive('El precio debe ser mayor a 0'),
+  additionalDetails: z.string().optional().or(z.literal('')),
 });
 
 const isEditing = computed(() => !!props.roomType);
-const editingRooms = computed(() => props.roomType?.cantidadHabitaciones ?? 0);
+const editingRooms = computed(() => props.roomType?.roomCount ?? 0);
 const availableRooms = computed(() => props.maxRooms - props.usedRooms + editingRooms.value);
 
 const state = ref<HotelRoomTypeFormData>({
-  ocupacionMaxima: props.roomType?.ocupacionMaxima ?? 2,
-  cantidadHabitaciones: props.roomType?.cantidadHabitaciones ?? 1,
-  camas: props.roomType?.camas && props.roomType.camas.length > 0
-    ? [...props.roomType.camas]
-    : [{ tamaño: 'individual', cantidad: 1 }],
-  precioPorNoche: props.roomType?.precioPorNoche ?? 0,
-  detallesAdicionales: props.roomType?.detallesAdicionales ?? '',
+  maxOccupancy: props.roomType?.maxOccupancy ?? 2,
+  roomCount: props.roomType?.roomCount ?? 1,
+  beds: props.roomType?.beds && props.roomType.beds.length > 0
+    ? [...props.roomType.beds]
+    : [{ size: 'single', count: 1 }],
+  pricePerNight: props.roomType?.pricePerNight ?? 0,
+  additionalDetails: props.roomType?.additionalDetails ?? '',
 });
 
 function addCama() {
-  state.value.camas.push({ tamaño: 'individual', cantidad: 1 });
+  state.value.beds.push({ size: 'single', count: 1 });
 }
 
 function removeCama(index: number) {
-  if (state.value.camas.length > 1) {
-    state.value.camas.splice(index, 1);
+  if (state.value.beds.length > 1) {
+    state.value.beds.splice(index, 1);
   }
 }
 
@@ -66,11 +66,11 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       existingType.id !== props.roomType?.id
       && areRoomTypesIdentical(
         {
-          ocupacionMaxima: event.data.ocupacionMaxima,
-          cantidadHabitaciones: event.data.cantidadHabitaciones,
-          camas: event.data.camas,
-          precioPorNoche: event.data.precioPorNoche,
-          detallesAdicionales: event.data.detallesAdicionales,
+          maxOccupancy: event.data.maxOccupancy,
+          roomCount: event.data.roomCount,
+          beds: event.data.beds,
+          pricePerNight: event.data.pricePerNight,
+          additionalDetails: event.data.additionalDetails,
         },
         existingType,
       ),
@@ -102,7 +102,7 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       required
     >
       <UInput
-        v-model.number="state.ocupacionMaxima"
+        v-model.number="state.maxOccupancy"
         type="number"
         :min="1"
         :max="20"
@@ -117,7 +117,7 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       required
     >
       <UInput
-        v-model.number="state.cantidadHabitaciones"
+        v-model.number="state.roomCount"
         type="number"
         :min="1"
         :max="availableRooms"
@@ -125,14 +125,14 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       />
     </UFormField>
 
-    <USeparator label="Configuración de camas" />
+    <USeparator label="Configuración de beds" />
 
     <div class="space-y-2">
       <HotelBedConfigurationInput
-        v-for="(cama, i) in state.camas"
+        v-for="(cama, i) in state.beds"
         :key="i"
         :model-value="cama"
-        @update:model-value="(val) => state.camas[i] = val"
+        @update:model-value="(val) => state.beds[i] = val"
         @remove="removeCama(i)"
       />
       <UButton
@@ -152,7 +152,7 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       required
     >
       <UInput
-        v-model.number="state.precioPorNoche"
+        v-model.number="state.pricePerNight"
         type="number"
         step="0.01"
         :min="0"
@@ -162,7 +162,7 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
 
     <UFormField label="Detalles adicionales" name="detallesAdicionales">
       <UTextarea
-        v-model="state.detallesAdicionales"
+        v-model="state.additionalDetails"
         :rows="2"
         placeholder="Vista al mar, balcón, etc."
       />

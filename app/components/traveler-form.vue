@@ -18,20 +18,20 @@ const emit = defineEmits<{
   submit: [data: TravelerFormData];
   cancel: [];
 }>();
-const cotizacionStore = useCotizacionStore();
+const travelsStore = useTravelsStore();
 const providerStore = useProviderStore();
 
 // Schema de validación
 const schema = z.object({
-  nombre: z.string()
+  firstName: z.string()
     .min(2, 'Mínimo 2 caracteres')
     .max(100, 'Máximo 100 caracteres'),
 
-  apellido: z.string()
+  lastName: z.string()
     .min(2, 'Mínimo 2 caracteres')
     .max(100, 'Máximo 100 caracteres'),
 
-  telefono: z.string()
+  phone: z.string()
     .min(7, 'Mínimo 7 caracteres')
     .max(20, 'Máximo 20 caracteres'),
 
@@ -39,52 +39,52 @@ const schema = z.object({
 
   travelBusId: z.string().min(1, 'El camión es requerido'),
 
-  asiento: z.string().min(1, 'El asiento es requerido').max(10, 'Máximo 10 caracteres'),
+  seat: z.string().min(1, 'El asiento es requerido').max(10, 'Máximo 10 caracteres'),
 
-  puntoAbordaje: z.string()
+  boardingPoint: z.string()
     .min(2, 'Mínimo 2 caracteres')
     .max(150, 'Máximo 150 caracteres'),
 
-  esRepresentante: z.boolean(),
+  isRepresentative: z.boolean(),
 
-  representanteId: z.string().optional(),
+  representativeId: z.string().optional(),
 });
 
 type Schema = z.output<typeof schema>;
 
 // Estado inicial del formulario
 const state = ref<Schema>({
-  nombre: traveler?.nombre ?? '',
-  apellido: traveler?.apellido ?? '',
-  telefono: traveler?.telefono ?? '',
+  firstName: traveler?.firstName ?? '',
+  lastName: traveler?.lastName ?? '',
+  phone: traveler?.phone ?? '',
   travelId: traveler?.travelId ?? lockedTravelId ?? '',
   travelBusId: traveler?.travelBusId ?? '',
-  asiento: traveler?.asiento ?? '',
-  puntoAbordaje: traveler?.puntoAbordaje ?? '',
-  esRepresentante: traveler?.esRepresentante ?? false,
-  representanteId: traveler?.representanteId ?? undefined,
+  seat: traveler?.seat ?? '',
+  boardingPoint: traveler?.boardingPoint ?? '',
+  isRepresentative: traveler?.isRepresentative ?? false,
+  representativeId: traveler?.representativeId ?? undefined,
 });
 
 // Opciones de viajes para USelect
 const travelOptions = computed(() =>
   availableTravels.map(t => ({
     value: t.id,
-    label: `${t.destino} (${t.fechaInicio})`,
+    label: `${t.destination} (${t.startDate})`,
   })),
 );
 
-// Cotización del viaje seleccionado — fuente de verdad para los buses
-const selectedCotizacion = computed(() =>
-  state.value.travelId ? cotizacionStore.getCotizacionByTravel(state.value.travelId) : undefined,
+// Viaje seleccionado — fuente de verdad para los buses (FK a travel_buses.id)
+const selectedTravel = computed(() =>
+  state.value.travelId ? travelsStore.getTravelById(state.value.travelId) : undefined,
 );
 
-// Opciones de camiones: vienen de cotizacion.busesApartados, no de travel.autobuses
+// Opciones de camiones: vienen de travel.buses (id de travel_buses)
 const busOptions = computed(() => {
-  if (!selectedCotizacion.value)
-    return [];
-  return cotizacionStore.getBusesByCotizacion(selectedCotizacion.value.id).map((b) => {
-    const agencia = providerStore.getProviderById(b.proveedorId)?.nombre;
-    const label = agencia ? `${agencia} — Unidad ${b.numeroUnidad}` : `Unidad ${b.numeroUnidad}`;
+  const buses = selectedTravel.value?.buses ?? [];
+  return buses.map((b) => {
+    const agencia = providerStore.getProviderById(b.providerId)?.name;
+    const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
+    const label = agencia ? `${agencia} — ${busName}` : busName;
     return { value: b.id, label };
   });
 });
@@ -97,30 +97,30 @@ const representanteOptions = computed(() => {
     .filter(t =>
       t.travelId === state.value.travelId
       && t.travelBusId === state.value.travelBusId
-      && t.esRepresentante === true
+      && t.isRepresentative === true
       && t.id !== traveler?.id,
     )
     .map(t => ({
       value: t.id,
-      label: `${t.nombre} ${t.apellido}`,
+      label: `${t.firstName} ${t.lastName}`,
     }));
 });
 
 // Cuando cambia el viaje, resetear el camión y el representante
 watch(() => state.value.travelId, () => {
   state.value.travelBusId = '';
-  state.value.representanteId = undefined;
+  state.value.representativeId = undefined;
 });
 
 // Cuando cambia el camión, resetear el representante
 watch(() => state.value.travelBusId, () => {
-  state.value.representanteId = undefined;
+  state.value.representativeId = undefined;
 });
 
-// Cuando esRepresentante cambia a true, limpiar representanteId
-watch(() => state.value.esRepresentante, (esRep) => {
-  if (esRep) {
-    state.value.representanteId = undefined;
+// Cuando isRepresentative cambia a true, limpiar representativeId
+watch(() => state.value.isRepresentative, (isRep) => {
+  if (isRep) {
+    state.value.representativeId = undefined;
   }
 });
 
@@ -131,7 +131,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     const formData: TravelerFormData = {
       ...event.data,
-      representanteId: event.data.esRepresentante ? undefined : (event.data.representanteId || undefined),
+      representativeId: event.data.isRepresentative ? undefined : (event.data.representativeId || undefined),
       id: traveler?.id,
     };
     emit('submit', formData);
@@ -157,22 +157,22 @@ function onCancel() {
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Nombre"
-        name="nombre"
+        name="firstName"
         required
       >
         <UInput
-          v-model="state.nombre"
+          v-model="state.firstName"
           placeholder="Juan"
         />
       </UFormField>
 
       <UFormField
         label="Apellido"
-        name="apellido"
+        name="lastName"
         required
       >
         <UInput
-          v-model="state.apellido"
+          v-model="state.lastName"
           placeholder="Pérez"
         />
       </UFormField>
@@ -180,11 +180,11 @@ function onCancel() {
 
     <UFormField
       label="Teléfono"
-      name="telefono"
+      name="phone"
       required
     >
       <UInput
-        v-model="state.telefono"
+        v-model="state.phone"
         type="tel"
         placeholder="+52 55 1234 5678"
       />
@@ -224,22 +224,22 @@ function onCancel() {
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Asiento"
-        name="asiento"
+        name="seat"
         required
       >
         <UInput
-          v-model="state.asiento"
+          v-model="state.seat"
           placeholder="12A"
         />
       </UFormField>
 
       <UFormField
         label="Punto de Abordaje"
-        name="puntoAbordaje"
+        name="boardingPoint"
         required
       >
         <UInput
-          v-model="state.puntoAbordaje"
+          v-model="state.boardingPoint"
           placeholder="Terminal Central del Norte"
         />
       </UFormField>
@@ -248,22 +248,22 @@ function onCancel() {
     <!-- Representante de grupo -->
     <USeparator label="Representación" />
 
-    <UFormField name="esRepresentante">
+    <UFormField name="isRepresentative">
       <UCheckbox
-        v-model="state.esRepresentante"
+        v-model="state.isRepresentative"
         label="Es representante de grupo"
       />
     </UFormField>
 
     <!-- Selector de representante (solo si NO es representante) -->
     <UFormField
-      v-if="!state.esRepresentante"
+      v-if="!state.isRepresentative"
       label="Representante del grupo"
-      name="representanteId"
+      name="representativeId"
       description="Viajero del mismo viaje y camión que actúa como representante"
     >
       <USelect
-        v-model="state.representanteId"
+        v-model="state.representativeId"
         :items="representanteOptions"
         :placeholder="representanteOptions.length ? 'Seleccionar representante' : 'No hay representantes disponibles en este camión'"
         :disabled="!state.travelBusId || representanteOptions.length === 0"
