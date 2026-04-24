@@ -170,7 +170,7 @@ const columns: TableColumn<Provider>[] = [
         class: 'flex items-center gap-2 hover:text-primary-500 transition-colors group',
       }, () => [
         h('span', { class: 'i-lucide-bus w-4 h-4 text-gray-400 group-hover:text-primary-400' }),
-        h('span', { class: 'font-medium' }, row.getValue('nombre')),
+        h('span', { class: 'font-medium' }, row.getValue('name')),
       ]),
   },
   {
@@ -205,10 +205,10 @@ const columns: TableColumn<Provider>[] = [
     },
   },
   {
-    accessorKey: 'activo',
+    accessorKey: 'active',
     header: 'Estado',
     cell: ({ row }) => {
-      const active = row.getValue('activo') as boolean;
+      const active = row.getValue('active') as boolean;
       return h(resolveComponent('UBadge'), {
         variant: 'subtle',
         color: active ? 'primary' : 'warning',

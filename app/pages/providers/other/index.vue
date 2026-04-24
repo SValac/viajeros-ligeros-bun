@@ -161,7 +161,7 @@ const columns: TableColumn<Provider>[] = [
     cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-2' }, [
         h('span', { class: 'i-lucide-package w-4 h-4 text-gray-400' }),
-        h('span', { class: 'font-medium' }, row.getValue('nombre')),
+        h('span', { class: 'font-medium' }, row.getValue('name')),
       ]),
   },
   {
