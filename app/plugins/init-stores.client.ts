@@ -5,6 +5,7 @@ export default defineNuxtPlugin(() => {
   const hotelRoomStore = useHotelRoomStore();
   const travelsStore = useTravelsStore();
   const travelerStore = useTravelerStore();
+  const cotizacionStore = useCotizacionStore();
 
   Promise.all([
     providerStore.fetchAll(),
@@ -13,5 +14,6 @@ export default defineNuxtPlugin(() => {
     hotelRoomStore.fetchAll(),
     travelsStore.fetchAll(),
     travelerStore.fetchAll(),
+    cotizacionStore.fetchAll(),
   ]);
 });

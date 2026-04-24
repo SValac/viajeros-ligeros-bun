@@ -536,6 +536,27 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   // Actions
 
+  async function fetchAll(): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data, error: err } = await supabase
+        .from('quotations')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (err)
+        throw err;
+
+      cotizaciones.value = (data ?? []).map(mapQuotationRowToDomain);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
   async function fetchByTravel(travelId: string): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -1815,6 +1836,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getBusPaymentStatus,
     getCostoPerPersonaBus,
     // Actions
+    fetchAll,
     fetchByTravel,
     createQuotation,
     updateQuotation,
