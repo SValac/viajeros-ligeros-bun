@@ -150,13 +150,6 @@ function getActivityActions(activity: TravelActivity) {
     },
   ];
 }
-
-// Formatear hora
-function formatHora(hora?: string) {
-  if (!hora)
-    return '';
-  return hora;
-}
 </script>
 
 <template>
@@ -180,55 +173,12 @@ function formatHora(hora?: string) {
       v-if="sortedActivities.length > 0"
       class="space-y-3"
     >
-      <UCard
+      <TravelActivityCard
         v-for="activity in sortedActivities"
         :key="activity.id"
-        class="hover:bg-elevated transition-colors"
+        :activity="activity"
       >
-        <div class="flex items-start justify-between gap-4">
-          <div class="flex-1 space-y-2">
-            <!-- Día y hora -->
-            <div class="flex items-center gap-2 text-sm text-muted">
-              <span class="i-lucide-calendar-days w-4 h-4" />
-              <span class="font-medium">Día {{ activity.day }}</span>
-              <span
-                v-if="activity.time"
-                class="flex items-center gap-1"
-              >
-                <span class="i-lucide-clock w-3.5 h-3.5" />
-                {{ formatHora(activity.time) }}
-              </span>
-            </div>
-
-            <!-- Título -->
-            <div class="font-medium text-base">
-              {{ activity.title }}
-            </div>
-
-            <!-- Descripción -->
-            <div class="text-sm text-muted">
-              {{ activity.description }}
-            </div>
-
-            <!-- Ubicación -->
-            <div
-              v-if="activity.location"
-              class="flex items-center gap-1.5 text-sm text-muted"
-            >
-              <span class="i-lucide-map-pin w-3.5 h-3.5" />
-              {{ activity.location }}
-            </div>
-
-            <!-- Ubicación en Mapa -->
-            <div
-              v-if="activity.mapLocation"
-              class="pt-2 mt-2 border-t border-border"
-            >
-              <MapLocationDisplay :map-location="activity.mapLocation" />
-            </div>
-          </div>
-
-          <!-- Acciones -->
+        <template #actions>
           <UDropdownMenu :items="getActivityActions(activity)">
             <UButton
               icon="i-lucide-more-vertical"
@@ -237,8 +187,8 @@ function formatHora(hora?: string) {
               size="sm"
             />
           </UDropdownMenu>
-        </div>
-      </UCard>
+        </template>
+      </TravelActivityCard>
     </div>
 
     <!-- Estado vacío -->

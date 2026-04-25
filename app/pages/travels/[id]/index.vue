@@ -460,32 +460,7 @@ definePageMeta({
                     />
                   </div>
 
-                  <!-- Activity Card -->
-                  <UCard class="mb-2">
-                    <div class="flex items-start justify-between gap-4">
-                      <div class="flex-1">
-                        <div class="flex items-center gap-2 mb-2">
-                          <UBadge color="primary" variant="subtle">
-                            Día {{ activity.day }}
-                          </UBadge>
-                          <span v-if="activity.time" class="text-sm text-muted flex items-center gap-1">
-                            <span class="i-lucide-clock w-3 h-3" />
-                            {{ activity.time }}
-                          </span>
-                        </div>
-                        <h3 class="font-semibold text-lg mb-1">
-                          {{ activity.title }}
-                        </h3>
-                        <p class="text-muted text-sm mb-2">
-                          {{ activity.description }}
-                        </p>
-                        <div v-if="activity.location" class="flex items-center gap-1 text-sm text-muted">
-                          <span class="i-lucide-map-pin w-3 h-3" />
-                          {{ activity.location }}
-                        </div>
-                      </div>
-                    </div>
-                  </UCard>
+                  <TravelActivityCard :activity="activity" class="mb-2" />
                 </div>
               </div>
             </div>
