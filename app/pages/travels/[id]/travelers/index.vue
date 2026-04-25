@@ -26,7 +26,7 @@ const travel = computed(() => travelStore.getTravelById(travelId.value));
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
 const expanded = ref<ExpandedStateList>({});
-const selectedBusId = shallowRef<string | null>(null);
+const selectedBusKey = shallowRef<string | null>(null);
 
 // Datos derivados de stores
 const travelers = computed(() => travelerStore.filteredGroupedTravelers);
@@ -36,19 +36,38 @@ const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t
 const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
 
 const allBuses = computed(() => travel.value?.buses ?? []);
+const busTabs = computed(() =>
+  allBuses.value.map((bus, index) => ({
+    key: `${bus.id}-${index}`,
+    bus,
+  })),
+);
 
 // Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
 onMounted(async () => {
   travelerStore.setFilters({ travelId: travelId.value });
   await travelerStore.fetchByTravel(travelId.value);
-  if (allBuses.value.length > 0) {
-    selectedBusId.value = allBuses.value[0]!.id;
-  }
 });
 
 watch(travelId, (id) => {
   travelerStore.setFilters({ travelId: id });
 });
+
+watch(
+  busTabs,
+  (tabs) => {
+    if (tabs.length === 0) {
+      selectedBusKey.value = null;
+      return;
+    }
+
+    const currentSelectionExists = tabs.some(tab => tab.key === selectedBusKey.value);
+    if (!currentSelectionExists) {
+      selectedBusKey.value = tabs[0]!.key;
+    }
+  },
+  { immediate: true },
+);
 
 watchEffect(() => {
   const newExpanded: ExpandedStateList = {};
@@ -61,8 +80,9 @@ watchEffect(() => {
 });
 
 const selectedBus = computed(() =>
-  allBuses.value.find(b => b.id === selectedBusId.value) ?? null,
+  busTabs.value.find(tab => tab.key === selectedBusKey.value)?.bus ?? null,
 );
+const selectedBusId = computed(() => selectedBus.value?.id ?? null);
 
 const travelersBySelectedBus = computed(() =>
   selectedBusId.value
@@ -436,15 +456,15 @@ const columns: TableColumn<TravelerWithChildren>[] = [
         </UBadge>
       </div>
 
-      <div v-if="allBuses.length > 1" class="flex gap-2 flex-wrap mb-4">
+      <div v-if="busTabs.length > 1" class="flex gap-2 flex-wrap mb-4">
         <UButton
-          v-for="bus in allBuses"
-          :key="bus.id"
+          v-for="tab in busTabs"
+          :key="tab.key"
           size="sm"
-          :variant="selectedBusId === bus.id ? 'solid' : 'outline'"
-          @click="selectedBusId = bus.id"
+          :variant="selectedBusKey === tab.key ? 'solid' : 'outline'"
+          @click="selectedBusKey = tab.key"
         >
-          {{ getBusLabel(bus.id) }}
+          {{ getBusLabel(tab.bus.id) }}
         </UButton>
       </div>
 
@@ -478,6 +498,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
         <TravelerForm
           :traveler="editingTraveler"
           :available-travels="[]"
+          :available-buses="allBuses"
           :available-travelers="travelerStore.travelers"
           :locked-travel-id="travelId"
           @submit="handleFormSubmit"

@@ -3,17 +3,18 @@ import type { FormSubmitEvent } from '#ui/types';
 
 import { z } from 'zod';
 
-import type { Travel } from '~/types/travel';
+import type { Travel, TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
 type Props = {
   traveler?: Traveler | null;
   availableTravels: Travel[];
+  availableBuses?: TravelBus[];
   availableTravelers: Traveler[];
   lockedTravelId?: string;
 };
 
-const { traveler = null, availableTravels, availableTravelers, lockedTravelId } = defineProps<Props>();
+const { traveler = null, availableTravels, availableBuses = [], availableTravelers, lockedTravelId } = defineProps<Props>();
 const emit = defineEmits<{
   submit: [data: TravelerFormData];
   cancel: [];
@@ -80,7 +81,10 @@ const selectedTravel = computed(() =>
 
 // Opciones de camiones: vienen de travel.buses (id de travel_buses)
 const busOptions = computed(() => {
-  const buses = selectedTravel.value?.buses ?? [];
+  const buses = lockedTravelId
+    ? availableBuses
+    : (selectedTravel.value?.buses ?? []);
+
   return buses.map((b) => {
     const agencia = providerStore.getProviderById(b.providerId)?.name;
     const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
