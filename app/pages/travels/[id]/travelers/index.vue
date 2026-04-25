@@ -26,7 +26,7 @@ const travel = computed(() => travelStore.getTravelById(travelId.value));
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
 const expanded = ref<ExpandedStateList>({});
-const selectedBusKey = shallowRef<string | null>(null);
+const activeTabValue = shallowRef<string | number>('travelers');
 
 // Datos derivados de stores
 const travelers = computed(() => travelerStore.filteredGroupedTravelers);
@@ -36,12 +36,22 @@ const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t
 const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
 
 const allBuses = computed(() => travel.value?.buses ?? []);
-const busTabs = computed(() =>
-  allBuses.value.map((bus, index) => ({
-    key: `${bus.id}-${index}`,
+const tabs = computed(() => [
+  {
+    label: 'Todos los viajeros',
+    icon: 'i-lucide-users',
+    value: 'travelers',
+    slot: 'travelers',
+    bus: null,
+  },
+  ...allBuses.value.map((bus, index) => ({
+    label: getBusLabel(bus.id),
+    icon: 'i-lucide-bus',
+    value: `bus-${bus.id}-${index}`,
+    slot: 'bus',
     bus,
   })),
-);
+]);
 
 // Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
 onMounted(async () => {
@@ -53,21 +63,12 @@ watch(travelId, (id) => {
   travelerStore.setFilters({ travelId: id });
 });
 
-watch(
-  busTabs,
-  (tabs) => {
-    if (tabs.length === 0) {
-      selectedBusKey.value = null;
-      return;
-    }
-
-    const currentSelectionExists = tabs.some(tab => tab.key === selectedBusKey.value);
-    if (!currentSelectionExists) {
-      selectedBusKey.value = tabs[0]!.key;
-    }
-  },
-  { immediate: true },
-);
+watch(tabs, (availableTabs) => {
+  const hasCurrentTab = availableTabs.some(tab => tab.value === activeTabValue.value);
+  if (!hasCurrentTab) {
+    activeTabValue.value = 'travelers';
+  }
+}, { immediate: true });
 
 watchEffect(() => {
   const newExpanded: ExpandedStateList = {};
@@ -79,34 +80,20 @@ watchEffect(() => {
   expanded.value = newExpanded;
 });
 
-const selectedBus = computed(() =>
-  busTabs.value.find(tab => tab.key === selectedBusKey.value)?.bus ?? null,
-);
-const selectedBusId = computed(() => selectedBus.value?.id ?? null);
-
-const travelersBySelectedBus = computed(() =>
-  selectedBusId.value
-    ? travelerStore.getTravelersByBus(selectedBusId.value)
-    : [],
-);
-
-const occupiedSeats = computed(() =>
-  travelersBySelectedBus.value
-    .filter(t => t.seat)
+function getOccupiedSeatsByBus(busId: string) {
+  return travelerStore
+    .getTravelersByBus(busId)
+    .filter(t => t.seat > 0)
     .map(t => ({
       travelerId: t.id,
-      seatNumber: Number.parseInt(t.seat, 10),
+      seatNumber: t.seat,
       passengerName: `${t.firstName} ${t.lastName}`,
-    }))
-    .filter(s => !Number.isNaN(s.seatNumber)),
-);
+    }));
+}
 
-const lastRowSeats = computed(() => {
-  const bus = selectedBus.value;
-  if (!bus)
-    return 4;
+function getLastRowSeats(bus: { seatCount: number; lastRowSeats?: number | null }) {
   return bus.lastRowSeats ?? (bus.seatCount % 4 || 4);
-});
+}
 
 const representantes = computed(() =>
   travelerStore.filteredTravelers.filter(t => t.isRepresentative),
@@ -383,109 +370,100 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       </UCard>
     </div>
 
-    <!-- Filtros y tabla de viajeros -->
-    <TravelerFilterBar
-      v-model="filters"
-      :available-travels="[]"
-      :available-buses="allBuses"
-      :representantes="representantes"
-      :hide-travel-filter="true"
-    />
+    <UTabs
+      v-model="activeTabValue"
+      :items="tabs"
+      variant="link"
+    >
+      <template #travelers>
+        <div class="space-y-6">
+          <TravelerFilterBar
+            v-model="filters"
+            :available-travels="[]"
+            :available-buses="allBuses"
+            :representantes="representantes"
+            :hide-travel-filter="true"
+          />
 
-    <!-- Tabla de viajeros -->
-    <UCard>
-      <div v-if="travelers.length === 0" class="text-center py-12">
-        <UIcon
-          name="i-lucide-inbox"
-          class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
-        />
-        <template v-if="filters.travelBusId || filters.representativeId">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Sin resultados para los filtros aplicados
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Intenta con otros criterios de búsqueda
-          </p>
-          <UButton
-            icon="i-lucide-filter-x"
-            @click="travelerStore.setFilters({ travelId })"
-          >
-            Limpiar filtros
-          </UButton>
-        </template>
-        <template v-else>
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No hay viajeros en este viaje
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Comienza registrando el primer viajero
-          </p>
-          <UButton icon="i-lucide-plus" @click="openCreateModal">
-            Agregar Primer Viajero
-          </UButton>
-        </template>
-      </div>
-      <UTable
-        v-else
-        v-model:expanded="expanded"
-        :columns="columns"
-        :data="travelers"
-        :get-row-id="(row) => row.id"
-        :get-sub-rows="(row) => row.children"
-        :ui="{
-          base: 'border-separate border-spacing-0',
-          tbody: '[&>tr]:last:[&>td]:border-b-0',
-          tr: 'group',
-          td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
-        }"
-      />
-    </UCard>
+          <UCard>
+            <div v-if="travelers.length === 0" class="text-center py-12">
+              <UIcon
+                name="i-lucide-inbox"
+                class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
+              />
+              <template v-if="filters.travelBusId || filters.representativeId">
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  Sin resultados para los filtros aplicados
+                </h3>
+                <p class="text-gray-500 dark:text-gray-400 mb-4">
+                  Intenta con otros criterios de búsqueda
+                </p>
+                <UButton
+                  icon="i-lucide-filter-x"
+                  @click="travelerStore.setFilters({ travelId })"
+                >
+                  Limpiar filtros
+                </UButton>
+              </template>
+              <template v-else>
+                <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                  No hay viajeros en este viaje
+                </h3>
+                <p class="text-gray-500 dark:text-gray-400 mb-4">
+                  Comienza registrando el primer viajero
+                </p>
+                <UButton icon="i-lucide-plus" @click="openCreateModal">
+                  Agregar Primer Viajero
+                </UButton>
+              </template>
+            </div>
+            <UTable
+              v-else
+              v-model:expanded="expanded"
+              :columns="columns"
+              :data="travelers"
+              :get-row-id="(row) => row.id"
+              :get-sub-rows="(row) => row.children"
+              :ui="{
+                base: 'border-separate border-spacing-0',
+                tbody: '[&>tr]:last:[&>td]:border-b-0',
+                tr: 'group',
+                td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
+              }"
+            />
+          </UCard>
+        </div>
+      </template>
 
-    <!-- Mapa de asientos -->
-    <div>
-      <div class="flex items-center gap-3 mb-3">
-        <h2 class="text-lg font-semibold">
-          Distribución de asientos
-        </h2>
-        <UBadge
-          v-if="selectedBus"
-          color="neutral"
-          variant="subtle"
-        >
-          {{ occupiedSeats.length }} / {{ selectedBus.seatCount }} ocupados
-        </UBadge>
-      </div>
+      <template #bus="{ item }">
+        <div v-if="item.bus" class="space-y-4">
+          <div class="flex items-center gap-3">
+            <h2 class="text-lg font-semibold">
+              Distribución de asientos
+            </h2>
+            <UBadge
+              color="neutral"
+              variant="subtle"
+            >
+              {{ getOccupiedSeatsByBus(item.bus.id).length }} / {{ item.bus.seatCount }} ocupados
+            </UBadge>
+          </div>
 
-      <div v-if="busTabs.length > 1" class="flex gap-2 flex-wrap mb-4">
-        <UButton
-          v-for="tab in busTabs"
-          :key="tab.key"
-          size="sm"
-          :variant="selectedBusKey === tab.key ? 'solid' : 'outline'"
-          @click="selectedBusKey = tab.key"
-        >
-          {{ getBusLabel(tab.bus.id) }}
-        </UButton>
-      </div>
-
-      <UCard v-if="selectedBus">
-        <BusSeatMap
-          :total-seats="selectedBus.seatCount"
-          :occupied-seats="occupiedSeats"
-          :seats-per-row="4"
-          :last-row-seats="lastRowSeats"
-          @seat-selected="(travelerId) => {
-            const t = travelerStore.travelers.find(t => t.id === travelerId);
-            if (t) openEditModal(t);
-          }"
-        />
-      </UCard>
-      <UCard v-else-if="allBuses.length === 0">
-        <p class="text-center text-gray-400 py-6">
-          Sin autobuses asignados a este viaje
-        </p>
-      </UCard>
-    </div>
+          <UCard>
+            <BusSeatMap
+              :total-seats="item.bus.seatCount"
+              :occupied-seats="getOccupiedSeatsByBus(item.bus.id)"
+              :seats-per-row="4"
+              :last-row-seats="getLastRowSeats(item.bus)"
+              @seat-selected="(travelerId) => {
+                const t = travelerStore.travelers.find(t => t.id === travelerId);
+                if (t) openEditModal(t);
+              }"
+            />
+          </UCard>
+        </div>
+      </template>
+    </UTabs>
 
     <!-- Modal de formulario -->
     <UModal

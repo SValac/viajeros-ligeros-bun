@@ -310,7 +310,7 @@ insert into public.travelers (
   'Marco',
   'Torres',
   '8181234001',
-  '1A',
+  1,
   'Monterrey — Terminal Norte'
 ),
 (
@@ -322,7 +322,7 @@ insert into public.travelers (
   'Valentina',
   'Cruz',
   '8181234002',
-  '2A',
+  2,
   'Monterrey — Terminal Norte'
 ),
 (
@@ -334,7 +334,7 @@ insert into public.travelers (
   'Diego',
   'Hernández',
   '8181234003',
-  '1B',
+  1,
   'Monterrey — Terminal Sur'
 )
 on conflict (id) do nothing;
@@ -361,7 +361,7 @@ insert into public.travelers (
   'Elena',
   'Torres',
   '8181234004',
-  '1B',
+  3,
   'Monterrey — Terminal Norte'
 )
 on conflict (id) do nothing;

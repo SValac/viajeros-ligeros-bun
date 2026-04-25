@@ -22,49 +22,71 @@ const emit = defineEmits<{
 const travelsStore = useTravelsStore();
 const providerStore = useProviderStore();
 
-// Schema de validación
-const schema = z.object({
-  firstName: z.string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
-
-  lastName: z.string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
-
-  phone: z.string()
-    .min(7, 'Mínimo 7 caracteres')
-    .max(20, 'Máximo 20 caracteres'),
-
-  travelId: z.string().min(1, 'El viaje es requerido'),
-
-  travelBusId: z.string().min(1, 'El camión es requerido'),
-
-  seat: z.string().min(1, 'El asiento es requerido').max(10, 'Máximo 10 caracteres'),
-
-  boardingPoint: z.string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(150, 'Máximo 150 caracteres'),
-
-  isRepresentative: z.boolean(),
-
-  representativeId: z.string().optional(),
-});
-
-type Schema = z.output<typeof schema>;
-
 // Estado inicial del formulario
-const state = ref<Schema>({
+const state = ref({
   firstName: traveler?.firstName ?? '',
   lastName: traveler?.lastName ?? '',
   phone: traveler?.phone ?? '',
   travelId: traveler?.travelId ?? lockedTravelId ?? '',
   travelBusId: traveler?.travelBusId ?? '',
-  seat: traveler?.seat ?? '',
+  seat: traveler?.seat ?? (undefined as unknown as number),
   boardingPoint: traveler?.boardingPoint ?? '',
   isRepresentative: traveler?.isRepresentative ?? false,
   representativeId: traveler?.representativeId ?? undefined,
 });
+
+// Camión seleccionado — fuente de verdad para el máximo de asientos
+const selectedBusForSeat = computed(() =>
+  availableBuses.find(b => b.id === state.value.travelBusId),
+);
+const maxSeats = computed(() => selectedBusForSeat.value?.seatCount ?? 1);
+
+// Schema reactivo al máximo de asientos del camión seleccionado
+const schema = computed(() =>
+  z.object({
+    firstName: z.string()
+      .min(2, 'Mínimo 2 caracteres')
+      .max(100, 'Máximo 100 caracteres'),
+
+    lastName: z.string()
+      .min(2, 'Mínimo 2 caracteres')
+      .max(100, 'Máximo 100 caracteres'),
+
+    phone: z.string()
+      .min(7, 'Mínimo 7 caracteres')
+      .max(20, 'Máximo 20 caracteres'),
+
+    travelId: z.string().min(1, 'El viaje es requerido'),
+
+    travelBusId: z.string().min(1, 'El camión es requerido'),
+
+    seat: z.coerce
+      .number({ error: 'El asiento debe ser un número' })
+      .int('El asiento debe ser un número entero')
+      .min(1, 'El asiento mínimo es 1')
+      .max(maxSeats.value, `Máximo ${maxSeats.value} asientos en este camión`),
+
+    boardingPoint: z.string()
+      .min(2, 'Mínimo 2 caracteres')
+      .max(150, 'Máximo 150 caracteres'),
+
+    isRepresentative: z.boolean(),
+
+    representativeId: z.string().optional(),
+  }),
+);
+
+type Schema = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  travelId: string;
+  travelBusId: string;
+  seat: number;
+  boardingPoint: string;
+  isRepresentative: boolean;
+  representativeId?: string;
+};
 
 // Opciones de viajes para USelect
 const travelOptions = computed(() =>
@@ -110,14 +132,16 @@ const representanteOptions = computed(() => {
     }));
 });
 
-// Cuando cambia el viaje, resetear el camión y el representante
+// Cuando cambia el viaje, resetear el camión, asiento y representante
 watch(() => state.value.travelId, () => {
   state.value.travelBusId = '';
+  state.value.seat = undefined as unknown as number;
   state.value.representativeId = undefined;
 });
 
-// Cuando cambia el camión, resetear el representante
+// Cuando cambia el camión, resetear el asiento y el representante
 watch(() => state.value.travelBusId, () => {
+  state.value.seat = undefined as unknown as number;
   state.value.representativeId = undefined;
 });
 
@@ -232,8 +256,12 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.seat"
-          placeholder="12A"
+          v-model.number="state.seat"
+          type="number"
+          :min="1"
+          :max="maxSeats"
+          :disabled="!state.travelBusId"
+          :placeholder="state.travelBusId ? `1 – ${maxSeats}` : 'Selecciona un camión'"
         />
       </UFormField>
 
