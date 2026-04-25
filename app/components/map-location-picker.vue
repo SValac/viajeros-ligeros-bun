@@ -143,6 +143,9 @@ const handleSearchInput = debounce(async (query: string) => {
     return;
 
   try {
+    // TODO: migrate to AutocompleteSuggestion.fetchAutocompleteSuggestions() — AutocompleteService
+    // is deprecated for new customers since March 2025 and will no longer receive bug fixes.
+    // Migration guide: https://developers.google.com/maps/documentation/javascript/places-migration-overview
     const service = new google.maps.places.AutocompleteService();
     const result = await service.getPlacePredictions({ input: query });
     suggestions.value = result.predictions || [];
