@@ -1,5 +1,12 @@
 export type TravelStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
 
+export type MapLocation = {
+  lat: number;
+  lng: number;
+  placeId?: string;
+  address?: string;
+};
+
 export type TravelActivity = {
   id: string;
   day: number;
@@ -7,6 +14,7 @@ export type TravelActivity = {
   description: string;
   time?: string;
   location?: string;
+  mapLocation?: MapLocation;
 };
 
 export type TravelBus = {

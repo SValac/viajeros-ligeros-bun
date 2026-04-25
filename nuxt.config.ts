@@ -6,6 +6,8 @@ export default defineNuxtConfig({
     public: {
       supabaseUrl: '',
       supabaseKey: '',
+      googleMapsApiKey: '',
+      googleMapsMapId: '',
     },
   },
   devtools: { enabled: true },

@@ -164,7 +164,8 @@ export function mapTravelRowToDomain(
   };
 }
 
-export function mapTravelActivityRowToDomain(row: Tables<'travel_activities'>): TravelActivity {
+export function mapTravelActivityRowToDomain(row: Tables<'travel_activities'> & { map_location?: any }): TravelActivity {
+  const mapLocationData = (row as any).map_location;
   return {
     id: row.id,
     day: row.day,
@@ -172,6 +173,14 @@ export function mapTravelActivityRowToDomain(row: Tables<'travel_activities'>): 
     description: row.description,
     time: row.time ?? undefined,
     location: row.location ?? undefined,
+    mapLocation: mapLocationData
+      ? {
+          lat: mapLocationData.lat,
+          lng: mapLocationData.lng,
+          placeId: mapLocationData.placeId,
+          address: mapLocationData.address,
+        }
+      : undefined,
   };
 }
 

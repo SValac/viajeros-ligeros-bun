@@ -64,6 +64,14 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         throw new Error('Actividad de itinerario inválida');
       }
 
+      // Validar mapLocation si existe
+      if (activity.mapLocation) {
+        const { lat, lng } = activity.mapLocation;
+        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+          throw new Error('Coordenadas de mapa inválidas');
+        }
+      }
+
       return {
         travel_id: travelId,
         day,
@@ -71,6 +79,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         description,
         time: activity.time ?? null,
         location: activity.location ?? null,
+        map_location: activity.mapLocation ?? null,
       };
     });
   }
@@ -130,7 +139,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       const itineraryInserts = mapItineraryForInsert(travelId, data.itinerary);
       const { data: actRows, error: actErr } = await supabase
         .from('travel_activities')
-        .insert(itineraryInserts)
+        .insert(itineraryInserts as any)
         .select();
 
       if (actErr) {
@@ -292,7 +301,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         const itineraryInserts = mapItineraryForInsert(id, data.itinerary);
         const { data: actRows, error: actErr } = await supabase
           .from('travel_activities')
-          .insert(itineraryInserts)
+          .insert(itineraryInserts as any)
           .select();
 
         if (actErr) {
