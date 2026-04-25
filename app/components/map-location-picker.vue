@@ -1,36 +1,28 @@
 <script setup lang="ts">
 import type { MapLocation } from '~/types/travel';
 
-type Props = {
-  modelValue?: MapLocation;
-};
-
-type Emits = {
-  (e: 'update:modelValue', value: MapLocation | undefined): void;
-};
-
-const props = defineProps<Props>();
-const emit = defineEmits<Emits>();
+const modelValue = defineModel<MapLocation | undefined>();
 
 // State
-const searchInput = ref('');
-const suggestions = ref<any[]>([]);
-const selectedSuggestion = ref<any>(null);
-const mapContainer = ref<HTMLDivElement>();
+const searchInput = shallowRef('');
+const suggestions = shallowRef<any[]>([]);
+const selectedSuggestion = shallowRef<any>(null);
+const mapContainer = useTemplateRef<HTMLDivElement>('mapContainer');
 // shallowRef: external Google Maps objects don't need deep reactivity
 const map = shallowRef<any>(null);
 const marker = shallowRef<any>(null);
+const sessionToken = shallowRef<any>(null);
 
 // Composables
-const { loadGoogleMaps, isGoogleMapsLoaded, getGoogleMaps, debounce } = useGoogleMaps();
+const { loadGoogleMaps, isGoogleMapsLoaded, getGoogleMaps, debounce, importPlacesLibrary } = useGoogleMaps();
 const googleMapsLoaded = computed(() => isGoogleMapsLoaded());
 
 // Computed
-const hasLocation = computed(() => !!props.modelValue?.lat && !!props.modelValue?.lng);
+const hasLocation = computed(() => !!modelValue.value?.lat && !!modelValue.value?.lng);
 const locationDisplay = computed(() => {
   if (!hasLocation.value)
     return 'No se ha seleccionado ubicación';
-  const { lat, lng, address } = props.modelValue!;
+  const { lat, lng, address } = modelValue.value!;
   return address || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
 });
 
@@ -43,8 +35,8 @@ function initializeMap() {
   if (!google)
     return;
 
-  const center = props.modelValue
-    ? { lat: props.modelValue.lat, lng: props.modelValue.lng }
+  const center = modelValue.value
+    ? { lat: modelValue.value.lat, lng: modelValue.value.lng }
     : { lat: 19.43, lng: -99.13 };
 
   map.value = new google.maps.Map(mapContainer.value, {
@@ -55,8 +47,8 @@ function initializeMap() {
     zoomControl: true,
   });
 
-  if (props.modelValue) {
-    createMarker(props.modelValue.lat, props.modelValue.lng);
+  if (modelValue.value) {
+    createMarker(modelValue.value.lat, modelValue.value.lng);
   }
 
   map.value.addListener('click', (event: any) => {
@@ -100,8 +92,8 @@ function updateLocation(lat: number, lng: number) {
 
   createMarker(lat, lng);
 
-  const location: MapLocation = { lat, lng, address: props.modelValue?.address };
-  emit('update:modelValue', location);
+  const location: MapLocation = { lat, lng, address: modelValue.value?.address };
+  modelValue.value = location;
 
   reverseGeocode(lat, lng);
 }
@@ -119,12 +111,12 @@ async function reverseGeocode(lat: number, lng: number) {
     const result = await geocoder.geocode({ location: { lat, lng } });
 
     if (result.results?.[0]) {
-      emit('update:modelValue', {
+      modelValue.value = {
         lat,
         lng,
         address: result.results[0].formatted_address,
         placeId: result.results[0].place_id,
-      });
+      };
     }
   }
   catch (error) {
@@ -135,20 +127,19 @@ async function reverseGeocode(lat: number, lng: number) {
 const handleSearchInput = debounce(async (query: string) => {
   if (!query.trim() || !googleMapsLoaded.value) {
     suggestions.value = [];
+    sessionToken.value = null;
     return;
   }
 
-  const google = getGoogleMaps();
-  if (!google)
-    return;
-
   try {
-    // TODO: migrate to AutocompleteSuggestion.fetchAutocompleteSuggestions() — AutocompleteService
-    // is deprecated for new customers since March 2025 and will no longer receive bug fixes.
-    // Migration guide: https://developers.google.com/maps/documentation/javascript/places-migration-overview
-    const service = new google.maps.places.AutocompleteService();
-    const result = await service.getPlacePredictions({ input: query });
-    suggestions.value = result.predictions || [];
+    const { AutocompleteSuggestion, AutocompleteSessionToken } = await importPlacesLibrary();
+    if (!sessionToken.value)
+      sessionToken.value = new AutocompleteSessionToken();
+    const { suggestions: results } = await AutocompleteSuggestion.fetchAutocompleteSuggestions({
+      input: query,
+      sessionToken: sessionToken.value,
+    });
+    suggestions.value = results;
   }
   catch (error) {
     console.warn('Error en autocomplete:', error);
@@ -160,40 +151,28 @@ async function selectSuggestion(suggestion: any) {
   if (!googleMapsLoaded.value)
     return;
 
-  const google = getGoogleMaps();
-  if (!google)
-    return;
-
-  searchInput.value = suggestion.description;
-  selectedSuggestion.value = suggestion;
+  searchInput.value = suggestion.placePrediction.text?.toString() ?? '';
   suggestions.value = [];
 
   try {
-    const service = new google.maps.places.PlacesService(map.value || document.createElement('div'));
+    const place = suggestion.placePrediction.toPlace();
+    await place.fetchFields({ fields: ['location', 'formattedAddress', 'id'] });
+    sessionToken.value = null;
 
-    service.getDetails(
-      {
-        placeId: suggestion.place_id,
-        fields: ['geometry', 'formatted_address', 'place_id'],
-      },
-      (place: any) => {
-        if (place?.geometry?.location) {
-          const lat = place.geometry.location.lat();
-          const lng = place.geometry.location.lng();
+    const lat = place.location.lat();
+    const lng = place.location.lng();
 
-          updateLocation(lat, lng);
+    updateLocation(lat, lng);
 
-          emit('update:modelValue', {
-            lat,
-            lng,
-            address: place.formatted_address,
-            placeId: suggestion.place_id,
-          });
-        }
-      },
-    );
+    modelValue.value = {
+      lat,
+      lng,
+      address: place.formattedAddress,
+      placeId: place.id,
+    };
   }
   catch (error) {
+    sessionToken.value = null;
     console.warn('Error obteniendo detalles del lugar:', error);
   }
 }
@@ -202,10 +181,11 @@ function clearLocation() {
   searchInput.value = '';
   selectedSuggestion.value = null;
   suggestions.value = [];
+  sessionToken.value = null;
   if (marker.value)
     marker.value.setMap(null);
   marker.value = null;
-  emit('update:modelValue', undefined);
+  modelValue.value = undefined;
 }
 
 // Lifecycle
@@ -220,6 +200,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  sessionToken.value = null;
   if (marker.value) {
     marker.value.setMap(null);
     marker.value = null;
@@ -233,14 +214,11 @@ watch(googleMapsLoaded, (loaded) => {
     initializeMap();
 }, { flush: 'post' });
 
-watch(
-  () => props.modelValue,
-  (newVal) => {
-    if (newVal && !selectedSuggestion.value) {
-      searchInput.value = newVal.address || `${newVal.lat}, ${newVal.lng}`;
-    }
-  },
-);
+watch(modelValue, (newVal) => {
+  if (newVal && !selectedSuggestion.value) {
+    searchInput.value = newVal.address || `${newVal.lat}, ${newVal.lng}`;
+  }
+});
 </script>
 
 <template>
@@ -269,17 +247,17 @@ watch(
             class="absolute top-full left-0 right-0 bg-white border border-gray-300 border-t-0 rounded-b-lg shadow-lg z-10 max-h-48 overflow-y-auto"
           >
             <button
-              v-for="(suggestion, idx) in suggestions"
-              :key="idx"
+              v-for="suggestion in suggestions"
+              :key="suggestion.placePrediction.placeId"
               type="button"
               class="w-full text-left px-3 py-2 hover:bg-blue-50 border-b last:border-b-0 transition-colors"
               @click="selectSuggestion(suggestion)"
             >
               <div class="text-sm font-medium text-gray-900">
-                {{ suggestion.structured_formatting?.main_text ?? suggestion.description }}
+                {{ suggestion.placePrediction.mainText?.toString() ?? suggestion.placePrediction.text?.toString() }}
               </div>
               <div class="text-xs text-gray-500">
-                {{ suggestion.structured_formatting?.secondary_text }}
+                {{ suggestion.placePrediction.secondaryText?.toString() }}
               </div>
             </button>
           </div>
