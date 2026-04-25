@@ -3,9 +3,16 @@
 const loading = ref(false);
 const loaded = ref(false);
 const error = ref<string | null>(null);
+let hasWarnedMapIdInProduction = false;
 
 export function useGoogleMaps() {
   const config = useRuntimeConfig();
+  const mapId = config.public.googleMapsMapId as string;
+
+  if (!mapId && import.meta.env.PROD && !hasWarnedMapIdInProduction) {
+    console.warn('GOOGLE_MAPS_MAP_ID no configurado — AdvancedMarkerElement no funcionará en producción');
+    hasWarnedMapIdInProduction = true;
+  }
 
   async function loadGoogleMaps(): Promise<void> {
     if (loaded.value)
@@ -96,6 +103,14 @@ export function useGoogleMaps() {
     return { AutocompleteSuggestion, AutocompleteSessionToken };
   }
 
+  async function importMarkerLibrary() {
+    if (!loaded.value)
+      throw new Error('Google Maps no está cargado aún');
+    const { AdvancedMarkerElement }
+      = await (window as any).google.maps.importLibrary('marker');
+    return { AdvancedMarkerElement };
+  }
+
   return {
     loading: readonly(loading),
     loaded: readonly(loaded),
@@ -104,6 +119,8 @@ export function useGoogleMaps() {
     isGoogleMapsLoaded,
     getGoogleMaps,
     debounce,
+    mapId,
     importPlacesLibrary,
+    importMarkerLibrary,
   };
 }

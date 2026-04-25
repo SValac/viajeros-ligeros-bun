@@ -14,7 +14,7 @@ const marker = shallowRef<any>(null);
 const sessionToken = shallowRef<any>(null);
 
 // Composables
-const { loadGoogleMaps, isGoogleMapsLoaded, getGoogleMaps, debounce, importPlacesLibrary } = useGoogleMaps();
+const { loadGoogleMaps, isGoogleMapsLoaded, getGoogleMaps, debounce, importPlacesLibrary, importMarkerLibrary, mapId } = useGoogleMaps();
 const googleMapsLoaded = computed(() => isGoogleMapsLoaded());
 
 // Computed
@@ -42,13 +42,16 @@ function initializeMap() {
   map.value = new google.maps.Map(mapContainer.value, {
     zoom: 15,
     center,
+    mapId: mapId || 'DEMO_MAP_ID',
     mapTypeControl: true,
     fullscreenControl: true,
     zoomControl: true,
   });
 
   if (modelValue.value) {
-    createMarker(modelValue.value.lat, modelValue.value.lng);
+    void createMarker(modelValue.value.lat, modelValue.value.lng).catch((error) => {
+      console.warn('Error creando marcador inicial:', error);
+    });
   }
 
   map.value.addListener('click', (event: any) => {
@@ -57,26 +60,29 @@ function initializeMap() {
   });
 }
 
-function createMarker(lat: number, lng: number) {
+async function createMarker(lat: number, lng: number) {
   if (!map.value)
     return;
 
-  const google = getGoogleMaps();
-  if (!google)
-    return;
-
   if (marker.value)
-    marker.value.setMap(null);
+    marker.value.map = null;
 
-  marker.value = new google.maps.Marker({
+  const { AdvancedMarkerElement } = await importMarkerLibrary();
+  marker.value = new AdvancedMarkerElement({
     position: { lat, lng },
     map: map.value,
-    draggable: true,
+    gmpDraggable: true,
   });
 
-  marker.value.addListener('dragend', (event: any) => {
-    const { lat, lng } = event.latLng;
-    updateLocation(lat(), lng());
+  marker.value.addListener('dragend', () => {
+    const position = marker.value?.position;
+    if (!position)
+      return;
+    const lat = typeof position.lat === 'function' ? position.lat() : position.lat;
+    const lng = typeof position.lng === 'function' ? position.lng() : position.lng;
+    if (typeof lat === 'number' && typeof lng === 'number') {
+      updateLocation(lat, lng);
+    }
   });
 }
 
@@ -90,7 +96,9 @@ function updateLocation(lat: number, lng: number) {
     map.value.setCenter({ lat, lng });
   }
 
-  createMarker(lat, lng);
+  void createMarker(lat, lng).catch((error) => {
+    console.warn('Error actualizando marcador:', error);
+  });
 
   const location: MapLocation = { lat, lng, address: modelValue.value?.address };
   modelValue.value = location;
@@ -183,7 +191,7 @@ function clearLocation() {
   suggestions.value = [];
   sessionToken.value = null;
   if (marker.value)
-    marker.value.setMap(null);
+    marker.value.map = null;
   marker.value = null;
   modelValue.value = undefined;
 }
@@ -202,7 +210,7 @@ onMounted(() => {
 onUnmounted(() => {
   sessionToken.value = null;
   if (marker.value) {
-    marker.value.setMap(null);
+    marker.value.map = null;
     marker.value = null;
   }
   map.value = null;
