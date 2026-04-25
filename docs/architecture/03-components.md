@@ -1,382 +1,152 @@
 # 3. Componentes
 
-## 3.1 Tabla de Viajes (Dashboard Principal)
-
-**Archivo**: `app/pages/travels/dashboard.vue`
-
-**Propósito**: Vista principal con tabla UTable mostrando todos los viajes.
-
-**Características**:
-- Tabla con columnas: ID, Destino, Cliente, Fechas, Estado (badge), Precio, Acciones
-- Filtro por estado y búsqueda por cliente/destino
-- Botón "Nuevo Viaje" que abre modal
-- Acciones por fila: Ver, Editar, Eliminar
-- Indicadores de estado con colores (UBadge)
-- Estadísticas en header (total viajes, ingresos)
-
-```vue
-<script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
-
-import { h } from 'vue';
-
-import type { Travel, TravelStatus } from '~/types/travel';
-
-const travelsStore = useTravelsStore();
-const toast = useToast();
-
-// Estado para modal de formulario
-const isFormModalOpen = ref(false);
-const editingTravel = ref<Travel | null>(null);
-
-// Columnas de la tabla
-const columns: TableColumn<Travel>[] = [
-  {
-    accessorKey: 'id',
-    header: 'ID',
-    cell: ({ row }) => `#${row.getValue('id').substring(0, 8)}`,
-  },
-  {
-    accessorKey: 'destino',
-    header: 'Destino',
-  },
-  {
-    accessorKey: 'cliente',
-    header: 'Cliente',
-  },
-  {
-    accessorKey: 'fechaInicio',
-    header: 'Fechas',
-    cell: ({ row }) => `${formatDate(row.getValue('fechaInicio'))} - ${formatDate(row.original.fechaFin)}`,
-  },
-  {
-    accessorKey: 'estado',
-    header: 'Estado',
-    cell: ({ row }) => h(UBadge, {
-      color: getStatusColor(row.getValue('estado')),
-      variant: 'subtle',
-    }, () => row.getValue('estado')),
-  },
-  {
-    accessorKey: 'precio',
-    header: 'Precio',
-    cell: ({ row }) => formatCurrency(row.getValue('precio')),
-  },
-  {
-    id: 'actions',
-    cell: ({ row }) => h(UDropdownMenu, {
-      items: getRowActions(row.original),
-    }, () => h(UButton, {
-      icon: 'i-lucide-more-vertical',
-      variant: 'ghost',
-      color: 'neutral',
-    })),
-  },
-];
-
-// Funciones auxiliares
-function getStatusColor(status: TravelStatus) {
-  const colors = {
-    'pendiente': 'warning',
-    'confirmado': 'info',
-    'en-curso': 'primary',
-    'completado': 'success',
-    'cancelado': 'error',
-  };
-  return colors[status] || 'neutral';
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'EUR',
-  }).format(amount);
-}
-
-function getRowActions(travel: Travel) {
-  return [
-    {
-      label: 'Ver detalles',
-      icon: 'i-lucide-eye',
-      onSelect: () => viewTravel(travel),
-    },
-    {
-      label: 'Editar',
-      icon: 'i-lucide-pencil',
-      onSelect: () => editTravel(travel),
-    },
-    { type: 'separator' },
-    {
-      label: 'Eliminar',
-      icon: 'i-lucide-trash-2',
-      color: 'error',
-      onSelect: () => deleteTravel(travel),
-    },
-  ];
-}
-
-function openCreateModal() {
-  editingTravel.value = null;
-  isFormModalOpen.value = true;
-}
-
-function editTravel(travel: Travel) {
-  editingTravel.value = travel;
-  isFormModalOpen.value = true;
-}
-
-function viewTravel(travel: Travel) {
-  navigateTo(`/travels/${travel.id}`);
-}
-
-async function deleteTravel(travel: Travel) {
-  const confirmed = confirm(`¿Eliminar viaje a ${travel.destino}?`);
-  if (confirmed) {
-    travelsStore.deleteTravel(travel.id);
-    toast.add({
-      title: 'Viaje eliminado',
-      color: 'success',
-    });
-  }
-}
-</script>
-
-<template>
-  <div class="flex flex-col h-full">
-    <!-- Header con estadísticas y botón nuevo -->
-    <div class="p-4 border-b border-default">
-      <div class="flex items-center justify-between mb-4">
-        <h1 class="text-2xl font-bold">
-          Gestión de Viajes
-        </h1>
-        <UButton
-          icon="i-lucide-plus"
-          label="Nuevo Viaje"
-          @click="openCreateModal"
-        />
-      </div>
-
-      <!-- Stats cards -->
-      <div class="grid grid-cols-4 gap-4">
-        <div class="p-3 bg-elevated rounded-lg">
-          <div class="text-sm text-muted">Total</div>
-          <div class="text-2xl font-bold">{{ travelsStore.stats.total }}</div>
-        </div>
-        <div class="p-3 bg-elevated rounded-lg">
-          <div class="text-sm text-muted">Confirmados</div>
-          <div class="text-2xl font-bold">{{ travelsStore.stats.confirmados }}</div>
-        </div>
-        <div class="p-3 bg-elevated rounded-lg">
-          <div class="text-sm text-muted">En Curso</div>
-          <div class="text-2xl font-bold">{{ travelsStore.stats.enCurso }}</div>
-        </div>
-        <div class="p-3 bg-elevated rounded-lg">
-          <div class="text-sm text-muted">Ingresos</div>
-          <div class="text-2xl font-bold">{{ formatCurrency(travelsStore.totalRevenue) }}</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabla -->
-    <div class="flex-1 overflow-hidden">
-      <UTable
-        :data="travelsStore.allTravels"
-        :columns="columns"
-        sticky
-        class="h-full"
-      />
-    </div>
-
-    <!-- Modal de formulario -->
-    <UModal v-model:open="isFormModalOpen" :title="editingTravel ? 'Editar Viaje' : 'Nuevo Viaje'">
-      <TravelForm
-        :travel="editingTravel"
-        @submit="handleFormSubmit"
-        @cancel="isFormModalOpen = false"
-      />
-    </UModal>
-  </div>
-</template>
-```
+54 componentes en `app/components/`, agrupados por dominio. Todos usan `<script setup lang="ts">` con Composition API.
 
 ---
 
-## 3.2 Formulario de Viaje
+## 3.1 Layout y Navegación
 
-**Archivo**: `app/components/travel-form.vue`
-
-**Propósito**: Formulario completo para crear/editar viajes con validación.
-
-**Características**:
-- Usa UForm con validación (Zod)
-- Campos: destino, fechas, precio, descripción, imagen URL, estado, cliente
-- Secciones expandibles para itinerario y servicios
-- Validaciones: campos requeridos, fechas válidas, precio > 0
-- Botones: Cancelar, Guardar
-
-```vue
-<script setup lang="ts">
-import type { FormSubmitEvent } from '@nuxt/ui';
-
-import { z } from 'zod';
-
-import type { Travel, TravelFormData } from '~/types/travel';
-
-const props = defineProps<{
-  travel?: Travel | null;
-}>();
-
-const emit = defineEmits<{
-  submit: [data: TravelFormData];
-  cancel: [];
-}>();
-
-// Schema de validación
-const schema = z.object({
-  destino: z.string().min(3, 'Mínimo 3 caracteres'),
-  fechaInicio: z.string().min(1, 'Fecha requerida'),
-  fechaFin: z.string().min(1, 'Fecha requerida'),
-  precio: z.number().min(0, 'Precio debe ser positivo'),
-  descripcion: z.string().min(10, 'Mínimo 10 caracteres'),
-  imagenUrl: z.string().url('URL inválida').optional().or(z.literal('')),
-  estado: z.enum(['pendiente', 'confirmado', 'en-curso', 'completado', 'cancelado']),
-  cliente: z.string().min(3, 'Mínimo 3 caracteres'),
-  notasInternas: z.string().optional(),
-});
-
-type Schema = z.output<typeof schema>;
-
-// Estado inicial del formulario
-const state = reactive<Partial<Schema>>({
-  destino: props.travel?.destino || '',
-  fechaInicio: props.travel?.fechaInicio || '',
-  fechaFin: props.travel?.fechaFin || '',
-  precio: props.travel?.precio || 0,
-  descripcion: props.travel?.descripcion || '',
-  imagenUrl: props.travel?.imagenUrl || '',
-  estado: props.travel?.estado || 'pendiente',
-  cliente: props.travel?.cliente || '',
-  notasInternas: props.travel?.notasInternas || '',
-});
-
-const estadoOptions = [
-  { label: 'Pendiente', value: 'pendiente' },
-  { label: 'Confirmado', value: 'confirmado' },
-  { label: 'En Curso', value: 'en-curso' },
-  { label: 'Completado', value: 'completado' },
-  { label: 'Cancelado', value: 'cancelado' },
-];
-
-function onSubmit(event: FormSubmitEvent<Schema>) {
-  const formData: TravelFormData = {
-    ...event.data,
-    id: props.travel?.id,
-    itinerario: props.travel?.itinerario || [],
-    servicios: props.travel?.servicios || [],
-  };
-  emit('submit', formData);
-}
-</script>
-
-<template>
-  <UForm
-    :schema="schema"
-    :state="state"
-    class="space-y-4 p-4"
-    @submit="onSubmit"
-  >
-    <UFormField label="Destino" name="destino" required>
-      <UInput v-model="state.destino" placeholder="París, Francia" />
-    </UFormField>
-
-    <UFormField label="Cliente" name="cliente" required>
-      <UInput v-model="state.cliente" placeholder="Nombre del cliente" />
-    </UFormField>
-
-    <div class="grid grid-cols-2 gap-4">
-      <UFormField label="Fecha Inicio" name="fechaInicio" required>
-        <UInput v-model="state.fechaInicio" type="date" />
-      </UFormField>
-
-      <UFormField label="Fecha Fin" name="fechaFin" required>
-        <UInput v-model="state.fechaFin" type="date" />
-      </UFormField>
-    </div>
-
-    <div class="grid grid-cols-2 gap-4">
-      <UFormField label="Precio (EUR)" name="precio" required>
-        <UInput v-model.number="state.precio" type="number" min="0" step="0.01" />
-      </UFormField>
-
-      <UFormField label="Estado" name="estado" required>
-        <USelect v-model="state.estado" :items="estadoOptions" />
-      </UFormField>
-    </div>
-
-    <UFormField label="Descripción" name="descripcion" required>
-      <UTextarea v-model="state.descripcion" :rows="3" />
-    </UFormField>
-
-    <UFormField label="URL de Imagen" name="imagenUrl">
-      <UInput v-model="state.imagenUrl" placeholder="https://..." />
-    </UFormField>
-
-    <UFormField label="Notas Internas" name="notasInternas">
-      <UTextarea v-model="state.notasInternas" :rows="2" />
-    </UFormField>
-
-    <div class="flex gap-2 justify-end pt-4">
-      <UButton label="Cancelar" color="neutral" variant="outline" @click="emit('cancel')" />
-      <UButton type="submit" label="Guardar" />
-    </div>
-  </UForm>
-</template>
-```
+| Archivo | Propósito |
+|---------|-----------|
+| `the-sidebar.vue` | Navegación principal lateral |
+| `user-menu.vue` | Menú de cuenta de usuario (avatar, cerrar sesión) |
+| `logo.vue` | Logo de la marca |
+| `the-separator.vue` | Divisor UI reutilizable |
 
 ---
 
-## 3.3 Card de Estadísticas (Opcional)
+## 3.2 Viajes
 
-**Archivo**: `app/components/travel-stat-card.vue`
-
-**Propósito**: Componente reutilizable para mostrar estadísticas.
-
-```vue
-<script setup lang="ts">
-defineProps<{
-  label: string;
-  value: string | number;
-  icon?: string;
-  color?: string;
-}>();
-</script>
-
-<template>
-  <div class="p-4 bg-elevated rounded-lg">
-    <div class="flex items-center justify-between">
-      <div>
-        <div class="text-sm text-muted">{{ label }}</div>
-        <div class="text-2xl font-bold">{{ value }}</div>
-      </div>
-      <UIcon
-        v-if="icon"
-        :name="icon"
-        class="size-8"
-        :class="`text-${color}`"
-      />
-    </div>
-  </div>
-</template>
-```
+| Archivo | Propósito |
+|---------|-----------|
+| `travel-form.vue` | Formulario completo crear/editar viaje (multi-sección) |
+| `travel-activity-form.vue` | Agregar/editar actividad del itinerario |
+| `travel-activity-list.vue` | Lista de actividades del itinerario |
+| `travel-activity-card.vue` | Card individual de actividad |
+| `travel-servicios-section.vue` | Sección de servicios incluidos |
+| `travel-service-form.vue` | Formulario de servicio |
+| `travel-service-list.vue` | Lista de servicios |
+| `travel-buses-section.vue` | Sección de buses asignados al viaje |
+| `travel-bus-form.vue` | Formulario de bus para el viaje |
+| `travel-bus-list.vue` | Lista de buses del viaje |
 
 ---
 
-[← Pinia Store](./02-store.md) | [Volver al índice](./README.md) | [Siguiente: Flujo de Datos →](./04-data-flow.md)
+## 3.3 Proveedores
+
+| Archivo | Propósito |
+|---------|-----------|
+| `provider-form.vue` | Crear/editar proveedor |
+| `provider-selector.vue` | Dropdown selector de proveedor |
+| `provider-filter-bar.vue` | Barra de filtros (categoría, ciudad, estado, búsqueda) |
+| `provider-active-filters.vue` | Chips de filtros activos con botón de limpiar |
+
+---
+
+## 3.4 Buses
+
+| Archivo | Propósito |
+|---------|-----------|
+| `bus-form.vue` | Crear/editar bus en inventario |
+| `bus-list.vue` | Lista de buses de un proveedor |
+
+---
+
+## 3.5 Hoteles y Habitaciones
+
+| Archivo | Propósito |
+|---------|-----------|
+| `hotel/hotel-rooms-manager.vue` | Gestor completo de habitaciones de hotel |
+| `hotel/hotel-rooms-summary.vue` | Resumen de habitaciones disponibles/usadas |
+| `hotel/hotel-room-type-card.vue` | Card de tipo de habitación |
+| `hotel/hotel-room-type-form.vue` | Formulario de tipo de habitación |
+| `hotel/bed-configuration-input.vue` | UI para configurar camas (tamaño + cantidad) |
+
+---
+
+## 3.6 Cotización — Proveedores
+
+| Archivo | Propósito |
+|---------|-----------|
+| `cotizacion-proveedor-form.vue` | Agregar proveedor a cotización |
+| `cotizacion-proveedor-tabla.vue` | Tabla de proveedores cotizados |
+| `cotizacion-proveedores-section.vue` | Sección completa de proveedores |
+
+---
+
+## 3.7 Cotización — Hospedaje
+
+| Archivo | Propósito |
+|---------|-----------|
+| `cotizacion-hospedaje-form.vue` | Agregar hospedaje a cotización |
+| `cotizacion-hospedaje-tabla.vue` | Tabla de hospedajes cotizados |
+| `cotizacion-hospedaje-resumen.vue` | Resumen de costos de hospedaje |
+| `cotizacion-hospedaje-section.vue` | Sección completa de hospedaje |
+
+---
+
+## 3.8 Cotización — Buses
+
+| Archivo | Propósito |
+|---------|-----------|
+| `cotizacion-bus-form.vue` | Agregar bus a cotización |
+| `cotizacion-buses-section.vue` | Sección completa de buses cotizados |
+| `cotizacion-bus-cotizacion-form.vue` | Detalle de cotización de bus |
+
+---
+
+## 3.9 Cotización — General
+
+| Archivo | Propósito |
+|---------|-----------|
+| `cotizacion-header-actions.vue` | Toolbar de la cotización (confirmar, etc.) |
+| `cotizacion-precio-publico-section.vue` | Gestión de precios públicos |
+| `cotizacion-resumen-financiero.vue` | Resumen financiero total de la cotización |
+
+---
+
+## 3.10 Pagos a Proveedores / Hospedajes / Buses
+
+| Archivo | Propósito |
+|---------|-----------|
+| `pago-proveedor-form.vue` | Registrar pago a proveedor |
+| `pago-proveedor-historial.vue` | Historial de pagos a proveedor |
+| `pago-hospedaje-form.vue` | Registrar pago de hospedaje |
+| `pago-hospedaje-historial.vue` | Historial de pagos de hospedaje |
+| `pago-bus-form.vue` | Registrar pago de bus |
+| `pago-bus-historial.vue` | Historial de pagos de bus |
+
+---
+
+## 3.11 Pagos de Viajeros
+
+| Archivo | Propósito |
+|---------|-----------|
+| `payment-form.vue` | Registrar pago de viajero |
+| `payment-summary-card.vue` | Card de resumen de cuenta del viajero |
+| `payment-account-config-form.vue` | Configurar precios, descuentos y recargos del viajero |
+
+---
+
+## 3.12 Viajeros y Coordinadores
+
+| Archivo | Propósito |
+|---------|-----------|
+| `traveler-form.vue` | Agregar/editar viajero |
+| `traveler-filter-bar.vue` | Filtros de lista de viajeros |
+| `coordinator-form.vue` | Crear/editar coordinador |
+
+---
+
+## 3.13 Mapas y Utilitarios
+
+| Archivo | Propósito |
+|---------|-----------|
+| `map-location-picker.vue` | Selector de ubicación con Google Maps (autocomplete + pin) |
+| `map-location-display.vue` | Mapa estático de solo lectura para mostrar ubicación |
+| `rich-text-editor.client.vue` | Editor rich text (Tiptap) — solo cliente |
+| `rich-content.vue` | Render de contenido rich text con sanitización DOMPurify |
+
+---
+
+[← Pinia Stores](./02-store.md) | [Volver al índice](./README.md) | [Siguiente: Flujo de Datos →](./04-data-flow.md)

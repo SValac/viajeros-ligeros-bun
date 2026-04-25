@@ -4,73 +4,104 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  COMPONENTE: travels/dashboard.vue                          │
-│  - Muestra tabla de viajes                                  │
-│  - Gestiona modales (crear/editar)                          │
-│  - Lee datos del store                                      │
+│  MIDDLEWARE: app/middleware/auth.global.ts                   │
+│  - Verifica sesión en cada navegación                        │
+│  - Redirige a /login si no autenticado                       │
+│  - Redirige a / si autenticado intenta acceder /login        │
 └────────────────┬────────────────────────────────────────────┘
                  │
-                 │ usa travelsStore
-                 │ llama actions
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  STORE: stores/travels.ts (Pinia)                           │
-│  - Estado centralizado (travels[])                          │
-│  - Getters (filtros, estadísticas)                          │
-│  - Actions (CRUD operations)                                │
-│  - Persistencia automática en localStorage                  │
+│  PLUGIN: app/plugins/init-stores.client.ts                   │
+│  - Al montar la app, carga todos los stores en paralelo      │
+│  - fetchAll(): providers, buses, coordinators, hotelRooms,   │
+│    travels, travelers, cotizaciones                          │
 └────────────────┬────────────────────────────────────────────┘
                  │
-                 │ persiste/recupera
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  LOCALSTORAGE: "viajeros-ligeros-travels"                   │
-│  - Almacenamiento persistente del estado                    │
-│  - Se sincroniza automáticamente con el store               │
+│  PINIA STORES (9 stores)                                     │
+│  - Estado reactivo en memoria                                │
+│  - Getters para vistas derivadas (filtros, cálculos)         │
+│  - Actions async que llaman a Supabase                       │
+└────────────────┬────────────────────────────────────────────┘
+                 │
+                 │ supabaseClient.from('tabla')
+                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│  SUPABASE (PostgreSQL)                                       │
+│  - Cliente singleton en app/composables/use-supabase.ts      │
+│  - Todas las operaciones CRUD pasan por este cliente         │
+│  - Mappers (app/utils/mappers.ts) convierten snake_case ↔   │
+│    camelCase entre BD y dominio                              │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Operaciones CRUD
+## Ciclo de vida de datos
 
-### CREAR
+### Inicio de sesión
 
-1. Usuario hace clic en "Nuevo Viaje"
-2. Se abre modal con `TravelForm` (`props.travel = null`)
-3. Usuario completa formulario y submit
-4. `TravelForm` emite evento `@submit` con datos
-5. Dashboard llama `travelsStore.addTravel(data)`
-6. Store genera ID, timestamps y agrega al array
-7. Pinia persiste automáticamente en localStorage
-8. Vista se actualiza reactivamente
+1. Usuario accede a `/login`
+2. `auth-store.signIn()` llama a `supabase.auth.signInWithPassword()`
+3. Supabase devuelve `session`
+4. Middleware detecta sesión → redirige a `/`
+5. Plugin `init-stores` ejecuta `fetchAll()` en paralelo en todos los stores
+6. App lista para usar
 
-### EDITAR
+### Operación CRUD típica (ejemplo: crear viaje)
 
-1. Usuario hace clic en "Editar" en dropdown de fila
-2. Se abre modal con `TravelForm` (`props.travel = travelObject`)
-3. Formulario se pre-rellena con datos existentes
-4. Usuario modifica y submit
-5. Dashboard llama `travelsStore.updateTravel(id, data)`
-6. Store actualiza objeto y timestamp
-7. Pinia persiste cambios
-8. Vista se actualiza
+1. Componente llama `travelsStore.addTravel(data)`
+2. Store ejecuta inserts en Supabase (tablas: `travels`, `travel_activities`, `travel_services`, `travel_buses`, `travel_coordinators`)
+3. Si hay error, store expone `error` y lanza excepción
+4. Si éxito, store agrega el nuevo objeto al array local `travels[]`
+5. Componente reacciona reactivamente (computed → template)
 
-### ELIMINAR
+### Lectura de datos relacionados
 
-1. Usuario hace clic en "Eliminar"
-2. Confirmación con dialog
-3. Dashboard llama `travelsStore.deleteTravel(id)`
-4. Store elimina del array
-5. Pinia persiste
-6. Vista se actualiza
+El store de viajes carga relaciones en `fetchAll()` con joins:
 
-### LEER
+```
+travels
+  ├─ travel_activities (itinerario)
+  ├─ travel_services (servicios)
+  ├─ travel_buses (con operadores)
+  └─ travel_coordinators → coordinators (via join)
+```
 
-1. Dashboard accede a `travelsStore.allTravels` (getter)
-2. Getter devuelve array ordenado reactivamente
-3. UTable recibe `:data="travelsStore.allTravels"`
-4. Tabla se actualiza automáticamente en cambios
+La cotización (`fetchByTravel`) usa caché interno para evitar llamadas duplicadas si múltiples componentes la solicitan simultáneamente.
+
+---
+
+## Mapeo BD ↔ Dominio
+
+`app/utils/mappers.ts` provee funciones bidireccionales:
+
+```typescript
+// BD → Dominio
+mapProviderRowToDomain(row: Tables<'providers'>): Provider
+mapTravelRowToDomain(row): Travel
+
+// Dominio → BD (para insert/update)
+mapProviderToInsert(data: Partial<Provider>): TablesInsert<'providers'>
+mapTravelToInsert(data): TablesInsert<'travels'>
+```
+
+---
+
+## Auth y protección de rutas
+
+`app/middleware/auth.global.ts` corre en cada navegación:
+
+```typescript
+const AUTH_PAGES = ['/login', '/register'];
+
+// Sin sesión + ruta protegida → /login
+// Con sesión + página de auth → /
+```
+
+La sesión se obtiene de `authStore.fetchSession()` que llama a `supabase.auth.getSession()`.
 
 ---
 
