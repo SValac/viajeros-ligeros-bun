@@ -29,6 +29,7 @@ export type TravelBus = {
   operator2Name?: string;
   operator2Phone?: string;
   seatCount: number;
+  lastRowSeats?: number;
   rentalPrice: number;
 };
 
