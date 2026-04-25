@@ -218,6 +218,14 @@ function formatHora(hora?: string) {
               <span class="i-lucide-map-pin w-3.5 h-3.5" />
               {{ activity.location }}
             </div>
+
+            <!-- Ubicación en Mapa -->
+            <div
+              v-if="activity.mapLocation"
+              class="pt-2 mt-2 border-t border-border"
+            >
+              <MapLocationDisplay :map-location="activity.mapLocation" />
+            </div>
           </div>
 
           <!-- Acciones -->

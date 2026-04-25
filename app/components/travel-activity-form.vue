@@ -39,6 +39,12 @@ function createSchema(maxDia: number) {
       .max(200, 'Máximo 200 caracteres')
       .optional()
       .or(z.literal('')),
+    mapLocation: z.object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+      placeId: z.string().optional(),
+      address: z.string().optional(),
+    }).optional(),
   });
 }
 
@@ -55,6 +61,7 @@ const initialState = computed((): Schema => {
       description: props.activity.description,
       time: props.activity.time || '',
       location: props.activity.location || '',
+      mapLocation: props.activity.mapLocation,
     };
   }
 
@@ -64,10 +71,16 @@ const initialState = computed((): Schema => {
     description: '',
     time: '',
     location: '',
+    mapLocation: undefined,
   };
 });
 
 const state = ref<Schema>({ ...initialState.value });
+
+// Reset form when the activity prop changes (e.g., modal reused for a different activity)
+watch(initialState, (next) => {
+  state.value = { ...next };
+});
 
 // Handlers
 const isSubmitting = ref(false);
@@ -82,6 +95,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       description: event.data.description,
       time: event.data.time || undefined,
       location: event.data.location || undefined,
+      mapLocation: event.data.mapLocation,
     };
 
     emit('submit', activityData);
@@ -156,6 +170,16 @@ function onCancel() {
         v-model="state.location"
         placeholder="Champ de Mars, París"
         icon="i-lucide-map"
+      />
+    </UFormField>
+
+    <!-- Ubicación en Mapa (opcional) -->
+    <UFormField
+      label="Ubicación precisa en mapa"
+      description="Opcional - Búsqueda y marcador interactivo"
+    >
+      <MapLocationPicker
+        v-model="state.mapLocation"
       />
     </UFormField>
 
