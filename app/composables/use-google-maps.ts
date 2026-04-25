@@ -29,14 +29,20 @@ export function useGoogleMaps() {
         throw new Error('GOOGLE_MAPS_API_KEY no está configurada');
       }
 
+      const callbackName = '__googleMapsReady';
       const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places`;
+      script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=${callbackName}`;
       script.async = true;
-      script.defer = true;
 
       await new Promise<void>((resolve, reject) => {
-        script.onload = () => resolve();
-        script.onerror = () => reject(new Error('Fallo al cargar Google Maps API'));
+        (window as any)[callbackName] = () => {
+          delete (window as any)[callbackName];
+          resolve();
+        };
+        script.onerror = () => {
+          delete (window as any)[callbackName];
+          reject(new Error('Fallo al cargar Google Maps API'));
+        };
         document.head.appendChild(script);
       });
 
