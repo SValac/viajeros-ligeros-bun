@@ -88,6 +88,14 @@ export function useGoogleMaps() {
     };
   }
 
+  async function importPlacesLibrary() {
+    if (!loaded.value)
+      throw new Error('Google Maps no está cargado aún');
+    const { AutocompleteSuggestion, AutocompleteSessionToken }
+      = await (window as any).google.maps.importLibrary('places');
+    return { AutocompleteSuggestion, AutocompleteSessionToken };
+  }
+
   return {
     loading: readonly(loading),
     loaded: readonly(loaded),
@@ -96,5 +104,6 @@ export function useGoogleMaps() {
     isGoogleMapsLoaded,
     getGoogleMaps,
     debounce,
+    importPlacesLibrary,
   };
 }
