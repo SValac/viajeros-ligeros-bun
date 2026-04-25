@@ -63,7 +63,7 @@ const computedRows = computed(() => {
       rowSeats = [rowData[0] ?? null, rowData[1] ?? null, null, rowData[2] ?? null, null];
     }
     else if (rowData.length === 2) {
-      rowSeats = [rowData[0] ?? null, null, null, rowData[1] ?? null, null];
+      rowSeats = [rowData[0] ?? null, rowData[1] ?? null, null, null, null];
     }
     else {
       rowSeats = [rowData[0] ?? null, null, null, null, null];
