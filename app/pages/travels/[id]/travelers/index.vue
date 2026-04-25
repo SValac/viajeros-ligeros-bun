@@ -6,6 +6,8 @@ import { h } from 'vue';
 
 import type { Traveler, TravelerFormData, TravelerWithChildren } from '~/types/traveler';
 
+import BusSeatMap from '~/components/bus-seat-map.vue';
+
 definePageMeta({
   name: 'travel-travelers',
 });
@@ -24,19 +26,29 @@ const travel = computed(() => travelStore.getTravelById(travelId.value));
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
 const expanded = ref<ExpandedStateList>({});
+const selectedBusId = shallowRef<string | null>(null);
+
+// Datos derivados de stores
+const travelers = computed(() => travelerStore.filteredGroupedTravelers);
+const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
+const totalTravelers = computed(() => travelersOfTravel.value.length);
+const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
+const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
+
+const allBuses = computed(() => travel.value?.buses ?? []);
 
 // Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
 onMounted(async () => {
   travelerStore.setFilters({ travelId: travelId.value });
   await travelerStore.fetchByTravel(travelId.value);
+  if (allBuses.value.length > 0) {
+    selectedBusId.value = allBuses.value[0]!.id;
+  }
 });
 
 watch(travelId, (id) => {
   travelerStore.setFilters({ travelId: id });
 });
-
-// Datos derivados de stores
-const travelers = computed(() => travelerStore.filteredGroupedTravelers);
 
 watchEffect(() => {
   const newExpanded: ExpandedStateList = {};
@@ -48,12 +60,33 @@ watchEffect(() => {
   expanded.value = newExpanded;
 });
 
-const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
-const totalTravelers = computed(() => travelersOfTravel.value.length);
-const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
-const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
+const selectedBus = computed(() =>
+  allBuses.value.find(b => b.id === selectedBusId.value) ?? null,
+);
 
-const allBuses = computed(() => travel.value?.buses ?? []);
+const travelersBySelectedBus = computed(() =>
+  selectedBusId.value
+    ? travelerStore.getTravelersByBus(selectedBusId.value)
+    : [],
+);
+
+const occupiedSeats = computed(() =>
+  travelersBySelectedBus.value
+    .filter(t => t.seat)
+    .map(t => ({
+      travelerId: t.id,
+      seatNumber: Number.parseInt(t.seat, 10),
+      passengerName: `${t.firstName} ${t.lastName}`,
+    }))
+    .filter(s => !Number.isNaN(s.seatNumber)),
+);
+
+const lastRowSeats = computed(() => {
+  const bus = selectedBus.value;
+  if (!bus)
+    return 4;
+  return bus.lastRowSeats ?? (bus.seatCount % 4 || 4);
+});
 
 const representantes = computed(() =>
   travelerStore.filteredTravelers.filter(t => t.isRepresentative),
@@ -330,7 +363,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       </UCard>
     </div>
 
-    <!-- Filtros -->
+    <!-- Filtros y tabla de viajeros -->
     <TravelerFilterBar
       v-model="filters"
       :available-travels="[]"
@@ -387,6 +420,52 @@ const columns: TableColumn<TravelerWithChildren>[] = [
         }"
       />
     </UCard>
+
+    <!-- Mapa de asientos -->
+    <div>
+      <div class="flex items-center gap-3 mb-3">
+        <h2 class="text-lg font-semibold">
+          Distribución de asientos
+        </h2>
+        <UBadge
+          v-if="selectedBus"
+          color="neutral"
+          variant="subtle"
+        >
+          {{ occupiedSeats.length }} / {{ selectedBus.seatCount }} ocupados
+        </UBadge>
+      </div>
+
+      <div v-if="allBuses.length > 1" class="flex gap-2 flex-wrap mb-4">
+        <UButton
+          v-for="bus in allBuses"
+          :key="bus.id"
+          size="sm"
+          :variant="selectedBusId === bus.id ? 'solid' : 'outline'"
+          @click="selectedBusId = bus.id"
+        >
+          {{ getBusLabel(bus.id) }}
+        </UButton>
+      </div>
+
+      <UCard v-if="selectedBus">
+        <BusSeatMap
+          :total-seats="selectedBus.seatCount"
+          :occupied-seats="occupiedSeats"
+          :seats-per-row="4"
+          :last-row-seats="lastRowSeats"
+          @seat-selected="(travelerId) => {
+            const t = travelerStore.travelers.find(t => t.id === travelerId);
+            if (t) openEditModal(t);
+          }"
+        />
+      </UCard>
+      <UCard v-else-if="allBuses.length === 0">
+        <p class="text-center text-gray-400 py-6">
+          Sin autobuses asignados a este viaje
+        </p>
+      </UCard>
+    </div>
 
     <!-- Modal de formulario -->
     <UModal
