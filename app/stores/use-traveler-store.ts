@@ -163,7 +163,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
-  async function updateTraveler(id: string, data: TravelerUpdateData): Promise<Traveler | undefined> {
+  async function updateTraveler(id: string, data: TravelerUpdateData): Promise<Traveler> {
     loading.value = true;
     error.value = null;
     try {
@@ -206,7 +206,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
+      throw e;
     }
     finally {
       loading.value = false;

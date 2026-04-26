@@ -36,6 +36,11 @@ type OccupiedSeat = {
   menuItems: TravelerActionItem[][];
 };
 
+type DatabaseError = {
+  code?: string;
+  constraint?: string;
+};
+
 const travelId = computed(() => route.params.id as string);
 const travel = computed(() => travelStore.getTravelById(travelId.value));
 
@@ -179,18 +184,40 @@ function handleEmptySeatSelected(payload: { busId: string; seatNumber: number })
   });
 }
 
+function findTravelerBySeat(data: TravelerFormData, excludeTravelerId?: string): Traveler | undefined {
+  return travelersOfTravel.value.find((traveler) => {
+    return traveler.id !== excludeTravelerId
+      && traveler.travelBusId === data.travelBusId
+      && traveler.seat === data.seat;
+  });
+}
+
+function isSeatAlreadyTakenError(error: unknown): boolean {
+  const dbError = error as DatabaseError | null;
+  return dbError?.code === '23505'
+    && dbError?.constraint === 'travelers_unique_travel_bus_seat';
+}
+
 async function handleFormSubmit(data: TravelerFormData) {
+  const takenSeatTraveler = findTravelerBySeat(data, editingTraveler.value?.id);
+  if (takenSeatTraveler) {
+    toast.add({
+      title: 'Asiento ocupado',
+      description: `El asiento ${data.seat} ya está asignado a ${takenSeatTraveler.firstName} ${takenSeatTraveler.lastName}`,
+      color: 'warning',
+    });
+    return;
+  }
+
   try {
     if (editingTraveler.value) {
-      const updated = await travelerStore.updateTraveler(editingTraveler.value.id, data);
-      if (updated) {
-        toast.add({
-          title: 'Viajero actualizado',
-          description: `${data.firstName} ${data.lastName} se actualizó correctamente`,
-          color: 'primary',
-        });
-        closeModal();
-      }
+      await travelerStore.updateTraveler(editingTraveler.value.id, data);
+      toast.add({
+        title: 'Viajero actualizado',
+        description: `${data.firstName} ${data.lastName} se actualizó correctamente`,
+        color: 'primary',
+      });
+      closeModal();
     }
     else {
       await travelerStore.addTraveler(data);
@@ -202,7 +229,16 @@ async function handleFormSubmit(data: TravelerFormData) {
       closeModal();
     }
   }
-  catch {
+  catch (error) {
+    if (isSeatAlreadyTakenError(error)) {
+      toast.add({
+        title: 'Asiento ocupado',
+        description: `El asiento ${data.seat} ya está asignado a otro viajero`,
+        color: 'warning',
+      });
+      return;
+    }
+
     toast.add({
       title: 'Error',
       description: 'Ocurrió un error al guardar el viajero',
