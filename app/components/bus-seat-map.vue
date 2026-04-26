@@ -32,14 +32,29 @@ type Props = {
   seatsPerRow?: number;
   lastRowSeats?: number;
   busLabel?: string;
+  isSeatSelectionMode?: boolean;
+  sourceTravelerId?: string | null;
+  sourceSeatNumber?: number | null;
+  selectedSeatNumber?: number | null;
 };
 
 const props = withDefaults(defineProps<Props>(), {
   seatsPerRow: 4,
+  isSeatSelectionMode: false,
+  sourceTravelerId: null,
+  sourceSeatNumber: null,
+  selectedSeatNumber: null,
 });
 
 const emit = defineEmits<{
   emptySeatSelected: [payload: { busId: string; seatNumber: number }];
+  destinationSeatSelected: [payload: {
+    busId: string;
+    seatNumber: number;
+    status: SeatCell['status'];
+    travelerId?: string;
+    passengerName?: string;
+  }];
 }>();
 
 const allSeats = computed((): SeatCell[] => {
@@ -103,6 +118,35 @@ const computedRows = computed(() => {
 function selectEmptySeat(seatNumber: number) {
   emit('emptySeatSelected', { busId: props.busId, seatNumber });
 }
+
+function selectSeat(seat: SeatCell) {
+  if (props.isSeatSelectionMode) {
+    emit('destinationSeatSelected', {
+      busId: props.busId,
+      seatNumber: seat.number,
+      status: seat.status,
+      travelerId: seat.travelerId,
+      passengerName: seat.passengerName,
+    });
+    return;
+  }
+
+  if (seat.status === 'available') {
+    selectEmptySeat(seat.number);
+  }
+}
+
+function isSourceSeat(seat: SeatCell): boolean {
+  return props.isSeatSelectionMode
+    && (
+      (props.sourceTravelerId !== null && seat.travelerId === props.sourceTravelerId)
+      || seat.number === props.sourceSeatNumber
+    );
+}
+
+function isDestinationSeat(seat: SeatCell): boolean {
+  return props.selectedSeatNumber === seat.number;
+}
 </script>
 
 <template>
@@ -121,7 +165,7 @@ function selectEmptySeat(seatNumber: number) {
         <template v-for="(seat, colIndex) in row" :key="colIndex">
           <div v-if="seat === null" />
 
-          <div v-else-if="seat.status === 'occupied' && seat.menuItems" class="w-full">
+          <div v-else-if="seat.status === 'occupied' && seat.menuItems && !isSeatSelectionMode" class="w-full">
             <UDropdownMenu :items="seat.menuItems">
               <BusSeatCard
                 :seat-number="seat.number"
@@ -130,6 +174,8 @@ function selectEmptySeat(seatNumber: number) {
                 :boarding-point="seat.boardingPoint"
                 :is-representative="seat.isRepresentative"
                 :representative-name="seat.representativeName"
+                :is-source-seat="isSourceSeat(seat)"
+                :is-destination-seat="isDestinationSeat(seat)"
               />
             </UDropdownMenu>
           </div>
@@ -138,11 +184,18 @@ function selectEmptySeat(seatNumber: number) {
             v-else
             type="button"
             class="w-full rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            @click="selectEmptySeat(seat.number)"
+            :disabled="isSourceSeat(seat)"
+            @click="selectSeat(seat)"
           >
             <BusSeatCard
               :seat-number="seat.number"
-              status="available"
+              :status="seat.status"
+              :passenger-name="seat.passengerName"
+              :boarding-point="seat.boardingPoint"
+              :is-representative="seat.isRepresentative"
+              :representative-name="seat.representativeName"
+              :is-source-seat="isSourceSeat(seat)"
+              :is-destination-seat="isDestinationSeat(seat)"
             />
           </button>
         </template>

@@ -1,6 +1,7 @@
 import type { TablesUpdate } from '~/types/database.types';
-import type { Traveler, TravelerFilters, TravelerFormData, TravelerUpdateData, TravelerWithChildren } from '~/types/traveler';
+import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeResult, TravelerUpdateData, TravelerWithChildren } from '~/types/traveler';
 
+import { TravelerSeatChangeError } from '~/types/traveler';
 import { mapTravelerRowToDomain, mapTravelerToInsert } from '~/utils/mappers';
 
 export const useTravelerStore = defineStore('useTravelerStore', () => {
@@ -90,6 +91,47 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
     return result;
   });
+
+  function isTravelerSeatChangeResult(data: unknown): data is TravelerSeatChangeResult {
+    if (!data || typeof data !== 'object') {
+      return false;
+    }
+
+    const payload = data as Partial<TravelerSeatChangeResult>;
+    return (payload.operation === 'moved' || payload.operation === 'swapped')
+      && typeof payload.travelId === 'string'
+      && typeof payload.sourceTravelerId === 'string'
+      && (typeof payload.targetTravelerId === 'string' || payload.targetTravelerId === null)
+      && typeof payload.sourceSeat === 'number'
+      && typeof payload.targetSeat === 'number'
+      && Array.isArray(payload.travelers);
+  }
+
+  function toTravelerSeatChangeError(error: unknown): TravelerSeatChangeError {
+    const message = (error as { message?: string } | null)?.message;
+
+    if (message === 'invalid_travel_bus') {
+      return new TravelerSeatChangeError('invalid-travel-bus', 'Camión inválido para realizar el cambio de asiento.', { cause: error });
+    }
+
+    if (message === 'invalid_target_seat') {
+      return new TravelerSeatChangeError('invalid-target-seat', 'El asiento destino es inválido.', { cause: error });
+    }
+
+    if (message === 'traveler_not_found') {
+      return new TravelerSeatChangeError('traveler-not-found', 'No se encontró al viajero para cambiar de asiento.', { cause: error });
+    }
+
+    if (message === 'same_seat_selected') {
+      return new TravelerSeatChangeError('same-seat-selected', 'Debes seleccionar un asiento diferente al actual.', { cause: error });
+    }
+
+    if (message === 'seat_conflict') {
+      return new TravelerSeatChangeError('seat-conflict', 'El asiento destino cambió durante la operación. Intenta de nuevo.', { cause: error });
+    }
+
+    return new TravelerSeatChangeError('unknown-error', 'No se pudo cambiar el asiento del viajero.', { cause: error });
+  }
 
   // Actions
   async function fetchAll(): Promise<void> {
@@ -253,6 +295,58 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  async function changeTravelerSeat(params: {
+    travelerId: string;
+    travelBusId: string;
+    targetSeat: number;
+  }): Promise<TravelerSeatChangeResult> {
+    loading.value = true;
+    error.value = null;
+
+    try {
+      const { data, error: rpcError } = await supabase.rpc('move_or_swap_traveler_seat', {
+        p_traveler_id: params.travelerId,
+        p_target_seat: params.targetSeat,
+        p_travel_bus_id: params.travelBusId,
+      });
+
+      if (rpcError) {
+        throw toTravelerSeatChangeError(rpcError);
+      }
+
+      if (!isTravelerSeatChangeResult(data)) {
+        throw new TravelerSeatChangeError('unknown-error', 'La respuesta del servidor para cambiar asiento es inválida.');
+      }
+
+      for (const travelerSeat of data.travelers) {
+        const travelerIndex = travelers.value.findIndex(t => t.id === travelerSeat.id);
+        if (travelerIndex !== -1) {
+          const currentTraveler = travelers.value[travelerIndex];
+          if (!currentTraveler) {
+            continue;
+          }
+
+          travelers.value[travelerIndex] = {
+            ...currentTraveler,
+            seat: travelerSeat.seat,
+          };
+        }
+      }
+
+      return data;
+    }
+    catch (e) {
+      const seatChangeError = e instanceof TravelerSeatChangeError
+        ? e
+        : toTravelerSeatChangeError(e);
+      error.value = seatChangeError.message;
+      throw seatChangeError;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
   function setFilters(newFilters: TravelerFilters): void {
     filters.value = { ...newFilters };
   }
@@ -282,6 +376,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     addTraveler,
     updateTraveler,
     deleteTraveler,
+    changeTravelerSeat,
     setFilters,
     clearFilters,
   };

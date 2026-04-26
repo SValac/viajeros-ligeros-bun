@@ -2,6 +2,8 @@
 type Props = {
   seatNumber: number;
   status: 'available' | 'occupied';
+  isSourceSeat?: boolean;
+  isDestinationSeat?: boolean;
   passengerName?: string;
   boardingPoint?: string;
   isRepresentative?: boolean;
@@ -11,6 +13,16 @@ type Props = {
 const props = defineProps<Props>();
 
 const cardClass = computed(() => {
+  if (props.isSourceSeat) {
+    return 'border-2 border-warning bg-warning/10 text-default ring-2 ring-warning/40';
+  }
+
+  if (props.isDestinationSeat) {
+    return props.status === 'available'
+      ? 'border-2 border-success bg-success/10 text-default ring-2 ring-success/40'
+      : 'border-2 border-success bg-success/15 text-default ring-2 ring-success/40';
+  }
+
   if (props.status === 'available') {
     return 'border-default bg-elevated text-default hover:bg-muted';
   }
@@ -33,10 +45,22 @@ const cardClass = computed(() => {
         Asiento {{ seatNumber }}
       </span>
       <span
-        v-if="status === 'available'"
+        v-if="status === 'available' && !isDestinationSeat"
         class="text-[10px] font-medium"
       >
         Disponible
+      </span>
+      <span
+        v-else-if="isSourceSeat"
+        class="text-[10px] font-medium"
+      >
+        Origen
+      </span>
+      <span
+        v-else-if="isDestinationSeat"
+        class="text-[10px] font-medium"
+      >
+        Destino
       </span>
     </div>
 

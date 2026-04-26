@@ -4,7 +4,7 @@ import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
-import type { Traveler, TravelerFormData, TravelerWithChildren } from '~/types/traveler';
+import type { Traveler, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
 
 import BusSeatMap from '~/components/bus-seat-map.vue';
 
@@ -41,6 +41,21 @@ type DatabaseError = {
   constraint?: string;
 };
 
+type SeatChangeContext = {
+  travelerId: string;
+  travelerName: string;
+  travelBusId: string;
+  sourceSeat: number;
+};
+
+type SeatSelectionPayload = {
+  busId: string;
+  seatNumber: number;
+  status: 'available' | 'occupied';
+  travelerId?: string;
+  passengerName?: string;
+};
+
 const travelId = computed(() => route.params.id as string);
 const travel = computed(() => travelStore.getTravelById(travelId.value));
 
@@ -50,6 +65,9 @@ const editingTraveler = shallowRef<Traveler | null>(null);
 const createTravelerInitialValues = shallowRef<Partial<TravelerFormData> | null>(null);
 const expanded = ref<ExpandedStateList>({});
 const activeTabValue = shallowRef<string | number>('travelers');
+const seatChangeContext = shallowRef<SeatChangeContext | null>(null);
+const selectedDestinationSeat = shallowRef<number | null>(null);
+const seatChangeLoading = shallowRef(false);
 
 // Datos derivados de stores
 const travelers = computed(() => travelerStore.filteredGroupedTravelers);
@@ -57,6 +75,7 @@ const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(trav
 const totalTravelers = computed(() => travelersOfTravel.value.length);
 const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
 const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
+const isSeatChangeModeActive = computed(() => seatChangeContext.value !== null);
 
 const allBuses = computed(() => travel.value?.buses ?? []);
 const tabs = computed(() => [
@@ -76,6 +95,15 @@ const tabs = computed(() => [
   })),
 ]);
 
+const seatChangeAlertDescription = computed(() => {
+  if (!seatChangeContext.value) {
+    return '';
+  }
+
+  return `Selecciona el asiento destino para ${seatChangeContext.value.travelerName}.`
+    + ` Puedes elegir un asiento libre para mover o uno ocupado para intercambiar.`;
+});
+
 // Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
 onMounted(async () => {
   travelerStore.setFilters({ travelId: travelId.value });
@@ -84,6 +112,7 @@ onMounted(async () => {
 
 watch(travelId, (id) => {
   travelerStore.setFilters({ travelId: id });
+  clearSeatChangeState();
 });
 
 watch(tabs, (availableTabs) => {
@@ -176,12 +205,165 @@ function closeModal() {
   createTravelerInitialValues.value = null;
 }
 
+function clearSeatChangeState() {
+  seatChangeContext.value = null;
+  selectedDestinationSeat.value = null;
+  seatChangeLoading.value = false;
+}
+
+function cancelSeatChange(showToast = true) {
+  if (!isSeatChangeModeActive.value) {
+    return;
+  }
+
+  toast.clear();
+  clearSeatChangeState();
+
+  if (showToast) {
+    toast.add({
+      title: 'Cambio de asiento cancelado',
+      description: 'No se realizó ninguna modificación de asientos.',
+      color: 'neutral',
+    });
+  }
+}
+
+function startSeatChange(traveler: Traveler) {
+  if (!traveler.travelBusId) {
+    toast.clear();
+    toast.add({
+      title: 'Cambio no disponible',
+      description: 'El viajero no tiene un camión asignado.',
+      color: 'warning',
+    });
+    return;
+  }
+
+  if (!traveler.seat || traveler.seat <= 0) {
+    toast.clear();
+    toast.add({
+      title: 'Cambio no disponible',
+      description: 'El viajero no tiene un asiento válido asignado.',
+      color: 'warning',
+    });
+    return;
+  }
+
+  const busTab = tabs.value.find(tab => tab.bus?.id === traveler.travelBusId);
+  if (busTab) {
+    activeTabValue.value = busTab.value;
+  }
+
+  toast.clear();
+  seatChangeContext.value = {
+    travelerId: traveler.id,
+    travelerName: `${traveler.firstName} ${traveler.lastName}`,
+    travelBusId: traveler.travelBusId,
+    sourceSeat: traveler.seat,
+  };
+  selectedDestinationSeat.value = null;
+  seatChangeLoading.value = false;
+
+  toast.add({
+    title: 'Modo cambiar asiento',
+    description: `Selecciona el asiento destino para ${traveler.firstName} ${traveler.lastName}.`,
+    color: 'info',
+  });
+}
+
 function handleEmptySeatSelected(payload: { busId: string; seatNumber: number }) {
   openCreateModalWithInitialValues({
     travelId: travelId.value,
     travelBusId: payload.busId,
     seat: payload.seatNumber,
   });
+}
+
+function getSeatChangeErrorMessage(code?: TravelerSeatChangeErrorCode, fallbackMessage?: string): string {
+  if (code === 'invalid-target-seat') {
+    return 'El asiento destino no es válido.';
+  }
+
+  if (code === 'invalid-travel-bus') {
+    return 'El camión seleccionado no es válido para este cambio.';
+  }
+
+  if (code === 'traveler-not-found') {
+    return 'No se encontró al viajero. Recarga la vista e intenta nuevamente.';
+  }
+
+  if (code === 'same-seat-selected') {
+    return 'Selecciona un asiento diferente al actual.';
+  }
+
+  if (code === 'seat-conflict') {
+    return 'Otro cambio ocupó ese asiento. Intenta de nuevo con la información actualizada.';
+  }
+
+  return fallbackMessage ?? 'No se pudo completar el cambio de asiento.';
+}
+
+async function handleSeatDestinationSelected(payload: SeatSelectionPayload) {
+  if (!seatChangeContext.value || seatChangeLoading.value) {
+    return;
+  }
+
+  if (payload.busId !== seatChangeContext.value.travelBusId) {
+    toast.clear();
+    toast.add({
+      title: 'Camión inválido',
+      description: 'Selecciona un asiento del mismo camión.',
+      color: 'warning',
+    });
+    return;
+  }
+
+  if (payload.seatNumber === seatChangeContext.value.sourceSeat) {
+    toast.clear();
+    toast.add({
+      title: 'Asiento origen',
+      description: 'Selecciona un asiento diferente al asiento origen.',
+      color: 'warning',
+    });
+    return;
+  }
+
+  selectedDestinationSeat.value = payload.seatNumber;
+  seatChangeLoading.value = true;
+
+  const currentContext = { ...seatChangeContext.value };
+
+  try {
+    const result = await travelerStore.changeTravelerSeat({
+      travelerId: currentContext.travelerId,
+      travelBusId: currentContext.travelBusId,
+      targetSeat: payload.seatNumber,
+    });
+
+    toast.clear();
+    toast.add({
+      title: result.operation === 'swapped' ? 'Asientos intercambiados' : 'Asiento actualizado',
+      description: result.operation === 'swapped' && payload.passengerName
+        ? `${currentContext.travelerName} intercambió asiento con ${payload.passengerName}.`
+        : `${currentContext.travelerName} ahora ocupa el asiento ${payload.seatNumber}.`,
+      color: 'success',
+    });
+    clearSeatChangeState();
+  }
+  catch (error) {
+    toast.clear();
+    toast.add({
+      title: 'Error al cambiar asiento',
+      description: getSeatChangeErrorMessage(
+        (error as { code?: TravelerSeatChangeErrorCode } | null)?.code,
+        (error as { message?: string } | null)?.message,
+      ),
+      color: 'error',
+    });
+  }
+  finally {
+    seatChangeLoading.value = false;
+  }
 }
 
 function findTravelerBySeat(data: TravelerFormData, excludeTravelerId?: string): Traveler | undefined {
@@ -251,6 +433,9 @@ async function handleDelete(traveler: Traveler) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar a ${traveler.firstName} ${traveler.lastName}?`)) {
     await travelerStore.deleteTraveler(traveler.id);
+    if (seatChangeContext.value?.travelerId === traveler.id) {
+      clearSeatChangeState();
+    }
     toast.add({
       title: 'Viajero eliminado',
       description: `${traveler.firstName} ${traveler.lastName} se eliminó correctamente`,
@@ -266,6 +451,11 @@ function getRowActions(traveler: Traveler) {
         label: 'Editar',
         icon: 'i-lucide-pencil',
         onSelect: () => openEditModal(traveler),
+      },
+      {
+        label: 'Cambiar asiento',
+        icon: 'i-lucide-arrow-left-right',
+        onSelect: () => startSeatChange(traveler),
       },
     ],
     [
@@ -457,6 +647,38 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       </UCard>
     </div>
 
+    <div v-if="seatChangeContext" class="flex flex-col gap-3 md:flex-row md:items-center">
+      <UAlert
+        class="flex-1"
+        icon="i-lucide-arrow-left-right"
+        color="info"
+        variant="subtle"
+        title="Modo cambiar asiento activo"
+        :description="seatChangeAlertDescription"
+      />
+      <div class="flex items-center gap-2">
+        <UBadge
+          v-if="seatChangeLoading"
+          color="info"
+          variant="soft"
+        >
+          Aplicando cambio...
+        </UBadge>
+        <UBadge color="warning" variant="soft">
+          Origen: asiento {{ seatChangeContext.sourceSeat }}
+        </UBadge>
+        <UButton
+          color="neutral"
+          variant="outline"
+          icon="i-lucide-x"
+          :disabled="seatChangeLoading"
+          @click="cancelSeatChange()"
+        >
+          Cancelar
+        </UButton>
+      </div>
+    </div>
+
     <UTabs
       v-model="activeTabValue"
       :items="tabs"
@@ -551,7 +773,12 @@ const columns: TableColumn<TravelerWithChildren>[] = [
               :seats-per-row="4"
               :last-row-seats="getLastRowSeats(item.bus)"
               :bus-label="getBusLabel(item.bus.id)"
+              :is-seat-selection-mode="seatChangeContext?.travelBusId === item.bus.id"
+              :source-traveler-id="seatChangeContext?.travelerId ?? null"
+              :source-seat-number="seatChangeContext?.sourceSeat ?? null"
+              :selected-seat-number="selectedDestinationSeat"
               @empty-seat-selected="handleEmptySeatSelected"
+              @destination-seat-selected="handleSeatDestinationSelected"
             />
           </UCard>
         </div>

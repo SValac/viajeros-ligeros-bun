@@ -1086,7 +1086,14 @@ export type Database = {
       [_ in never]: never
     };
     Functions: {
-      [_ in never]: never
+      move_or_swap_traveler_seat: {
+        Args: {
+          p_target_seat: number;
+          p_travel_bus_id: string;
+          p_traveler_id: string;
+        };
+        Returns: Json;
+      };
     };
     Enums: {
       cost_split_type: 'minimum' | 'total';
