@@ -3,17 +3,26 @@ import type { FormSubmitEvent } from '#ui/types';
 
 import { z } from 'zod';
 
-import type { Travel } from '~/types/travel';
+import type { Travel, TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
 type Props = {
   traveler?: Traveler | null;
+  initialValues?: Partial<TravelerFormData> | null;
   availableTravels: Travel[];
+  availableBuses?: TravelBus[];
   availableTravelers: Traveler[];
   lockedTravelId?: string;
 };
 
-const { traveler = null, availableTravels, availableTravelers, lockedTravelId } = defineProps<Props>();
+const {
+  traveler = null,
+  initialValues = null,
+  availableTravels,
+  availableBuses = [],
+  availableTravelers,
+  lockedTravelId,
+} = defineProps<Props>();
 const emit = defineEmits<{
   submit: [data: TravelerFormData];
   cancel: [];
@@ -21,49 +30,71 @@ const emit = defineEmits<{
 const travelsStore = useTravelsStore();
 const providerStore = useProviderStore();
 
-// Schema de validación
-const schema = z.object({
-  firstName: z.string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
-
-  lastName: z.string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
-
-  phone: z.string()
-    .min(7, 'Mínimo 7 caracteres')
-    .max(20, 'Máximo 20 caracteres'),
-
-  travelId: z.string().min(1, 'El viaje es requerido'),
-
-  travelBusId: z.string().min(1, 'El camión es requerido'),
-
-  seat: z.string().min(1, 'El asiento es requerido').max(10, 'Máximo 10 caracteres'),
-
-  boardingPoint: z.string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(150, 'Máximo 150 caracteres'),
-
-  isRepresentative: z.boolean(),
-
-  representativeId: z.string().optional(),
-});
-
-type Schema = z.output<typeof schema>;
-
 // Estado inicial del formulario
-const state = ref<Schema>({
-  firstName: traveler?.firstName ?? '',
-  lastName: traveler?.lastName ?? '',
-  phone: traveler?.phone ?? '',
-  travelId: traveler?.travelId ?? lockedTravelId ?? '',
-  travelBusId: traveler?.travelBusId ?? '',
-  seat: traveler?.seat ?? '',
-  boardingPoint: traveler?.boardingPoint ?? '',
-  isRepresentative: traveler?.isRepresentative ?? false,
-  representativeId: traveler?.representativeId ?? undefined,
+const state = ref({
+  firstName: traveler?.firstName ?? initialValues?.firstName ?? '',
+  lastName: traveler?.lastName ?? initialValues?.lastName ?? '',
+  phone: traveler?.phone ?? initialValues?.phone ?? '',
+  travelId: traveler?.travelId ?? initialValues?.travelId ?? lockedTravelId ?? '',
+  travelBusId: traveler?.travelBusId ?? initialValues?.travelBusId ?? '',
+  seat: traveler?.seat ?? initialValues?.seat ?? (undefined as unknown as number),
+  boardingPoint: traveler?.boardingPoint ?? initialValues?.boardingPoint ?? '',
+  isRepresentative: traveler?.isRepresentative ?? initialValues?.isRepresentative ?? false,
+  representativeId: traveler?.representativeId ?? initialValues?.representativeId ?? undefined,
 });
+
+// Camión seleccionado — fuente de verdad para el máximo de asientos
+const selectedBusForSeat = computed(() =>
+  availableBuses.find(b => b.id === state.value.travelBusId),
+);
+const maxSeats = computed(() => selectedBusForSeat.value?.seatCount ?? 1);
+
+// Schema reactivo al máximo de asientos del camión seleccionado
+const schema = computed(() =>
+  z.object({
+    firstName: z.string()
+      .min(2, 'Mínimo 2 caracteres')
+      .max(100, 'Máximo 100 caracteres'),
+
+    lastName: z.string()
+      .min(2, 'Mínimo 2 caracteres')
+      .max(100, 'Máximo 100 caracteres'),
+
+    phone: z.string()
+      .min(7, 'Mínimo 7 caracteres')
+      .max(20, 'Máximo 20 caracteres'),
+
+    travelId: z.string().min(1, 'El viaje es requerido'),
+
+    travelBusId: z.string().min(1, 'El camión es requerido'),
+
+    seat: z.coerce
+      .number({ error: 'El asiento debe ser un número' })
+      .int('El asiento debe ser un número entero')
+      .min(1, 'El asiento mínimo es 1')
+      .max(maxSeats.value, `Máximo ${maxSeats.value} asientos en este camión`),
+
+    boardingPoint: z.string()
+      .min(2, 'Mínimo 2 caracteres')
+      .max(150, 'Máximo 150 caracteres'),
+
+    isRepresentative: z.boolean(),
+
+    representativeId: z.string().optional(),
+  }),
+);
+
+type Schema = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  travelId: string;
+  travelBusId: string;
+  seat: number;
+  boardingPoint: string;
+  isRepresentative: boolean;
+  representativeId?: string;
+};
 
 // Opciones de viajes para USelect
 const travelOptions = computed(() =>
@@ -80,7 +111,10 @@ const selectedTravel = computed(() =>
 
 // Opciones de camiones: vienen de travel.buses (id de travel_buses)
 const busOptions = computed(() => {
-  const buses = selectedTravel.value?.buses ?? [];
+  const buses = lockedTravelId
+    ? availableBuses
+    : (selectedTravel.value?.buses ?? []);
+
   return buses.map((b) => {
     const agencia = providerStore.getProviderById(b.providerId)?.name;
     const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
@@ -106,14 +140,16 @@ const representanteOptions = computed(() => {
     }));
 });
 
-// Cuando cambia el viaje, resetear el camión y el representante
+// Cuando cambia el viaje, resetear el camión, asiento y representante
 watch(() => state.value.travelId, () => {
   state.value.travelBusId = '';
+  state.value.seat = undefined as unknown as number;
   state.value.representativeId = undefined;
 });
 
-// Cuando cambia el camión, resetear el representante
+// Cuando cambia el camión, resetear el asiento y el representante
 watch(() => state.value.travelBusId, () => {
+  state.value.seat = undefined as unknown as number;
   state.value.representativeId = undefined;
 });
 
@@ -228,8 +264,12 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.seat"
-          placeholder="12A"
+          v-model.number="state.seat"
+          type="number"
+          :min="1"
+          :max="maxSeats"
+          :disabled="!state.travelBusId"
+          :placeholder="state.travelBusId ? `1 – ${maxSeats}` : 'Selecciona un camión'"
         />
       </UFormField>
 

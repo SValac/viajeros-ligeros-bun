@@ -970,7 +970,7 @@ export type Database = {
           last_name: string;
           phone: string;
           representative_id: string | null;
-          seat: string;
+          seat: number;
           travel_bus_id: string | null;
           travel_id: string;
           updated_at: string;
@@ -984,7 +984,7 @@ export type Database = {
           last_name: string;
           phone: string;
           representative_id?: string | null;
-          seat: string;
+          seat: number;
           travel_bus_id?: string | null;
           travel_id: string;
           updated_at?: string;
@@ -998,7 +998,7 @@ export type Database = {
           last_name?: string;
           phone?: string;
           representative_id?: string | null;
-          seat?: string;
+          seat?: number;
           travel_bus_id?: string | null;
           travel_id?: string;
           updated_at?: string;

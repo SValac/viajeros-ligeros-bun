@@ -5,7 +5,7 @@ export type Traveler = {
   phone: string;
   travelId: string;
   travelBusId: string;
-  seat: string;
+  seat: number;
   boardingPoint: string;
   isRepresentative: boolean;
   representativeId?: string;

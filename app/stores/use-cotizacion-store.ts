@@ -21,6 +21,7 @@ import type {
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
 } from '~/types/quotation';
+import type { TravelBus } from '~/types/travel';
 
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
@@ -534,6 +535,36 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
     const travelStore = useTravelsStore();
     await travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
+  }
+
+  // Helper interno — sincroniza autobuses apartados de cotización hacia travel_buses
+  async function _syncBusesToTravel(quotationId: string): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    if (!cotizacion || cotizacion.status === 'confirmed')
+      return;
+
+    const busesForTravel: TravelBus[] = busesApartados.value
+      .filter(b => b.quotationId === quotationId)
+      .map(b => ({
+        id: `quotation-bus-${b.id}`,
+        busId: undefined,
+        providerId: b.providerId,
+        model: b.unitNumber,
+        brand: undefined,
+        year: undefined,
+        operator1Name: 'Por asignar',
+        operator1Phone: 'Por asignar',
+        operator2Name: undefined,
+        operator2Phone: undefined,
+        seatCount: b.capacity,
+        rentalPrice: b.totalCost,
+      }));
+
+    const travelStore = useTravelsStore();
+    const updated = await travelStore.updateTravel(cotizacion.travelId, { buses: busesForTravel });
+    if (!updated) {
+      throw new Error('No se pudo sincronizar autobuses de cotización al viaje');
+    }
   }
 
   // Actions
@@ -1596,6 +1627,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       const newBus = mapQuotationBusRowToDomain(row);
       busesApartados.value.push(newBus);
+      await _syncBusesToTravel(data.quotationId);
       await _syncPrecioToTravel(data.quotationId);
       return newBus;
     }
@@ -1659,6 +1691,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       const updated = mapQuotationBusRowToDomain(row);
       busesApartados.value[index] = updated;
+      await _syncBusesToTravel(existing.quotationId);
       await _syncPrecioToTravel(existing.quotationId);
       return updated;
     }
@@ -1693,6 +1726,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       busesApartados.value = busesApartados.value.filter(b => b.id !== id);
       pagosBus.value = pagosBus.value.filter(p => p.quotationBusId !== id);
+      await _syncBusesToTravel(quotationId);
       await _syncPrecioToTravel(quotationId);
     }
     catch (e) {
