@@ -3,20 +3,35 @@ type OccupiedSeat = {
   travelerId: string;
   seatNumber: number;
   passengerName: string;
+  boardingPoint?: string;
+  isRepresentative: boolean;
+  representativeName?: string;
+  menuItems: {
+    label: string;
+    icon?: string;
+    color?: string;
+    onSelect: () => void;
+  }[][];
 };
 
 type SeatCell = {
   number: number;
   status: 'available' | 'occupied';
-  passenger?: string;
   travelerId?: string;
+  passengerName?: string;
+  boardingPoint?: string;
+  isRepresentative?: boolean;
+  representativeName?: string;
+  menuItems?: OccupiedSeat['menuItems'];
 };
 
 type Props = {
+  busId: string;
   totalSeats: number;
   occupiedSeats: OccupiedSeat[];
   seatsPerRow?: number;
   lastRowSeats?: number;
+  busLabel?: string;
 };
 
 const props = withDefaults(defineProps<Props>(), {
@@ -24,7 +39,7 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const emit = defineEmits<{
-  seatSelected: [travelerId: string];
+  emptySeatSelected: [payload: { busId: string; seatNumber: number }];
 }>();
 
 const allSeats = computed((): SeatCell[] => {
@@ -34,7 +49,16 @@ const allSeats = computed((): SeatCell[] => {
     const number = i + 1;
     const occ = occupied.get(number);
     return occ
-      ? { number, status: 'occupied', passenger: occ.passengerName, travelerId: occ.travelerId }
+      ? {
+          number,
+          status: 'occupied',
+          travelerId: occ.travelerId,
+          passengerName: occ.passengerName,
+          boardingPoint: occ.boardingPoint,
+          isRepresentative: occ.isRepresentative,
+          representativeName: occ.representativeName,
+          menuItems: occ.menuItems,
+        }
       : { number, status: 'available' };
   });
 });
@@ -76,46 +100,53 @@ const computedRows = computed(() => {
   return rows;
 });
 
-function seatClass(seat: SeatCell) {
-  return {
-    'bg-green-100 border border-green-300 text-green-700': seat.status === 'available',
-    'bg-red-500 text-white cursor-pointer hover:bg-red-600': seat.status === 'occupied',
-  };
-}
-
-function selectSeat(seat: SeatCell) {
-  if (seat.status === 'occupied' && seat.travelerId) {
-    emit('seatSelected', seat.travelerId);
-  }
+function selectEmptySeat(seatNumber: number) {
+  emit('emptySeatSelected', { busId: props.busId, seatNumber });
 }
 </script>
 
 <template>
-  <div class="flex flex-col gap-2">
-    <div
-      v-for="(row, rowIndex) in computedRows"
-      :key="rowIndex"
-      class="grid grid-cols-5 gap-2 items-center"
-    >
-      <template v-for="(seat, colIndex) in row" :key="colIndex">
-        <div v-if="seat === null" />
+  <div class="space-y-4">
+    <div v-if="busLabel" class="flex items-center gap-2 text-sm text-muted">
+      <UIcon name="i-lucide-bus" class="size-4" />
+      <span>{{ busLabel }}</span>
+    </div>
 
-        <div
-          v-else
-          class="relative h-12 flex items-center justify-center rounded-lg text-sm font-medium transition group"
-          :class="seatClass(seat)"
-          @click="selectSeat(seat)"
-        >
-          <span>{{ seat.number }}</span>
+    <div class="flex flex-col gap-2">
+      <div
+        v-for="(row, rowIndex) in computedRows"
+        :key="rowIndex"
+        class="grid grid-cols-5 gap-2 items-center"
+      >
+        <template v-for="(seat, colIndex) in row" :key="colIndex">
+          <div v-if="seat === null" />
 
-          <div
-            v-if="seat.passenger"
-            class="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 whitespace-nowrap text-xs bg-black text-white px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition pointer-events-none z-10"
-          >
-            {{ seat.passenger }}
+          <div v-else-if="seat.status === 'occupied' && seat.menuItems" class="w-full">
+            <UDropdownMenu :items="seat.menuItems">
+              <BusSeatCard
+                :seat-number="seat.number"
+                status="occupied"
+                :passenger-name="seat.passengerName"
+                :boarding-point="seat.boardingPoint"
+                :is-representative="seat.isRepresentative"
+                :representative-name="seat.representativeName"
+              />
+            </UDropdownMenu>
           </div>
-        </div>
-      </template>
+
+          <button
+            v-else
+            type="button"
+            class="w-full rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            @click="selectEmptySeat(seat.number)"
+          >
+            <BusSeatCard
+              :seat-number="seat.number"
+              status="available"
+            />
+          </button>
+        </template>
+      </div>
     </div>
   </div>
 </template>

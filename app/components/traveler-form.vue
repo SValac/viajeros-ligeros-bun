@@ -8,13 +8,21 @@ import type { Traveler, TravelerFormData } from '~/types/traveler';
 
 type Props = {
   traveler?: Traveler | null;
+  initialValues?: Partial<TravelerFormData> | null;
   availableTravels: Travel[];
   availableBuses?: TravelBus[];
   availableTravelers: Traveler[];
   lockedTravelId?: string;
 };
 
-const { traveler = null, availableTravels, availableBuses = [], availableTravelers, lockedTravelId } = defineProps<Props>();
+const {
+  traveler = null,
+  initialValues = null,
+  availableTravels,
+  availableBuses = [],
+  availableTravelers,
+  lockedTravelId,
+} = defineProps<Props>();
 const emit = defineEmits<{
   submit: [data: TravelerFormData];
   cancel: [];
@@ -24,15 +32,15 @@ const providerStore = useProviderStore();
 
 // Estado inicial del formulario
 const state = ref({
-  firstName: traveler?.firstName ?? '',
-  lastName: traveler?.lastName ?? '',
-  phone: traveler?.phone ?? '',
-  travelId: traveler?.travelId ?? lockedTravelId ?? '',
-  travelBusId: traveler?.travelBusId ?? '',
-  seat: traveler?.seat ?? (undefined as unknown as number),
-  boardingPoint: traveler?.boardingPoint ?? '',
-  isRepresentative: traveler?.isRepresentative ?? false,
-  representativeId: traveler?.representativeId ?? undefined,
+  firstName: traveler?.firstName ?? initialValues?.firstName ?? '',
+  lastName: traveler?.lastName ?? initialValues?.lastName ?? '',
+  phone: traveler?.phone ?? initialValues?.phone ?? '',
+  travelId: traveler?.travelId ?? initialValues?.travelId ?? lockedTravelId ?? '',
+  travelBusId: traveler?.travelBusId ?? initialValues?.travelBusId ?? '',
+  seat: traveler?.seat ?? initialValues?.seat ?? (undefined as unknown as number),
+  boardingPoint: traveler?.boardingPoint ?? initialValues?.boardingPoint ?? '',
+  isRepresentative: traveler?.isRepresentative ?? initialValues?.isRepresentative ?? false,
+  representativeId: traveler?.representativeId ?? initialValues?.representativeId ?? undefined,
 });
 
 // Camión seleccionado — fuente de verdad para el máximo de asientos

@@ -19,12 +19,30 @@ const travelStore = useTravelsStore();
 const providerStore = useProviderStore();
 const toast = useToast();
 
+type TravelerActionItem = {
+  label: string;
+  icon?: string;
+  color?: string;
+  onSelect: () => void;
+};
+
+type OccupiedSeat = {
+  travelerId: string;
+  seatNumber: number;
+  passengerName: string;
+  boardingPoint?: string;
+  isRepresentative: boolean;
+  representativeName?: string;
+  menuItems: TravelerActionItem[][];
+};
+
 const travelId = computed(() => route.params.id as string);
 const travel = computed(() => travelStore.getTravelById(travelId.value));
 
 // Estado local
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
+const createTravelerInitialValues = shallowRef<Partial<TravelerFormData> | null>(null);
 const expanded = ref<ExpandedStateList>({});
 const activeTabValue = shallowRef<string | number>('travelers');
 
@@ -80,15 +98,31 @@ watchEffect(() => {
   expanded.value = newExpanded;
 });
 
-function getOccupiedSeatsByBus(busId: string) {
-  return travelerStore
-    .getTravelersByBus(busId)
-    .filter(t => t.seat > 0)
-    .map(t => ({
-      travelerId: t.id,
-      seatNumber: t.seat,
-      passengerName: `${t.firstName} ${t.lastName}`,
-    }));
+function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
+  const travelersByBus = travelerStore.getTravelersByBus(busId);
+  const representativeById = new Map(
+    travelersByBus
+      .filter(t => t.isRepresentative)
+      .map(t => [t.id, `${t.firstName} ${t.lastName}`]),
+  );
+
+  return travelersByBus
+    .map((t) => {
+      const seatNumber = Number(t.seat);
+      return {
+        travelerId: t.id,
+        seatNumber,
+        passengerName: `${t.firstName} ${t.lastName}`,
+        boardingPoint: t.boardingPoint,
+        isRepresentative: t.isRepresentative,
+        representativeName: t.representativeId
+          ? representativeById.get(t.representativeId)
+          : undefined,
+        menuItems: getRowActions(t),
+      };
+    })
+    .filter(seat => Number.isFinite(seat.seatNumber) && seat.seatNumber > 0)
+    .sort((a, b) => a.seatNumber - b.seatNumber);
 }
 
 function getLastRowSeats(bus: { seatCount: number; lastRowSeats?: number | null }) {
@@ -115,17 +149,34 @@ function getBusLabel(travelBusId: string): string {
 
 function openCreateModal() {
   editingTraveler.value = null;
+  createTravelerInitialValues.value = null;
+  isFormModalOpen.value = true;
+}
+
+function openCreateModalWithInitialValues(initialValues: Partial<TravelerFormData>) {
+  editingTraveler.value = null;
+  createTravelerInitialValues.value = initialValues;
   isFormModalOpen.value = true;
 }
 
 function openEditModal(traveler: Traveler) {
   editingTraveler.value = traveler;
+  createTravelerInitialValues.value = null;
   isFormModalOpen.value = true;
 }
 
 function closeModal() {
   isFormModalOpen.value = false;
   editingTraveler.value = null;
+  createTravelerInitialValues.value = null;
+}
+
+function handleEmptySeatSelected(payload: { busId: string; seatNumber: number }) {
+  openCreateModalWithInitialValues({
+    travelId: travelId.value,
+    travelBusId: payload.busId,
+    seat: payload.seatNumber,
+  });
 }
 
 async function handleFormSubmit(data: TravelerFormData) {
@@ -449,16 +500,22 @@ const columns: TableColumn<TravelerWithChildren>[] = [
             </UBadge>
           </div>
 
+          <UAlert
+            v-if="getOccupiedSeatsByBus(item.bus.id).length === 0"
+            icon="i-lucide-user-round-x"
+            color="warning"
+            variant="subtle"
+            title="Sin viajeros asignados a este camión."
+          />
           <UCard>
             <BusSeatMap
+              :bus-id="item.bus.id"
               :total-seats="item.bus.seatCount"
               :occupied-seats="getOccupiedSeatsByBus(item.bus.id)"
               :seats-per-row="4"
               :last-row-seats="getLastRowSeats(item.bus)"
-              @seat-selected="(travelerId) => {
-                const t = travelerStore.travelers.find(t => t.id === travelerId);
-                if (t) openEditModal(t);
-              }"
+              :bus-label="getBusLabel(item.bus.id)"
+              @empty-seat-selected="handleEmptySeatSelected"
             />
           </UCard>
         </div>
@@ -475,6 +532,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       <template #body>
         <TravelerForm
           :traveler="editingTraveler"
+          :initial-values="createTravelerInitialValues"
           :available-travels="[]"
           :available-buses="allBuses"
           :available-travelers="travelerStore.travelers"
