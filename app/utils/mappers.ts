@@ -22,7 +22,7 @@ import type {
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
 } from '~/types/quotation';
-import type { Travel, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
+import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
 import { normalizeBedConfigurations } from '~/utils/hotel-room-helpers';
@@ -139,6 +139,7 @@ export function mapTravelRowToDomain(
     itinerary?: TravelActivity[];
     services?: TravelService[];
     buses?: TravelBus[];
+    accommodations?: TravelAccommodation[];
   },
 ): Travel {
   return {
@@ -159,6 +160,7 @@ export function mapTravelRowToDomain(
     itinerary: extras?.itinerary ?? [],
     services: extras?.services ?? [],
     buses: extras?.buses ?? [],
+    accommodations: extras?.accommodations ?? [],
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -211,6 +213,20 @@ export function mapTravelServiceRowToDomain(row: Tables<'travel_services'>): Tra
   };
 }
 
+export function mapTravelAccommodationRowToDomain(row: Tables<'travel_accommodations'>): TravelAccommodation {
+  return {
+    id: row.id,
+    travelId: row.travel_id,
+    providerId: row.provider_id,
+    hotelRoomTypeId: row.hotel_room_type_id ?? undefined,
+    maxOccupancy: row.max_occupancy,
+    roomNumber: row.room_number ?? undefined,
+    floor: row.floor ?? undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
 export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at'> {
   return {
     destination: data.destination,
@@ -244,6 +260,7 @@ export function mapTravelerRowToDomain(row: Tables<'travelers'>): Traveler {
     boardingPoint: row.boarding_point,
     isRepresentative: row.is_representative,
     representativeId: row.representative_id ?? undefined,
+    travelAccommodationId: row.travel_accommodation_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -260,6 +277,7 @@ export function mapTravelerToInsert(data: TravelerFormData): Omit<Tables<'travel
     boarding_point: data.boardingPoint,
     is_representative: data.isRepresentative,
     representative_id: data.representativeId ?? null,
+    travel_accommodation_id: data.travelAccommodationId ?? null,
   };
 }
 

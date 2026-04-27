@@ -9,6 +9,7 @@ export type Traveler = {
   boardingPoint: string;
   isRepresentative: boolean;
   representativeId?: string;
+  travelAccommodationId?: string;
   createdAt: string;
   updatedAt: string;
 };
@@ -23,6 +24,7 @@ export type TravelerFilters = {
   travelId?: string;
   travelBusId?: string;
   representativeId?: string;
+  travelAccommodationId?: string;
 };
 
 export type TravelerWithChildren = Traveler & {

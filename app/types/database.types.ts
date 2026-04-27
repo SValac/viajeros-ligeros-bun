@@ -763,6 +763,64 @@ export type Database = {
           },
         ];
       };
+      travel_accommodations: {
+        Row: {
+          created_at: string;
+          floor: number | null;
+          hotel_room_type_id: string | null;
+          id: string;
+          max_occupancy: number;
+          provider_id: string;
+          room_number: string | null;
+          travel_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          floor?: number | null;
+          hotel_room_type_id?: string | null;
+          id?: string;
+          max_occupancy: number;
+          provider_id: string;
+          room_number?: string | null;
+          travel_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          floor?: number | null;
+          hotel_room_type_id?: string | null;
+          id?: string;
+          max_occupancy?: number;
+          provider_id?: string;
+          room_number?: string | null;
+          travel_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'travel_accommodations_hotel_room_type_id_fkey';
+            columns: ['hotel_room_type_id'];
+            isOneToOne: false;
+            referencedRelation: 'hotel_room_types';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'travel_accommodations_provider_id_fkey';
+            columns: ['provider_id'];
+            isOneToOne: false;
+            referencedRelation: 'providers';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'travel_accommodations_travel_id_fkey';
+            columns: ['travel_id'];
+            isOneToOne: false;
+            referencedRelation: 'travels';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       travel_buses: {
         Row: {
           brand: string | null;
@@ -971,6 +1029,7 @@ export type Database = {
           phone: string;
           representative_id: string | null;
           seat: number;
+          travel_accommodation_id: string | null;
           travel_bus_id: string | null;
           travel_id: string;
           updated_at: string;
@@ -985,6 +1044,7 @@ export type Database = {
           phone: string;
           representative_id?: string | null;
           seat: number;
+          travel_accommodation_id?: string | null;
           travel_bus_id?: string | null;
           travel_id: string;
           updated_at?: string;
@@ -999,6 +1059,7 @@ export type Database = {
           phone?: string;
           representative_id?: string | null;
           seat?: number;
+          travel_accommodation_id?: string | null;
           travel_bus_id?: string | null;
           travel_id?: string;
           updated_at?: string;
@@ -1009,6 +1070,13 @@ export type Database = {
             columns: ['representative_id'];
             isOneToOne: false;
             referencedRelation: 'travelers';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'travelers_travel_accommodation_id_fkey';
+            columns: ['travel_accommodation_id'];
+            isOneToOne: false;
+            referencedRelation: 'travel_accommodations';
             referencedColumns: ['id'];
           },
           {
