@@ -716,6 +716,22 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     return true;
   }
 
+  function updateLocalAccommodations(
+    travelId: string,
+    deletedIds: Set<string>,
+    added: TravelAccommodation[],
+  ): void {
+    const index = travels.value.findIndex(t => t.id === travelId);
+    if (index === -1)
+      return;
+    const existing = travels.value[index]?.accommodations ?? [];
+    const kept = existing.filter(a => !deletedIds.has(a.id));
+    travels.value[index] = {
+      ...travels.value[index]!,
+      accommodations: [...kept, ...added],
+    };
+  }
+
   return {
     // State
     travels,
@@ -738,5 +754,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     updateTravelBus,
     removeBusFromTravel,
     updateTravelAccommodation,
+    updateLocalAccommodations,
   };
 });

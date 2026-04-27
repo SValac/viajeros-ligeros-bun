@@ -167,6 +167,15 @@ async function handleSubmit() {
     color: 'success',
   });
 
+  if (response.skippedOccupied > 0) {
+    toast.add({
+      title: `${response.skippedOccupied} habitación(es) ocupadas no pudieron eliminarse`,
+      description: 'Remueve los viajeros manualmente si deseas liberar esas habitaciones.',
+      color: 'warning',
+      duration: 8000,
+    });
+  }
+
   // Reiniciar form
   formState.quotationId = props.quotationId;
   formState.providerId = '';

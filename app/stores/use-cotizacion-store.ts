@@ -42,6 +42,7 @@ import {
   mapQuotationPublicPriceToInsert,
   mapQuotationRowToDomain,
   mapQuotationToInsert,
+  mapTravelAccommodationRowToDomain,
 } from '~/utils/mappers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
@@ -568,36 +569,141 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   // Helper interno — sincroniza habitaciones de cotización hacia travel_accommodations
-  async function _syncHospedajeToTravel(quotationId: string): Promise<void> {
+  async function _syncHospedajeToTravel(quotationId: string): Promise<{ skippedOccupied: number }> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
     if (!cotizacion || cotizacion.status === 'confirmed')
-      return;
+      return { skippedOccupied: 0 };
 
-    const accommodationsForTravel: TravelAccommodation[] = [];
+    const travelStore = useTravelsStore();
+    const travelId = cotizacion.travelId;
+
+    // Build desired state: group by providerId:hotelRoomTypeId -> list of desired room slots
+    type RoomSlot = { providerId: string; hotelRoomTypeId?: string; maxOccupancy: number };
+    type DesiredGroup = { key: string; slots: RoomSlot[] };
+    const desiredGroupMap = new Map<string, DesiredGroup>();
 
     for (const hospedaje of hospedajesQuotation.value.filter(h => h.quotationId === quotationId)) {
       for (const detalle of hospedaje.details) {
+        const key = `${hospedaje.providerId}:${detalle.roomTypeId ?? ''}`;
+        if (!desiredGroupMap.has(key)) {
+          desiredGroupMap.set(key, { key, slots: [] });
+        }
         for (let i = 0; i < detalle.quantity; i++) {
-          accommodationsForTravel.push({
-            id: `quotation-accommodation-${hospedaje.id}-${detalle.roomTypeId}-${i}`,
-            travelId: cotizacion.travelId,
+          desiredGroupMap.get(key)!.slots.push({
             providerId: hospedaje.providerId,
             hotelRoomTypeId: detalle.roomTypeId,
             maxOccupancy: detalle.maxOccupancy,
-            roomNumber: undefined,
-            floor: undefined,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
           });
         }
       }
     }
 
-    const travelStore = useTravelsStore();
-    const updated = await travelStore.updateTravel(cotizacion.travelId, { accommodations: accommodationsForTravel });
-    if (!updated) {
-      throw new Error('No se pudo sincronizar habitaciones de cotización al viaje');
+    // Get existing rooms for this travel
+    const existingAccommodations = travelStore.getAccommodationsByTravel(travelId);
+
+    // Get occupied room IDs from DB (travelers with a room in this travel)
+    const { data: occupiedRows } = await supabase
+      .from('travelers')
+      .select('travel_accommodation_id')
+      .eq('travel_id', travelId)
+      .not('travel_accommodation_id', 'is', null);
+
+    const occupiedIds = new Set<string>(
+      (occupiedRows ?? []).map(r => r.travel_accommodation_id!),
+    );
+
+    // Group existing rooms by key
+    const existingGroupMap = new Map<string, typeof existingAccommodations>();
+    for (const acc of existingAccommodations) {
+      const key = `${acc.providerId}:${acc.hotelRoomTypeId ?? ''}`;
+      if (!existingGroupMap.has(key)) {
+        existingGroupMap.set(key, []);
+      }
+      existingGroupMap.get(key)!.push(acc);
     }
+
+    const toDeleteIds: string[] = [];
+    const toInsert: RoomSlot[] = [];
+    let skippedOccupied = 0;
+
+    // For each desired group, reconcile against existing
+    for (const [key, desired] of desiredGroupMap) {
+      const existing = existingGroupMap.get(key) ?? [];
+      const desiredCount = desired.slots.length;
+      const existingCount = existing.length;
+
+      if (desiredCount > existingCount) {
+        // Need to add more rooms
+        const toAdd = desiredCount - existingCount;
+        for (let i = 0; i < toAdd; i++) {
+          toInsert.push(desired.slots[0]!);
+        }
+      }
+      else if (desiredCount < existingCount) {
+        // Need to remove excess rooms — only remove unoccupied ones, from the end
+        const excess = existingCount - desiredCount;
+        let removed = 0;
+        for (let i = existing.length - 1; i >= 0 && removed < excess; i--) {
+          const acc = existing[i]!;
+          if (!occupiedIds.has(acc.id)) {
+            toDeleteIds.push(acc.id);
+            removed++;
+          }
+          else {
+            skippedOccupied++;
+          }
+        }
+      }
+      // else: counts match — nothing to do for this group
+    }
+
+    // Remove existing groups not present in desired state (only unoccupied ones)
+    for (const [key, existing] of existingGroupMap) {
+      if (!desiredGroupMap.has(key)) {
+        for (const acc of existing) {
+          if (!occupiedIds.has(acc.id)) {
+            toDeleteIds.push(acc.id);
+          }
+          else {
+            skippedOccupied++;
+          }
+        }
+      }
+    }
+
+    // Execute DB changes
+    if (toDeleteIds.length > 0) {
+      const { error: delErr } = await supabase
+        .from('travel_accommodations')
+        .delete()
+        .in('id', toDeleteIds);
+      if (delErr)
+        throw new Error(`No se pudo eliminar habitaciones: ${delErr.message}`);
+    }
+
+    let inserted: TravelAccommodation[] = [];
+    if (toInsert.length > 0) {
+      const { data: newRows, error: insErr } = await supabase
+        .from('travel_accommodations')
+        .insert(
+          toInsert.map(slot => ({
+            travel_id: travelId,
+            provider_id: slot.providerId,
+            hotel_room_type_id: slot.hotelRoomTypeId ?? null,
+            max_occupancy: slot.maxOccupancy,
+            room_number: null,
+            floor: null,
+          })),
+        )
+        .select();
+      if (insErr)
+        throw new Error(`No se pudo insertar habitaciones: ${insErr.message}`);
+      inserted = (newRows ?? []).map(mapTravelAccommodationRowToDomain);
+    }
+
+    // Update local state without nuking occupied assignments
+    travelStore.updateLocalAccommodations(travelId, new Set(toDeleteIds), inserted);
+    return { skippedOccupied };
   }
 
   // Actions
@@ -1191,7 +1297,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Hospedaje Actions
   // ============================================================================
 
-  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
+  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<(QuotationAccommodation & { skippedOccupied: number }) | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
@@ -1247,8 +1353,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const newHospedaje = mapQuotationAccommodationRowToDomain(accRow, details);
       hospedajesQuotation.value.push(newHospedaje);
       await _syncPrecioToTravel(data.quotationId);
-      await _syncHospedajeToTravel(data.quotationId);
-      return newHospedaje;
+      const addSyncResult = await _syncHospedajeToTravel(data.quotationId);
+      return { ...newHospedaje, skippedOccupied: addSyncResult.skippedOccupied };
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1262,7 +1368,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function updateHospedajeQuotation(
     id: string,
     data: Partial<QuotationAccommodationFormData>,
-  ): Promise<QuotationAccommodation | undefined> {
+  ): Promise<(QuotationAccommodation & { skippedOccupied: number }) | undefined> {
     const index = hospedajesQuotation.value.findIndex(h => h.id === id);
     if (index === -1)
       return undefined;
@@ -1336,8 +1442,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const updated = mapQuotationAccommodationRowToDomain(updatedRow, details);
       hospedajesQuotation.value[index] = updated;
       await _syncPrecioToTravel(existing.quotationId);
-      await _syncHospedajeToTravel(existing.quotationId);
-      return updated;
+      const updateSyncResult = await _syncHospedajeToTravel(existing.quotationId);
+      return { ...updated, skippedOccupied: updateSyncResult.skippedOccupied };
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1348,14 +1454,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
   }
 
-  async function deleteHospedajeQuotation(id: string): Promise<void> {
+  async function deleteHospedajeQuotation(id: string): Promise<number> {
     const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
-      return;
+      return 0;
 
     const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
     if (cotizacion?.status === 'confirmed')
-      return;
+      return 0;
 
     const quotationId = hospedaje.quotationId;
     loading.value = true;
@@ -1371,10 +1477,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
       await _syncPrecioToTravel(quotationId);
-      await _syncHospedajeToTravel(quotationId);
+      const deleteSyncResult = await _syncHospedajeToTravel(quotationId);
+      return deleteSyncResult.skippedOccupied;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return 0;
     }
     finally {
       loading.value = false;
