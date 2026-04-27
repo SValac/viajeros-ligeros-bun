@@ -545,24 +545,24 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    accessorKey: 'asiento',
+    accessorKey: 'seat',
     header: 'Asiento',
     cell: ({ row }) => {
       return h(
         'span',
         { class: 'font-mono text-sm' },
-        row.getValue('asiento'),
+        row.getValue('seat'),
       );
     },
   },
   {
-    accessorKey: 'puntoAbordaje',
+    accessorKey: 'boardingPoint',
     header: 'Punto de abordaje',
     cell: ({ row }) => {
       return h(
         'span',
         { class: 'text-sm text-gray-600 dark:text-gray-300' },
-        row.getValue('puntoAbordaje'),
+        row.getValue('boardingPoint'),
       );
     },
   },
