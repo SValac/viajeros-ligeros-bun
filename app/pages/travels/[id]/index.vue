@@ -155,6 +155,13 @@ definePageMeta({
             @click="router.push({ name: 'travel-travelers', params: { id: travel.id } })"
           />
           <UButton
+            icon="i-lucide-bed-double"
+            label="Habitaciones"
+            variant="outline"
+            color="neutral"
+            @click="router.push({ name: 'travel-habitaciones', params: { id: travel.id } })"
+          />
+          <UButton
             icon="i-lucide-credit-card"
             label="Ver Pagos"
             variant="outline"

@@ -41,6 +41,18 @@ export type TravelService = {
   providerId?: string;
 };
 
+export type TravelAccommodation = {
+  id: string;
+  travelId: string;
+  providerId: string;
+  hotelRoomTypeId?: string;
+  maxOccupancy: number;
+  roomNumber?: string;
+  floor?: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Travel = {
   id: string;
   destination: string;
@@ -54,6 +66,7 @@ export type Travel = {
   itinerary: TravelActivity[];
   services: TravelService[];
   buses: TravelBus[];
+  accommodations: TravelAccommodation[];
   internalNotes?: string;
   totalOperationCost?: number;
   minimumSeats?: number;
@@ -63,7 +76,7 @@ export type Travel = {
   updatedAt: string;
 };
 
-export type TravelFormData = Omit<Travel, 'id' | 'createdAt' | 'updatedAt'> & {
+export type TravelFormData = Omit<Travel, 'id' | 'createdAt' | 'updatedAt' | 'accommodations'> & {
   id?: string;
 };
 

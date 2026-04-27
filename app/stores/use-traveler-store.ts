@@ -38,6 +38,12 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     };
   });
 
+  const getTravelersByAccommodation = computed(() => {
+    return (travelAccommodationId: string): Traveler[] => {
+      return travelers.value.filter(t => t.travelAccommodationId === travelAccommodationId);
+    };
+  });
+
   const getGroupMembers = computed(() => {
     return (representativeId: string): Traveler[] => {
       return travelers.value.filter(t => t.representativeId === representativeId);
@@ -228,6 +234,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
         update.is_representative = data.isRepresentative;
       if (data.representativeId !== undefined)
         update.representative_id = data.representativeId ?? null;
+      if ('travelAccommodationId' in data)
+        update.travel_accommodation_id = data.travelAccommodationId ?? null;
 
       const { data: row, error: err } = await supabase
         .from('travelers')
@@ -347,10 +355,67 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  async function assignTravelerToRoom(travelerId: string, travelAccommodationId: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('travelers')
+        .update({ travel_accommodation_id: travelAccommodationId })
+        .eq('id', travelerId)
+        .select()
+        .single();
+
+      if (err)
+        throw err;
+
+      const traveler = mapTravelerRowToDomain(row);
+      const index = travelers.value.findIndex(t => t.id === travelerId);
+      if (index !== -1) {
+        travelers.value[index] = traveler;
+      }
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function removeTravelerFromRoom(travelerId: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const { data: row, error: err } = await supabase
+        .from('travelers')
+        .update({ travel_accommodation_id: null })
+        .eq('id', travelerId)
+        .select()
+        .single();
+
+      if (err)
+        throw err;
+
+      const traveler = mapTravelerRowToDomain(row);
+      const index = travelers.value.findIndex(t => t.id === travelerId);
+      if (index !== -1) {
+        travelers.value[index] = traveler;
+      }
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
   function setFilters(newFilters: TravelerFilters): void {
     filters.value = { ...newFilters };
   }
-
   function clearFilters(): void {
     filters.value = {};
   }
@@ -367,6 +432,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     getTravelerById,
     getTravelersByTravel,
     getTravelersByBus,
+    getTravelersByAccommodation,
     getGroupMembers,
     filteredTravelers,
     filteredGroupedTravelers,
@@ -377,6 +443,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     updateTraveler,
     deleteTraveler,
     changeTravelerSeat,
+    assignTravelerToRoom,
+    removeTravelerFromRoom,
     setFilters,
     clearFilters,
   };

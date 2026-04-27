@@ -78,6 +78,7 @@ const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t
 const isSeatChangeModeActive = computed(() => seatChangeContext.value !== null);
 
 const allBuses = computed(() => travel.value?.buses ?? []);
+const allAccommodations = computed(() => travelStore.getAccommodationsByTravel(travelId.value));
 const tabs = computed(() => [
   {
     label: 'Todos los viajeros',
@@ -171,6 +172,16 @@ const filters = computed({
   get: () => travelerStore.filters,
   set: val => travelerStore.setFilters({ ...val, travelId: travelId.value }),
 });
+
+function getAccommodationLabel(travelAccommodationId?: string): string {
+  if (!travelAccommodationId)
+    return '—';
+  const acc = allAccommodations.value.find(a => a.id === travelAccommodationId);
+  if (!acc)
+    return '—';
+  const provider = providerStore.getProviderById(acc.providerId)?.name ?? 'Hotel';
+  return acc.roomNumber ? `${provider} — Hab. ${acc.roomNumber}` : provider;
+}
 
 function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
@@ -457,6 +468,11 @@ function getRowActions(traveler: Traveler) {
         icon: 'i-lucide-arrow-left-right',
         onSelect: () => startSeatChange(traveler),
       },
+      {
+        label: traveler.travelAccommodationId ? 'Quitar habitación' : 'Asignar habitación',
+        icon: 'i-lucide-bed-double',
+        onSelect: () => router.push({ name: 'travel-habitaciones', params: { id: travelId.value } }),
+      },
     ],
     [
       {
@@ -514,6 +530,17 @@ const columns: TableColumn<TravelerWithChildren>[] = [
         'span',
         { class: 'text-sm text-gray-600 dark:text-gray-300' },
         getBusLabel(row.getValue('travelBusId')),
+      );
+    },
+  },
+  {
+    accessorKey: 'travelAccommodationId',
+    header: 'Habitación',
+    cell: ({ row }) => {
+      return h(
+        'span',
+        { class: 'text-sm text-gray-600 dark:text-gray-300' },
+        getAccommodationLabel(row.getValue('travelAccommodationId')),
       );
     },
   },

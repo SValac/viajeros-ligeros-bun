@@ -280,17 +280,34 @@ async function guardarEdicion() {
     color: 'success',
   });
 
+  if (updated.skippedOccupied > 0) {
+    toast.add({
+      title: `${updated.skippedOccupied} habitación(es) ocupadas no pudieron eliminarse`,
+      description: 'Remueve los viajeros manualmente si deseas liberar esas habitaciones.',
+      color: 'warning',
+      duration: 8000,
+    });
+  }
+
   isEditModalOpen.value = false;
   editingHospedaje.value = null;
 }
 
 // Eliminar hospedaje
 async function eliminarHospedaje(id: string) {
-  await cotizacionStore.deleteHospedajeQuotation(id);
+  const skippedOccupied = await cotizacionStore.deleteHospedajeQuotation(id);
   toast.add({
     title: 'Hospedaje eliminado',
     color: 'success',
   });
+  if (skippedOccupied > 0) {
+    toast.add({
+      title: `${skippedOccupied} habitación(es) ocupadas no pudieron eliminarse`,
+      description: 'Remueve los viajeros manualmente si deseas liberar esas habitaciones.',
+      color: 'warning',
+      duration: 8000,
+    });
+  }
 }
 </script>
 
