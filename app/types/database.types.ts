@@ -832,6 +832,7 @@ export type Database = {
           operator2_name: string | null
           operator2_phone: string | null
           provider_id: string
+          quotation_bus_id: string | null
           rental_price: number
           seat_count: number
           travel_id: string
@@ -847,6 +848,7 @@ export type Database = {
           operator2_name?: string | null
           operator2_phone?: string | null
           provider_id: string
+          quotation_bus_id?: string | null
           rental_price: number
           seat_count: number
           travel_id: string
@@ -862,6 +864,7 @@ export type Database = {
           operator2_name?: string | null
           operator2_phone?: string | null
           provider_id?: string
+          quotation_bus_id?: string | null
           rental_price?: number
           seat_count?: number
           travel_id?: string
@@ -880,6 +883,13 @@ export type Database = {
             columns: ["provider_id"]
             isOneToOne: false
             referencedRelation: "providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travel_buses_quotation_bus_id_fkey"
+            columns: ["quotation_bus_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_buses"
             referencedColumns: ["id"]
           },
           {
