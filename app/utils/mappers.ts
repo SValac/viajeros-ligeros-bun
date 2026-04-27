@@ -190,6 +190,7 @@ export function mapTravelBusRowToDomain(row: Tables<'travel_buses'>): TravelBus 
   return {
     id: row.id,
     busId: row.bus_id ?? undefined,
+    quotationBusId: row.quotation_bus_id ?? undefined,
     providerId: row.provider_id,
     model: row.model ?? undefined,
     brand: row.brand ?? undefined,

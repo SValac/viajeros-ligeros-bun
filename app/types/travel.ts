@@ -20,6 +20,7 @@ export type TravelActivity = {
 export type TravelBus = {
   id: string;
   busId?: string;
+  quotationBusId?: string;
   providerId: string;
   model?: string;
   brand?: string;
