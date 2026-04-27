@@ -1,5 +1,5 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { Travel, TravelActivity, TravelBus, TravelFormData, TravelService, TravelStatus, TravelUpdateData } from '~/types/travel';
+import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService, TravelStatus, TravelUpdateData } from '~/types/travel';
 
 type TravelStats = {
   total: number;
@@ -34,6 +34,12 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   const getTravelsByStatus = computed(() => {
     return (status: TravelStatus): Travel[] => {
       return travels.value.filter(travel => travel.status === status);
+    };
+  });
+
+  const getAccommodationsByTravel = computed(() => {
+    return (travelId: string): TravelAccommodation[] => {
+      return travels.value.find(t => t.id === travelId)?.accommodations ?? [];
     };
   });
 
@@ -91,7 +97,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     try {
       const { data, error: err } = await supabase
         .from('travels')
-        .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_coordinators(coordinator_id)')
+        .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id)')
         .order('created_at', { ascending: false });
 
       if (err)
@@ -105,11 +111,12 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
         const services: TravelService[] = (row.travel_services ?? []).map(mapTravelServiceRowToDomain);
         const buses: TravelBus[] = (row.travel_buses ?? []).map(mapTravelBusRowToDomain);
+        const accommodations: TravelAccommodation[] = (row.travel_accommodations ?? []).map(mapTravelAccommodationRowToDomain);
         const coordinatorIds: string[] = (row.travel_coordinators ?? []).map(
           (tc: { coordinator_id: string }) => tc.coordinator_id,
         );
 
-        return mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses });
+        return mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations });
       });
     }
     catch (e) {
@@ -224,6 +231,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       itinerary: insertedActivities,
       services: insertedServices,
       buses: insertedBuses,
+      accommodations: [],
     });
 
     travels.value.push(newTravel);
@@ -383,6 +391,36 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       }
     }
 
+    let accommodations = travels.value[index]?.accommodations ?? [];
+    if (data.accommodations !== undefined) {
+      await supabase.from('travel_accommodations').delete().eq('travel_id', id);
+
+      if (data.accommodations.length > 0) {
+        const { data: accRows, error: accErr } = await supabase
+          .from('travel_accommodations')
+          .insert(
+            data.accommodations.map(a => ({
+              travel_id: id,
+              provider_id: a.providerId,
+              hotel_room_type_id: a.hotelRoomTypeId ?? null,
+              max_occupancy: a.maxOccupancy,
+              room_number: a.roomNumber ?? null,
+              floor: a.floor ?? null,
+            })),
+          )
+          .select();
+
+        if (accErr) {
+          error.value = accErr.message;
+          return false;
+        }
+        accommodations = (accRows ?? []).map(mapTravelAccommodationRowToDomain);
+      }
+      else {
+        accommodations = [];
+      }
+    }
+
     let coordinatorIds = travels.value[index]?.coordinatorIds ?? [];
     if (data.coordinatorIds !== undefined) {
       await supabase.from('travel_coordinators').delete().eq('travel_id', id);
@@ -411,6 +449,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
           itinerary,
           services,
           buses,
+          accommodations,
         })
       : {
           ...existingTravel,
@@ -418,6 +457,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
           itinerary,
           services,
           buses,
+          accommodations,
         };
 
     error.value = null;
@@ -618,6 +658,64 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     return true;
   }
 
+  async function updateTravelAccommodation(
+    travelId: string,
+    accommodationId: string,
+    data: { roomNumber?: string | null; floor?: number | null },
+  ): Promise<boolean> {
+    const travelIndex = travels.value.findIndex(t => t.id === travelId);
+    if (travelIndex === -1) {
+      error.value = 'Viaje no encontrado';
+      return false;
+    }
+
+    const existingTravel = travels.value[travelIndex];
+    if (!existingTravel) {
+      error.value = 'Viaje no encontrado';
+      return false;
+    }
+
+    const accIndex = (existingTravel.accommodations ?? []).findIndex(a => a.id === accommodationId);
+    if (accIndex === -1) {
+      error.value = 'Habitación no encontrada en el viaje';
+      return false;
+    }
+
+    const update: TablesUpdate<'travel_accommodations'> = {};
+    if ('roomNumber' in data)
+      update.room_number = data.roomNumber ?? null;
+    if ('floor' in data)
+      update.floor = data.floor ?? null;
+
+    const { data: accRow, error: accErr } = await supabase
+      .from('travel_accommodations')
+      .update(update)
+      .eq('id', accommodationId)
+      .select()
+      .single();
+
+    if (accErr) {
+      error.value = accErr.message;
+      return false;
+    }
+
+    const updatedAcc = mapTravelAccommodationRowToDomain(accRow);
+    const currentAccommodations = existingTravel.accommodations ?? [];
+    const updatedAccommodations = [
+      ...currentAccommodations.slice(0, accIndex),
+      updatedAcc,
+      ...currentAccommodations.slice(accIndex + 1),
+    ];
+
+    travels.value[travelIndex] = {
+      ...existingTravel,
+      accommodations: updatedAccommodations,
+    };
+
+    error.value = null;
+    return true;
+  }
+
   return {
     // State
     travels,
@@ -627,6 +725,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     allTravels,
     getTravelById,
     getTravelsByStatus,
+    getAccommodationsByTravel,
     stats,
     totalRevenue,
     // Actions
@@ -638,5 +737,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     addBusToTravel,
     updateTravelBus,
     removeBusFromTravel,
+    updateTravelAccommodation,
   };
 });

@@ -21,7 +21,7 @@ import type {
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
 } from '~/types/quotation';
-import type { TravelBus } from '~/types/travel';
+import type { TravelAccommodation, TravelBus } from '~/types/travel';
 
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
@@ -564,6 +564,39 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     const updated = await travelStore.updateTravel(cotizacion.travelId, { buses: busesForTravel });
     if (!updated) {
       throw new Error('No se pudo sincronizar autobuses de cotización al viaje');
+    }
+  }
+
+  // Helper interno — sincroniza habitaciones de cotización hacia travel_accommodations
+  async function _syncHospedajeToTravel(quotationId: string): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    if (!cotizacion || cotizacion.status === 'confirmed')
+      return;
+
+    const accommodationsForTravel: TravelAccommodation[] = [];
+
+    for (const hospedaje of hospedajesQuotation.value.filter(h => h.quotationId === quotationId)) {
+      for (const detalle of hospedaje.details) {
+        for (let i = 0; i < detalle.quantity; i++) {
+          accommodationsForTravel.push({
+            id: `quotation-accommodation-${hospedaje.id}-${detalle.roomTypeId}-${i}`,
+            travelId: cotizacion.travelId,
+            providerId: hospedaje.providerId,
+            hotelRoomTypeId: detalle.roomTypeId,
+            maxOccupancy: detalle.maxOccupancy,
+            roomNumber: undefined,
+            floor: undefined,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        }
+      }
+    }
+
+    const travelStore = useTravelsStore();
+    const updated = await travelStore.updateTravel(cotizacion.travelId, { accommodations: accommodationsForTravel });
+    if (!updated) {
+      throw new Error('No se pudo sincronizar habitaciones de cotización al viaje');
     }
   }
 
@@ -1214,6 +1247,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const newHospedaje = mapQuotationAccommodationRowToDomain(accRow, details);
       hospedajesQuotation.value.push(newHospedaje);
       await _syncPrecioToTravel(data.quotationId);
+      await _syncHospedajeToTravel(data.quotationId);
       return newHospedaje;
     }
     catch (e) {
@@ -1302,6 +1336,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const updated = mapQuotationAccommodationRowToDomain(updatedRow, details);
       hospedajesQuotation.value[index] = updated;
       await _syncPrecioToTravel(existing.quotationId);
+      await _syncHospedajeToTravel(existing.quotationId);
       return updated;
     }
     catch (e) {
@@ -1336,6 +1371,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
       await _syncPrecioToTravel(quotationId);
+      await _syncHospedajeToTravel(quotationId);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
