@@ -65,6 +65,51 @@ function getRoomTypeName(hotelRoomTypeId?: string): string | undefined {
   return undefined;
 }
 
+type OccupancyGroup = {
+  maxOccupancy: number;
+  accommodations: TravelAccommodation[];
+};
+
+function groupByOccupancy(accs: TravelAccommodation[]): OccupancyGroup[] {
+  const map = new Map<number, TravelAccommodation[]>();
+  for (const acc of accs) {
+    if (!map.has(acc.maxOccupancy))
+      map.set(acc.maxOccupancy, []);
+    map.get(acc.maxOccupancy)!.push(acc);
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a - b)
+    .map(([maxOccupancy, accommodations]) => ({ maxOccupancy, accommodations }));
+}
+
+// Tabs — one per hotel
+type HotelTab = {
+  label: string;
+  icon: string;
+  value: string;
+  slot: string;
+  group: AccommodationGroup;
+};
+
+const activeTabValue = shallowRef<string | number>('');
+
+const tabs = computed((): HotelTab[] =>
+  groupedAccommodations.value.map((group, index) => ({
+    label: group.providerName,
+    icon: 'i-lucide-hotel',
+    value: `hotel-${group.providerId}-${index}`,
+    slot: 'hotel',
+    group,
+  })),
+);
+
+watch(tabs, (availableTabs) => {
+  const hasCurrentTab = availableTabs.some(tab => tab.value === activeTabValue.value);
+  if (!hasCurrentTab) {
+    activeTabValue.value = availableTabs[0]?.value ?? '';
+  }
+}, { immediate: true });
+
 // Modal for adding traveler to a room
 const addingToAccommodation = shallowRef<TravelAccommodation | null>(null);
 const isAddModalOpen = shallowRef(false);
@@ -178,7 +223,7 @@ async function updateAccommodation(
         </UCard>
       </div>
 
-      <!-- No accommodations -->
+      <!-- Tabs por hotel -->
       <UCard v-if="accommodations.length === 0">
         <div class="text-center py-8 text-muted">
           <UIcon name="i-lucide-bed-double" class="size-10 mx-auto mb-2 opacity-40" />
@@ -189,39 +234,49 @@ async function updateAccommodation(
         </div>
       </UCard>
 
-      <!-- Grouped by hotel/provider -->
-      <div
-        v-for="group in groupedAccommodations"
-        :key="group.providerId"
-        class="space-y-3"
+      <UTabs
+        v-else
+        v-model="activeTabValue"
+        :items="tabs"
+        variant="link"
       >
-        <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-hotel" class="size-4 text-muted" />
-          <h2 class="font-semibold">
-            {{ group.providerName }}
-          </h2>
-          <UBadge
-            :label="`${group.accommodations.length} hab.`"
-            size="xs"
-            variant="subtle"
-            color="neutral"
-          />
-        </div>
+        <template #hotel="{ item }">
+          <div class="space-y-6">
+            <div
+              v-for="og in groupByOccupancy(item.group.accommodations)"
+              :key="og.maxOccupancy"
+              class="space-y-3"
+            >
+              <div class="flex items-center gap-2">
+                <UIcon name="i-lucide-users" class="size-4 text-muted" />
+                <h3 class="font-semibold text-sm">
+                  Capacidad - {{ og.maxOccupancy }} persona{{ og.maxOccupancy === 1 ? '' : 's' }}
+                </h3>
+                <UBadge
+                  :label="`${og.accommodations.length} hab.`"
+                  size="xs"
+                  variant="subtle"
+                  color="neutral"
+                />
+              </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          <TravelAccommodationCard
-            v-for="acc in group.accommodations"
-            :key="acc.id"
-            :accommodation="acc"
-            :occupants="travelerStore.getTravelersByAccommodation(acc.id)"
-            :provider-name="group.providerName"
-            :room-type-name="getRoomTypeName(acc.hotelRoomTypeId)"
-            @add-traveler="openAddTravelerModal"
-            @remove-traveler="removeTraveler"
-            @update="updateAccommodation"
-          />
-        </div>
-      </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <TravelAccommodationCard
+                  v-for="acc in og.accommodations"
+                  :key="acc.id"
+                  :accommodation="acc"
+                  :occupants="travelerStore.getTravelersByAccommodation(acc.id)"
+                  :provider-name="item.group.providerName"
+                  :room-type-name="getRoomTypeName(acc.hotelRoomTypeId)"
+                  @add-traveler="openAddTravelerModal"
+                  @remove-traveler="removeTraveler"
+                  @update="updateAccommodation"
+                />
+              </div>
+            </div>
+          </div>
+        </template>
+      </UTabs>
     </div>
 
     <!-- Add Traveler Modal -->
