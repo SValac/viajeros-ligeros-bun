@@ -1,9 +1,20 @@
 import type { TablesUpdate } from '~/types/database.types';
 import type { Provider, ProviderFormData, ProviderUpdateData } from '~/types/provider';
 
+/**
+ * Data access layer for the `providers` table.
+ * Each function performs a single Supabase operation and either returns domain data
+ * or throws — it never touches reactive state. Cache management is the store's
+  responsibility.
+ */
 export function useProviderRepository() {
   const supabase = useSupabase();
 
+  /**
+   * Fetches all providers ordered by name.
+   * @returns All provider records mapped to domain objects
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function fetchAll(): Promise<Provider[]> {
     const { data, error: err } = await supabase
       .from('providers')
@@ -14,6 +25,12 @@ export function useProviderRepository() {
 
     return data.map(mapProviderRowToDomain);
   };
+  /**
+   * Inserts a new provider.
+   * @param data The provider data to insert
+   * @returns The inserted provider mapped to a domain object
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function insert(data: ProviderFormData): Promise<Provider> {
     const { data: row, error } = await supabase
       .from('providers')
@@ -26,6 +43,14 @@ export function useProviderRepository() {
 
     return mapProviderRowToDomain(row);
   };
+
+  /**
+   * Updates an existing provider.
+   * @param id The ID of the provider to update
+   * @param data The provider data to update
+   * @returns The updated provider mapped to a domain object
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function update(id: string, data: Partial<ProviderUpdateData>): Promise<Provider> {
     const update: TablesUpdate<'providers'> = {};
     if (data.name !== undefined)
@@ -60,6 +85,11 @@ export function useProviderRepository() {
 
     return mapProviderRowToDomain(row);
   };
+  /**
+   * Deletes a provider.
+   * @param id The ID of the provider to delete
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function remove(id: string): Promise<void> {
     const { error } = await supabase
       .from('providers')
