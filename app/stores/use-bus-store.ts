@@ -1,12 +1,11 @@
 import { defineStore } from 'pinia';
 
 import type { Bus, BusFormData, BusUpdateData } from '~/types/bus';
-import type { TablesUpdate } from '~/types/database.types';
 
-import { mapBusRowToDomain, mapBusToInsert } from '~/utils/mappers';
+import { useBusRepository } from '~/composables/buses/use-bus-repository';
 
 export const useBusStore = defineStore('buses', () => {
-  const supabase = useSupabase();
+  const repository = useBusRepository();
 
   // State
   const buses = ref<Bus[]>([]);
@@ -38,13 +37,7 @@ export const useBusStore = defineStore('buses', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data, error: err } = await supabase
-        .from('buses')
-        .select('*')
-        .order('created_at');
-      if (err)
-        throw err;
-      buses.value = data.map(mapBusRowToDomain);
+      buses.value = await repository.fetchAll();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al cargar autobuses';
@@ -55,74 +48,57 @@ export const useBusStore = defineStore('buses', () => {
   }
 
   async function addBus(data: BusFormData): Promise<Bus> {
-    const { data: row, error: err } = await supabase
-      .from('buses')
-      .insert(mapBusToInsert(data))
-      .select()
-      .single();
-
-    if (err) {
-      error.value = err.message;
-      throw err;
-    }
-
-    const bus = mapBusRowToDomain(row);
-    buses.value.push(bus);
+    loading.value = true;
     error.value = null;
-    return bus;
+    try {
+      const bus = await repository.insert(data);
+      buses.value.push(bus);
+      return bus;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al crear autobús';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   async function updateBus(id: string, data: Partial<BusUpdateData>): Promise<boolean> {
-    const update: TablesUpdate<'buses'> = {};
-    if (data.providerId !== undefined)
-      update.provider_id = data.providerId;
-    if (data.active !== undefined)
-      update.active = data.active;
-    if (data.seatCount !== undefined)
-      update.seat_count = data.seatCount;
-    if (data.rentalPrice !== undefined)
-      update.rental_price = data.rentalPrice;
-    if ('brand' in data)
-      update.brand = data.brand ?? null;
-    if ('model' in data)
-      update.model = data.model ?? null;
-    if ('year' in data)
-      update.year = data.year ?? null;
-
-    const { data: row, error: err } = await supabase
-      .from('buses')
-      .update(update)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (err) {
-      error.value = err.message;
+    loading.value = true;
+    error.value = null;
+    try {
+      const bus = await repository.update(id, data);
+      const index = buses.value.findIndex(b => b.id === id);
+      if (index !== -1) {
+        buses.value[index] = bus;
+      }
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al actualizar autobús';
       return false;
     }
-
-    const index = buses.value.findIndex(b => b.id === id);
-    if (index !== -1) {
-      buses.value[index] = mapBusRowToDomain(row);
+    finally {
+      loading.value = false;
     }
-    error.value = null;
-    return true;
   }
 
   async function deleteBus(id: string): Promise<boolean> {
-    const { error: err } = await supabase
-      .from('buses')
-      .delete()
-      .eq('id', id);
-
-    if (err) {
-      error.value = err.message;
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.remove(id);
+      buses.value = buses.value.filter(b => b.id !== id);
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al eliminar autobús';
       return false;
     }
-
-    buses.value = buses.value.filter(b => b.id !== id);
-    error.value = null;
-    return true;
+    finally {
+      loading.value = false;
+    }
   }
 
   async function toggleBusStatus(id: string): Promise<boolean> {
