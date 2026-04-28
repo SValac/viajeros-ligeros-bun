@@ -1,4 +1,4 @@
-import type { Traveler, TravelerSeatChangeResult, TravelerWithChildren } from '~/types/traveler';
+import type { Traveler, TravelerFilters, TravelerSeatChangeResult, TravelerWithChildren } from '~/types/traveler';
 
 import { TravelerSeatChangeError } from '~/types/traveler';
 
@@ -77,4 +77,16 @@ export function groupTravelersByRepresentative(
   }
 
   return groupedTravelers;
+}
+
+export function filterTravelers(travelers: Traveler[], filters: TravelerFilters): Traveler[] {
+  return travelers.filter((t) => {
+    if (filters.travelId && t.travelId !== filters.travelId) {
+      return false;
+    }
+    if (filters.travelBusId && t.travelBusId !== filters.travelBusId) {
+      return false;
+    }
+    return true;
+  });
 }
