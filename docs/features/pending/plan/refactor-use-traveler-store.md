@@ -6,7 +6,7 @@ la lógica de dominio pura va a un composable dedicado; el acceso a Supabase va 
 un composable repositorio. Sin cambios en la API pública del store ni en las páginas.
 
 **Patrón elegido:** Repository + Domain composables  
-**Estado:** Fase 1 completada · Fase 2 pendiente
+**Estado:** Fase 1 completada · Fase 2 completada · Fase 3 completada ✅
 
 ---
 
@@ -63,7 +63,7 @@ efectos secundarios.
 
 ---
 
-## Fase 2 — Extraer acceso a Supabase al repositorio
+## ~~Fase 2 — Extraer acceso a Supabase al repositorio~~ ✅ COMPLETADA
 
 > **Alcance:** Crear `use-traveler-repository.ts` y delegarle todas las queries/mutaciones
 > desde el store. El store pasa a ser orquestador puro de estado.  
@@ -126,7 +126,7 @@ y lanza el error tal cual (el store decide cómo manejarlo).
 
 ---
 
-## Fase 3 — Limpieza final y documentación interna
+## ~~Fase 3 — Limpieza final y documentación interna~~ ✅ COMPLETADA
 
 > **Alcance:** Revisión de código muerto, consistencia de nombres y actualización
 > de comentarios/tipos internos. Sin cambios funcionales.  
