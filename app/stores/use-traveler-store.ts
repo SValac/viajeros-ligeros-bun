@@ -1,6 +1,7 @@
 import type { TablesUpdate } from '~/types/database.types';
 import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeResult, TravelerUpdateData, TravelerWithChildren } from '~/types/traveler';
 
+import { groupTravelersByRepresentative, isTravelerSeatChangeResult, toTravelerSeatChangeError } from '~/composables/travelers/use-traveler-domain';
 import { TravelerSeatChangeError } from '~/types/traveler';
 import { mapTravelerRowToDomain, mapTravelerToInsert } from '~/utils/mappers';
 
@@ -63,81 +64,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   });
 
   const filteredGroupedTravelers = computed((): TravelerWithChildren[] => {
-    // Base: viajeros ya filtrados por travelId y travelBusId
-    const base = filteredTravelers.value;
-
-    // Si hay filtro de representante, retorna solo ese representante con sus acompañantes
-    if (filters.value.representativeId) {
-      const rep = base.find(t => t.id === filters.value.representativeId);
-      if (!rep)
-        return [];
-      const children = base.filter(t => t.representativeId === rep.id);
-      return [{ ...rep, children: children.length > 0 ? children : undefined }];
-    }
-
-    // Agrupar: separar acompañantes (tienen representativeId) de los demás
-    const grouped = Object.groupBy(base, t => t.representativeId ?? '');
-    const acompañantesIds = new Set(
-      base.filter(t => t.representativeId).map(t => t.id),
-    );
-
-    const result: TravelerWithChildren[] = [];
-
-    for (const t of base) {
-      // Si este viajero es acompañante de alguien, se incluye como child — no como fila raíz
-      if (acompañantesIds.has(t.id))
-        continue;
-
-      const children = grouped[t.id];
-      result.push({
-        ...t,
-        children: children && children.length > 0 ? children : undefined,
-      });
-    }
-
-    return result;
+    return groupTravelersByRepresentative(filteredTravelers.value, filters.value.representativeId);
   });
-
-  function isTravelerSeatChangeResult(data: unknown): data is TravelerSeatChangeResult {
-    if (!data || typeof data !== 'object') {
-      return false;
-    }
-
-    const payload = data as Partial<TravelerSeatChangeResult>;
-    return (payload.operation === 'moved' || payload.operation === 'swapped')
-      && typeof payload.travelId === 'string'
-      && typeof payload.sourceTravelerId === 'string'
-      && (typeof payload.targetTravelerId === 'string' || payload.targetTravelerId === null)
-      && typeof payload.sourceSeat === 'number'
-      && typeof payload.targetSeat === 'number'
-      && Array.isArray(payload.travelers);
-  }
-
-  function toTravelerSeatChangeError(error: unknown): TravelerSeatChangeError {
-    const message = (error as { message?: string } | null)?.message;
-
-    if (message === 'invalid_travel_bus') {
-      return new TravelerSeatChangeError('invalid-travel-bus', 'Camión inválido para realizar el cambio de asiento.', { cause: error });
-    }
-
-    if (message === 'invalid_target_seat') {
-      return new TravelerSeatChangeError('invalid-target-seat', 'El asiento destino es inválido.', { cause: error });
-    }
-
-    if (message === 'traveler_not_found') {
-      return new TravelerSeatChangeError('traveler-not-found', 'No se encontró al viajero para cambiar de asiento.', { cause: error });
-    }
-
-    if (message === 'same_seat_selected') {
-      return new TravelerSeatChangeError('same-seat-selected', 'Debes seleccionar un asiento diferente al actual.', { cause: error });
-    }
-
-    if (message === 'seat_conflict') {
-      return new TravelerSeatChangeError('seat-conflict', 'El asiento destino cambió durante la operación. Intenta de nuevo.', { cause: error });
-    }
-
-    return new TravelerSeatChangeError('unknown-error', 'No se pudo cambiar el asiento del viajero.', { cause: error });
-  }
 
   // Actions
   async function fetchAll(): Promise<void> {
