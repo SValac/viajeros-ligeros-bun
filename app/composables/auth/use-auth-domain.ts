@@ -1,3 +1,8 @@
+/**
+ * Maps a raw Supabase sign-in error to a user-facing Spanish message.
+ * @param error - Raw error thrown by the auth adapter (AuthError or unknown)
+ * @returns A user-facing error message string
+ */
 export function getSignInErrorMessage(error: unknown): string {
   if (!error || typeof error !== 'object' || !('message' in error))
     return 'No pudimos iniciar sesión. Intenta de nuevo.';
@@ -13,6 +18,11 @@ export function getSignInErrorMessage(error: unknown): string {
   return String((error as { message?: string }).message) || 'No pudimos iniciar sesión. Intenta de nuevo.';
 }
 
+/**
+ * Maps a raw Supabase sign-up error to a user-facing Spanish message.
+ * @param error - Raw error thrown by the auth adapter (AuthError or unknown)
+ * @returns A user-facing error message string
+ */
 export function getSignUpErrorMessage(error: unknown): string {
   if (!error || typeof error !== 'object' || !('message' in error))
     return 'No pudimos crear tu cuenta. Intenta de nuevo.';

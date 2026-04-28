@@ -3,6 +3,12 @@ import type { Session, User } from '@supabase/supabase-js';
 import { useAuthAdapter } from '~/composables/auth/use-auth-adapter';
 import { getSignInErrorMessage, getSignUpErrorMessage } from '~/composables/auth/use-auth-domain';
 
+/**
+ * Global authentication state manager.
+ * Delegates all Supabase Auth I/O to `useAuthAdapter` and error mapping to `use-auth-domain`.
+ * Returns result objects (`{ error }`) instead of throwing so the UI can handle errors inline.
+ * @returns Store state, getters and actions
+ */
 export const useAuthStore = defineStore('useAuthStore', () => {
   const adapter = useAuthAdapter();
 
@@ -15,6 +21,11 @@ export const useAuthStore = defineStore('useAuthStore', () => {
   const userEmail = computed(() => user.value?.email || '');
   const avatarUrl = computed(() => user.value?.user_metadata?.avatar_url || '');
 
+  /**
+   * Loads the current Supabase session into the store on app mount.
+   * Failures are caught and returned as `{ error }` so the caller can decide how to react.
+   * @returns `{ error: null }` on success or `{ error }` with the raw error on failure
+   */
   async function fetchSession() {
     try {
       const { session: s, user: u } = await adapter.getSession();
@@ -30,6 +41,12 @@ export const useAuthStore = defineStore('useAuthStore', () => {
     }
   }
 
+  /**
+   * Signs in a user with email and password and updates session state.
+   * @param email - User's email address
+   * @param password - User's password
+   * @returns `{ error: null }` on success or `{ error: string }` with a user-facing message on failure
+   */
   async function signIn(email: string, password: string): Promise<{ error: string | null }> {
     loading.value = true;
     try {
@@ -46,6 +63,13 @@ export const useAuthStore = defineStore('useAuthStore', () => {
     }
   }
 
+  /**
+   * Registers a new user and updates session state if auto-confirmation is enabled.
+   * @param email - New user's email address
+   * @param password - New user's password
+   * @param name - Optional display name stored in user metadata
+   * @returns `{ error: null, requiresEmailVerification }` on success or `{ error: string }` on failure
+   */
   async function signUp(
     email: string,
     password: string,
@@ -66,6 +90,10 @@ export const useAuthStore = defineStore('useAuthStore', () => {
     }
   }
 
+  /**
+   * Signs out the current user and clears all session state.
+   * Always clears local state even if the Supabase call fails.
+   */
   async function signOut() {
     loading.value = true;
     try {
