@@ -4,6 +4,12 @@ import type { Bus, BusFormData, BusUpdateData } from '~/types/bus';
 
 import { useBusRepository } from '~/composables/buses/use-bus-repository';
 
+/**
+ * Global cache and orchestrator for bus data.
+ * Delegates all Supabase I/O to `useBusRepository`.
+ * Owns the reactive `buses` array — no other layer mutates it.
+ * @returns Store state, getters and actions
+ */
 export const useBusStore = defineStore('buses', () => {
   const repository = useBusRepository();
 
@@ -33,6 +39,10 @@ export const useBusStore = defineStore('buses', () => {
   const totalBuses = computed(() => buses.value.filter(b => b.active).length);
 
   // Actions
+  /**
+   * Loads all buses from the repository into the cache.
+   * Errors are stored in `error` state — they do not propagate to the caller.
+   */
   async function fetchAll(): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -47,6 +57,12 @@ export const useBusStore = defineStore('buses', () => {
     }
   }
 
+  /**
+   * Creates a new bus and appends it to the cache.
+   * @param data - Form data for the new bus
+   * @returns The created bus
+   * @throws Re-throws repository errors so the caller can react (e.g. show a toast)
+   */
   async function addBus(data: BusFormData): Promise<Bus> {
     loading.value = true;
     error.value = null;
@@ -64,6 +80,12 @@ export const useBusStore = defineStore('buses', () => {
     }
   }
 
+  /**
+   * Updates a bus and patches the cache entry by index for minimal re-renders.
+   * @param id - UUID of the bus to update
+   * @param data - Partial update data
+   * @returns `true` on success, `false` on failure (error is stored in `error` state)
+   */
   async function updateBus(id: string, data: Partial<BusUpdateData>): Promise<boolean> {
     loading.value = true;
     error.value = null;
@@ -84,6 +106,11 @@ export const useBusStore = defineStore('buses', () => {
     }
   }
 
+  /**
+   * Removes a bus from the repository and from the cache.
+   * @param id - UUID of the bus to delete
+   * @returns `true` on success, `false` on failure (error is stored in `error` state)
+   */
   async function deleteBus(id: string): Promise<boolean> {
     loading.value = true;
     error.value = null;
@@ -101,6 +128,11 @@ export const useBusStore = defineStore('buses', () => {
     }
   }
 
+  /**
+   * Toggles the `active` flag of a bus.
+   * @param id - UUID of the bus to toggle
+   * @returns `true` on success, `false` if the bus is not found or on repository failure
+   */
   async function toggleBusStatus(id: string): Promise<boolean> {
     const bus = getBusById.value(id);
     if (!bus) {

@@ -1,9 +1,20 @@
 import type { Bus, BusFormData, BusUpdateData } from '~/types/bus';
 import type { TablesUpdate } from '~/types/database.types';
 
+/**
+ * Data access layer for the `buses` table.
+ * Each function performs a single Supabase operation and either returns domain data
+ * or throws — it never touches reactive state. Cache management is the store's responsibility.
+ * @returns Object with all repository methods
+ */
 export function useBusRepository() {
   const supabase = useSupabase();
 
+  /**
+   * Fetches all buses ordered by creation date ascending.
+   * @returns All bus records mapped to domain objects
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function fetchAll(): Promise<Bus[]> {
     const { data, error } = await supabase
       .from('buses')
@@ -14,6 +25,12 @@ export function useBusRepository() {
 
     return data.map(mapBusRowToDomain);
   };
+  /**
+   * Inserts a new bus record.
+   * @param data - Form data for the new bus
+   * @returns The created bus mapped to a domain object
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function insert(data: BusFormData): Promise<Bus> {
     const { data: row, error } = await supabase
       .from('buses')
@@ -26,6 +43,14 @@ export function useBusRepository() {
 
     return mapBusRowToDomain(row);
   };
+  /**
+   * Updates an existing bus. Only fields present in `data` are sent to Supabase
+   * (camelCase keys are translated to snake_case here, not in the store).
+   * @param id - UUID of the bus to update
+   * @param data - Partial update data; omitted fields are left unchanged
+   * @returns The updated bus mapped to a domain object
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function update(id: string, data: Partial<BusUpdateData>): Promise<Bus> {
     const update: TablesUpdate<'buses'> = {};
     if (data.providerId !== undefined)
@@ -55,6 +80,11 @@ export function useBusRepository() {
     }
     return mapBusRowToDomain(row);
   };
+  /**
+   * Deletes a bus record by ID.
+   * @param id - UUID of the bus to delete
+   * @throws {PostgrestError} on Supabase failure
+   */
   async function remove(id: string): Promise<void> {
     const { error } = await supabase
       .from('buses')
