@@ -9,6 +9,8 @@ export function useAuthAdapter() {
 
   /**
    * Retrieves the current session from Supabase.
+   * Errors here are infrastructure failures (e.g. network), not user-facing errors —
+   * the store logs them to console and clears the local session instead of showing a message.
    * @returns Current session and user, or `null` values when no session exists
    * @throws {AuthError} on Supabase failure
    */

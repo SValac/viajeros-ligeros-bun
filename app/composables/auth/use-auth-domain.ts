@@ -1,7 +1,9 @@
 /**
  * Maps a raw Supabase sign-in error to a user-facing Spanish message.
+ * Covers known Supabase Auth error codes; falls back to the raw `message` field
+ * for unrecognized errors so no detail is silently swallowed.
  * @param error - Raw error thrown by the auth adapter (AuthError or unknown)
- * @returns A user-facing error message string
+ * @returns Spanish message safe to display directly in the UI
  */
 export function getSignInErrorMessage(error: unknown): string {
   if (!error || typeof error !== 'object' || !('message' in error))
@@ -20,8 +22,10 @@ export function getSignInErrorMessage(error: unknown): string {
 
 /**
  * Maps a raw Supabase sign-up error to a user-facing Spanish message.
+ * Covers known Supabase Auth error codes; falls back to the raw `message` field
+ * for unrecognized errors so no detail is silently swallowed.
  * @param error - Raw error thrown by the auth adapter (AuthError or unknown)
- * @returns A user-facing error message string
+ * @returns Spanish message safe to display directly in the UI
  */
 export function getSignUpErrorMessage(error: unknown): string {
   if (!error || typeof error !== 'object' || !('message' in error))

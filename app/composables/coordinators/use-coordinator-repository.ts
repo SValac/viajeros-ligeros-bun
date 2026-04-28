@@ -5,7 +5,6 @@ import type { TablesUpdate } from '~/types/database.types';
  * Data access layer for the `coordinators` table.
  * Each function performs a single Supabase operation and either returns domain data
  * or throws — it never touches reactive state. Cache management is the store's responsibility.
- * @returns Object with all repository methods
  */
 export function useCoordinatorRepository() {
   const supabase = useSupabase();
