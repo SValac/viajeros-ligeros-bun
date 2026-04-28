@@ -2,6 +2,12 @@ import type { Coordinator, CoordinatorFormData, CoordinatorUpdateData } from '~/
 
 import { useCoordinatorRepository } from '~/composables/coordinators/use-coordinator-repository';
 
+/**
+ * Global cache and orchestrator for coordinator data.
+ * Delegates all Supabase I/O to `useCoordinatorRepository`.
+ * Owns the reactive `coordinators` array — no other layer mutates it.
+ * @returns Store state, getters and actions
+ */
 export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
   const repository = useCoordinatorRepository();
 
@@ -24,6 +30,10 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
   });
 
   // Actions
+  /**
+   * Loads all coordinators from the repository into the cache.
+   * Errors are stored in `error` state — they do not propagate to the caller.
+   */
   async function fetchAll(): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -38,6 +48,12 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     }
   }
 
+  /**
+   * Creates a new coordinator and appends it to the cache.
+   * @param data - Form data for the new coordinator
+   * @returns The created coordinator
+   * @throws Re-throws repository errors so the caller can react (e.g. show a toast)
+   */
   async function addCoordinator(data: CoordinatorFormData): Promise<Coordinator> {
     loading.value = true;
     error.value = null;
@@ -55,6 +71,12 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     }
   }
 
+  /**
+   * Updates a coordinator and patches the cache entry by index for minimal re-renders.
+   * @param id - UUID of the coordinator to update
+   * @param data - Partial update data
+   * @returns The updated coordinator, or `undefined` on failure (error is stored in `error` state)
+   */
   async function updateCoordinator(id: string, data: CoordinatorUpdateData): Promise<Coordinator | undefined> {
     loading.value = true;
     error.value = null;
@@ -75,6 +97,10 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     }
   }
 
+  /**
+   * Removes a coordinator from the repository and from the cache.
+   * @param id - UUID of the coordinator to delete
+   */
   async function deleteCoordinator(id: string): Promise<void> {
     loading.value = true;
     error.value = null;
