@@ -4,6 +4,12 @@ import { filterTravelers, groupTravelersByRepresentative, isTravelerSeatChangeRe
 import { useTravelerRepository } from '~/composables/travelers/use-traveler-repository';
 import { TravelerSeatChangeError } from '~/types/traveler';
 
+/**
+ * Global cache and orchestrator for traveler data.
+ * Delegates all Supabase I/O to `useTravelerRepository` and domain logic to `use-traveler-domain`.
+ * Owns the reactive `travelers` array — no other layer mutates it.
+ * @returns Store state, getters and actions
+ */
 export const useTravelerStore = defineStore('useTravelerStore', () => {
   const repository = useTravelerRepository();
 
@@ -73,6 +79,11 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Fetches travelers for a specific travel and merges them into the global cache.
+   * Only replaces entries matching `travelId` — preserves travelers from other travels.
+   * @param travelId - UUID of the travel to load travelers for
+   */
   async function fetchByTravel(travelId: string): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -94,6 +105,12 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Creates a new traveler and appends it to the cache.
+   * @param data - Form data for the new traveler
+   * @returns The created traveler
+   * @throws Re-throws repository errors so the caller can react (e.g. close modal, show toast)
+   */
   async function addTraveler(data: TravelerFormData): Promise<Traveler> {
     loading.value = true;
     error.value = null;
@@ -112,6 +129,13 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Updates a traveler and patches the cache entry by index for minimal re-renders.
+   * @param id - UUID of the traveler to update
+   * @param data - Partial update data
+   * @returns The updated traveler
+   * @throws Re-throws repository errors so the caller can react
+   */
   async function updateTraveler(id: string, data: TravelerUpdateData): Promise<Traveler> {
     loading.value = true;
     error.value = null;
@@ -133,6 +157,11 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Unlinks all companions before deleting the traveler.
+   * Required because the DB does not cascade `representative_id` on traveler delete.
+   * @param id - UUID of the traveler to delete
+   */
   async function deleteTraveler(id: string): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -160,6 +189,16 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Moves or swaps a traveler's seat via RPC.
+   * The RPC may update two travelers (swap), so all returned seats are patched in the cache.
+   * @param params - Seat change parameters
+   * @param params.travelerId - UUID of the traveler to move
+   * @param params.travelBusId - UUID of the travel bus context
+   * @param params.targetSeat - Destination seat number
+   * @returns The RPC result with operation type and updated seat data
+   * @throws {TravelerSeatChangeError} with a typed code and user-facing message
+   */
   async function changeTravelerSeat(params: {
     travelerId: string;
     travelBusId: string;
@@ -204,6 +243,12 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Assigns a traveler to an accommodation and patches the cache.
+   * @param travelerId - UUID of the traveler to assign
+   * @param travelAccommodationId - UUID of the target accommodation
+   * @throws Re-throws repository errors so the caller can react
+   */
   async function assignTravelerToRoom(travelerId: string, travelAccommodationId: string): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -223,6 +268,11 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Removes a traveler from their assigned accommodation and patches the cache.
+   * @param travelerId - UUID of the traveler to unassign
+   * @throws Re-throws repository errors so the caller can react
+   */
   async function removeTravelerFromRoom(travelerId: string): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -242,6 +292,10 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Replaces all active filters.
+   * @param newFilters - New filter state to apply
+   */
   function setFilters(newFilters: TravelerFilters): void {
     filters.value = { ...newFilters };
   }

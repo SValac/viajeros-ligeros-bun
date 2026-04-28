@@ -2,6 +2,12 @@ import type { Traveler, TravelerFilters, TravelerSeatChangeResult, TravelerWithC
 
 import { TravelerSeatChangeError } from '~/types/traveler';
 
+/**
+ * Type guard for the RPC `move_or_swap_traveler_seat` response.
+ * Validates structure before the store trusts the payload.
+ * @param data - Raw value returned by the RPC call
+ * @returns `true` if `data` conforms to `TravelerSeatChangeResult`
+ */
 export function isTravelerSeatChangeResult(data: unknown): data is TravelerSeatChangeResult {
   if (!data || typeof data !== 'object') {
     return false;
@@ -17,6 +23,12 @@ export function isTravelerSeatChangeResult(data: unknown): data is TravelerSeatC
     && Array.isArray(payload.travelers);
 }
 
+/**
+ * Maps a raw Supabase RPC error to a typed `TravelerSeatChangeError`.
+ * The RPC uses string codes in `message` (e.g. `"seat_conflict"`) instead of numeric codes.
+ * @param error - Raw error from Supabase (PostgrestError or unknown)
+ * @returns A `TravelerSeatChangeError` with a user-facing message and typed code
+ */
 export function toTravelerSeatChangeError(error: unknown): TravelerSeatChangeError {
   const message = (error as { message?: string } | null)?.message;
 
@@ -43,6 +55,14 @@ export function toTravelerSeatChangeError(error: unknown): TravelerSeatChangeErr
   return new TravelerSeatChangeError('unknown-error', 'No se pudo cambiar el asiento del viajero.', { cause: error });
 }
 
+/**
+ * Builds a tree of travelers where companions are nested under their representative.
+ * Travelers who are companions of another traveler are excluded from the root level.
+ * If `representativeId` is provided, returns only that representative and their companions.
+ * @param travelers - Flat list of travelers to group
+ * @param representativeId - Optional filter to return a single group
+ * @returns List of root-level travelers, each with an optional `children` array
+ */
 export function groupTravelersByRepresentative(
   travelers: Traveler[],
   representativeId?: string,
@@ -79,6 +99,12 @@ export function groupTravelersByRepresentative(
   return groupedTravelers;
 }
 
+/**
+ * Filters travelers by travel and/or bus. Omitted filter keys are ignored (not treated as "all").
+ * @param travelers - Source array to filter
+ * @param filters - Active filters; missing keys are skipped
+ * @returns Filtered travelers array (may be empty)
+ */
 export function filterTravelers(travelers: Traveler[], filters: TravelerFilters): Traveler[] {
   return travelers.filter((t) => {
     if (filters.travelId && t.travelId !== filters.travelId) {
