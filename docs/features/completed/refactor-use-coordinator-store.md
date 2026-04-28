@@ -8,7 +8,7 @@ composable repositorio. Sin cambios en la API pública del store ni en las pági
 **Complejidad:** Baja — 1 tabla, CRUD simple, sin lógica de dominio  
 **Nota:** Este store y `use-bus-store` tienen estructura idéntica.
 Se pueden refactorizar en la misma sesión.  
-**Estado:** Pendiente
+**Estado:** Completado
 
 ---
 
@@ -81,7 +81,7 @@ No hay lógica de dominio pura significativa que extraer en este store.
 
 ---
 
-## Fase 2 — Extraer acceso a Supabase al repositorio ✅ PENDIENTE
+## Fase 2 — Extraer acceso a Supabase al repositorio ✅ COMPLETADO
 
 > **Criterio de éxito:** store sin ninguna referencia directa a `supabase.from`.
 
@@ -121,7 +121,7 @@ A diferencia del store de travelers, `updateCoordinator` retorna `Coordinator | 
 
 ---
 
-## Fase 3 — Limpieza final ✅ PENDIENTE
+## Fase 3 — Limpieza final ✅ COMPLETADO
 
 **3.1** Revisar `use-coordinator-store.ts`: solo debe contener estado, getters
 y actions que llaman `repository.*`.

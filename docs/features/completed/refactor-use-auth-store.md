@@ -7,7 +7,7 @@ a un composable adaptador. Sin cambios en la API pública del store.
 
 **Patrón elegido:** Domain + Auth Adapter (variante del Repository para auth)  
 **Complejidad:** Baja — no es CRUD de tablas, es auth con Supabase Auth  
-**Estado:** Pendiente
+**Estado:** Completado
 
 ---
 
@@ -84,7 +84,7 @@ app/
 
 ---
 
-## Fase 1 — Extraer lógica de dominio pura ✅ PENDIENTE
+## Fase 1 — Extraer lógica de dominio pura ✅ COMPLETADO
 
 > **Criterio de éxito:** las funciones de mapeo de errores están en el dominio,
 > el store las importa en vez de definirlas localmente.
@@ -111,7 +111,7 @@ export function getSignUpErrorMessage(error: unknown): string {
 
 ---
 
-## Fase 2 — Extraer llamadas a supabase.auth al adaptador ✅ PENDIENTE
+## Fase 2 — Extraer llamadas a supabase.auth al adaptador ✅ COMPLETADO
 
 > **Criterio de éxito:** store sin ninguna referencia directa a `supabase.auth`.
 
@@ -181,7 +181,7 @@ no cambia.
 
 ---
 
-## Fase 3 — Limpieza final ✅ PENDIENTE
+## Fase 3 — Limpieza final ✅ COMPLETADO
 
 **3.1** Verificar `use-auth-store.ts`: solo estado (`user`, `session`, `loading`),
 getters computados y actions que llaman `adapter.*` y aplican `domain.*`.

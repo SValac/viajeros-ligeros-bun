@@ -6,7 +6,7 @@ el acceso a Supabase va al repositorio. Sin cambios en la API pública del store
 
 **Patrón elegido:** Repository + Domain composables  
 **Complejidad:** Media — 1 tabla, filtros multi-criterio, dependencia cross-store  
-**Estado:** Pendiente
+**Estado:** Completado
 
 ---
 
@@ -82,7 +82,7 @@ app/
 
 ---
 
-## Fase 1 — Extraer lógica de dominio pura ✅ PENDIENTE
+## Fase 1 — Extraer lógica de dominio pura ✅ COMPLETADO
 
 > **Criterio de éxito:** `filteredProviders` computed delega a `filterProviders`.
 
@@ -109,7 +109,7 @@ export function filterProviders(providers: Provider[], filters: ProviderFilters)
 
 ---
 
-## Fase 2 — Extraer acceso a Supabase al repositorio ✅ PENDIENTE
+## Fase 2 — Extraer acceso a Supabase al repositorio ✅ COMPLETADO
 
 > **Criterio de éxito:** store sin ninguna referencia directa a `supabase.from`.
 
@@ -150,7 +150,7 @@ La traducción de campos anidados (`location.city` → `location_city`,
 
 ---
 
-## Fase 3 — Limpieza final ✅ PENDIENTE
+## Fase 3 — Limpieza final ✅ COMPLETADO
 
 **3.1** Revisar `use-provider-store.ts`: solo estado, getters y actions que
 llaman `repository.*` o coordinan con otros stores.

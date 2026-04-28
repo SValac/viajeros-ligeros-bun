@@ -7,7 +7,7 @@ el acceso a Supabase va al repositorio. Sin cambios en la API pública del store
 **Patrón elegido:** Repository + Domain composables  
 **Complejidad:** Media — 2 tablas anidadas (`hotel_rooms` + `hotel_room_types`),
 validación de regla de negocio en `updateTotalRooms`  
-**Estado:** Pendiente
+**Estado:** Completado
 
 ---
 
@@ -85,7 +85,7 @@ app/
 
 ---
 
-## Fase 1 — Extraer lógica de dominio pura ✅ PENDIENTE
+## Fase 1 — Extraer lógica de dominio pura ✅ COMPLETADO
 
 > **Criterio de éxito:** `updateTotalRooms` delega la validación al dominio.
 
@@ -117,7 +117,7 @@ export function validateTotalRoomsUpdate(newTotal: number, usedRooms: number): s
 
 ---
 
-## Fase 2 — Extraer acceso a Supabase al repositorio ✅ PENDIENTE
+## Fase 2 — Extraer acceso a Supabase al repositorio ✅ COMPLETADO
 
 > **Criterio de éxito:** store sin ninguna referencia directa a `supabase.from`.
 
@@ -163,7 +163,7 @@ para insertar) o en el store. Elige repositorio — es preparación de datos par
 
 ---
 
-## Fase 3 — Limpieza final ✅ PENDIENTE
+## Fase 3 — Limpieza final ✅ COMPLETADO
 
 **3.1** Revisar `use-hotel-room-store.ts`: solo estado, getters y actions que llaman
 `repository.*` + `deleteProviderRooms` (cache local).
