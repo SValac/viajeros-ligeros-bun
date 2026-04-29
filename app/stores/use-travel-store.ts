@@ -1,5 +1,7 @@
-import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService, TravelStatus, TravelUpdateData } from '~/types/travel';
+import type { Tables } from '~/types/database.types';
+import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStatus, TravelUpdateData } from '~/types/travel';
+
+import { useTravelRepository } from '~/composables/travels/use-travel-repository';
 
 type TravelStats = {
   total: number;
@@ -11,7 +13,7 @@ type TravelStats = {
 };
 
 export const useTravelsStore = defineStore('useTravelsStore', () => {
-  const supabase = useSupabase();
+  const repository = useTravelRepository();
 
   // State
   const travels = ref<Travel[]>([]);
@@ -60,64 +62,12 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       .reduce((sum, travel) => sum + travel.price, 0);
   });
 
-  function mapItineraryForInsert(travelId: string, itinerary: TravelActivity[]) {
-    return itinerary.map((activity) => {
-      const day = Number(activity.day);
-      const title = activity.title?.trim();
-      const description = activity.description?.trim();
-
-      if (!Number.isInteger(day) || day <= 0 || !title || !description) {
-        throw new Error('Actividad de itinerario inválida');
-      }
-
-      // Validar mapLocation si existe
-      if (activity.mapLocation) {
-        const { lat, lng } = activity.mapLocation;
-        if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
-          throw new Error('Coordenadas de mapa inválidas');
-        }
-      }
-
-      return {
-        travel_id: travelId,
-        day,
-        title,
-        description,
-        time: activity.time ?? null,
-        location: activity.location ?? null,
-        map_location: activity.mapLocation ?? null,
-      };
-    });
-  }
-
   // Actions
   async function fetchAll(): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const { data, error: err } = await supabase
-        .from('travels')
-        .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id)')
-        .order('created_at', { ascending: false });
-
-      if (err)
-        throw err;
-
-      travels.value = data.map((row) => {
-        const activities: TravelActivity[] = (row.travel_activities ?? [])
-          .slice()
-          .sort((a: { day: number }, b: { day: number }) => a.day - b.day)
-          .map(mapTravelActivityRowToDomain);
-
-        const services: TravelService[] = (row.travel_services ?? []).map(mapTravelServiceRowToDomain);
-        const buses: TravelBus[] = (row.travel_buses ?? []).map(mapTravelBusRowToDomain);
-        const accommodations: TravelAccommodation[] = (row.travel_accommodations ?? []).map(mapTravelAccommodationRowToDomain);
-        const coordinatorIds: string[] = (row.travel_coordinators ?? []).map(
-          (tc: { coordinator_id: string }) => tc.coordinator_id,
-        );
-
-        return mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations });
-      });
+      travels.value = await repository.fetchAll();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al cargar viajes';
@@ -128,115 +78,40 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   }
 
   async function addTravel(data: TravelFormData): Promise<Travel> {
-    const { data: travelRow, error: travelErr } = await supabase
-      .from('travels')
-      .insert(mapTravelToInsert(data))
-      .select()
-      .single();
-
-    if (travelErr) {
-      error.value = travelErr.message;
-      throw travelErr;
-    }
-
-    const travelId = travelRow.id;
-
-    let insertedActivities: TravelActivity[] = [];
-    if (data.itinerary.length > 0) {
-      const itineraryInserts = mapItineraryForInsert(travelId, data.itinerary);
-      const { data: actRows, error: actErr } = await supabase
-        .from('travel_activities')
-        .insert(itineraryInserts as any)
-        .select();
-
-      if (actErr) {
-        error.value = actErr.message;
-        throw actErr;
-      }
-      insertedActivities = (actRows ?? [])
-        .slice()
-        .sort((a, b) => a.day - b.day)
-        .map(mapTravelActivityRowToDomain);
-    }
-
-    let insertedServices: TravelService[] = [];
-    if (data.services.length > 0) {
-      const { data: svcRows, error: svcErr } = await supabase
-        .from('travel_services')
-        .insert(
-          data.services.map(s => ({
-            travel_id: travelId,
-            name: s.name,
-            description: s.description ?? null,
-            included: s.included,
-            provider_id: s.providerId ?? null,
-          })),
-        )
-        .select();
-
-      if (svcErr) {
-        error.value = svcErr.message;
-        throw svcErr;
-      }
-      insertedServices = (svcRows ?? []).map(mapTravelServiceRowToDomain);
-    }
-
-    let insertedBuses: TravelBus[] = [];
-    if (data.buses.length > 0) {
-      const { data: busRows, error: busErr } = await supabase
-        .from('travel_buses')
-        .insert(
-          data.buses.map(b => ({
-            travel_id: travelId,
-            bus_id: b.busId ?? null,
-            provider_id: b.providerId,
-            model: b.model ?? null,
-            brand: b.brand ?? null,
-            year: b.year ?? null,
-            operator1_name: b.operator1Name,
-            operator1_phone: b.operator1Phone,
-            operator2_name: b.operator2Name ?? null,
-            operator2_phone: b.operator2Phone ?? null,
-            seat_count: b.seatCount,
-            rental_price: b.rentalPrice,
-          })),
-        )
-        .select();
-
-      if (busErr) {
-        error.value = busErr.message;
-        throw busErr;
-      }
-      insertedBuses = (busRows ?? []).map(mapTravelBusRowToDomain);
-    }
-
-    if (data.coordinatorIds.length > 0) {
-      const { error: coordErr } = await supabase
-        .from('travel_coordinators')
-        .insert(
-          data.coordinatorIds.map(coordinatorId => ({
-            travel_id: travelId,
-            coordinator_id: coordinatorId,
-          })),
-        );
-
-      if (coordErr) {
-        error.value = coordErr.message;
-        throw coordErr;
-      }
-    }
-
-    const newTravel = mapTravelRowToDomain(travelRow, {
-      coordinatorIds: data.coordinatorIds,
-      itinerary: insertedActivities,
-      services: insertedServices,
-      buses: insertedBuses,
-      accommodations: [],
-    });
-
-    travels.value.push(newTravel);
+    loading.value = true;
     error.value = null;
-    return newTravel;
+    try {
+      const travel = await repository.insertTravel(data);
+      const extras = {
+        coordinatorIds: data.coordinatorIds,
+        itinerary: data.itinerary,
+        services: data.services,
+        buses: data.buses,
+        accommodations: [],
+      };
+
+      if (data.itinerary.length > 0)
+        extras.itinerary = await repository.insertActivities(travel.id, data.itinerary);
+      if (data.services.length > 0)
+        extras.services = await repository.insertServices(travel.id, data.services);
+      if (data.buses.length > 0)
+        extras.buses = await repository.insertBuses(travel.id, data.buses);
+      if (data.coordinatorIds.length > 0)
+        await repository.insertCoordinators(travel.id, data.coordinatorIds);
+
+      const newTravel = mapTravelRowToDomain(travel, extras);
+
+      travels.value.push(newTravel);
+      error.value = null;
+      return newTravel;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al agregar viaje';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   async function updateTravel(id: string, data: Partial<TravelUpdateData>): Promise<boolean> {
@@ -251,228 +126,88 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return false;
     }
 
-    const update: TablesUpdate<'travels'> = {};
-    if (data.destination !== undefined)
-      update.destination = data.destination;
-    if (data.startDate !== undefined)
-      update.start_date = data.startDate;
-    if (data.endDate !== undefined)
-      update.end_date = data.endDate;
-    if (data.price !== undefined)
-      update.price = data.price;
-    if (data.description !== undefined)
-      update.description = data.description;
-    if ('imageUrl' in data)
-      update.image_url = data.imageUrl ?? null;
-    if (data.status !== undefined)
-      update.status = data.status;
-    if ('internalNotes' in data)
-      update.internal_notes = data.internalNotes ?? null;
-    if ('totalOperationCost' in data)
-      update.total_operation_cost = data.totalOperationCost ?? null;
-    if ('minimumSeats' in data)
-      update.minimum_seats = data.minimumSeats ?? null;
-    if ('projectedProfit' in data)
-      update.projected_profit = data.projectedProfit ?? null;
-    if ('accumulatedTravelers' in data)
-      update.accumulated_travelers = data.accumulatedTravelers ?? null;
-
-    let travelRow: Tables<'travels'> | null = null;
-    if (Object.keys(update).length > 0) {
-      const { data: updatedTravelRow, error: travelErr } = await supabase
-        .from('travels')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (travelErr) {
-        error.value = travelErr.message;
-        return false;
-      }
-
-      travelRow = updatedTravelRow;
-    }
-
-    let itinerary = travels.value[index]?.itinerary ?? [];
-    if (data.itinerary !== undefined) {
-      const { error: deleteActivitiesError } = await supabase
-        .from('travel_activities')
-        .delete()
-        .eq('travel_id', id);
-      if (deleteActivitiesError) {
-        error.value = deleteActivitiesError.message;
-        return false;
-      }
-
-      if (data.itinerary.length > 0) {
-        const itineraryInserts = mapItineraryForInsert(id, data.itinerary);
-        const { data: actRows, error: actErr } = await supabase
-          .from('travel_activities')
-          .insert(itineraryInserts as any)
-          .select();
-
-        if (actErr) {
-          error.value = actErr.message;
-          return false;
-        }
-        itinerary = (actRows ?? [])
-          .slice()
-          .sort((a, b) => a.day - b.day)
-          .map(mapTravelActivityRowToDomain);
-      }
-      else {
-        itinerary = [];
-      }
-    }
-
-    let services = travels.value[index]?.services ?? [];
-    if (data.services !== undefined) {
-      await supabase.from('travel_services').delete().eq('travel_id', id);
-
-      if (data.services.length > 0) {
-        const { data: svcRows, error: svcErr } = await supabase
-          .from('travel_services')
-          .insert(
-            data.services.map(s => ({
-              travel_id: id,
-              name: s.name,
-              description: s.description ?? null,
-              included: s.included,
-              provider_id: s.providerId ?? null,
-            })),
-          )
-          .select();
-
-        if (svcErr) {
-          error.value = svcErr.message;
-          return false;
-        }
-        services = (svcRows ?? []).map(mapTravelServiceRowToDomain);
-      }
-      else {
-        services = [];
-      }
-    }
-
-    let buses = travels.value[index]?.buses ?? [];
-    if (data.buses !== undefined) {
-      await supabase.from('travel_buses').delete().eq('travel_id', id);
-
-      if (data.buses.length > 0) {
-        const { data: busRows, error: busErr } = await supabase
-          .from('travel_buses')
-          .insert(
-            data.buses.map(b => ({
-              travel_id: id,
-              bus_id: b.busId ?? null,
-              provider_id: b.providerId,
-              model: b.model ?? null,
-              brand: b.brand ?? null,
-              year: b.year ?? null,
-              operator1_name: b.operator1Name,
-              operator1_phone: b.operator1Phone,
-              operator2_name: b.operator2Name ?? null,
-              operator2_phone: b.operator2Phone ?? null,
-              seat_count: b.seatCount,
-              rental_price: b.rentalPrice,
-            })),
-          )
-          .select();
-
-        if (busErr) {
-          error.value = busErr.message;
-          return false;
-        }
-        buses = (busRows ?? []).map(mapTravelBusRowToDomain);
-      }
-      else {
-        buses = [];
-      }
-    }
-
-    let accommodations = travels.value[index]?.accommodations ?? [];
-    if (data.accommodations !== undefined) {
-      await supabase.from('travel_accommodations').delete().eq('travel_id', id);
-
-      if (data.accommodations.length > 0) {
-        const { data: accRows, error: accErr } = await supabase
-          .from('travel_accommodations')
-          .insert(
-            data.accommodations.map(a => ({
-              travel_id: id,
-              provider_id: a.providerId,
-              hotel_room_type_id: a.hotelRoomTypeId ?? null,
-              max_occupancy: a.maxOccupancy,
-              room_number: a.roomNumber ?? null,
-              floor: a.floor ?? null,
-            })),
-          )
-          .select();
-
-        if (accErr) {
-          error.value = accErr.message;
-          return false;
-        }
-        accommodations = (accRows ?? []).map(mapTravelAccommodationRowToDomain);
-      }
-      else {
-        accommodations = [];
-      }
-    }
-
-    let coordinatorIds = travels.value[index]?.coordinatorIds ?? [];
-    if (data.coordinatorIds !== undefined) {
-      await supabase.from('travel_coordinators').delete().eq('travel_id', id);
-
-      if (data.coordinatorIds.length > 0) {
-        const { error: coordErr } = await supabase
-          .from('travel_coordinators')
-          .insert(
-            data.coordinatorIds.map(coordinatorId => ({
-              travel_id: id,
-              coordinator_id: coordinatorId,
-            })),
-          );
-
-        if (coordErr) {
-          error.value = coordErr.message;
-          return false;
-        }
-      }
-      coordinatorIds = data.coordinatorIds;
-    }
-
-    travels.value[index] = travelRow
-      ? mapTravelRowToDomain(travelRow, {
-          coordinatorIds,
-          itinerary,
-          services,
-          buses,
-          accommodations,
-        })
-      : {
-          ...existingTravel,
-          coordinatorIds,
-          itinerary,
-          services,
-          buses,
-          accommodations,
-        };
-
+    loading.value = true;
     error.value = null;
-    return true;
+    try {
+      let travelRow: Tables<'travels'> | null = null;
+      const travelRootKeys: (keyof TravelUpdateData)[] = [
+        'destination',
+        'startDate',
+        'endDate',
+        'price',
+        'description',
+        'imageUrl',
+        'status',
+        'internalNotes',
+        'totalOperationCost',
+        'minimumSeats',
+        'projectedProfit',
+        'accumulatedTravelers',
+      ];
+      const haveTravelFields = travelRootKeys.some(key => key in data);
+
+      if (haveTravelFields) {
+        travelRow = await repository.updateTravel(id, data);
+      }
+      let itinerary = travels.value[index]?.itinerary ?? [];
+      let services = travels.value[index]?.services ?? [];
+      let buses = travels.value[index]?.buses ?? [];
+      let accommodations = travels.value[index]?.accommodations ?? [];
+      let coordinatorIds = travels.value[index]?.coordinatorIds ?? [];
+
+      if (data.itinerary !== undefined)
+        itinerary = await repository.replaceActivities(id, data.itinerary);
+      if (data.services !== undefined)
+        services = await repository.replaceServices(id, data.services);
+      if (data.buses !== undefined)
+        buses = await repository.replaceBuses(id, data.buses);
+      if (data.accommodations !== undefined)
+        accommodations = await repository.replaceAccommodations(id, data.accommodations);
+      if (data.coordinatorIds !== undefined) {
+        await repository.replaceCoordinators(id, data.coordinatorIds);
+        coordinatorIds = data.coordinatorIds;
+      }
+
+      travels.value[index] = travelRow
+        ? mapTravelRowToDomain(travelRow, {
+            coordinatorIds,
+            itinerary,
+            services,
+            buses,
+            accommodations,
+          })
+        : {
+            ...existingTravel,
+            coordinatorIds,
+            itinerary,
+            services,
+            buses,
+            accommodations,
+          };
+
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al actualizar viaje';
+      return false;
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   async function deleteTravel(id: string): Promise<boolean> {
-    const { error: err } = await supabase
-      .from('travels')
-      .delete()
-      .eq('id', id);
-
-    if (err) {
-      error.value = err.message;
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.removeTravel(id);
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al eliminar viaje';
       return false;
+    }
+    finally {
+      loading.value = false;
     }
 
     travels.value = travels.value.filter(t => t.id !== id);
@@ -513,39 +248,24 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       resolvedBusId = catalogBus.id;
     }
 
-    const { data: busRow, error: busErr } = await supabase
-      .from('travel_buses')
-      .insert({
-        travel_id: travelId,
-        bus_id: resolvedBusId ?? null,
-        provider_id: data.providerId,
-        model: data.model ?? null,
-        brand: data.brand ?? null,
-        year: data.year ?? null,
-        operator1_name: data.operator1Name,
-        operator1_phone: data.operator1Phone,
-        operator2_name: data.operator2Name ?? null,
-        operator2_phone: data.operator2Phone ?? null,
-        seat_count: data.seatCount,
-        rental_price: data.rentalPrice,
-      })
-      .select()
-      .single();
+    loading.value = true;
+    error.value = null;
+    try {
+      const newBus = await repository.insertTravelBus(travelId, { ...data, busId: resolvedBusId });
+      travels.value[index] = {
+        ...existingTravel,
+        buses: [...(existingTravel.buses ?? []), newBus],
+      };
 
-    if (busErr) {
-      error.value = busErr.message;
+      return newBus;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al agregar autobús al viaje';
       return null;
     }
-
-    const newBus = mapTravelBusRowToDomain(busRow);
-
-    travels.value[index] = {
-      ...existingTravel,
-      buses: [...(existingTravel.buses ?? []), newBus],
-    };
-
-    error.value = null;
-    return newBus;
+    finally {
+      loading.value = false;
+    }
   }
 
   async function updateTravelBus(travelId: string, busId: string, data: Partial<Omit<TravelBus, 'id'>>): Promise<boolean> {
@@ -567,57 +287,30 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return false;
     }
 
-    const update: TablesUpdate<'travel_buses'> = {};
-    if ('busId' in data)
-      update.bus_id = data.busId ?? null;
-    if (data.providerId !== undefined)
-      update.provider_id = data.providerId;
-    if ('model' in data)
-      update.model = data.model ?? null;
-    if ('brand' in data)
-      update.brand = data.brand ?? null;
-    if ('year' in data)
-      update.year = data.year ?? null;
-    if (data.operator1Name !== undefined)
-      update.operator1_name = data.operator1Name;
-    if (data.operator1Phone !== undefined)
-      update.operator1_phone = data.operator1Phone;
-    if ('operator2Name' in data)
-      update.operator2_name = data.operator2Name ?? null;
-    if ('operator2Phone' in data)
-      update.operator2_phone = data.operator2Phone ?? null;
-    if (data.seatCount !== undefined)
-      update.seat_count = data.seatCount;
-    if (data.rentalPrice !== undefined)
-      update.rental_price = data.rentalPrice;
+    loading.value = true;
+    error.value = null;
+    try {
+      const updatedBus = await repository.updateTravelBus(busId, data);
+      const currentBuses = existingTravel.buses ?? [];
+      const updatedBuses = [
+        ...currentBuses.slice(0, busIndex),
+        updatedBus,
+        ...currentBuses.slice(busIndex + 1),
+      ];
 
-    const { data: busRow, error: busErr } = await supabase
-      .from('travel_buses')
-      .update(update)
-      .eq('id', busId)
-      .select()
-      .single();
-
-    if (busErr) {
-      error.value = busErr.message;
+      travels.value[travelIndex] = {
+        ...existingTravel,
+        buses: updatedBuses,
+      };
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al actualizar autobús del viaje';
       return false;
     }
-
-    const updatedBus = mapTravelBusRowToDomain(busRow);
-    const currentBuses = existingTravel.buses ?? [];
-    const updatedBuses = [
-      ...currentBuses.slice(0, busIndex),
-      updatedBus,
-      ...currentBuses.slice(busIndex + 1),
-    ];
-
-    travels.value[travelIndex] = {
-      ...existingTravel,
-      buses: updatedBuses,
-    };
-
-    error.value = null;
-    return true;
+    finally {
+      loading.value = false;
+    }
   }
 
   async function removeBusFromTravel(travelId: string, busId: string): Promise<boolean> {
@@ -639,23 +332,23 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return false;
     }
 
-    const { error: busErr } = await supabase
-      .from('travel_buses')
-      .delete()
-      .eq('id', busId);
-
-    if (busErr) {
-      error.value = busErr.message;
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.removeTravelBus(busId);
+      travels.value[travelIndex] = {
+        ...existingTravel,
+        buses: (existingTravel.buses ?? []).filter(b => b.id !== busId),
+      };
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al eliminar autobús del viaje';
       return false;
     }
-
-    travels.value[travelIndex] = {
-      ...existingTravel,
-      buses: (existingTravel.buses ?? []).filter(b => b.id !== busId),
-    };
-
-    error.value = null;
-    return true;
+    finally {
+      loading.value = false;
+    }
   }
 
   async function updateTravelAccommodation(
@@ -681,39 +374,30 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return false;
     }
 
-    const update: TablesUpdate<'travel_accommodations'> = {};
-    if ('roomNumber' in data)
-      update.room_number = data.roomNumber ?? null;
-    if ('floor' in data)
-      update.floor = data.floor ?? null;
+    loading.value = true;
+    error.value = null;
+    try {
+      const updatedAcc = await repository.updateTravelAccommodation(accommodationId, data);
+      const currentAccommodations = existingTravel.accommodations ?? [];
+      const updatedAccommodations = [
+        ...currentAccommodations.slice(0, accIndex),
+        updatedAcc,
+        ...currentAccommodations.slice(accIndex + 1),
+      ];
 
-    const { data: accRow, error: accErr } = await supabase
-      .from('travel_accommodations')
-      .update(update)
-      .eq('id', accommodationId)
-      .select()
-      .single();
-
-    if (accErr) {
-      error.value = accErr.message;
+      travels.value[travelIndex] = {
+        ...existingTravel,
+        accommodations: updatedAccommodations,
+      };
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al actualizar alojamiento del viaje';
       return false;
     }
-
-    const updatedAcc = mapTravelAccommodationRowToDomain(accRow);
-    const currentAccommodations = existingTravel.accommodations ?? [];
-    const updatedAccommodations = [
-      ...currentAccommodations.slice(0, accIndex),
-      updatedAcc,
-      ...currentAccommodations.slice(accIndex + 1),
-    ];
-
-    travels.value[travelIndex] = {
-      ...existingTravel,
-      accommodations: updatedAccommodations,
-    };
-
-    error.value = null;
-    return true;
+    finally {
+      loading.value = false;
+    }
   }
 
   function updateLocalAccommodations(
