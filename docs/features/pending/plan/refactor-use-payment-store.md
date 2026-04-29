@@ -7,7 +7,7 @@ va al dominio; el acceso a Supabase va al repositorio. Sin cambios en la API pú
 **Patrón elegido:** Repository + Domain composables  
 **Complejidad:** Media-alta — 2 tablas (`payments` + `traveler_account_configs`),
 lógica de cálculo financiero (descuentos, recargos, saldo), validación de pagos  
-**Estado:** Pendiente
+**Estado:** Completado
 
 ---
 
@@ -105,7 +105,7 @@ app/
 
 ---
 
-## Fase 1 — Extraer lógica de dominio pura ✅ PENDIENTE
+## Fase 1 — Extraer lógica de dominio pura ✅ COMPLETADA
 
 > **Criterio de éxito:** `getTravelerPaymentSummary` y `addPayment` delegan
 > los cálculos al dominio. La lógica de cálculo existe en un solo lugar.
@@ -153,7 +153,7 @@ export function validatePaymentAmount(
 
 ---
 
-## Fase 2 — Extraer acceso a Supabase al repositorio ✅ PENDIENTE
+## Fase 2 — Extraer acceso a Supabase al repositorio ✅ COMPLETADA
 
 > **Criterio de éxito:** store sin ninguna referencia directa a `supabase.from`.
 
@@ -208,7 +208,7 @@ La validación puede usar datos del cache del store sin tocar el repositorio.
 
 ---
 
-## Fase 3 — Limpieza final ✅ PENDIENTE
+## Fase 3 — Limpieza final ✅ COMPLETADA
 
 **3.1** Confirmar que la lógica de cálculo financiero está **solo** en el dominio
 (no duplicada entre `getTravelerPaymentSummary` y `addPayment`).
