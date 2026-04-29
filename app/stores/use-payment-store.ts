@@ -1,24 +1,17 @@
-import type { TablesUpdate } from '~/types/database.types';
 import type {
-  AdjustmentItem,
   Payment,
   PaymentFilters,
   PaymentFormData,
-  PaymentStatus,
   PaymentUpdateData,
   TravelerAccountConfig,
   TravelerPaymentSummary,
 } from '~/types/payment';
 
-import {
-  mapPaymentRowToDomain,
-  mapPaymentToInsert,
-  mapTravelerAccountConfigRowToDomain,
-  mapTravelerAccountConfigToUpsert,
-} from '~/utils/mappers';
+import { calculatePaymentSummary, validatePaymentAmount } from '~/composables/payments/use-payments-domain';
+import { usePaymentsRepository } from '~/composables/payments/use-payments-repository';
 
 export const usePaymentStore = defineStore('usePaymentStore', () => {
-  const supabase = useSupabase();
+  const repository = usePaymentsRepository();
 
   // State
   const payments = ref<Payment[]>([]);
@@ -71,53 +64,17 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
   const getTravelerPaymentSummary = computed(() => {
     return (travelerId: string, travelId: string, travelPrice: number): TravelerPaymentSummary => {
       const config = getAccountConfig.value(travelerId, travelId);
-      const travelerType = config?.travelerType ?? 'adult';
-      const appliedPrice = config?.publicPriceAmount ?? (
-        travelerType === 'child' && config?.childPrice != null
-          ? config.childPrice
-          : travelPrice
-      );
-
-      const discounts = config?.discounts ?? [];
-      const surcharges = config?.surcharges ?? [];
-
-      function calcAmount(item: AdjustmentItem, base: number) {
-        return item.type === 'percentage' ? base * item.amount / 100 : item.amount;
-      }
-
-      const totalDiscountAmount = discounts.reduce((sum, d) => sum + calcAmount(d, appliedPrice), 0);
-      const totalSurchargeAmount = surcharges.reduce((sum, s) => sum + calcAmount(s, appliedPrice), 0);
-      const finalCost = Math.max(0, appliedPrice - totalDiscountAmount + totalSurchargeAmount);
-
       const travelerPayments = getPaymentsByTravelerAndTravel.value(travelerId, travelId);
-      const totalPaid = travelerPayments.reduce((sum, p) => sum + p.amount, 0);
-      const balance = Math.max(0, finalCost - totalPaid);
-
-      let status: PaymentStatus;
-      if (totalPaid <= 0) {
-        status = 'pending';
-      }
-      else if (totalPaid >= finalCost) {
-        status = 'paid';
-      }
-      else {
-        status = 'partial';
-      }
+      const summary = calculatePaymentSummary(config, travelPrice, travelerPayments);
 
       return {
         travelId,
         travelerId,
         totalCost: travelPrice,
-        travelerType,
-        appliedPrice,
-        discounts,
-        surcharges,
-        totalDiscountAmount,
-        totalSurchargeAmount,
-        finalCost,
-        totalPaid,
-        balance,
-        status,
+        travelerType: config?.travelerType ?? 'adult',
+        discounts: config?.discounts ?? [],
+        surcharges: config?.surcharges ?? [],
+        ...summary,
       };
     };
   });
@@ -151,24 +108,16 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data, error: err } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('travel_id', travelId)
-        .order('payment_date', { ascending: false });
-      if (err)
-        throw err;
-      const otherPayments = payments.value.filter(p => p.travelId !== travelId);
-      payments.value = [...otherPayments, ...data.map(mapPaymentRowToDomain)];
+      const [fetchedPayments, fetchedConfigs] = await Promise.all([
+        repository.fetchPaymentsByTravel(travelId),
+        repository.fetchConfigsByTravel(travelId),
+      ]);
 
-      const { data: configData, error: configErr } = await supabase
-        .from('traveler_account_configs')
-        .select('*')
-        .eq('travel_id', travelId);
-      if (configErr)
-        throw configErr;
+      const otherPayments = payments.value.filter(p => p.travelId !== travelId);
+      payments.value = [...otherPayments, ...fetchedPayments];
+
       const otherConfigs = accountConfigs.value.filter(c => c.travelId !== travelId);
-      accountConfigs.value = [...otherConfigs, ...configData.map(mapTravelerAccountConfigRowToDomain)];
+      accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -182,24 +131,16 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data, error: err } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('traveler_id', travelerId)
-        .order('payment_date', { ascending: false });
-      if (err)
-        throw err;
-      const otherPayments = payments.value.filter(p => p.travelerId !== travelerId);
-      payments.value = [...otherPayments, ...data.map(mapPaymentRowToDomain)];
+      const [fetchedPayments, fetchedConfigs] = await Promise.all([
+        repository.fetchPaymentsByTraveler(travelerId),
+        repository.fetchConfigsByTraveler(travelerId),
+      ]);
 
-      const { data: configData, error: configErr } = await supabase
-        .from('traveler_account_configs')
-        .select('*')
-        .eq('traveler_id', travelerId);
-      if (configErr)
-        throw configErr;
+      const otherPayments = payments.value.filter(p => p.travelerId !== travelerId);
+      payments.value = [...otherPayments, ...fetchedPayments];
+
       const otherConfigs = accountConfigs.value.filter(c => c.travelerId !== travelerId);
-      accountConfigs.value = [...otherConfigs, ...configData.map(mapTravelerAccountConfigRowToDomain)];
+      accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -217,41 +158,16 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     }
 
     const existingPayments = getPaymentsByTravelerAndTravel.value(data.travelerId, data.travelId);
-    const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
-
-    const appliedPrice = config.publicPriceAmount ?? (
-      config.travelerType === 'child' && config.childPrice != null
-        ? config.childPrice
-        : 0
-    );
-
-    const discounts = config.discounts ?? [];
-    const surcharges = config.surcharges ?? [];
-    const totalDiscountAmount = discounts.reduce((sum, d) => {
-      return sum + (d.type === 'percentage' ? appliedPrice * d.amount / 100 : d.amount);
-    }, 0);
-    const totalSurchargeAmount = surcharges.reduce((sum, s) => {
-      return sum + (s.type === 'percentage' ? appliedPrice * s.amount / 100 : s.amount);
-    }, 0);
-    const finalCost = Math.max(0, appliedPrice - totalDiscountAmount + totalSurchargeAmount);
-
-    const balance = Math.max(0, finalCost - totalPaid);
-
-    if (appliedPrice > 0 && data.amount > balance) {
-      return { error: `El monto no puede superar el saldo pendiente (${balance}).` };
+    const { balance, appliedPrice } = calculatePaymentSummary(config, 0, existingPayments);
+    const validationError = validatePaymentAmount(data.amount, balance, appliedPrice);
+    if (validationError) {
+      return { error: validationError };
     }
 
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('payments')
-        .insert(mapPaymentToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-      const payment = mapPaymentRowToDomain(row);
+      const payment = await repository.insertPayment(data);
       payments.value.push(payment);
       return payment;
     }
@@ -268,26 +184,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'payments'> = {};
-      if (data.amount !== undefined)
-        update.amount = data.amount;
-      if (data.paymentDate !== undefined)
-        update.payment_date = data.paymentDate;
-      if (data.paymentType !== undefined)
-        update.payment_type = data.paymentType;
-      if (data.notes !== undefined)
-        update.notes = data.notes ?? null;
-
-      const { data: row, error: err } = await supabase
-        .from('payments')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const payment = mapPaymentRowToDomain(row);
+      const payment = await repository.updatePayment(id, data);
       const index = payments.value.findIndex(p => p.id === id);
       if (index !== -1) {
         payments.value[index] = payment;
@@ -307,12 +204,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('payments')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
+      await repository.removePayment(id);
       payments.value = payments.value.filter(p => p.id !== id);
     }
     catch (e) {
@@ -327,11 +219,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('traveler_account_configs')
-        .upsert(mapTravelerAccountConfigToUpsert(config), { onConflict: 'travel_id,traveler_id' });
-      if (err)
-        throw err;
+      await repository.upsertAccountConfig(config);
       const index = accountConfigs.value.findIndex(
         c => c.travelerId === config.travelerId && c.travelId === config.travelId,
       );
