@@ -8,7 +8,7 @@ el acceso a Supabase va al repositorio. Sin cambios en la API pública del store
 **Complejidad:** Alta — 6 tablas relacionadas (travels, travel_activities, travel_services,
 travel_buses, travel_accommodations, travel_coordinators), operaciones de replace
 (delete + insert), sub-entities anidadas en el cache  
-**Estado:** Pendiente
+**Estado:** ✅ Completado
 
 ---
 
@@ -111,7 +111,7 @@ app/
 
 ---
 
-## Fase 1 — Extraer lógica de dominio pura ✅ PENDIENTE
+## Fase 1 — Extraer lógica de dominio pura ✅ COMPLETADO
 
 > **Criterio de éxito:** `mapItineraryForInsert` se convierte en función exportada
 > del dominio; el store la importa.
@@ -141,7 +141,7 @@ export function validateAndMapItinerary(
 
 ---
 
-## Fase 2 — Extraer acceso a Supabase al repositorio ✅ PENDIENTE
+## Fase 2 — Extraer acceso a Supabase al repositorio ✅ COMPLETADO
 
 > **Criterio de éxito:** store sin ninguna referencia directa a `supabase.from`.
 
@@ -180,7 +180,7 @@ funciones del repositorio listadas en la sección de análisis.
 
 ---
 
-## Fase 3 — Limpieza final ✅ PENDIENTE
+## Fase 3 — Limpieza final ✅ COMPLETADO
 
 **3.1** Verificar que `use-travel-store.ts` solo contiene:
 - Estado reactivo
