@@ -509,59 +509,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     await travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
   }
 
-  // Helper interno — sincroniza autobuses apartados de cotización hacia travel_buses
-  // Crea un travel_bus vinculado al quotation_bus recién insertado
-  async function _addTravelBusForQuotation(quotationBus: QuotationBus, travelId: string): Promise<void> {
-    const { data: row, error: err } = await supabase
-      .from('travel_buses')
-      .insert({
-        travel_id: travelId,
-        quotation_bus_id: quotationBus.id,
-        provider_id: quotationBus.providerId,
-        model: quotationBus.unitNumber,
-        operator1_name: 'Por asignar',
-        operator1_phone: 'Por asignar',
-        seat_count: quotationBus.capacity,
-        rental_price: quotationBus.totalCost,
-      })
-      .select()
-      .single();
-    if (err)
-      throw new Error(`No se pudo crear el autobús en el viaje: ${err.message}`);
-
-    const travelStore = useTravelsStore();
-    const travelIndex = travelStore.travels.findIndex(t => t.id === travelId);
-    if (travelIndex !== -1) {
-      travelStore.travels[travelIndex] = {
-        ...travelStore.travels[travelIndex]!,
-        buses: [...(travelStore.travels[travelIndex]!.buses ?? []), mapTravelBusRowToDomain(row)],
-      };
-    }
-  }
-
-  // Actualiza únicamente rental_price del travel_bus vinculado al quotation_bus
-  async function _updateTravelBusForQuotation(quotationBus: QuotationBus, travelId: string): Promise<void> {
-    const { error: err } = await supabase
-      .from('travel_buses')
-      .update({ rental_price: quotationBus.totalCost })
-      .eq('quotation_bus_id', quotationBus.id);
-    if (err)
-      throw new Error(`No se pudo actualizar el autobús en el viaje: ${err.message}`);
-
-    const travelStore = useTravelsStore();
-    const travelIndex = travelStore.travels.findIndex(t => t.id === travelId);
-    if (travelIndex !== -1) {
-      travelStore.travels[travelIndex] = {
-        ...travelStore.travels[travelIndex]!,
-        buses: (travelStore.travels[travelIndex]!.buses ?? []).map(b =>
-          b.quotationBusId === quotationBus.id
-            ? { ...b, rentalPrice: quotationBus.totalCost }
-            : b,
-        ),
-      };
-    }
-  }
-
   // Helper interno — sincroniza habitaciones de cotización hacia travel_accommodations
   async function _syncHospedajeToTravel(quotationId: string): Promise<{ skippedOccupied: number }> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
