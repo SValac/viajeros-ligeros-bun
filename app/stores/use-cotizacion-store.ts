@@ -1,4 +1,3 @@
-import type { Tables, TablesUpdate } from '~/types/database.types';
 import type {
   AccommodationPayment,
   AccommodationPaymentFormData,
@@ -30,31 +29,17 @@ import {
   reconcileAccommodations,
 
 } from '~/composables/quotation/use-quotation-domain';
+import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 import {
-  mapAccommodationPaymentRowToDomain,
-  mapAccommodationPaymentToInsert,
-  mapBusPaymentRowToDomain,
-  mapBusPaymentToInsert,
-  mapProviderPaymentRowToDomain,
-  mapProviderPaymentToInsert,
-  mapQuotationAccommodationDetailRowToDomain,
-  mapQuotationAccommodationRowToDomain,
-  mapQuotationBusRowToDomain,
-  mapQuotationBusToInsert,
-  mapQuotationProviderRowToDomain,
-  mapQuotationProviderToInsert,
-  mapQuotationPublicPriceRowToDomain,
-  mapQuotationPublicPriceToInsert,
-  mapQuotationRowToDomain,
-  mapQuotationToInsert,
   mapTravelAccommodationRowToDomain,
   mapTravelBusRowToDomain,
 } from '~/utils/mappers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const supabase = useSupabase();
+  const repository = useQuotationRepository();
   const travelFetchCache = new Set<string>();
   const travelFetchInFlight = new Map<string, Promise<void>>();
 
@@ -646,14 +631,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data, error: err } = await supabase
-        .from('quotations')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (err)
-        throw err;
-
-      cotizaciones.value = (data ?? []).map(mapQuotationRowToDomain);
+      cotizaciones.value = await repository.fetchAll();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -682,15 +660,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       loading.value = true;
       error.value = null;
       try {
-        const { data: quotRow, error: quotErr } = await supabase
-          .from('quotations')
-          .select('*')
-          .eq('travel_id', travelId)
-          .maybeSingle();
-        if (quotErr)
-          throw quotErr;
+        const result = await repository.fetchByTravel(travelId);
 
-        if (!quotRow) {
+        if (!result) {
           const existing = cotizaciones.value.find(c => c.travelId === travelId);
           if (existing) {
             const qId = existing.id;
@@ -712,102 +684,17 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           travelFetchCache.add(travelId);
           return;
         }
+        const { quotation, providers, providerPayments, accommodations, accommodationPayments, publicPrices, buses, busPayments } = result;
+        const quotationId = quotation.id;
 
-        const quotationId = quotRow.id;
-
-        const [
-          providersResult,
-          accommodationsResult,
-          publicPricesResult,
-          busesResult,
-        ] = await Promise.all([
-          supabase
-            .from('quotation_providers')
-            .select('*, provider_payments(*)')
-            .eq('quotation_id', quotationId),
-          supabase
-            .from('quotation_accommodations')
-            .select('*, quotation_accommodation_details(*), accommodation_payments(*)')
-            .eq('quotation_id', quotationId),
-          supabase
-            .from('quotation_public_prices')
-            .select('*')
-            .eq('quotation_id', quotationId),
-          supabase
-            .from('quotation_buses')
-            .select('*, bus_payments(*)')
-            .eq('quotation_id', quotationId),
-        ]);
-
-        if (providersResult.error)
-          throw providersResult.error;
-        if (accommodationsResult.error)
-          throw accommodationsResult.error;
-        if (publicPricesResult.error)
-          throw publicPricesResult.error;
-        if (busesResult.error)
-          throw busesResult.error;
-
-        const providers = (providersResult.data ?? []).map((row) => {
-          const { provider_payments: _pp, ...provRow } = row;
-          return mapQuotationProviderRowToDomain(provRow as Tables<'quotation_providers'>);
-        });
-        const newPagosProveedor = (providersResult.data ?? []).flatMap(row =>
-          (row.provider_payments ?? []).map(mapProviderPaymentRowToDomain),
-        );
-
-        const accommodations = (accommodationsResult.data ?? []).map((row) => {
-          const { quotation_accommodation_details: detRows, accommodation_payments: _ap, ...accRow } = row;
-          const details = (detRows ?? []).map(d => ({
-            ...mapQuotationAccommodationDetailRowToDomain(d as Tables<'quotation_accommodation_details'>),
-            costPerPerson: d.price_per_night / d.max_occupancy,
-          }));
-          return mapQuotationAccommodationRowToDomain(accRow as Tables<'quotation_accommodations'>, details);
-        });
-        const newPagosHospedaje = (accommodationsResult.data ?? []).flatMap(row =>
-          (row.accommodation_payments ?? []).map(mapAccommodationPaymentRowToDomain),
-        );
-
-        const buses = (busesResult.data ?? []).map((row) => {
-          const { bus_payments: _bp, ...busRow } = row;
-          return mapQuotationBusRowToDomain(busRow as Tables<'quotation_buses'>);
-        });
-        const newPagosBus = (busesResult.data ?? []).flatMap(row =>
-          (row.bus_payments ?? []).map(mapBusPaymentRowToDomain),
-        );
-
-        cotizaciones.value = [
-          ...cotizaciones.value.filter(c => c.travelId !== travelId),
-          mapQuotationRowToDomain(quotRow),
-        ];
-        proveedoresQuotation.value = [
-          ...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId),
-          ...providers,
-        ];
-        pagosProveedor.value = [
-          ...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)),
-          ...newPagosProveedor,
-        ];
-        hospedajesQuotation.value = [
-          ...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId),
-          ...accommodations,
-        ];
-        pagosHospedaje.value = [
-          ...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)),
-          ...newPagosHospedaje,
-        ];
-        preciosPublicos.value = [
-          ...preciosPublicos.value.filter(p => p.quotationId !== quotationId),
-          ...(publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
-        ];
-        busesApartados.value = [
-          ...busesApartados.value.filter(b => b.quotationId !== quotationId),
-          ...buses,
-        ];
-        pagosBus.value = [
-          ...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)),
-          ...newPagosBus,
-        ];
+        cotizaciones.value = [...cotizaciones.value.filter(c => c.travelId !== travelId), quotation];
+        proveedoresQuotation.value = [...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId), ...providers];
+        pagosProveedor.value = [...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...providerPayments];
+        hospedajesQuotation.value = [...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId), ...accommodations];
+        pagosHospedaje.value = [...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...accommodationPayments];
+        preciosPublicos.value = [...preciosPublicos.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
+        busesApartados.value = [...busesApartados.value.filter(b => b.quotationId !== quotationId), ...buses];
+        pagosBus.value = [...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...busPayments];
 
         travelFetchCache.add(travelId);
       }
@@ -833,15 +720,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('quotations')
-        .insert(mapQuotationToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const quotation = mapQuotationRowToDomain(row);
+      const quotation = await repository.insertQuotation(data);
       cotizaciones.value.push(quotation);
       travelFetchCache.add(data.travelId);
       return quotation;
@@ -869,28 +748,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'quotations'> = {};
-      if (data.busCapacity !== undefined)
-        update.bus_capacity = data.busCapacity;
-      if (data.minimumSeatTarget !== undefined)
-        update.minimum_seat_target = data.minimumSeatTarget;
-      if (data.seatPrice !== undefined)
-        update.seat_price = data.seatPrice;
-      if (data.status !== undefined)
-        update.status = data.status;
-      if (data.notes !== undefined)
-        update.notes = data.notes ?? null;
-
-      const { data: row, error: err } = await supabase
-        .from('quotations')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const updated = mapQuotationRowToDomain(row);
+      const updated = await repository.updateQuotation(id, data);
       cotizaciones.value[index] = updated;
 
       if ('minimumSeatTarget' in data) {
@@ -958,15 +816,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('quotation_providers')
-        .insert(mapQuotationProviderToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const newProveedor = mapQuotationProviderRowToDomain(row);
+      const newProveedor = await repository.insertProvider(data);
       proveedoresQuotation.value.push(newProveedor);
       await _syncPrecioToTravel(data.quotationId);
       return newProveedor;
@@ -999,32 +849,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'quotation_providers'> = {};
-      if (data.providerId !== undefined)
-        update.provider_id = data.providerId;
-      if (data.serviceDescription !== undefined)
-        update.service_description = data.serviceDescription;
-      if (data.remarks !== undefined)
-        update.remarks = data.remarks ?? null;
-      if (data.totalCost !== undefined)
-        update.total_cost = data.totalCost;
-      if (data.paymentMethod !== undefined)
-        update.payment_method = data.paymentMethod;
-      if (data.splitType !== undefined)
-        update.split_type = data.splitType;
-      if (data.confirmed !== undefined)
-        update.confirmed = data.confirmed;
-
-      const { data: row, error: err } = await supabase
-        .from('quotation_providers')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const updated = mapQuotationProviderRowToDomain(row);
+      const updated = await repository.updateProvider(id, data);
       proveedoresQuotation.value[index] = updated;
       await _syncPrecioToTravel(existing.quotationId);
       return updated;
@@ -1051,12 +876,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('quotation_providers')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
+      await repository.deleteProvider(id);
 
       proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
       pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
@@ -1082,12 +902,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('quotation_providers')
-        .update({ confirmed: !proveedor.confirmed })
-        .eq('id', id);
-      if (err)
-        throw err;
+      await repository.toggleProviderConfirmado(id, !proveedor.confirmed);
 
       const index = proveedoresQuotation.value.findIndex(p => p.id === id);
       if (index !== -1 && proveedoresQuotation.value[index]) {
@@ -1122,15 +937,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('provider_payments')
-        .insert(mapProviderPaymentToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const newPago = mapProviderPaymentRowToDomain(row);
+      const newPago = await repository.insertProviderPayment(data);
       pagosProveedor.value.push(newPago);
       return newPago;
     }
@@ -1155,28 +962,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'provider_payments'> = {};
-      if (data.amount !== undefined)
-        update.amount = data.amount;
-      if (data.paymentDate !== undefined)
-        update.payment_date = data.paymentDate;
-      if (data.paymentType !== undefined)
-        update.payment_type = data.paymentType;
-      if (data.concept !== undefined)
-        update.concept = data.concept ?? null;
-      if (data.notes !== undefined)
-        update.notes = data.notes ?? null;
-
-      const { data: row, error: err } = await supabase
-        .from('provider_payments')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const updated = mapProviderPaymentRowToDomain(row);
+      const updated = await repository.updateProviderPayment(id, data);
       pagosProveedor.value[index] = updated;
       return updated;
     }
@@ -1202,13 +988,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('provider_payments')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
-
+      await repository.deleteProviderPayment(id);
       pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
     }
     catch (e) {
@@ -1238,53 +1018,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    const detallesEnriquecidos = data.details.map(d => ({
-      ...d,
-      id: d.id ?? crypto.randomUUID(),
-      costPerPerson: d.pricePerNight / d.maxOccupancy,
-    }));
-
-    const totalCost = detallesEnriquecidos.reduce((sum, detalle) => {
-      return sum + (detalle.pricePerNight * data.nightCount * detalle.quantity);
-    }, 0);
-
     loading.value = true;
     error.value = null;
     try {
-      const { data: accRow, error: accErr } = await supabase
-        .from('quotation_accommodations')
-        .insert({
-          quotation_id: data.quotationId,
-          provider_id: data.providerId,
-          night_count: data.nightCount,
-          total_cost: totalCost,
-          payment_method: data.paymentMethod,
-          confirmed: data.confirmed,
-        })
-        .select()
-        .single();
-      if (accErr)
-        throw accErr;
-
-      const detailInserts = detallesEnriquecidos.map(d => ({
-        quotation_accommodation_id: accRow.id,
-        hotel_room_type_id: d.roomTypeId,
-        quantity: d.quantity,
-        price_per_night: d.pricePerNight,
-        max_occupancy: d.maxOccupancy,
-      }));
-      const { data: detailRows, error: detErr } = await supabase
-        .from('quotation_accommodation_details')
-        .insert(detailInserts)
-        .select();
-      if (detErr)
-        throw detErr;
-
-      const details = (detailRows ?? []).map(d => ({
-        ...mapQuotationAccommodationDetailRowToDomain(d),
-        costPerPerson: d.price_per_night / d.max_occupancy,
-      }));
-      const newHospedaje = mapQuotationAccommodationRowToDomain(accRow, details);
+      const newHospedaje = await repository.insertAccommodation(data);
       hospedajesQuotation.value.push(newHospedaje);
       await _syncPrecioToTravel(data.quotationId);
       const addSyncResult = await _syncHospedajeToTravel(data.quotationId);
@@ -1315,65 +1052,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion?.status === 'confirmed')
       return undefined;
 
-    const detallesBase = data.details ?? existing.details;
-    const detallesEnriquecidos = detallesBase.map(d => ({
-      ...d,
-      id: d.id ?? crypto.randomUUID(),
-      costPerPerson: d.pricePerNight / d.maxOccupancy,
-    }));
-
-    const totalCost = detallesEnriquecidos.reduce((sum, detalle) => {
-      return sum + (detalle.pricePerNight * (data.nightCount ?? existing.nightCount) * detalle.quantity);
-    }, 0);
-
     loading.value = true;
     error.value = null;
     try {
-      const accUpdate: TablesUpdate<'quotation_accommodations'> = { total_cost: totalCost };
-      if (data.providerId !== undefined)
-        accUpdate.provider_id = data.providerId;
-      if (data.nightCount !== undefined)
-        accUpdate.night_count = data.nightCount;
-      if (data.paymentMethod !== undefined)
-        accUpdate.payment_method = data.paymentMethod;
-      if (data.confirmed !== undefined)
-        accUpdate.confirmed = data.confirmed;
-
-      const { data: updatedRow, error: accErr } = await supabase
-        .from('quotation_accommodations')
-        .update(accUpdate)
-        .eq('id', id)
-        .select()
-        .single();
-      if (accErr)
-        throw accErr;
-
-      const { error: delErr } = await supabase
-        .from('quotation_accommodation_details')
-        .delete()
-        .eq('quotation_accommodation_id', id);
-      if (delErr)
-        throw delErr;
-
-      const detailInserts = detallesEnriquecidos.map(d => ({
-        quotation_accommodation_id: id,
-        hotel_room_type_id: d.roomTypeId,
-        quantity: d.quantity,
-        price_per_night: d.pricePerNight,
-        max_occupancy: d.maxOccupancy,
-      }));
-      const { data: newDetailRows, error: detErr } = await supabase
-        .from('quotation_accommodation_details')
-        .insert(detailInserts)
-        .select();
-      if (detErr)
-        throw detErr;
-
-      const details = (newDetailRows ?? []).map(d => ({
-        ...mapQuotationAccommodationDetailRowToDomain(d),
-        costPerPerson: d.price_per_night / d.max_occupancy,
-      }));
-      const updated = mapQuotationAccommodationRowToDomain(updatedRow, details);
+      const updated = await repository.updateAccommodation(id, data, existing.nightCount, existing.details);
       hospedajesQuotation.value[index] = updated;
       await _syncPrecioToTravel(existing.quotationId);
       const updateSyncResult = await _syncHospedajeToTravel(existing.quotationId);
@@ -1401,12 +1083,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('quotation_accommodations')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
+      await repository.deleteAccommodation(id);
 
       hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
@@ -1435,12 +1112,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('quotation_accommodations')
-        .update({ confirmed: !hospedaje.confirmed })
-        .eq('id', id);
-      if (err)
-        throw err;
+      await repository.toggleConfirmAccommodation(id, !hospedaje.confirmed);
 
       const index = hospedajesQuotation.value.findIndex(h => h.id === id);
       if (index !== -1 && hospedajesQuotation.value[index]) {
@@ -1474,15 +1146,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('accommodation_payments')
-        .insert(mapAccommodationPaymentToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const newPago = mapAccommodationPaymentRowToDomain(row);
+      const newPago = await repository.insertAccommodationPayment(data);
       pagosHospedaje.value.push(newPago);
       return newPago;
     }
@@ -1507,28 +1171,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'accommodation_payments'> = {};
-      if (data.amount !== undefined)
-        update.amount = data.amount;
-      if (data.paymentDate !== undefined)
-        update.payment_date = data.paymentDate;
-      if (data.paymentType !== undefined)
-        update.payment_type = data.paymentType;
-      if (data.concept !== undefined)
-        update.concept = data.concept ?? null;
-      if (data.notes !== undefined)
-        update.notes = data.notes ?? null;
-
-      const { data: row, error: err } = await supabase
-        .from('accommodation_payments')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const updated = mapAccommodationPaymentRowToDomain(row);
+      const updated = await repository.updateAccommodationPayment(id, data);
       pagosHospedaje.value[index] = updated;
       return updated;
     }
@@ -1554,13 +1197,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('accommodation_payments')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
-
+      await repository.deleteAccommodationPayment(id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
     }
     catch (e) {
@@ -1583,15 +1220,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('quotation_public_prices')
-        .insert(mapQuotationPublicPriceToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const newPrecio = mapQuotationPublicPriceRowToDomain(row);
+      const newPrecio = await repository.insertPublicPrice(data);
       preciosPublicos.value.push(newPrecio);
       return newPrecio;
     }
@@ -1616,30 +1245,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'quotation_public_prices'> = {};
-      if (data.priceType !== undefined)
-        update.price_type = data.priceType;
-      if (data.description !== undefined)
-        update.description = data.description;
-      if (data.pricePerPerson !== undefined)
-        update.price_per_person = data.pricePerPerson;
-      if (data.roomType !== undefined)
-        update.room_type = data.roomType ?? null;
-      if (data.ageGroup !== undefined)
-        update.age_group = data.ageGroup ?? null;
-      if (data.notes !== undefined)
-        update.notes = data.notes ?? null;
-
-      const { data: row, error: err } = await supabase
-        .from('quotation_public_prices')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const updated = mapQuotationPublicPriceRowToDomain(row);
+      const updated = await repository.updatePublicPrice(id, data);
       preciosPublicos.value[index] = updated;
       return updated;
     }
@@ -1656,13 +1262,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('quotation_public_prices')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
-
+      await repository.deletePublicPrice(id);
       preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
     }
     catch (e) {
@@ -1695,17 +1295,16 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('quotation_buses')
-        .insert(mapQuotationBusToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const newBus = mapQuotationBusRowToDomain(row);
+      const { quotationBus: newBus, travelBusRow } = await repository.insertBus(data, cotizacion.travelId);
       busesApartados.value.push(newBus);
-      await _addTravelBusForQuotation(newBus, cotizacion.travelId);
+      const travelStore = useTravelsStore();
+      const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
+      if (travelIndex !== -1) {
+        travelStore.travels[travelIndex] = {
+          ...travelStore.travels[travelIndex]!,
+          buses: [...(travelStore.travels[travelIndex]!.buses ?? []), mapTravelBusRowToDomain(travelBusRow)],
+        };
+      }
       await _syncPrecioToTravel(data.quotationId);
       return newBus;
     }
@@ -1734,42 +1333,18 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'quotation_buses'> = {};
-      if (data.providerId !== undefined)
-        update.provider_id = data.providerId;
-      if (data.unitNumber !== undefined)
-        update.unit_number = data.unitNumber;
-      if (data.capacity !== undefined)
-        update.capacity = data.capacity;
-      if (data.status !== undefined)
-        update.status = data.status;
-      if (data.totalCost !== undefined)
-        update.total_cost = data.totalCost;
-      if (data.splitType !== undefined)
-        update.split_type = data.splitType;
-      if (data.paymentMethod !== undefined)
-        update.payment_method = data.paymentMethod;
-      if (data.remarks !== undefined)
-        update.remarks = data.remarks ?? null;
-      if (data.notes !== undefined)
-        update.notes = data.notes ?? null;
-      if (data.confirmed !== undefined)
-        update.confirmed = data.confirmed;
-      if (data.coordinatorIds !== undefined)
-        update.coordinator_ids = data.coordinatorIds as unknown as import('~/types/database.types').Json;
-
-      const { data: row, error: err } = await supabase
-        .from('quotation_buses')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const updated = mapQuotationBusRowToDomain(row);
+      const updated = await repository.updateBus(id, data);
       busesApartados.value[index] = updated;
-      await _updateTravelBusForQuotation(updated, cotizacion!.travelId);
+      const travelStore = useTravelsStore();
+      const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion!.travelId);
+      if (travelIndex !== -1) {
+        travelStore.travels[travelIndex] = {
+          ...travelStore.travels[travelIndex]!,
+          buses: (travelStore.travels[travelIndex]!.buses ?? []).map(b =>
+            b.quotationBusId === id ? { ...b, rentalPrice: updated.totalCost } : b,
+          ),
+        };
+      }
       await _syncPrecioToTravel(existing.quotationId);
       return updated;
     }
@@ -1795,12 +1370,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('quotation_buses')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
+      await repository.deleteBus(id);
 
       busesApartados.value = busesApartados.value.filter(b => b.id !== id);
       pagosBus.value = pagosBus.value.filter(p => p.quotationBusId !== id);
@@ -1846,15 +1416,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('bus_payments')
-        .insert(mapBusPaymentToInsert(data))
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const newPago = mapBusPaymentRowToDomain(row);
+      const newPago = await repository.insertBusPayment(data);
       pagosBus.value.push(newPago);
       return newPago;
     }
@@ -1879,28 +1441,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'bus_payments'> = {};
-      if (data.amount !== undefined)
-        update.amount = data.amount;
-      if (data.paymentDate !== undefined)
-        update.payment_date = data.paymentDate;
-      if (data.paymentType !== undefined)
-        update.payment_type = data.paymentType;
-      if (data.concept !== undefined)
-        update.concept = data.concept ?? null;
-      if (data.notes !== undefined)
-        update.notes = data.notes ?? null;
-
-      const { data: row, error: err } = await supabase
-        .from('bus_payments')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-      if (err)
-        throw err;
-
-      const updated = mapBusPaymentRowToDomain(row);
+      const updated = await repository.updateBusPayment(id, data);
       pagosBus.value[index] = updated;
       return updated;
     }
@@ -1917,13 +1458,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { error: err } = await supabase
-        .from('bus_payments')
-        .delete()
-        .eq('id', id);
-      if (err)
-        throw err;
-
+      await repository.deleteBusPayment(id);
       pagosBus.value = pagosBus.value.filter(p => p.id !== id);
     }
     catch (e) {
