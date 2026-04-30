@@ -33,12 +33,10 @@ import { useQuotationRepository } from '~/composables/quotation/use-quotation-re
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 import {
-  mapTravelAccommodationRowToDomain,
   mapTravelBusRowToDomain,
 } from '~/utils/mappers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
-  const supabase = useSupabase();
   const repository = useQuotationRepository();
   const travelFetchCache = new Set<string>();
   const travelFetchInFlight = new Map<string, Promise<void>>();
@@ -489,12 +487,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (nuevoPrecio === 0)
       return;
 
-    const { error: err } = await supabase
-      .from('quotations')
-      .update({ seat_price: nuevoPrecio })
-      .eq('id', quotationId);
-    if (err)
-      throw err;
+    await repository.updateSeatPrice(quotationId, nuevoPrecio);
 
     const index = cotizaciones.value.findIndex(c => c.id === quotationId);
     if (index !== -1 && cotizaciones.value[index]) {
@@ -525,46 +518,18 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     const existingAccommodations = travelStore.getAccommodationsByTravel(travelId);
 
     // Get occupied room IDs from DB (travelers with a room in this travel)
-    const { data: occupiedRows } = await supabase
-      .from('travelers')
-      .select('travel_accommodation_id')
-      .eq('travel_id', travelId)
-      .not('travel_accommodation_id', 'is', null);
-
-    const occupiedIds = new Set<string>(
-      (occupiedRows ?? []).map(r => r.travel_accommodation_id!),
-    );
+    const occupiedIds = await repository.getOccupiedAccommodationIds(travelId);
 
     const { toDeleteIds, toInsert, skippedOccupied } = reconcileAccommodations(desiredGroupMap, existingAccommodations, occupiedIds);
 
     // Execute DB changes
     if (toDeleteIds.length > 0) {
-      const { error: delErr } = await supabase
-        .from('travel_accommodations')
-        .delete()
-        .in('id', toDeleteIds);
-      if (delErr)
-        throw new Error(`No se pudo eliminar habitaciones: ${delErr.message}`);
+      await repository.deleteUnoccupiedAccommodations(toDeleteIds);
     }
 
     let inserted: TravelAccommodation[] = [];
     if (toInsert.length > 0) {
-      const { data: newRows, error: insErr } = await supabase
-        .from('travel_accommodations')
-        .insert(
-          toInsert.map(slot => ({
-            travel_id: travelId,
-            provider_id: slot.providerId,
-            hotel_room_type_id: slot.hotelRoomTypeId ?? null,
-            max_occupancy: slot.maxOccupancy,
-            room_number: null,
-            floor: null,
-          })),
-        )
-        .select();
-      if (insErr)
-        throw new Error(`No se pudo insertar habitaciones: ${insErr.message}`);
-      inserted = (newRows ?? []).map(mapTravelAccommodationRowToDomain);
+      inserted = await repository.insertTravelAccommodations(travelId, toInsert);
     }
 
     // Update local state without nuking occupied assignments
