@@ -1,5 +1,6 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderPayment, ProviderPaymentFormData, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
+import type { TravelAccommodation } from '~/types/travel';
 
 import {
   mapAccommodationPaymentRowToDomain,
@@ -12,6 +13,8 @@ import {
   mapQuotationPublicPriceRowToDomain,
   mapQuotationRowToDomain,
 } from '~/utils/mappers';
+
+import type { RoomSlot } from './use-quotation-domain';
 
 export function useQuotationRepository() {
   const supabase = useSupabase();
@@ -640,6 +643,55 @@ export function useQuotationRepository() {
       throw error;
   }
 
+  async function updateSeatPrice(quotationId: string, price: number): Promise<void> {
+    const { error } = await supabase
+      .from('quotations')
+      .update({ seat_price: price })
+      .eq('id', quotationId);
+    if (error)
+      throw error;
+  }
+
+  async function getOccupiedAccommodationIds(travelId: string): Promise<Set<string>> {
+    const { data } = await supabase
+      .from('travelers')
+      .select('travel_accommodation_id')
+      .eq('travel_id', travelId)
+      .not('travel_accommodation_id', 'is', null);
+    return new Set<string>((data ?? []).map(r => r.travel_accommodation_id!));
+  }
+
+  async function deleteUnoccupiedAccommodations(ids: string[]): Promise<void> {
+    if (ids.length === 0)
+      return;
+    const { error } = await supabase
+      .from('travel_accommodations')
+      .delete()
+      .in('id', ids);
+    if (error)
+      throw new Error(`No se pudo eliminar habitaciones: ${error.message}`);
+  }
+
+  async function insertTravelAccommodations(
+    travelId: string,
+    slots: RoomSlot[],
+  ): Promise<TravelAccommodation[]> {
+    const { data, error } = await supabase
+      .from('travel_accommodations')
+      .insert(slots.map(slot => ({
+        travel_id: travelId,
+        provider_id: slot.providerId,
+        hotel_room_type_id: slot.hotelRoomTypeId ?? null,
+        max_occupancy: slot.maxOccupancy,
+        room_number: null,
+        floor: null,
+      })))
+      .select();
+    if (error)
+      throw new Error(`No se pudo insertar habitaciones: ${error.message}`);
+    return (data ?? []).map(mapTravelAccommodationRowToDomain);
+  }
+
   return {
     fetchAll,
     fetchByTravel,
@@ -668,5 +720,9 @@ export function useQuotationRepository() {
     insertBus,
     updateBus,
     deleteBus,
+    updateSeatPrice,
+    getOccupiedAccommodationIds,
+    deleteUnoccupiedAccommodations,
+    insertTravelAccommodations,
   };
 }
