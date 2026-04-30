@@ -163,3 +163,14 @@ export type QuotationPublicPrice = {
 export type QuotationPublicPriceFormData = Omit<QuotationPublicPrice, 'id' | 'createdAt' | 'updatedAt'> & {
   id?: string;
 };
+
+export type QuotationFetchResult = {
+  quotation: Quotation;
+  providers: QuotationProvider[];
+  providerPayments: ProviderPayment[];
+  accommodations: QuotationAccommodation[];
+  accommodationPayments: AccommodationPayment[];
+  buses: QuotationBus[];
+  busPayments: BusPayment[];
+  publicPrices: QuotationPublicPrice[];
+};
