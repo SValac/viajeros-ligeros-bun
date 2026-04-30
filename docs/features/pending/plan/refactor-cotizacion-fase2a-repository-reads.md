@@ -5,7 +5,7 @@ operaciones de lectura: `fetchAll` y `fetchByTravel`. El store deja de llamar
 a Supabase directamente en estas funciones.
 
 **Dependencia:** Fase 1 completada.  
-**Estado:** Pendiente
+**Estado:** Completada ✅
 
 ---
 

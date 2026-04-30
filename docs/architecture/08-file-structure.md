@@ -25,8 +25,33 @@ app/
 │   └── use-travel-store.ts
 │
 ├── composables/
-│   ├── use-google-maps.ts          # Carga lazy del SDK de Google Maps
-│   └── use-supabase.ts             # Cliente Supabase singleton tipado
+│   ├── auth/
+│   │   ├── use-auth-adapter.ts         # Adaptador Supabase Auth → dominio
+│   │   └── use-auth-domain.ts          # Lógica pura de autenticación
+│   ├── buses/
+│   │   └── use-bus-repository.ts       # Acceso Supabase para buses
+│   ├── coordinators/
+│   │   └── use-coordinator-repository.ts
+│   ├── hotel-rooms/
+│   │   ├── use-hotel-room-domain.ts    # Validaciones y cálculos de habitaciones
+│   │   └── use-hotel-room-repository.ts
+│   ├── payments/
+│   │   ├── use-payments-domain.ts
+│   │   └── use-payments-repository.ts
+│   ├── providers/
+│   │   ├── use-provider-domain.ts
+│   │   └── use-provider-repository.ts
+│   ├── quotation/
+│   │   ├── use-quotation-domain.ts     # calcPaymentStatus, calcSeatPrice, reconcileAccommodations
+│   │   └── use-quotation-repository.ts # ~30 funciones, 8 tablas
+│   ├── travelers/
+│   │   ├── use-traveler-domain.ts
+│   │   └── use-traveler-repository.ts
+│   ├── travels/
+│   │   ├── use-travel-domain.ts
+│   │   └── use-travel-repository.ts
+│   ├── use-google-maps.ts              # Carga lazy del SDK de Google Maps
+│   └── use-supabase.ts                 # Cliente Supabase singleton tipado
 │
 ├── middleware/
 │   └── auth.global.ts              # Guard global de autenticación

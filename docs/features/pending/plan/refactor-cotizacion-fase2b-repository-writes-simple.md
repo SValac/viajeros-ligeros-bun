@@ -4,7 +4,7 @@
 Son las mutaciones más mecánicas: una función = una tabla = una operación Supabase.
 
 **Dependencia:** Fase 2A completada.  
-**Estado:** Pendiente
+**Estado:** Completada ✅
 
 ---
 

@@ -6,7 +6,7 @@ Sin cambios en la API pública del store ni en las páginas.
 **Patrón elegido:** Repository + Domain composables  
 **Complejidad:** Muy Alta — el store más grande del proyecto (2111 líneas), 8 tablas,
 ~26 acciones async, Promise.all en fetchByTravel  
-**Estado:** Fases 0 y 1 completadas ✅ · Fases 2A–3 pendientes
+**Estado:** Todas las fases completadas ✅
 
 ---
 
@@ -15,10 +15,10 @@ Sin cambios en la API pública del store ni en las páginas.
 | Documento | Contenido | Estado |
 |---|---|---|
 | [refactor-cotizacion-fase1-domain.md](refactor-cotizacion-fase1-domain.md) | Crear `use-cotizacion-domain.ts` (4 funciones puras) | Completada ✅ |
-| [refactor-cotizacion-fase2a-repository-reads.md](refactor-cotizacion-fase2a-repository-reads.md) | Crear repositorio con `fetchAll` y `fetchByTravel` | Pendiente |
-| [refactor-cotizacion-fase2b-repository-writes-simple.md](refactor-cotizacion-fase2b-repository-writes-simple.md) | Migrar 18 operaciones CRUD de una tabla al repositorio | Pendiente |
-| [refactor-cotizacion-fase2c-repository-writes-complex.md](refactor-cotizacion-fase2c-repository-writes-complex.md) | Migrar 6 operaciones multi-tabla + helpers de sync | Pendiente |
-| [refactor-cotizacion-fase3-cleanup.md](refactor-cotizacion-fase3-cleanup.md) | Limpieza final + verificación de capas | Pendiente |
+| [refactor-cotizacion-fase2a-repository-reads.md](refactor-cotizacion-fase2a-repository-reads.md) | Crear repositorio con `fetchAll` y `fetchByTravel` | Completada ✅ |
+| [refactor-cotizacion-fase2b-repository-writes-simple.md](refactor-cotizacion-fase2b-repository-writes-simple.md) | Migrar 18 operaciones CRUD de una tabla al repositorio | Completada ✅ |
+| [refactor-cotizacion-fase2c-repository-writes-complex.md](refactor-cotizacion-fase2c-repository-writes-complex.md) | Migrar 6 operaciones multi-tabla + helpers de sync | Completada ✅ |
+| [refactor-cotizacion-fase3-cleanup.md](refactor-cotizacion-fase3-cleanup.md) | Limpieza final + verificación de capas | Completada ✅ |
 
 ---
 

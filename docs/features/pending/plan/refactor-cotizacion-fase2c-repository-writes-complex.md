@@ -5,7 +5,7 @@ DB al repositorio. Al terminar esta fase, el store no debe tener ningún `supaba
 directo — solo orquestación, cache y llamadas cross-store.
 
 **Dependencia:** Fases 1, 2A y 2B completadas.  
-**Estado:** Pendiente
+**Estado:** Completada ✅
 
 ---
 
