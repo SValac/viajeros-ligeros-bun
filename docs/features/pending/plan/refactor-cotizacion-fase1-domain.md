@@ -4,7 +4,7 @@
 extraídas del store. Sin cambios en la API pública del store ni en las páginas.
 
 **Dependencia:** Ninguna — esta es la primera fase.  
-**Estado:** Pendiente
+**Estado:** Completada ✅
 
 ---
 
