@@ -23,6 +23,13 @@ import type {
 } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 
+import {
+  buildDesiredRoomsMap,
+  calculatePaymentStatus,
+  calculateSeatPrice,
+  reconcileAccommodations,
+
+} from '~/composables/quotation/use-quotation-domain';
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 import {
@@ -255,21 +262,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!cotizacion)
         return 0;
 
-      const costoMinimo = getCostoTipoMinimo.value(quotationId);
-      const costoCapacidad = getCostoTipoTotal.value(quotationId);
-      const costoBusesMinimo = getCostoBusesTipoMinimo.value(quotationId);
-      const costoBusesTotal = getCostoBusesTipoTotal.value(quotationId);
-
-      const parteMinimo = cotizacion.minimumSeatTarget > 0
-        ? (costoMinimo + costoBusesMinimo) / cotizacion.minimumSeatTarget
-        : 0;
-      const parteCapacidad = cotizacion.busCapacity > 0
-        ? (costoCapacidad + costoBusesTotal) / cotizacion.busCapacity
-        : 0;
-
-      if (parteMinimo === 0 && parteCapacidad === 0)
-        return 0;
-      return Math.ceil(parteMinimo + parteCapacidad);
+      return calculateSeatPrice(
+        cotizacion,
+        proveedoresQuotation.value.filter(p => p.quotationId === quotationId),
+        busesApartados.value.filter(b => b.quotationId === quotationId),
+      );
     };
   });
 
@@ -331,11 +328,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!proveedor)
         return 'pending';
       const anticipado = getAnticipadoProveedor.value(quotationProviderId);
-      if (anticipado <= 0)
-        return 'pending';
-      if (anticipado >= proveedor.totalCost)
-        return 'paid';
-      return 'partial';
+      return calculatePaymentStatus(anticipado, proveedor.totalCost);
     };
   });
 
@@ -377,11 +370,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!hospedaje)
         return 'pending';
       const anticipado = getAnticipadoHospedaje.value(quotationAccommodationId);
-      if (anticipado <= 0)
-        return 'pending';
-      if (anticipado >= hospedaje.totalCost)
-        return 'paid';
-      return 'partial';
+      return calculatePaymentStatus(anticipado, hospedaje.totalCost);
     };
   });
 
@@ -482,11 +471,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!bus)
         return 'pending';
       const anticipado = getAnticipadoBus.value(quotationBusId);
-      if (anticipado <= 0)
-        return 'pending';
-      if (anticipado >= bus.totalCost)
-        return 'paid';
-      return 'partial';
+      return calculatePaymentStatus(anticipado, bus.totalCost ?? 0);
     };
   });
 
@@ -602,25 +587,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     const travelId = cotizacion.travelId;
 
     // Build desired state: group by providerId:hotelRoomTypeId -> list of desired room slots
-    type RoomSlot = { providerId: string; hotelRoomTypeId?: string; maxOccupancy: number };
-    type DesiredGroup = { key: string; slots: RoomSlot[] };
-    const desiredGroupMap = new Map<string, DesiredGroup>();
-
-    for (const hospedaje of hospedajesQuotation.value.filter(h => h.quotationId === quotationId)) {
-      for (const detalle of hospedaje.details) {
-        const key = `${hospedaje.providerId}:${detalle.roomTypeId ?? ''}`;
-        if (!desiredGroupMap.has(key)) {
-          desiredGroupMap.set(key, { key, slots: [] });
-        }
-        for (let i = 0; i < detalle.quantity; i++) {
-          desiredGroupMap.get(key)!.slots.push({
-            providerId: hospedaje.providerId,
-            hotelRoomTypeId: detalle.roomTypeId,
-            maxOccupancy: detalle.maxOccupancy,
-          });
-        }
-      }
-    }
+    const desiredGroupMap = buildDesiredRoomsMap(hospedajesQuotation.value.filter(h => h.quotationId === quotationId));
 
     // Get existing rooms for this travel
     const existingAccommodations = travelStore.getAccommodationsByTravel(travelId);
@@ -636,64 +603,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       (occupiedRows ?? []).map(r => r.travel_accommodation_id!),
     );
 
-    // Group existing rooms by key
-    const existingGroupMap = new Map<string, typeof existingAccommodations>();
-    for (const acc of existingAccommodations) {
-      const key = `${acc.providerId}:${acc.hotelRoomTypeId ?? ''}`;
-      if (!existingGroupMap.has(key)) {
-        existingGroupMap.set(key, []);
-      }
-      existingGroupMap.get(key)!.push(acc);
-    }
-
-    const toDeleteIds: string[] = [];
-    const toInsert: RoomSlot[] = [];
-    let skippedOccupied = 0;
-
-    // For each desired group, reconcile against existing
-    for (const [key, desired] of desiredGroupMap) {
-      const existing = existingGroupMap.get(key) ?? [];
-      const desiredCount = desired.slots.length;
-      const existingCount = existing.length;
-
-      if (desiredCount > existingCount) {
-        // Need to add more rooms
-        const toAdd = desiredCount - existingCount;
-        for (let i = 0; i < toAdd; i++) {
-          toInsert.push(desired.slots[0]!);
-        }
-      }
-      else if (desiredCount < existingCount) {
-        // Need to remove excess rooms — only remove unoccupied ones, from the end
-        const excess = existingCount - desiredCount;
-        let removed = 0;
-        for (let i = existing.length - 1; i >= 0 && removed < excess; i--) {
-          const acc = existing[i]!;
-          if (!occupiedIds.has(acc.id)) {
-            toDeleteIds.push(acc.id);
-            removed++;
-          }
-          else {
-            skippedOccupied++;
-          }
-        }
-      }
-      // else: counts match — nothing to do for this group
-    }
-
-    // Remove existing groups not present in desired state (only unoccupied ones)
-    for (const [key, existing] of existingGroupMap) {
-      if (!desiredGroupMap.has(key)) {
-        for (const acc of existing) {
-          if (!occupiedIds.has(acc.id)) {
-            toDeleteIds.push(acc.id);
-          }
-          else {
-            skippedOccupied++;
-          }
-        }
-      }
-    }
+    const { toDeleteIds, toInsert, skippedOccupied } = reconcileAccommodations(desiredGroupMap, existingAccommodations, occupiedIds);
 
     // Execute DB changes
     if (toDeleteIds.length > 0) {
