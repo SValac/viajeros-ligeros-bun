@@ -1,11 +1,17 @@
-import type { TablesUpdate } from '~/types/database.types';
 import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeResult, TravelerUpdateData, TravelerWithChildren } from '~/types/traveler';
 
+import { filterTravelers, groupTravelersByRepresentative, isTravelerSeatChangeResult, toTravelerSeatChangeError } from '~/composables/travelers/use-traveler-domain';
+import { useTravelerRepository } from '~/composables/travelers/use-traveler-repository';
 import { TravelerSeatChangeError } from '~/types/traveler';
-import { mapTravelerRowToDomain, mapTravelerToInsert } from '~/utils/mappers';
 
+/**
+ * Global cache and orchestrator for traveler data.
+ * Delegates all Supabase I/O to `useTravelerRepository` and domain logic to `use-traveler-domain`.
+ * Owns the reactive `travelers` array — no other layer mutates it.
+ * @returns Store state, getters and actions
+ */
 export const useTravelerStore = defineStore('useTravelerStore', () => {
-  const supabase = useSupabase();
+  const repository = useTravelerRepository();
 
   // State
   const travelers = ref<Traveler[]>([]);
@@ -51,106 +57,19 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   });
 
   const filteredTravelers = computed((): Traveler[] => {
-    return travelers.value.filter((t) => {
-      if (filters.value.travelId && t.travelId !== filters.value.travelId) {
-        return false;
-      }
-      if (filters.value.travelBusId && t.travelBusId !== filters.value.travelBusId) {
-        return false;
-      }
-      return true;
-    });
+    return filterTravelers(travelers.value, filters.value);
   });
 
   const filteredGroupedTravelers = computed((): TravelerWithChildren[] => {
-    // Base: viajeros ya filtrados por travelId y travelBusId
-    const base = filteredTravelers.value;
-
-    // Si hay filtro de representante, retorna solo ese representante con sus acompañantes
-    if (filters.value.representativeId) {
-      const rep = base.find(t => t.id === filters.value.representativeId);
-      if (!rep)
-        return [];
-      const children = base.filter(t => t.representativeId === rep.id);
-      return [{ ...rep, children: children.length > 0 ? children : undefined }];
-    }
-
-    // Agrupar: separar acompañantes (tienen representativeId) de los demás
-    const grouped = Object.groupBy(base, t => t.representativeId ?? '');
-    const acompañantesIds = new Set(
-      base.filter(t => t.representativeId).map(t => t.id),
-    );
-
-    const result: TravelerWithChildren[] = [];
-
-    for (const t of base) {
-      // Si este viajero es acompañante de alguien, se incluye como child — no como fila raíz
-      if (acompañantesIds.has(t.id))
-        continue;
-
-      const children = grouped[t.id];
-      result.push({
-        ...t,
-        children: children && children.length > 0 ? children : undefined,
-      });
-    }
-
-    return result;
+    return groupTravelersByRepresentative(filteredTravelers.value, filters.value.representativeId);
   });
-
-  function isTravelerSeatChangeResult(data: unknown): data is TravelerSeatChangeResult {
-    if (!data || typeof data !== 'object') {
-      return false;
-    }
-
-    const payload = data as Partial<TravelerSeatChangeResult>;
-    return (payload.operation === 'moved' || payload.operation === 'swapped')
-      && typeof payload.travelId === 'string'
-      && typeof payload.sourceTravelerId === 'string'
-      && (typeof payload.targetTravelerId === 'string' || payload.targetTravelerId === null)
-      && typeof payload.sourceSeat === 'number'
-      && typeof payload.targetSeat === 'number'
-      && Array.isArray(payload.travelers);
-  }
-
-  function toTravelerSeatChangeError(error: unknown): TravelerSeatChangeError {
-    const message = (error as { message?: string } | null)?.message;
-
-    if (message === 'invalid_travel_bus') {
-      return new TravelerSeatChangeError('invalid-travel-bus', 'Camión inválido para realizar el cambio de asiento.', { cause: error });
-    }
-
-    if (message === 'invalid_target_seat') {
-      return new TravelerSeatChangeError('invalid-target-seat', 'El asiento destino es inválido.', { cause: error });
-    }
-
-    if (message === 'traveler_not_found') {
-      return new TravelerSeatChangeError('traveler-not-found', 'No se encontró al viajero para cambiar de asiento.', { cause: error });
-    }
-
-    if (message === 'same_seat_selected') {
-      return new TravelerSeatChangeError('same-seat-selected', 'Debes seleccionar un asiento diferente al actual.', { cause: error });
-    }
-
-    if (message === 'seat_conflict') {
-      return new TravelerSeatChangeError('seat-conflict', 'El asiento destino cambió durante la operación. Intenta de nuevo.', { cause: error });
-    }
-
-    return new TravelerSeatChangeError('unknown-error', 'No se pudo cambiar el asiento del viajero.', { cause: error });
-  }
 
   // Actions
   async function fetchAll(): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const { data, error: err } = await supabase
-        .from('travelers')
-        .select('*')
-        .order('created_at', { ascending: false });
-      if (err)
-        throw err;
-      travelers.value = data.map(mapTravelerRowToDomain);
+      travelers.value = await repository.fetchAll();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -160,18 +79,19 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Fetches travelers for a specific travel and merges them into the global cache.
+   * Only replaces entries matching `travelId` — preserves travelers from other travels.
+   * @param travelId - UUID of the travel to load travelers for
+   */
   async function fetchByTravel(travelId: string): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const { data, error: err } = await supabase
-        .from('travelers')
-        .select('*')
-        .eq('travel_id', travelId)
-        .order('created_at', { ascending: false });
-      if (err)
-        throw err;
-      const fetched = data.map(mapTravelerRowToDomain);
+      const fetched = await repository.fetchByTravel(travelId);
+      // el store es un cache global — puede tener viajeros de múltiples viajes ya cargados. Si
+      // haces travelers.value = fetched pierdes los viajeros de otros viajes. El merge dice:
+      // "reemplaza solo los del travelId X, conserva todos los demás".
       travelers.value = [
         ...travelers.value.filter(t => t.travelId !== travelId),
         ...fetched,
@@ -185,25 +105,23 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Creates a new traveler and appends it to the cache.
+   * @param data - Form data for the new traveler
+   * @returns The created traveler
+   * @throws Re-throws repository errors so the caller can react (e.g. close modal, show toast)
+   */
   async function addTraveler(data: TravelerFormData): Promise<Traveler> {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('travelers')
-        .insert(mapTravelerToInsert(data))
-        .select()
-        .single();
-
-      if (err)
-        throw err;
-
-      const traveler = mapTravelerRowToDomain(row);
+      const traveler = await repository.insert(data);
       travelers.value.push(traveler);
       return traveler;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
+      // return the error up the call stack so the UI can react to it (e.g. show a toast)
       throw e;
     }
     finally {
@@ -211,43 +129,19 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Updates a traveler and patches the cache entry by index for minimal re-renders.
+   * @param id - UUID of the traveler to update
+   * @param data - Partial update data
+   * @returns The updated traveler
+   * @throws Re-throws repository errors so the caller can react
+   */
   async function updateTraveler(id: string, data: TravelerUpdateData): Promise<Traveler> {
     loading.value = true;
     error.value = null;
     try {
-      const update: TablesUpdate<'travelers'> = {};
-      if (data.firstName !== undefined)
-        update.first_name = data.firstName;
-      if (data.lastName !== undefined)
-        update.last_name = data.lastName;
-      if (data.phone !== undefined)
-        update.phone = data.phone;
-      if (data.travelId !== undefined)
-        update.travel_id = data.travelId;
-      if (data.travelBusId !== undefined)
-        update.travel_bus_id = data.travelBusId || null;
-      if (data.seat !== undefined)
-        update.seat = data.seat;
-      if (data.boardingPoint !== undefined)
-        update.boarding_point = data.boardingPoint;
-      if (data.isRepresentative !== undefined)
-        update.is_representative = data.isRepresentative;
-      if (data.representativeId !== undefined)
-        update.representative_id = data.representativeId ?? null;
-      if ('travelAccommodationId' in data)
-        update.travel_accommodation_id = data.travelAccommodationId ?? null;
-
-      const { data: row, error: err } = await supabase
-        .from('travelers')
-        .update(update)
-        .eq('id', id)
-        .select()
-        .single();
-
-      if (err)
-        throw err;
-
-      const traveler = mapTravelerRowToDomain(row);
+      const traveler = await repository.update(id, data);
+      // vue detects the change in this specific position without re-evaluating the entire list, so it's more efficient than replacing the whole array
       const index = travelers.value.findIndex(t => t.id === id);
       if (index !== -1) {
         travelers.value[index] = traveler;
@@ -263,6 +157,11 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Unlinks all companions before deleting the traveler.
+   * Required because the DB does not cascade `representative_id` on traveler delete.
+   * @param id - UUID of the traveler to delete
+   */
   async function deleteTraveler(id: string): Promise<void> {
     loading.value = true;
     error.value = null;
@@ -270,13 +169,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       // Si este viajero es representante, desvincular sus acompañantes antes de borrar
       const hasCompanions = travelers.value.some(t => t.representativeId === id);
       if (hasCompanions) {
-        const { error: unlinkErr } = await supabase
-          .from('travelers')
-          .update({ representative_id: null, is_representative: false })
-          .eq('representative_id', id);
-        if (unlinkErr)
-          throw unlinkErr;
-
+        await repository.unlinkCompanions(id);
         // Actualizar en memoria
         travelers.value = travelers.value.map(t =>
           t.representativeId === id
@@ -285,14 +178,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
         );
       }
 
-      const { error: err } = await supabase
-        .from('travelers')
-        .delete()
-        .eq('id', id);
-
-      if (err)
-        throw err;
-
+      await repository.remove(id);
       travelers.value = travelers.value.filter(t => t.id !== id);
     }
     catch (e) {
@@ -303,6 +189,16 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Moves or swaps a traveler's seat via RPC.
+   * The RPC may update two travelers (swap), so all returned seats are patched in the cache.
+   * @param params - Seat change parameters
+   * @param params.travelerId - UUID of the traveler to move
+   * @param params.travelBusId - UUID of the travel bus context
+   * @param params.targetSeat - Destination seat number
+   * @returns The RPC result with operation type and updated seat data
+   * @throws {TravelerSeatChangeError} with a typed code and user-facing message
+   */
   async function changeTravelerSeat(params: {
     travelerId: string;
     travelBusId: string;
@@ -312,15 +208,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     error.value = null;
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('move_or_swap_traveler_seat', {
-        p_traveler_id: params.travelerId,
-        p_target_seat: params.targetSeat,
-        p_travel_bus_id: params.travelBusId,
-      });
-
-      if (rpcError) {
-        throw toTravelerSeatChangeError(rpcError);
-      }
+      const data = await repository.changeSeat(params);
 
       if (!isTravelerSeatChangeResult(data)) {
         throw new TravelerSeatChangeError('unknown-error', 'La respuesta del servidor para cambiar asiento es inválida.');
@@ -355,21 +243,17 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Assigns a traveler to an accommodation and patches the cache.
+   * @param travelerId - UUID of the traveler to assign
+   * @param travelAccommodationId - UUID of the target accommodation
+   * @throws Re-throws repository errors so the caller can react
+   */
   async function assignTravelerToRoom(travelerId: string, travelAccommodationId: string): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('travelers')
-        .update({ travel_accommodation_id: travelAccommodationId })
-        .eq('id', travelerId)
-        .select()
-        .single();
-
-      if (err)
-        throw err;
-
-      const traveler = mapTravelerRowToDomain(row);
+      const traveler = await repository.assignRoom(travelerId, travelAccommodationId);
       const index = travelers.value.findIndex(t => t.id === travelerId);
       if (index !== -1) {
         travelers.value[index] = traveler;
@@ -384,21 +268,16 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Removes a traveler from their assigned accommodation and patches the cache.
+   * @param travelerId - UUID of the traveler to unassign
+   * @throws Re-throws repository errors so the caller can react
+   */
   async function removeTravelerFromRoom(travelerId: string): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const { data: row, error: err } = await supabase
-        .from('travelers')
-        .update({ travel_accommodation_id: null })
-        .eq('id', travelerId)
-        .select()
-        .single();
-
-      if (err)
-        throw err;
-
-      const traveler = mapTravelerRowToDomain(row);
+      const traveler = await repository.removeFromRoom(travelerId);
       const index = travelers.value.findIndex(t => t.id === travelerId);
       if (index !== -1) {
         travelers.value[index] = traveler;
@@ -413,6 +292,10 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
   }
 
+  /**
+   * Replaces all active filters.
+   * @param newFilters - New filter state to apply
+   */
   function setFilters(newFilters: TravelerFilters): void {
     filters.value = { ...newFilters };
   }

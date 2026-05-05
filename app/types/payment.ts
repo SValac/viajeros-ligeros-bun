@@ -63,3 +63,13 @@ export type PaymentFilters = {
   dateFrom?: string;
   dateTo?: string;
 };
+
+export type PaymentCalculation = {
+  appliedPrice: number;
+  totalDiscountAmount: number;
+  totalSurchargeAmount: number;
+  finalCost: number;
+  totalPaid: number;
+  balance: number;
+  status: PaymentStatus;
+};

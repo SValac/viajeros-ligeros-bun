@@ -34,6 +34,8 @@ export type TravelBus = {
   rentalPrice: number;
 };
 
+export type TravelBusInsert = Omit<TravelBus, 'id'>;
+
 export type TravelService = {
   id: string;
   name: string;

@@ -106,15 +106,11 @@ const seatChangeAlertDescription = computed(() => {
 });
 
 // Setear y mantener el filtro de viaje bloqueado al travelId de la ruta
-onMounted(async () => {
-  travelerStore.setFilters({ travelId: travelId.value });
-  await travelerStore.fetchByTravel(travelId.value);
-});
-
-watch(travelId, (id) => {
+watch(travelId, async (id) => {
   travelerStore.setFilters({ travelId: id });
   clearSeatChangeState();
-});
+  await travelerStore.fetchByTravel(id);
+}, { immediate: true });
 
 watch(tabs, (availableTabs) => {
   const hasCurrentTab = availableTabs.some(tab => tab.value === activeTabValue.value);
