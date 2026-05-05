@@ -1,27 +1,35 @@
 # Refactor: use-cotizacion-store
 
 **Objetivo:** Aplicar el patrón Repository + Domain composables al store de cotización.
-Por su tamaño y complejidad, este refactor se divide en sub-fases. Sin cambios en la
-API pública del store ni en las páginas.
+Sin cambios en la API pública del store ni en las páginas.
 
 **Patrón elegido:** Repository + Domain composables  
 **Complejidad:** Muy Alta — el store más grande del proyecto (2111 líneas), 8 tablas,
-~26 acciones async, fetching con `Promise.all` y nested selects  
-**Estado:** Pendiente — requiere análisis previo en sesión
+~26 acciones async, Promise.all en fetchByTravel  
+**Estado:** Todas las fases completadas ✅
+
+---
+
+## Índice de documentos por fase
+
+| Documento | Contenido | Estado |
+|---|---|---|
+| [refactor-cotizacion-fase1-domain.md](refactor-cotizacion-fase1-domain.md) | Crear `use-cotizacion-domain.ts` (4 funciones puras) | Completada ✅ |
+| [refactor-cotizacion-fase2a-repository-reads.md](refactor-cotizacion-fase2a-repository-reads.md) | Crear repositorio con `fetchAll` y `fetchByTravel` | Completada ✅ |
+| [refactor-cotizacion-fase2b-repository-writes-simple.md](refactor-cotizacion-fase2b-repository-writes-simple.md) | Migrar 18 operaciones CRUD de una tabla al repositorio | Completada ✅ |
+| [refactor-cotizacion-fase2c-repository-writes-complex.md](refactor-cotizacion-fase2c-repository-writes-complex.md) | Migrar 6 operaciones multi-tabla + helpers de sync | Completada ✅ |
+| [refactor-cotizacion-fase3-cleanup.md](refactor-cotizacion-fase3-cleanup.md) | Limpieza final + verificación de capas | Completada ✅ |
 
 ---
 
 ## Rol del asistente
 
 **Modo:** Mentor / Guía de implementación  
-**Comportamiento:** Explicar el *por qué* de cada cambio antes de que el usuario
-escriba código. No realizar cambios al código a menos que el usuario lo pida
-explícitamente. Por la complejidad, leer el store completo al inicio de la sesión
-antes de proponer cambios. Responder preguntas y adaptar las explicaciones al nivel
-del usuario.
+**Comportamiento:** Explicar el *por qué* antes de cada cambio, no realizar cambios
+al código a menos que el usuario lo pida explícitamente. El usuario escribe el código
+y corre `bun run typecheck` después de cada acción migrada.
 
-**Skills a cargar al inicio de la sesión:**
-
+**Skills a cargar:**
 ```
 @.claude/skills/vue
 @.claude/skills/vue-best-practices
@@ -31,106 +39,133 @@ del usuario.
 ```
 
 **Contexto de referencia:**
-- Store ya refactorizado: `app/stores/use-traveler-store.ts`
-- Repositorio de referencia: `app/composables/travelers/use-traveler-repository.ts`
-- Dominio de referencia: `app/composables/travelers/use-traveler-domain.ts`
-- Plan de referencia completado: `docs/features/pending/plan/refactor-use-traveler-store.md`
-- Plan de referencia (complejo): `docs/features/pending/plan/refactor-use-travel-store.md`
+- Store refactorizado (referencia): `app/stores/use-traveler-store.ts`
+- Repositorio simple (referencia): `app/composables/travelers/use-traveler-repository.ts`
+- Dominio (referencia): `app/composables/travelers/use-traveler-domain.ts`
+- Repositorio con Promise.all (referencia): `app/composables/travels/use-travel-repository.ts`
 
 ---
 
-## Análisis preliminar (completar en sesión)
-
-**Archivo:** `app/stores/use-cotizacion-store.ts` (~2111 líneas)  
-**Tablas conocidas:** ~8 tablas relacionadas con cotización
-
-> **Acción requerida al inicio de la sesión:** Leer el archivo completo antes
-> de comenzar. El plan se irá refinando durante el análisis.
-
-### Lo que se sabe por memoria del proyecto
-
-- `fetchByTravel` usa `Promise.all` con nested selects — el más complejo del proyecto
-- Tiene secciones: Proveedores, Hospedaje, Precio al Público
-- Autobuses apartados (`CotizacionBus`) como sub-módulo
-
-### Preguntas a responder en la sesión
-
-Antes de proponer cambios, el asistente debe determinar:
-
-1. ¿Qué lógica de dominio pura existe? (cálculos de costos, validaciones de cotización)
-2. ¿Cuáles son las 8 tablas y sus relaciones?
-3. ¿El `fetchByTravel` con `Promise.all` se puede encapsular limpiamente en el repositorio?
-4. ¿Hay lógica de dominio que esté duplicada entre acciones?
-
----
-
-## Estructura objetivo (tentativa)
+## Estructura objetivo
 
 ```
 app/
 ├── composables/
-│   └── cotizacion/
-│       ├── use-cotizacion-domain.ts      ← lógica pura (cálculos, validaciones)
-│       └── use-cotizacion-repository.ts  ← acceso Supabase
+│   └── quotation/
+│       ├── use-quotation-domain.ts       ← lógica pura (CREADO ✅)
+│       └── use-quotation-repository.ts   ← acceso Supabase (NUEVO)
 ├── stores/
-│   └── use-cotizacion-store.ts           ← orquestación + cache
+│   └── use-cotizacion-store.ts           ← orquestación + cache (MODIFICADO)
 └── types/
-    └── cotizacion.ts                     ← sin cambios
+    └── quotation.ts                      ← agregar CotizacionFetchResult (MODIFICADO)
 ```
 
 ---
 
-## Fases (a detallar en sesión)
+## Fase 0 — Análisis ✅ COMPLETADA
 
-Dado el tamaño del store, las fases se dividen en sub-fases. El orden a seguir en sesión:
+### Tablas (8 propias + 3 auxiliares)
 
-### Fase 0 — Lectura y análisis (en sesión) ✅ PENDIENTE
+**Propias:**
+- `quotations` — cotización principal
+- `quotation_providers` — proveedores en cotización
+- `provider_payments` — pagos a proveedores
+- `quotation_accommodations` — hospedajes (con detalles anidados)
+- `quotation_accommodation_details` — detalle de habitaciones (child de accommodation)
+- `accommodation_payments` — pagos de hospedajes
+- `quotation_buses` — autobuses apartados
+- `bus_payments` — pagos de autobuses
 
-El asistente lee el store completo y mapea:
-- Funciones puras candidatas para el dominio
-- Acciones Supabase para el repositorio
-- Acciones que orquestan múltiples tablas (quedan en store)
-- Riesgos o particularidades
+**Auxiliares (no propias, se leen/escriben pero no son el dominio principal):**
+- `travel_buses` — se crea/actualiza como side effect de buses apartados
+- `travel_accommodations` — se sincroniza desde hospedajes de cotización
+- `travelers` — se lee para detectar habitaciones ocupadas
 
-### Fase 1 — Extraer lógica de dominio pura ✅ PENDIENTE
+### Estado del store
 
-> **A detallar en sesión** tras el análisis de Fase 0.
+| Ref | Tipo | Descripción |
+|---|---|---|
+| `cotizaciones` | `ref<Quotation[]>` | Array de cotizaciones |
+| `proveedoresQuotation` | `ref<QuotationProvider[]>` | Proveedores en cotizaciones |
+| `pagosProveedor` | `ref<ProviderPayment[]>` | Pagos a proveedores |
+| `hospedajesQuotation` | `ref<QuotationAccommodation[]>` | Hospedajes con detalles |
+| `pagosHospedaje` | `ref<AccommodationPayment[]>` | Pagos de hospedajes |
+| `preciosPublicos` | `ref<QuotationPublicPrice[]>` | Precios al público |
+| `busesApartados` | `ref<QuotationBus[]>` | Autobuses apartados |
+| `pagosBus` | `ref<BusPayment[]>` | Pagos de autobuses |
+| `loading` | `shallowRef<boolean>` | Indicador de carga |
+| `error` | `shallowRef<string\|null>` | Mensaje de error |
+| `filters` | `ref<QuotationProviderFilters>` | Filtros activos |
+| `travelFetchCache` | `Set<string>` | IDs de viajes ya fetched |
+| `travelFetchInFlight` | `Map<string, Promise<void>>` | Dedup de fetches concurrentes |
 
-Candidatos conocidos:
-- Cálculos de costos (punto de equilibrio, precio por asiento, etc.)
-- Validaciones de cotización
+### Clasificación de operaciones
 
-### Fase 2A — Repositorio: fetchs y queries ✅ PENDIENTE
+**READ (2):** `fetchAll`, `fetchByTravel`
 
-Extraer primero las operaciones de lectura (`fetch*`) — sin efectos secundarios en el store.
+**WRITE_SIMPLE (18)** — una tabla, una operación:
+- quotations: `createQuotation`, `updateQuotation`
+- quotation_providers: `addProveedorQuotation`, `updateProveedorQuotation`, `deleteProveedorQuotation`, `toggleConfirmadoProveedor`
+- provider_payments: `addProviderPayment`, `updateProviderPayment`, `deleteProviderPayment`
+- quotation_accommodations: `toggleConfirmadoHospedaje`
+- accommodation_payments: `addPagoHospedaje`, `updatePagoHospedaje`, `deletePagoHospedaje`
+- quotation_public_prices: `addPrecioPublico`, `updatePrecioPublico`, `deletePrecioPublico`
+- bus_payments: `addBusPayment`, `updateBusPayment`, `deleteBusPayment`
 
-### Fase 2B — Repositorio: mutaciones simples ✅ PENDIENTE
+**WRITE_COMPLEX (6)** — múltiples tablas o replace pattern:
+- `addHospedajeQuotation` → INSERT accommodation + INSERT N details
+- `updateHospedajeQuotation` → UPDATE accommodation + DELETE details + INSERT new details
+- `deleteHospedajeQuotation` → DELETE accommodation (cascade en DB)
+- `addBusQuotation` → INSERT quotation_bus + INSERT travel_bus
+- `updateBusQuotation` → UPDATE quotation_bus + UPDATE travel_bus.rental_price
+- `deleteBusQuotation` → DELETE quotation_bus (cascade)
 
-Extraer acciones de insert/update/delete de una sola tabla.
+**SYNC HELPERS (3)** — orquestación DB + cross-store:
+- `_syncPrecioToTravel` → UPDATE quotations.seat_price + llama travelStore
+- `_addTravelBusForQuotation` → INSERT travel_bus + actualiza travelStore local
+- `_syncHospedajeToTravel` → SELECT travelers + DELETE/INSERT travel_accommodations + llama travelStore
 
-### Fase 2C — Repositorio: mutaciones complejas ✅ PENDIENTE
+### Lógica de dominio identificada (para Fase 1)
 
-Extraer acciones multi-tabla o con lógica de replace (delete + insert).
+| Función | Origen en store | Por qué al dominio |
+|---|---|---|
+| `calcPaymentStatus(paid, total)` | Repetida 3 veces en store | Eliminar duplicación |
+| `calcSeatPrice(cotizacion, providers, buses)` | `getPrecioAsientoCalculado` (líneas 252–273) | Fórmula de negocio central |
+| `buildDesiredRoomsMap(hospedajes)` | Primer bloque de `_syncHospedajeToTravel` | Puro, testeable |
+| `reconcileAccommodations(desired, existing, occupiedIds)` | Algoritmo de `_syncHospedajeToTravel` (líneas 640–695) | ~80 líneas de lógica pura |
 
-### Fase 3 — Limpieza final ✅ PENDIENTE
+### fetchByTravel — estructura del Promise.all
 
-Verificación de que cada capa tiene exactamente lo que debe tener.
+```
+Paso 1: SELECT quotations WHERE travel_id → quotRow (o null)
+Paso 2 (si existe): Promise.all([
+  quotation_providers + provider_payments nested,
+  quotation_accommodations + quotation_accommodation_details + accommodation_payments nested,
+  quotation_public_prices,
+  quotation_buses + bus_payments nested,
+])
+→ Retorna CotizacionFetchResult (tipo nuevo en ~/types/quotation.ts)
+```
 
 ---
 
-## Decisiones de diseño conocidas
+## Decisiones de diseño
 
 | Decisión | Justificación |
 |---|---|
-| Dividir en sub-fases A/B/C | El store es demasiado grande para migrar en un solo paso |
-| Fase 0 de análisis requerida | Sin leer el store completo, cualquier plan es incompleto |
-| Migrar fetches primero | Son read-only: menor riesgo, resultado visible en typecheck inmediatamente |
-| Mantener `Promise.all` en el store o repositorio | A decidir en sesión según la complejidad del fetch |
+| `Promise.all` en el repositorio | Estrategia de acceso a datos; el store no debe saber cómo se paraleliza |
+| `CotizacionFetchResult` como tipo DTO | Contrato claro entre repositorio y store para fetchByTravel |
+| `_syncHospedajeToTravel` split: dominio + repositorio + store | El algoritmo de reconciliación es dominio puro; las queries DB van al repo; cross-store queda en el store |
+| Getters simples (filter/reduce) quedan en store | Son acceso a cache, no lógica de negocio |
+| `getMatrizPreciosReferencia` queda en store | Depende de `useProviderStore()` y `useHotelRoomStore()` — no puede ser función pura |
+| Fases 2A/2B/2C separadas | Por el volumen (26 acciones), permite typecheck incremental |
+
+---
 
 ## Advertencia
 
-Este es el store más complejo del proyecto. Se recomienda:
-1. Completar los refactors de los otros stores primero para tener experiencia
-2. Dedicar una sesión exclusiva a este store
-3. Hacer `bun run typecheck` después de cada acción migrada, no al final
-4. Tener el store de payments como referencia (también tiene Promise.all y 2 tablas)
+Este es el store más complejo del proyecto. Recomendaciones:
+1. Hacer `bun run typecheck` después de **cada acción** migrada, no al final de la fase
+2. Seguir el orden de fases estrictamente — las dependencias entre fases son reales
+3. Probar manualmente los flujos de sincronización (hospedajes → travel_accommodations,
+   precio → travel.price) después de cada fase que los afecte
