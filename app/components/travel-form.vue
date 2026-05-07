@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { FormSubmitEvent, SelectItem } from '#ui/types';
+import type { DateRange } from 'reka-ui';
 
+import { parseDate } from '@internationalized/date';
 import { z } from 'zod';
 
 import type { Coordinator } from '~/types/coordinator';
@@ -50,7 +52,7 @@ const schema = z.object({
   internalNotes: z.string().max(500, 'Máximo 500 caracteres').optional(),
 }).refine(
   data => new Date(data.endDate) >= new Date(data.startDate),
-  { message: 'Fecha fin debe ser mayor o igual a fecha inicio', path: ['endDate'] },
+  { message: 'Fecha fin debe ser mayor o igual a fecha inicio', path: ['startDate'] },
 );
 
 type Schema = z.output<typeof schema>;
@@ -85,6 +87,18 @@ const initialState = computed((): Schema => {
 });
 
 const state = ref<Schema>({ ...initialState.value });
+
+const inputDate = useTemplateRef('inputDate');
+
+const dateRange = shallowRef<DateRange>({
+  start: travel?.startDate ? parseDate(travel.startDate) : undefined,
+  end: travel?.endDate ? parseDate(travel.endDate) : undefined,
+});
+
+watch(dateRange, (range) => {
+  state.value.startDate = range.start?.toString() ?? '';
+  state.value.endDate = range.end?.toString() ?? '';
+});
 
 // Estado para itinerario y servicios (separados del schema Zod)
 const itinerario = ref(travel?.itinerary || []);
@@ -149,199 +163,210 @@ function onCancel() {
         <template #header>
           <h2>Datos Generales</h2>
         </template>
-        <UFormField
-          label="Destino"
-          name="destination"
-          required
-        >
-          <UInput
-            v-model="state.destination"
-            placeholder="París, Francia"
-            icon="i-lucide-map-pin"
-          />
-        </UFormField>
-
-        <!-- Coordinadores -->
-        <UFormField
-          label="Coordinadores"
-          name="coordinatorIds"
-          required
-        >
-          <template v-if="!hasCoordinators">
-            <UAlert
-              icon="i-lucide-triangle-alert"
-              color="warning"
-              variant="subtle"
-              title="Sin coordinadores registrados"
-              description="Debes agregar al menos un coordinador antes de crear un viaje."
-            >
-              <template #description>
-                Debes
-                <NuxtLink
-                  to="/coordinators"
-                  class="font-semibold underline underline-offset-2"
-                >
-                  agregar coordinadores
-                </NuxtLink>
-                antes de crear un viaje.
-              </template>
-            </UAlert>
-          </template>
-          <template v-else>
-            <USelectMenu
-              v-model="state.coordinatorIds"
-              :items="coordinatorItems"
-              multiple
-              placeholder="Seleccionar coordinadores"
-              value-key="value"
+        <div class="flex flex-col gap-4">
+          <UFormField
+            label="Destino"
+            name="destination"
+            required
+          >
+            <UInput
+              v-model="state.destination"
+              placeholder="París, Francia"
+              icon="i-lucide-map-pin"
             />
-            <div
-              v-if="selectedCoordinators.length > 0"
-              class="mt-3 flex flex-col gap-2"
-            >
-              <UCard
-                v-for="c in selectedCoordinators"
-                :key="c.id"
-                :ui="{ body: 'p-3' }"
+          </UFormField>
+
+          <!-- Coordinadores -->
+          <UFormField
+            label="Coordinadores"
+            name="coordinatorIds"
+            required
+          >
+            <template v-if="!hasCoordinators">
+              <UAlert
+                icon="i-lucide-triangle-alert"
+                color="warning"
+                variant="subtle"
+                title="Sin coordinadores registrados"
+                description="Debes agregar al menos un coordinador antes de crear un viaje."
               >
-                <div class="flex items-center justify-between gap-3">
-                  <div class="flex items-center gap-3 min-w-0">
-                    <UAvatar
-                      icon="i-lucide-user-star"
-                      size="sm"
-                      color="violet"
-                      variant="soft"
-                    />
-                    <div class="min-w-0">
-                      <p class="font-medium text-sm truncate">
-                        {{ c.name }}
-                      </p>
-                      <div class="flex items-center gap-3 mt-0.5">
-                        <UBadge
-                          :label="c.phone"
-                          icon="i-lucide-phone"
-                          color="neutral"
-                          variant="subtle"
-                          size="sm"
-                        />
-                        <UBadge
-                          :label="c.email"
-                          icon="i-lucide-mail"
-                          color="neutral"
-                          variant="subtle"
-                          size="sm"
-                        />
+                <template #description>
+                  Debes
+                  <NuxtLink
+                    to="/coordinators"
+                    class="font-semibold underline underline-offset-2"
+                  >
+                    agregar coordinadores
+                  </NuxtLink>
+                  antes de crear un viaje.
+                </template>
+              </UAlert>
+            </template>
+            <template v-else>
+              <USelectMenu
+                v-model="state.coordinatorIds"
+                :items="coordinatorItems"
+                multiple
+                placeholder="Seleccionar coordinadores"
+                value-key="value"
+              />
+              <div
+                v-if="selectedCoordinators.length > 0"
+                class="mt-3 flex flex-col gap-2"
+              >
+                <UCard
+                  v-for="c in selectedCoordinators"
+                  :key="c.id"
+                  :ui="{ body: 'p-3' }"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3 min-w-0">
+                      <UAvatar
+                        icon="i-lucide-user-star"
+                        size="sm"
+                        color="violet"
+                        variant="soft"
+                      />
+                      <div class="min-w-0">
+                        <p class="font-medium text-sm truncate">
+                          {{ c.name }}
+                        </p>
+                        <div class="flex items-center gap-3 mt-0.5">
+                          <UBadge
+                            :label="c.phone"
+                            icon="i-lucide-phone"
+                            color="neutral"
+                            variant="subtle"
+                            size="sm"
+                          />
+                          <UBadge
+                            :label="c.email"
+                            icon="i-lucide-mail"
+                            color="neutral"
+                            variant="subtle"
+                            size="sm"
+                          />
+                        </div>
                       </div>
                     </div>
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      size="xs"
+                      icon="i-lucide-x"
+                      @click="removeCoordinator(c.id)"
+                    />
                   </div>
-                  <UButton
-                    color="neutral"
-                    variant="ghost"
-                    size="xs"
-                    icon="i-lucide-x"
-                    @click="removeCoordinator(c.id)"
-                  />
-                </div>
-              </UCard>
-            </div>
-          </template>
-        </UFormField>
+                </UCard>
+              </div>
+            </template>
+          </UFormField>
 
-        <!-- Fechas (Grid 2 columnas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Fechas del Viaje -->
           <UFormField
-            label="Fecha Inicio"
+            label="Fechas del Viaje"
             name="startDate"
             required
           >
-            <UInput
-              v-model="state.startDate"
-              type="date"
-              icon="i-lucide-calendar"
-            />
+            <UInputDate
+              ref="inputDate"
+              v-model="dateRange"
+              separator-icon="i-lucide-arrow-right"
+              range
+              class=""
+            >
+              <template #trailing>
+                <UPopover :reference="inputDate?.inputsRef[0]?.$el">
+                  <UButton
+                    color="neutral"
+                    variant="link"
+                    size="sm"
+                    icon="i-lucide-calendar"
+                    aria-label="Seleccionar rango de fechas"
+                    class="px-0"
+                  />
+                  <template #content>
+                    <UCalendar
+                      v-model="dateRange"
+                      class="p-2"
+                      :number-of-months="2"
+                      range
+                    />
+                  </template>
+                </UPopover>
+              </template>
+            </UInputDate>
           </UFormField>
 
+          <!-- Precio y Estado (Grid 2 columnas) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <UFormField
+              v-if="mostrarPrecio"
+              label="Precio (MX)"
+              name="price"
+              :description="tieneCotizacion ? 'Gestionado por la cotización del viaje' : undefined"
+              required
+            >
+              <UInput
+                v-model.number="state.price"
+                type="number"
+                min="0"
+                step="0.01"
+                icon="i-lucide-dollar-sign"
+                placeholder="0.00"
+                :disabled="tieneCotizacion"
+              />
+            </UFormField>
+
+            <UFormField
+              label="Estado"
+              name="status"
+              required
+            >
+              <USelect
+                v-model="state.status"
+                :items="estadoOptions"
+                icon="i-lucide-circle-dot"
+              />
+            </UFormField>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- URL Imagen -->
+            <UFormField
+              label="URL de Imagen"
+              name="imageUrl"
+            >
+              <UInput
+                v-model="state.imageUrl"
+                type="url"
+                placeholder="https://example.com/image.jpg"
+                icon="i-lucide-image"
+              />
+            </UFormField>
+            <!-- Notas Internas -->
+            <UFormField
+              label="Notas Internas"
+              name="internalNotes"
+              description="Información privada solo para el equipo"
+            >
+              <UTextarea
+                v-model="state.internalNotes"
+                placeholder="Preferencias del cliente, observaciones especiales..."
+                :rows="5"
+              />
+            </UFormField>
+          </div>
           <UFormField
-            label="Fecha Fin"
-            name="endDate"
+            label="Descripción"
+            name="description"
             required
           >
-            <UInput
-              v-model="state.endDate"
-              type="date"
-              icon="i-lucide-calendar"
+            <RichTextEditor
+              v-model="state.description"
+              placeholder="Describe el viaje, actividades incluidas, etc."
             />
           </UFormField>
         </div>
-
-        <!-- Precio y Estado (Grid 2 columnas) -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <UFormField
-            v-if="mostrarPrecio"
-            label="Precio (MX)"
-            name="price"
-            :description="tieneCotizacion ? 'Gestionado por la cotización del viaje' : undefined"
-            required
-          >
-            <UInput
-              v-model.number="state.price"
-              type="number"
-              min="0"
-              step="0.01"
-              icon="i-lucide-dollar-sign"
-              placeholder="0.00"
-              :disabled="tieneCotizacion"
-            />
-          </UFormField>
-
-          <UFormField
-            label="Estado"
-            name="status"
-            required
-          >
-            <USelect
-              v-model="state.status"
-              :items="estadoOptions"
-              icon="i-lucide-circle-dot"
-            />
-          </UFormField>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <!-- URL Imagen -->
-          <UFormField
-            label="URL de Imagen"
-            name="imageUrl"
-          >
-            <UInput
-              v-model="state.imageUrl"
-              type="url"
-              placeholder="https://example.com/image.jpg"
-              icon="i-lucide-image"
-            />
-          </UFormField>
-          <!-- Notas Internas -->
-          <UFormField
-            label="Notas Internas"
-            name="internalNotes"
-            description="Información privada solo para el equipo"
-          >
-            <UTextarea
-              v-model="state.internalNotes"
-              placeholder="Preferencias del cliente, observaciones especiales..."
-              :rows="5"
-            />
-          </UFormField>
-        </div>
-        <UFormField
-          label="Descripción"
-          name="description"
-          required
-        >
-          <RichTextEditor
-            v-model="state.description"
-            placeholder="Describe el viaje, actividades incluidas, etc."
-          />
-        </UFormField>
       </UCard>
     </section>
 
