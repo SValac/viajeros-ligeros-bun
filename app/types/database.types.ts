@@ -931,6 +931,47 @@ export type Database = {
           },
         ]
       }
+      travel_media: {
+        Row: {
+          caption: string | null
+          created_at: string
+          display_order: number
+          id: string
+          media_type: string
+          public_url: string
+          storage_path: string
+          travel_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          media_type: string
+          public_url: string
+          storage_path: string
+          travel_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          display_order?: number
+          id?: string
+          media_type?: string
+          public_url?: string
+          storage_path?: string
+          travel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_media_travel_id_fkey"
+            columns: ["travel_id"]
+            isOneToOne: false
+            referencedRelation: "travels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       travel_services: {
         Row: {
           description: string | null
