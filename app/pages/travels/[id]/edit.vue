@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import type { TravelFormData } from '~/types/travel';
 
+import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
+
 const route = useRoute();
 const router = useRouter();
 const travelsStore = useTravelsStore();
 const toast = useToast();
+const { uploadBanner } = useTravelMediaRepository();
 
 // Obtener el ID del viaje desde la ruta
 const travelId = route.params.id as string;
@@ -26,7 +29,11 @@ onMounted(() => {
 });
 
 // Handlers
-async function handleSubmit(data: TravelFormData) {
+async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
+  if (bannerFile) {
+    data.imageUrl = await uploadBanner(travelId, bannerFile);
+  }
+
   const success = await travelsStore.updateTravel(travelId, data);
 
   if (success) {

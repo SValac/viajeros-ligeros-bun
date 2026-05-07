@@ -89,5 +89,23 @@ export function useTravelMediaRepository() {
     return data.publicUrl;
   }
 
-  return { fetchByTravel, upload, remove, getThumbnailUrl };
+  async function uploadBanner(travelId: string, file: File): Promise<string> {
+    const ext = file.name.split('.').pop() ?? 'bin';
+    const storagePath = `${travelId}/banner/${crypto.randomUUID()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('travel-gallery')
+      .upload(storagePath, file);
+
+    if (uploadError)
+      throw uploadError;
+
+    const { data } = supabase.storage
+      .from('travel-gallery')
+      .getPublicUrl(storagePath);
+
+    return data.publicUrl;
+  }
+
+  return { fetchByTravel, upload, remove, getThumbnailUrl, uploadBanner };
 }

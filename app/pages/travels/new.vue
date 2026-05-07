@@ -1,13 +1,21 @@
 <script setup lang="ts">
 import type { TravelFormData } from '~/types/travel';
 
+import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
+
 const router = useRouter();
 const travelsStore = useTravelsStore();
 const toast = useToast();
+const { uploadBanner } = useTravelMediaRepository();
 
 // Handlers
-async function handleSubmit(data: TravelFormData) {
+async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   const newTravel = await travelsStore.addTravel(data);
+
+  if (bannerFile) {
+    const imageUrl = await uploadBanner(newTravel.id, bannerFile);
+    await travelsStore.updateTravel(newTravel.id, { imageUrl });
+  }
 
   toast.add({
     title: 'Viaje creado',

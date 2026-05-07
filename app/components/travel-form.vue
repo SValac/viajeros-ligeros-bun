@@ -17,7 +17,7 @@ const { travel = null } = defineProps<Props>();
 
 // Emits
 const emit = defineEmits<{
-  submit: [data: TravelFormData];
+  submit: [data: TravelFormData, bannerFile: File | null];
   cancel: [close: boolean];
 }>();
 
@@ -47,7 +47,6 @@ const schema = z.object({
   endDate: z.string().min(1, 'Fecha requerida'),
   price: z.number().min(0, 'Precio debe ser positivo').max(999999, 'Precio máximo: 999,999'),
   description: z.string().min(10, 'Mínimo 10 caracteres').max(3000, 'Máximo 1000 caracteres'),
-  imageUrl: z.string().url('URL inválida').optional().or(z.literal('')),
   status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
   internalNotes: z.string().max(500, 'Máximo 500 caracteres').optional(),
 }).refine(
@@ -67,7 +66,6 @@ const initialState = computed((): Schema => {
       endDate: travel.endDate,
       price: travel.price,
       description: travel.description,
-      imageUrl: travel.imageUrl || '',
       status: travel.status,
       internalNotes: travel.internalNotes || '',
     };
@@ -80,10 +78,46 @@ const initialState = computed((): Schema => {
     endDate: '',
     price: 0,
     description: '',
-    imageUrl: '',
     status: 'pending',
     internalNotes: '',
   };
+});
+
+// Banner image state (managed outside Zod schema)
+const bannerInputRef = useTemplateRef<HTMLInputElement>('bannerInputRef');
+const pendingBannerFile = ref<File | null>(null);
+const bannerPreviewUrl = ref('');
+const existingBannerUrl = ref(travel?.imageUrl ?? '');
+
+const displayBannerUrl = computed(() =>
+  pendingBannerFile.value ? bannerPreviewUrl.value : existingBannerUrl.value,
+);
+
+function onBannerSelected(event: Event) {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  if (!file)
+    return;
+
+  if (bannerPreviewUrl.value)
+    URL.revokeObjectURL(bannerPreviewUrl.value);
+
+  pendingBannerFile.value = file;
+  bannerPreviewUrl.value = URL.createObjectURL(file);
+  input.value = '';
+}
+
+function removeBanner() {
+  if (bannerPreviewUrl.value)
+    URL.revokeObjectURL(bannerPreviewUrl.value);
+  pendingBannerFile.value = null;
+  bannerPreviewUrl.value = '';
+  existingBannerUrl.value = '';
+}
+
+onUnmounted(() => {
+  if (bannerPreviewUrl.value)
+    URL.revokeObjectURL(bannerPreviewUrl.value);
 });
 
 const state = ref<Schema>({ ...initialState.value });
@@ -122,12 +156,13 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   try {
     const formData: TravelFormData = {
       ...event.data,
+      imageUrl: pendingBannerFile.value ? undefined : (existingBannerUrl.value || undefined),
       itinerary: itinerario.value,
       services: servicios.value,
       buses: travel?.buses ?? [],
     };
 
-    emit('submit', formData);
+    emit('submit', formData, pendingBannerFile.value);
   }
   finally {
     isSubmitting.value = false;
@@ -330,32 +365,55 @@ function onCancel() {
               />
             </UFormField>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- URL Imagen -->
-            <UFormField
-              label="URL de Imagen"
-              name="imageUrl"
+          <!-- Imagen de portada -->
+          <div class="flex flex-col gap-2">
+            <label class="text-sm font-medium">Imagen de portada</label>
+            <div
+              v-if="displayBannerUrl"
+              class="relative w-full aspect-video rounded-lg overflow-hidden bg-elevated"
             >
-              <UInput
-                v-model="state.imageUrl"
-                type="url"
-                placeholder="https://example.com/image.jpg"
-                icon="i-lucide-image"
+              <img
+                :src="displayBannerUrl"
+                alt="Portada del viaje"
+                class="w-full h-full object-cover"
+              >
+              <UButton
+                icon="i-lucide-x"
+                size="xs"
+                color="neutral"
+                variant="solid"
+                class="absolute top-2 right-2"
+                @click="removeBanner"
               />
-            </UFormField>
-            <!-- Notas Internas -->
-            <UFormField
-              label="Notas Internas"
-              name="internalNotes"
-              description="Información privada solo para el equipo"
+            </div>
+            <input
+              ref="bannerInputRef"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              class="hidden"
+              @change="onBannerSelected"
             >
-              <UTextarea
-                v-model="state.internalNotes"
-                placeholder="Preferencias del cliente, observaciones especiales..."
-                :rows="5"
-              />
-            </UFormField>
+            <UButton
+              icon="i-lucide-image"
+              variant="outline"
+              @click="bannerInputRef?.click()"
+            >
+              {{ displayBannerUrl ? 'Cambiar imagen' : 'Seleccionar imagen' }}
+            </UButton>
           </div>
+          <!-- Notas Internas -->
+          <UFormField
+            label="Notas Internas"
+            name="internalNotes"
+            description="Información privada solo para el equipo"
+          >
+            <UTextarea
+              v-model="state.internalNotes"
+              placeholder="Preferencias del cliente, observaciones especiales..."
+              :rows="5"
+              class="w-full"
+            />
+          </UFormField>
           <UFormField
             label="Descripción"
             name="description"
