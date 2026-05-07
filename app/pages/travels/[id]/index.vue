@@ -496,6 +496,15 @@ definePageMeta({
           </UCard>
         </section>
       </div>
+      <!-- Gallery Section -->
+      <UCard>
+        <TheSeparator
+          size="xl"
+          text="Galería"
+          icon="i-lucide-images"
+        />
+        <TravelGallerySection :travel-id="travelId" />
+      </UCard>
     </div>
   </div>
 </template>
