@@ -213,6 +213,7 @@ function getActivityActions(activity: TravelActivity) {
       v-model:open="isActivityModalOpen"
       :title="editingActivity ? 'Editar Actividad' : 'Nueva Actividad'"
       :description="editingActivity ? 'Modifique los detalles de la actividad' : 'Complete los detalles de la nueva actividad'"
+      :dismissible="false"
     >
       <template #body>
         <TravelActivityForm
