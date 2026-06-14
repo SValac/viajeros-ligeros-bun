@@ -9,7 +9,8 @@ VALUES (
   true,
   104857600,
   ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'video/mp4', 'video/webm']
-);
+)
+ON CONFLICT (id) DO NOTHING;
 
 -- Admin: full storage operations (INSERT + SELECT + UPDATE needed for upsert)
 CREATE POLICY "gallery_authenticated_all" ON storage.objects
