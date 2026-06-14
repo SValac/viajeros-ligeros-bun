@@ -392,24 +392,12 @@ definePageMeta({
               </div>
             </template>
 
-            <div v-else class="p-8 text-center bg-elevated rounded-lg">
-              <span class="i-lucide-tag w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
-              <p class="text-muted font-medium mb-1">
-                Sin precios al público
-              </p>
-              <p class="text-sm text-muted">
-                Agrega los precios en la sección de
-                <UButton
-                  variant="link"
-                  color="primary"
-                  size="xs"
-                  class="px-0"
-                  label="Cotización"
-                  @click="router.push({ name: 'travel-cotizacion', params: { id: travel.id } })"
-                />
-                para que aparezcan aquí.
-              </p>
-            </div>
+            <TravelSectionEmptyState
+              icon="i-lucide-tag"
+              title="Sin precios al público"
+              description="Agrega los precios en la sección de"
+              :navigate="() => router.push({ name: 'travel-cotizacion', params: { id: travel?.id } })"
+            />
           </section>
           <!-- Buses Section -->
           <section id="buses" class="mb-6">

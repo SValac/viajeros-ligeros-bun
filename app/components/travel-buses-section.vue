@@ -306,19 +306,10 @@ function goToCotizacion() {
       </div>
     </template>
 
-    <div v-else class="p-8 text-center bg-elevated rounded-lg">
-      <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
-      <p class="text-muted font-medium mb-2">
-        Sin autobuses apartados
-      </p>
-      <p class="text-sm text-muted mb-4">
-        Los autobuses se gestionan desde la cotización del viaje.
-      </p>
-      <UButton
-        label="Ir a Cotización"
-        icon="i-lucide-arrow-right"
-        @click="goToCotizacion"
-      />
-    </div>
+    <TravelSectionEmptyState
+      icon="i-lucide-bus"
+      title="Sin autobuses apartados"
+      :navigate="goToCotizacion"
+    />
   </div>
 </template>
