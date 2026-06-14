@@ -11,6 +11,7 @@ import { validateAndMapItinerary } from './use-travel-domain';
  */
 export function useTravelRepository() {
   const supabase = useSupabase();
+  const authStore = useAuthStore();
 
   /**
    * Fetches all travels with their related sub-entities, ordered by creation date descending.
@@ -54,7 +55,7 @@ export function useTravelRepository() {
   async function insertTravel(data: TravelFormData): Promise<Tables<'travels'>> {
     const { data: row, error } = await supabase
       .from('travels')
-      .insert(mapTravelToInsert(data))
+      .insert({ ...mapTravelToInsert(data), owner_id: authStore.user!.id })
       .select()
       .single();
 

@@ -9,6 +9,7 @@ import type { Provider, ProviderFormData, ProviderUpdateData } from '~/types/pro
  */
 export function useProviderRepository() {
   const supabase = useSupabase();
+  const authStore = useAuthStore();
 
   /**
    * Fetches all providers ordered by name.
@@ -34,7 +35,7 @@ export function useProviderRepository() {
   async function insert(data: ProviderFormData): Promise<Provider> {
     const { data: row, error } = await supabase
       .from('providers')
-      .insert(mapProviderToInsert(data))
+      .insert({ ...mapProviderToInsert(data), owner_id: authStore.user!.id })
       .select()
       .single();
 
