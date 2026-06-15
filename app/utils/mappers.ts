@@ -54,7 +54,7 @@ export function mapProviderRowToDomain(row: Tables<'providers'>): Provider {
   };
 }
 
-export function mapProviderToInsert(data: ProviderFormData): Omit<Tables<'providers'>, 'id' | 'created_at' | 'updated_at'> {
+export function mapProviderToInsert(data: ProviderFormData): Omit<Tables<'providers'>, 'id' | 'created_at' | 'updated_at' | 'owner_id'> {
   return {
     name: data.name,
     category: data.category,
@@ -87,7 +87,7 @@ export function mapCoordinatorRowToDomain(row: Tables<'coordinators'>): Coordina
   };
 }
 
-export function mapCoordinatorToInsert(data: CoordinatorFormData): Omit<Tables<'coordinators'>, 'id' | 'created_at' | 'updated_at'> {
+export function mapCoordinatorToInsert(data: CoordinatorFormData): Omit<Tables<'coordinators'>, 'id' | 'created_at' | 'updated_at' | 'owner_id'> {
   return {
     name: data.name,
     age: data.age,
@@ -228,7 +228,7 @@ export function mapTravelAccommodationRowToDomain(row: Tables<'travel_accommodat
   };
 }
 
-export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at'> {
+export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at' | 'owner_id'> {
   return {
     destination: data.destination,
     start_date: data.startDate,

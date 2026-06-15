@@ -8,6 +8,7 @@ import type { TablesUpdate } from '~/types/database.types';
  */
 export function useCoordinatorRepository() {
   const supabase = useSupabase();
+  const authStore = useAuthStore();
 
   /**
    * Fetches all coordinators ordered by creation date descending.
@@ -33,7 +34,7 @@ export function useCoordinatorRepository() {
   async function insert(data: CoordinatorFormData): Promise<Coordinator> {
     const { data: row, error } = await supabase
       .from('coordinators')
-      .insert(mapCoordinatorToInsert(data))
+      .insert({ ...mapCoordinatorToInsert(data), owner_id: authStore.user!.id })
       .select()
       .single();
     if (error) {

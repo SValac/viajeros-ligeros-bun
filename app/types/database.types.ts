@@ -171,6 +171,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          owner_id: string
           phone: string
           updated_at: string
         }
@@ -181,6 +182,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          owner_id: string
           phone: string
           updated_at?: string
         }
@@ -191,6 +193,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          owner_id?: string
           phone?: string
           updated_at?: string
         }
@@ -382,6 +385,7 @@ export type Database = {
           location_country: string
           location_state: string
           name: string
+          owner_id: string
           updated_at: string
         }
         Insert: {
@@ -398,6 +402,7 @@ export type Database = {
           location_country: string
           location_state: string
           name: string
+          owner_id: string
           updated_at?: string
         }
         Update: {
@@ -414,6 +419,7 @@ export type Database = {
           location_country?: string
           location_state?: string
           name?: string
+          owner_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -1157,6 +1163,7 @@ export type Database = {
           image_url: string | null
           internal_notes: string | null
           minimum_seats: number | null
+          owner_id: string
           price: number
           projected_profit: number | null
           start_date: string
@@ -1174,6 +1181,7 @@ export type Database = {
           image_url?: string | null
           internal_notes?: string | null
           minimum_seats?: number | null
+          owner_id: string
           price: number
           projected_profit?: number | null
           start_date: string
@@ -1191,6 +1199,7 @@ export type Database = {
           image_url?: string | null
           internal_notes?: string | null
           minimum_seats?: number | null
+          owner_id?: string
           price?: number
           projected_profit?: number | null
           start_date?: string

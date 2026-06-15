@@ -9,7 +9,6 @@ const colorMode = useColorMode();
 const appConfig = useAppConfig();
 const authStore = useAuthStore();
 const { signOut } = authStore;
-const router = useRouter();
 
 const colors = ['red', 'orange', 'amber', 'yellow', 'lime', 'green', 'emerald', 'teal', 'cyan', 'sky', 'blue', 'indigo', 'violet', 'purple', 'fuchsia', 'pink', 'rose'];
 const neutrals = ['slate', 'gray', 'zinc', 'neutral', 'stone'];
@@ -22,10 +21,9 @@ const user = computed(() => ({
   },
 }));
 
-// Logout handler
 async function handleLogout() {
   await signOut();
-  router.push('/login');
+  window.location.href = '/login';
 }
 
 const items = computed<DropdownMenuItem[][]>(() => ([[{
