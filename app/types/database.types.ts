@@ -1160,11 +1160,12 @@ export type Database = {
           accumulated_travelers: number | null
           created_at: string
           description: string
-          destination: string
+          destination: string | null
           end_date: string
           id: string
           image_url: string | null
           internal_notes: string | null
+          label: string
           minimum_seats: number | null
           owner_id: string
           price: number
@@ -1178,11 +1179,12 @@ export type Database = {
           accumulated_travelers?: number | null
           created_at?: string
           description: string
-          destination: string
+          destination?: string | null
           end_date: string
           id?: string
           image_url?: string | null
           internal_notes?: string | null
+          label: string
           minimum_seats?: number | null
           owner_id: string
           price: number
@@ -1196,11 +1198,12 @@ export type Database = {
           accumulated_travelers?: number | null
           created_at?: string
           description?: string
-          destination?: string
+          destination?: string | null
           end_date?: string
           id?: string
           image_url?: string | null
           internal_notes?: string | null
+          label?: string
           minimum_seats?: number | null
           owner_id?: string
           price?: number
