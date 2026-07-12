@@ -1,4 +1,11 @@
-import type { Provider, ProviderFilters } from '~/types/provider';
+import type { Provider, ProviderFilters, ProviderLocation } from '~/types/provider';
+
+/**
+ * Formats a provider's location as a single display string.
+ */
+export function formatProviderLocation(location: ProviderLocation): string {
+  return [location.city, location.state, location.country].join(', ');
+}
 
 /**
  * Filters and sorts a provider list according to the given criteria.
