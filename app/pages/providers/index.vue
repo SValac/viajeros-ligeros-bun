@@ -1,7 +1,5 @@
 <script setup lang="ts">
-import type { ProviderCategory } from '~/types/provider';
-
-import { PROVIDER_CATEGORY } from '~/types/provider';
+import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 definePageMeta({
   name: 'providers-dashboard',
@@ -12,72 +10,7 @@ const providerStore = useProviderStore();
 const stats = computed(() => providerStore.statsByCategory);
 const total = computed(() => providerStore.totalProviders);
 
-type CategoryInfo = {
-  key: ProviderCategory;
-  label: string;
-  icon: string;
-  color: string;
-  textColor: string;
-  iconColor: string;
-  route: string;
-};
-
-const categories: CategoryInfo[] = [
-  {
-    key: PROVIDER_CATEGORY.GUIDES,
-    label: 'Guías',
-    icon: 'i-lucide-user-search',
-    color: 'blue',
-    textColor: 'text-blue-600 dark:text-blue-400',
-    iconColor: 'text-blue-400',
-    route: '/providers/guides',
-  },
-  {
-    key: PROVIDER_CATEGORY.TRANSPORTATION,
-    label: 'Transporte',
-    icon: 'i-lucide-car',
-    color: 'purple',
-    textColor: 'text-purple-600 dark:text-purple-400',
-    iconColor: 'text-purple-400',
-    route: '/providers/transportation',
-  },
-  {
-    key: PROVIDER_CATEGORY.ACCOMMODATION,
-    label: 'Hospedaje',
-    icon: 'i-lucide-hotel',
-    color: 'green',
-    textColor: 'text-green-600 dark:text-green-400',
-    iconColor: 'text-green-400',
-    route: '/providers/accommodation',
-  },
-  {
-    key: PROVIDER_CATEGORY.BUS_AGENCIES,
-    label: 'Agencias de Autobús',
-    icon: 'i-lucide-bus',
-    color: 'orange',
-    textColor: 'text-orange-600 dark:text-orange-400',
-    iconColor: 'text-orange-400',
-    route: '/providers/bus-agencies',
-  },
-  {
-    key: PROVIDER_CATEGORY.FOOD_SERVICES,
-    label: 'Comidas',
-    icon: 'i-lucide-utensils',
-    color: 'amber',
-    textColor: 'text-amber-600 dark:text-amber-400',
-    iconColor: 'text-amber-400',
-    route: '/providers/food-services',
-  },
-  {
-    key: PROVIDER_CATEGORY.OTHER,
-    label: 'Otros',
-    icon: 'i-lucide-package',
-    color: 'gray',
-    textColor: 'text-gray-600 dark:text-gray-400',
-    iconColor: 'text-gray-400',
-    route: '/providers/other',
-  },
-];
+const categories = Object.values(PROVIDER_CATEGORY_META);
 </script>
 
 <template>
@@ -111,7 +44,7 @@ const categories: CategoryInfo[] = [
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <NuxtLink
         v-for="cat in categories"
-        :key="cat.key"
+        :key="cat.category"
         :to="cat.route"
         class="block"
       >
@@ -121,17 +54,17 @@ const categories: CategoryInfo[] = [
               <p class="text-sm text-gray-500 dark:text-gray-400">
                 {{ cat.label }}
               </p>
-              <p class="text-2xl font-bold mt-1" :class="cat.textColor">
-                {{ stats[cat.key] }}
+              <p class="text-2xl font-bold mt-1" :class="cat.dashboardTextColorClass">
+                {{ stats[cat.category] }}
               </p>
               <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                {{ stats[cat.key] === 1 ? 'proveedor' : 'proveedores' }}
+                {{ stats[cat.category] === 1 ? 'proveedor' : 'proveedores' }}
               </p>
             </div>
             <UIcon
               :name="cat.icon"
               class="w-10 h-10"
-              :class="cat.iconColor"
+              :class="cat.iconColorClass"
             />
           </div>
         </UCard>
