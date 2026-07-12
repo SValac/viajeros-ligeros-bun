@@ -322,8 +322,10 @@ export function useTravelRepository() {
    */
   async function updateTravel(travelId: string, data: Partial<TravelUpdateData>): Promise<Tables<'travels'>> {
     const update: TablesUpdate<'travels'> = {};
-    if (data.destination !== undefined)
-      update.destination = data.destination;
+    if (data.label !== undefined)
+      update.label = data.label;
+    if ('destination' in data)
+      update.destination = data.destination ?? null;
     if (data.startDate !== undefined)
       update.start_date = data.startDate;
     if (data.endDate !== undefined)

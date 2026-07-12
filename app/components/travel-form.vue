@@ -41,7 +41,8 @@ const mostrarPrecio = computed(() => travel !== null);
 
 // Schema de validación Zod
 const schema = z.object({
-  destination: z.string().min(3, 'Mínimo 3 caracteres').max(100, 'Máximo 100 caracteres'),
+  label: z.string().min(3, 'Mínimo 3 caracteres').max(100, 'Máximo 100 caracteres'),
+  destination: z.string().max(100, 'Máximo 100 caracteres').optional(),
   coordinatorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
   startDate: z.string().min(1, 'Fecha requerida'),
   endDate: z.string().min(1, 'Fecha requerida'),
@@ -60,7 +61,8 @@ type Schema = z.output<typeof schema>;
 const initialState = computed((): Schema => {
   if (travel) {
     return {
-      destination: travel.destination,
+      label: travel.label,
+      destination: travel.destination ?? '',
       coordinatorIds: travel.coordinatorIds ?? [],
       startDate: travel.startDate,
       endDate: travel.endDate,
@@ -72,6 +74,7 @@ const initialState = computed((): Schema => {
   }
 
   return {
+    label: '',
     destination: '',
     coordinatorIds: [],
     startDate: '',
@@ -191,7 +194,7 @@ function onCancel() {
     class="grid grid-cols-1 xl:grid-cols-2 gap-4"
     @submit="onSubmit"
   >
-    <!-- Destino -->
+    <!-- Nombre y Destino -->
     <!-- Descripción -->
     <section id="datos-generales">
       <UCard>
@@ -200,9 +203,20 @@ function onCancel() {
         </template>
         <div class="flex flex-col gap-4">
           <UFormField
+            label="Nombre"
+            name="label"
+            required
+          >
+            <UInput
+              v-model="state.label"
+              placeholder="Aventura en París"
+              icon="i-lucide-tag"
+            />
+          </UFormField>
+
+          <UFormField
             label="Destino"
             name="destination"
-            required
           >
             <UInput
               v-model="state.destination"

@@ -147,7 +147,8 @@ export function mapTravelRowToDomain(
 ): Travel {
   return {
     id: row.id,
-    destination: row.destination,
+    label: row.label,
+    destination: row.destination ?? undefined,
     startDate: row.start_date,
     endDate: row.end_date,
     price: row.price,
@@ -233,7 +234,8 @@ export function mapTravelAccommodationRowToDomain(row: Tables<'travel_accommodat
 
 export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at' | 'owner_id'> {
   return {
-    destination: data.destination,
+    label: data.label,
+    destination: data.destination ?? null,
     start_date: data.startDate,
     end_date: data.endDate,
     price: data.price,

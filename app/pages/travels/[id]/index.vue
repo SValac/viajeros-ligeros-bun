@@ -137,7 +137,7 @@ async function deleteTravel() {
     return;
 
   // eslint-disable-next-line no-alert
-  const confirmed = confirm(`¿Eliminar el viaje a ${travel.value.destination}? Esta acción no se puede deshacer.`);
+  const confirmed = confirm(`¿Eliminar el viaje ${travel.value.label}? Esta acción no se puede deshacer.`);
 
   if (confirmed) {
     await travelsStore.deleteTravel(travel.value.id);
@@ -235,7 +235,7 @@ definePageMeta({
               >
                 <img
                   :src="travel.imageUrl"
-                  :alt="travel.destination"
+                  :alt="travel.label"
                   class="w-full h-full object-cover"
                 >
               </div>
@@ -249,7 +249,7 @@ definePageMeta({
                       class="w-6 h-6 text-primary"
                     />
                     <h1 class="text-3xl font-bold">
-                      {{ travel.destination }}
+                      {{ travel.label }}
                     </h1>
                   </div>
                   <!-- Footer Metadata -->

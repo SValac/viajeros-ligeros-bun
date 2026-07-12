@@ -75,12 +75,12 @@ function navigateToEdit(travelId: string) {
 
 async function handleDelete(travel: Travel) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar el viaje a ${travel.destination}?`)) {
+  if (confirm(`¿Estás seguro de eliminar el viaje ${travel.label}?`)) {
     const success = await travelsStore.deleteTravel(travel.id);
     if (success) {
       toast.add({
         title: 'Viaje eliminado',
-        description: `${travel.destination} se eliminó correctamente`,
+        description: `${travel.label} se eliminó correctamente`,
         color: 'warning',
       });
     }
@@ -120,15 +120,15 @@ function getRowActions(travel: Travel) {
 // Columnas de la tabla
 const columns: TableColumn<Travel>[] = [
   {
-    accessorKey: 'destination',
-    header: 'Destino',
+    accessorKey: 'label',
+    header: 'Nombre',
     cell: ({ row }) =>
       h(resolveComponent('NuxtLink'), {
         to: `/travels/${row.original.id}`,
         class: 'flex items-center gap-2 hover:text-primary transition-colors group',
       }, () => [
-        h('span', { class: 'i-lucide-map-pin w-4 h-4 text-muted group-hover:text-primary' }),
-        h('span', { class: 'font-medium' }, row.getValue('destination')),
+        h('span', { class: 'i-lucide-tag w-4 h-4 text-muted group-hover:text-primary' }),
+        h('span', { class: 'font-medium' }, row.getValue('label')),
       ]),
   },
   {

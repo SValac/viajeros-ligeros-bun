@@ -59,14 +59,14 @@ type TravelSummaryRow = (typeof travelSummaries.value)[number];
 
 const columns: TableColumn<TravelSummaryRow>[] = [
   {
-    id: 'destino',
-    header: 'Destino',
+    id: 'label',
+    header: 'Nombre',
     cell: ({ row }) => h(resolveComponent('NuxtLink'), {
       to: { name: 'payments-travel', params: { id: row.original.travel.id } },
       class: 'flex items-center gap-2 hover:text-primary transition-colors group',
     }, () => [
-      h('span', { class: 'i-lucide-map-pin w-4 h-4 text-muted group-hover:text-primary' }),
-      h('span', { class: 'font-medium' }, row.original.travel.destination),
+      h('span', { class: 'i-lucide-tag w-4 h-4 text-muted group-hover:text-primary' }),
+      h('span', { class: 'font-medium' }, row.original.travel.label),
     ]),
   },
   {

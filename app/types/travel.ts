@@ -61,7 +61,8 @@ export type TravelAccommodation = {
 
 export type Travel = {
   id: string;
-  destination: string;
+  label: string;
+  destination?: string;
   startDate: string;
   endDate: string;
   price: number;

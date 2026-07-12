@@ -190,8 +190,8 @@ async function updateAccommodation(
           <h1 class="text-xl font-bold">
             Habitaciones
           </h1>
-          <p v-if="travel?.destination" class="text-sm text-muted">
-            {{ travel.destination }}
+          <p v-if="travel?.label" class="text-sm text-muted">
+            {{ travel.label }}
           </p>
         </div>
         <div />

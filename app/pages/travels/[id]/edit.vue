@@ -39,7 +39,7 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   if (success) {
     toast.add({
       title: 'Viaje actualizado',
-      description: `El viaje a ${data.destination} ha sido actualizado exitosamente`,
+      description: `El viaje ${data.label} ha sido actualizado exitosamente`,
       color: 'success',
       icon: 'i-lucide-check-circle',
     });
@@ -82,7 +82,7 @@ function handleCancel() {
         </h1>
       </div>
       <p class="text-muted text-sm">
-        Destino: {{ travel.destination }}
+        Nombre: {{ travel.label }}
       </p>
     </div>
 

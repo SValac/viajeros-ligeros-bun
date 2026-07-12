@@ -374,7 +374,7 @@ watch(travelId, async (id) => {
             @click="goToPaymentsIndex"
           />
           <h1 class="text-3xl font-bold">
-            Pagos — {{ travel.destination }}
+            Pagos — {{ travel.label }}
           </h1>
         </div>
         <p class="text-muted ml-9">

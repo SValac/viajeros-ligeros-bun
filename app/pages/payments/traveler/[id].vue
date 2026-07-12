@@ -65,12 +65,12 @@ const travelOptions = computed(() => [
   { label: 'Todos los viajes', value: 'all' },
   ...travelerTravelIds.value.map((id) => {
     const t = travelStore.getTravelById(id);
-    return { label: t?.destination ?? id, value: id };
+    return { label: t?.label ?? id, value: id };
   }),
 ]);
 
 function getTravelName(id: string) {
-  return travelStore.getTravelById(id)?.destination ?? id;
+  return travelStore.getTravelById(id)?.label ?? id;
 }
 
 function getTravelPrice(id: string) {
