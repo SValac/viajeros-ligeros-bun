@@ -384,6 +384,7 @@ export type Database = {
           location_city: string
           location_country: string
           location_state: string
+          map_location: Json | null
           name: string
           owner_id: string
           updated_at: string
@@ -401,6 +402,7 @@ export type Database = {
           location_city: string
           location_country: string
           location_state: string
+          map_location?: Json | null
           name: string
           owner_id: string
           updated_at?: string
@@ -418,6 +420,7 @@ export type Database = {
           location_city?: string
           location_country?: string
           location_state?: string
+          map_location?: Json | null
           name?: string
           owner_id?: string
           updated_at?: string
