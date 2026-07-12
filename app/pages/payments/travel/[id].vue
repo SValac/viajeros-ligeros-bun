@@ -128,6 +128,14 @@ function closeModals() {
   selectedTraveler.value = null;
 }
 
+function goToPaymentsIndex() {
+  router.push({ name: 'payments-index' });
+}
+
+function clearStatusFilter() {
+  statusFilter.value = 'all';
+}
+
 const selectedSummary = computed(() => {
   if (!selectedTraveler.value)
     return null;
@@ -363,7 +371,7 @@ watch(travelId, async (id) => {
             variant="ghost"
             color="neutral"
             size="sm"
-            @click="router.push({ name: 'payments-index' })"
+            @click="goToPaymentsIndex"
           />
           <h1 class="text-3xl font-bold">
             Pagos — {{ travel.destination }}
@@ -445,7 +453,7 @@ watch(travelId, async (id) => {
           <h3 class="text-lg font-medium mb-2">
             Sin resultados para los filtros aplicados
           </h3>
-          <UButton icon="i-lucide-filter-x" @click="statusFilter = 'all'">
+          <UButton icon="i-lucide-filter-x" @click="clearStatusFilter">
             Limpiar filtros
           </UButton>
         </template>

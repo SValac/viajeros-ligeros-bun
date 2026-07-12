@@ -194,6 +194,10 @@ function openCreateModal() {
   isFormModalOpen.value = true;
 }
 
+function goToTravelDetail() {
+  router.push({ name: 'travel-detail', params: { id: travelId.value } });
+}
+
 function openCreateModalWithInitialValues(initialValues: Partial<TravelerFormData>) {
   editingTraveler.value = null;
   createTravelerInitialValues.value = initialValues;
@@ -605,7 +609,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           icon="i-lucide-arrow-left"
           variant="ghost"
           color="neutral"
-          @click="router.push({ name: 'travel-detail', params: { id: travelId } })"
+          @click="goToTravelDetail"
         />
         <div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white">

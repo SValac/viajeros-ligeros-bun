@@ -108,6 +108,30 @@ function editTravel() {
   }
 }
 
+function goToTravelers() {
+  if (travel.value) {
+    router.push({ name: 'travel-travelers', params: { id: travel.value.id } });
+  }
+}
+
+function goToHabitaciones() {
+  if (travel.value) {
+    router.push({ name: 'travel-habitaciones', params: { id: travel.value.id } });
+  }
+}
+
+function goToPayments() {
+  if (travel.value) {
+    router.push({ name: 'payments-travel', params: { id: travel.value.id } });
+  }
+}
+
+function goToCotizacion() {
+  if (travel.value) {
+    router.push({ name: 'travel-cotizacion', params: { id: travel.value.id } });
+  }
+}
+
 async function deleteTravel() {
   if (!travel.value)
     return;
@@ -152,27 +176,27 @@ definePageMeta({
             label="Viajeros"
             variant="outline"
             color="neutral"
-            @click="router.push({ name: 'travel-travelers', params: { id: travel.id } })"
+            @click="goToTravelers"
           />
           <UButton
             icon="i-lucide-bed-double"
             label="Habitaciones"
             variant="outline"
             color="neutral"
-            @click="router.push({ name: 'travel-habitaciones', params: { id: travel.id } })"
+            @click="goToHabitaciones"
           />
           <UButton
             icon="i-lucide-credit-card"
             label="Ver Pagos"
             variant="outline"
             color="neutral"
-            @click="router.push({ name: 'payments-travel', params: { id: travel.id } })"
+            @click="goToPayments"
           />
           <UButton
             icon="i-lucide-file-text"
             variant="outline"
             :color="tieneCotizacion ? 'success' : 'neutral'"
-            @click="router.push({ name: 'travel-cotizacion', params: { id: travel.id } })"
+            @click="goToCotizacion"
           >
             Cotización
             <UBadge

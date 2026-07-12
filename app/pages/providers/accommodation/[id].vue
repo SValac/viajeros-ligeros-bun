@@ -16,6 +16,10 @@ const provider = computed(() => providerStore.getProviderById(route.params.id as
 
 const isEditModalOpen = ref(false);
 
+function openEditModal() {
+  isEditModalOpen.value = true;
+}
+
 // Redirect if provider not found or not hospedaje
 watchEffect(() => {
   if (provider.value === undefined) {
@@ -113,7 +117,7 @@ async function handleDelete() {
             icon="i-lucide-pencil"
             variant="outline"
             color="neutral"
-            @click="isEditModalOpen = true"
+            @click="openEditModal"
           >
             Editar
           </UButton>

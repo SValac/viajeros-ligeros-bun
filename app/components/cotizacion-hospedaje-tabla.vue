@@ -293,6 +293,10 @@ async function guardarEdicion() {
   editingHospedaje.value = null;
 }
 
+function cerrarEdicion() {
+  isEditModalOpen.value = false;
+}
+
 // Eliminar hospedaje
 async function eliminarHospedaje(id: string) {
   const skippedOccupied = await cotizacionStore.deleteHospedajeQuotation(id);
@@ -439,7 +443,7 @@ async function eliminarHospedaje(id: string) {
               variant="ghost"
               color="neutral"
               label="Cancelar"
-              @click="isEditModalOpen = false"
+              @click="cerrarEdicion"
             />
             <UButton
               label="Guardar"

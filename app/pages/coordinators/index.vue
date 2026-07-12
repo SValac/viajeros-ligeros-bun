@@ -43,6 +43,10 @@ function closeModal() {
   editingCoordinator.value = null;
 }
 
+function clearSearch() {
+  searchTerm.value = '';
+}
+
 function handleFormSubmit(data: CoordinatorFormData) {
   try {
     if (editingCoordinator.value) {
@@ -191,7 +195,7 @@ const columns: TableColumn<Coordinator>[] = [
         <p class="text-gray-500 dark:text-gray-400 mb-4">
           Intenta con otros términos de búsqueda
         </p>
-        <UButton icon="i-lucide-filter-x" @click="searchTerm = ''">
+        <UButton icon="i-lucide-filter-x" @click="clearSearch">
           Limpiar búsqueda
         </UButton>
       </div>

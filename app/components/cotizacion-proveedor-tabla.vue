@@ -118,6 +118,10 @@ function openDeleteConfirm(proveedor: QuotationProvider) {
   isDeleteModalOpen.value = true;
 }
 
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
 async function handleProveedorSubmit(data: QuotationProviderFormData) {
   if (selectedProveedor.value) {
     const result = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
@@ -444,7 +448,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="isDeleteModalOpen = false"
+          @click="closeDeleteModal"
         />
         <UButton
           color="error"

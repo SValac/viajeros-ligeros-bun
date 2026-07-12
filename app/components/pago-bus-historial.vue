@@ -48,6 +48,10 @@ function openDeleteConfirm(pago: BusPayment) {
   isDeleteModalOpen.value = true;
 }
 
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
 async function handleSubmit(data: BusPaymentFormData) {
   if (selectedPago.value) {
     const result = await cotizacionStore.updateBusPayment(selectedPago.value.id, data);
@@ -231,7 +235,7 @@ async function confirmDelete() {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="isDeleteModalOpen = false"
+          @click="closeDeleteModal"
         />
         <UButton
           color="error"

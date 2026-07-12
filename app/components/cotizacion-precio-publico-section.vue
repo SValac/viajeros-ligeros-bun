@@ -125,6 +125,10 @@ function abrirFormulario() {
   isFormModalOpen.value = true;
 }
 
+function cerrarFormulario() {
+  isFormModalOpen.value = false;
+}
+
 // Abrir formulario para editar
 function abrirEdicion(price: QuotationPublicPrice) {
   editingPrecio.value = price;
@@ -498,7 +502,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
               variant="ghost"
               color="neutral"
               label="Cancelar"
-              @click="isFormModalOpen = false"
+              @click="cerrarFormulario"
             />
             <UButton
               type="submit"

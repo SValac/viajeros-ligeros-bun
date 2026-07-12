@@ -128,6 +128,14 @@ function openAddTravelerModal(accommodationId: string): void {
   isAddModalOpen.value = true;
 }
 
+function closeAddTravelerModal(): void {
+  isAddModalOpen.value = false;
+}
+
+function goToTravelDetail(): void {
+  router.push({ name: 'travel-detail', params: { id: travelId.value } });
+}
+
 async function assignTraveler(traveler: Traveler): Promise<void> {
   if (!addingToAccommodation.value)
     return;
@@ -176,7 +184,7 @@ async function updateAccommodation(
           label="Volver"
           variant="ghost"
           color="neutral"
-          @click="router.push({ name: 'travel-detail', params: { id: travelId } })"
+          @click="goToTravelDetail"
         />
         <div>
           <h1 class="text-xl font-bold">
@@ -306,7 +314,7 @@ async function updateAccommodation(
           label="Cancelar"
           variant="ghost"
           color="neutral"
-          @click="isAddModalOpen = false"
+          @click="closeAddTravelerModal"
         />
       </template>
     </UModal>

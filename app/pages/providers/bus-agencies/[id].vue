@@ -16,6 +16,10 @@ const provider = computed(() => providerStore.getProviderById(route.params.id as
 
 const isEditModalOpen = ref(false);
 
+function openEditModal() {
+  isEditModalOpen.value = true;
+}
+
 watchEffect(() => {
   if (provider.value === undefined) {
     router.replace('/providers/bus-agencies');
@@ -112,7 +116,7 @@ async function handleDelete() {
             icon="i-lucide-pencil"
             variant="outline"
             color="neutral"
-            @click="isEditModalOpen = true"
+            @click="openEditModal"
           >
             Editar
           </UButton>

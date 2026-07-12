@@ -39,6 +39,10 @@ function onSubmit(data: { roomNumber?: string | null; floor?: number | null }): 
   emit('update', props.accommodation, data);
   isEditing.value = false;
 }
+
+function toggleEditing() {
+  isEditing.value = !isEditing.value;
+}
 </script>
 
 <template>
@@ -68,7 +72,7 @@ function onSubmit(data: { roomNumber?: string | null; floor?: number | null }): 
             size="xs"
             variant="ghost"
             color="neutral"
-            @click="isEditing = !isEditing"
+            @click="toggleEditing"
           />
         </div>
       </div>
