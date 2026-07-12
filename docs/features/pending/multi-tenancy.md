@@ -101,6 +101,10 @@ Permitir que múltiples usuarios se registren en `/register` y cada uno gestione
 
 ---
 
-## Pendiente
+## Bug fix: store cache leak on logout
 
-- **Verificación con segundo usuario**: crear cuenta en `/register` y confirmar aislamiento de datos entre usuarios
+`handleLogout` en `user-menu.vue` usaba `router.push('/login')` (navegación client-side) — los stores de Pinia no se limpiaban entre usuarios. Fix: `window.location.href = '/login'` para forzar full page reload.
+
+Commit: `1b67e7a fix(auth): force full page reload on logout to clear Pinia store cache`
+
+**Verificado**: aislamiento completo entre isaac@gmail.com y ale@gmail.com confirmado en producción.

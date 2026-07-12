@@ -1,3 +1,5 @@
+import type { MapLocation } from './travel';
+
 export const PROVIDER_CATEGORY = {
   GUIDES: 'guides',
   TRANSPORTATION: 'transportation',
@@ -20,6 +22,7 @@ export type ProviderLocation = {
   city: string;
   state: string;
   country: string;
+  mapLocation?: MapLocation;
 };
 
 export type Provider = {

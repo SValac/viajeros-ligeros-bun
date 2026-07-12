@@ -86,6 +86,23 @@ async function createMarker(lat: number, lng: number) {
   });
 }
 
+function extractAddressComponents(components: any[] | undefined): Pick<MapLocation, 'city' | 'state' | 'country'> {
+  if (!components)
+    return {};
+
+  function findLongName(...types: string[]) {
+    const match = components!.find(component => types.some(type => component.types?.includes(type)));
+    // Legacy Geocoder API uses `long_name`, the new Places API uses `longText`
+    return match?.longText ?? match?.long_name;
+  }
+
+  return {
+    city: findLongName('locality', 'administrative_area_level_2'),
+    state: findLongName('administrative_area_level_1'),
+    country: findLongName('country'),
+  };
+}
+
 function updateLocation(lat: number, lng: number) {
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
     console.warn('Coordenadas inválidas:', { lat, lng });
@@ -124,6 +141,7 @@ async function reverseGeocode(lat: number, lng: number) {
         lng,
         address: result.results[0].formatted_address,
         placeId: result.results[0].place_id,
+        ...extractAddressComponents(result.results[0].address_components),
       };
     }
   }
@@ -164,7 +182,7 @@ async function selectSuggestion(suggestion: any) {
 
   try {
     const place = suggestion.placePrediction.toPlace();
-    await place.fetchFields({ fields: ['location', 'formattedAddress', 'id'] });
+    await place.fetchFields({ fields: ['location', 'formattedAddress', 'id', 'addressComponents'] });
     sessionToken.value = null;
 
     const lat = place.location.lat();
@@ -177,6 +195,7 @@ async function selectSuggestion(suggestion: any) {
       lng,
       address: place.formattedAddress,
       placeId: place.id,
+      ...extractAddressComponents(place.addressComponents),
     };
   }
   catch (error) {

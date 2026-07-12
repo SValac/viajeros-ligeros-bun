@@ -116,6 +116,9 @@ function handleDelete(rt: HotelRoomType) {
           class="w-24"
           @blur="updateTotalRooms"
         />
+        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Disponibles: {{ totalRoomsInput - usedRooms }}
+        </label>
         <UButton icon="i-lucide-plus" @click="openCreateForm">
           Agregar tipo
         </UButton>

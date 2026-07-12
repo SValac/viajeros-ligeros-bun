@@ -1,4 +1,4 @@
-import type { TablesUpdate } from '~/types/database.types';
+import type { Json, TablesUpdate } from '~/types/database.types';
 import type { Provider, ProviderFormData, ProviderUpdateData } from '~/types/provider';
 
 /**
@@ -66,6 +66,7 @@ export function useProviderRepository() {
       update.location_city = data.location.city;
       update.location_state = data.location.state;
       update.location_country = data.location.country;
+      update.map_location = (data.location.mapLocation as unknown as Json) ?? null;
     }
     if (data.contact) {
       update.contact_name = data.contact.name ?? null;
