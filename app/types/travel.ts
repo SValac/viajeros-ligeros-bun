@@ -5,6 +5,9 @@ export type MapLocation = {
   lng: number;
   placeId?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  country?: string;
 };
 
 export type TravelActivity = {
