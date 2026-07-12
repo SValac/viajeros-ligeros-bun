@@ -65,6 +65,10 @@ function openDeleteConfirm(bus: QuotationBus) {
   isDeleteModalOpen.value = true;
 }
 
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
 async function handleToggleConfirmado(bus: QuotationBus) {
   if (readonly)
     return;
@@ -355,7 +359,7 @@ function getBusActions(bus: QuotationBus) {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="isDeleteModalOpen = false"
+          @click="closeDeleteModal"
         />
         <UButton
           color="error"

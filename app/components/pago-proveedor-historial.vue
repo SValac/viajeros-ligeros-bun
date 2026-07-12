@@ -52,6 +52,10 @@ function openDeleteConfirm(pago: ProviderPayment) {
   isDeleteModalOpen.value = true;
 }
 
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
 async function handleSubmit(data: ProviderPaymentFormData) {
   if (selectedPago.value) {
     const result = await cotizacionStore.updateProviderPayment(selectedPago.value.id, data);
@@ -237,7 +241,7 @@ async function confirmDelete() {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="isDeleteModalOpen = false"
+          @click="closeDeleteModal"
         />
         <UButton
           color="error"

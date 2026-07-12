@@ -192,6 +192,14 @@ function closeConfigModal() {
   editingConfigTravelId.value = null;
 }
 
+function goToPaymentsIndex() {
+  router.push({ name: 'payments-index' });
+}
+
+function goToTravelPayments(travelId: string) {
+  router.push({ name: 'payments-travel', params: { id: travelId } });
+}
+
 const editingConfig = computed(() =>
   editingConfigTravelId.value
     ? paymentStore.getAccountConfig(travelerId.value, editingConfigTravelId.value)
@@ -247,7 +255,7 @@ watch(travelerTravelIds, (ids) => {
         variant="ghost"
         color="neutral"
         size="sm"
-        @click="router.push({ name: 'payments-index' })"
+        @click="goToPaymentsIndex"
       />
       <div>
         <h1 class="text-3xl font-bold">
@@ -312,7 +320,7 @@ watch(travelerTravelIds, (ids) => {
                 size="sm"
                 variant="outline"
                 icon="i-lucide-credit-card"
-                @click="router.push({ name: 'payments-travel', params: { id } })"
+                @click="goToTravelPayments(id)"
               >
                 Ver pagos del viaje
               </UButton>

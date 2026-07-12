@@ -23,6 +23,14 @@ const puedeConfirmar = computed(() => cotizacionStore.puedeConfirmar(quotationId
 const isConfirmarModalOpen = shallowRef(false);
 const isConfirmando = shallowRef(false);
 
+function openConfirmarModal() {
+  isConfirmarModalOpen.value = true;
+}
+
+function closeConfirmarModal() {
+  isConfirmarModalOpen.value = false;
+}
+
 function getEstadoColor(status: string): 'warning' | 'success' {
   return status === 'confirmed' ? 'success' : 'warning';
 }
@@ -75,7 +83,7 @@ async function confirmarQuotation() {
           color="success"
           size="sm"
           :disabled="readonly || !puedeConfirmar"
-          @click="isConfirmarModalOpen = true"
+          @click="openConfirmarModal"
         />
       </UTooltip>
     </div>
@@ -93,7 +101,7 @@ async function confirmarQuotation() {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="isConfirmarModalOpen = false"
+          @click="closeConfirmarModal"
         />
         <UButton
           color="success"

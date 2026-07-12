@@ -51,6 +51,10 @@ function formatCurrency(value: number) {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
 }
 
+function goToTravelsDashboard() {
+  router.push({ name: 'travels-dashboard' });
+}
+
 type TravelSummaryRow = (typeof travelSummaries.value)[number];
 
 const columns: TableColumn<TravelSummaryRow>[] = [
@@ -203,7 +207,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
         <p class="text-muted mb-4">
           Primero registra un viaje para gestionar sus pagos
         </p>
-        <UButton icon="i-lucide-map" @click="router.push({ name: 'travels-dashboard' })">
+        <UButton icon="i-lucide-map" @click="goToTravelsDashboard">
           Ir a Viajes
         </UButton>
       </div>

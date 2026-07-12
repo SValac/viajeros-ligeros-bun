@@ -59,6 +59,18 @@ const isCrearModalOpen = shallowRef(false);
 const isAgregarHospedajeModalOpen = shallowRef(false);
 const isAgregarBusModalOpen = shallowRef(false);
 
+function goToTravelDetail() {
+  router.push(`/travels/${travelId.value}`);
+}
+
+function openCrearModal() {
+  isCrearModalOpen.value = true;
+}
+
+function closeCrearModal() {
+  isCrearModalOpen.value = false;
+}
+
 async function handleCrearCotizacion() {
   const result = crearSchema.safeParse(crearState);
   if (!result.success)
@@ -83,6 +95,14 @@ function handleCotizacionConfirmada() {
 
 // Editable params state (synced with store)
 const editandoParametros = shallowRef(false);
+
+function openEditarParametros() {
+  editandoParametros.value = true;
+}
+
+function cerrarEditarParametros() {
+  editandoParametros.value = false;
+}
 
 const paramsState = reactive({
   busCapacity: cotizacion.value?.busCapacity ?? 0,
@@ -125,7 +145,7 @@ function handleHospedajeAgregado() {
             icon="i-lucide-arrow-left"
             variant="ghost"
             color="neutral"
-            @click="router.push(`/travels/${travelId}`)"
+            @click="goToTravelDetail"
           />
           <div>
             <h1 class="text-2xl font-bold">
@@ -151,7 +171,7 @@ function handleHospedajeAgregado() {
           <UButton
             icon="i-lucide-plus"
             label="Crear cotización"
-            @click="isCrearModalOpen = true"
+            @click="openCrearModal"
           />
         </UCard>
       </div>
@@ -186,7 +206,7 @@ function handleHospedajeAgregado() {
                 variant="ghost"
                 color="neutral"
                 label="Editar"
-                @click="editandoParametros = true"
+                @click="openEditarParametros"
               />
             </div>
           </template>
@@ -247,7 +267,7 @@ function handleHospedajeAgregado() {
                 variant="ghost"
                 color="neutral"
                 label="Cancelar"
-                @click="editandoParametros = false"
+                @click="cerrarEditarParametros"
               />
               <UButton
                 label="Guardar"
@@ -330,7 +350,7 @@ function handleHospedajeAgregado() {
               variant="ghost"
               color="neutral"
               label="Cancelar"
-              @click="isCrearModalOpen = false"
+              @click="closeCrearModal"
             />
             <UButton
               type="submit"
