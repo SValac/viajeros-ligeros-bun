@@ -152,7 +152,7 @@ function handleHospedajeAgregado() {
               Cotización
             </h1>
             <p class="text-muted text-sm">
-              {{ travel.destination }}
+              {{ travel.label }}
             </p>
           </div>
         </div>

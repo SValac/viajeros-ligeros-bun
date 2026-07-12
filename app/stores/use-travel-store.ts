@@ -131,6 +131,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     try {
       let travelRow: Tables<'travels'> | null = null;
       const travelRootKeys: (keyof TravelUpdateData)[] = [
+        'label',
         'destination',
         'startDate',
         'endDate',

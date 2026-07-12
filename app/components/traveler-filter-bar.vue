@@ -17,7 +17,7 @@ const filters = defineModel<TravelerFilters>({ default: () => ({}) });
 const providerStore = useProviderStore();
 
 const travelOptions = computed(() =>
-  props.availableTravels.map(t => ({ label: t.destination, value: t.id })),
+  props.availableTravels.map(t => ({ label: t.label, value: t.id })),
 );
 
 const representanteOptions = computed(() =>

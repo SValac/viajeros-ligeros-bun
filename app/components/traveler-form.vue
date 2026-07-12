@@ -100,7 +100,7 @@ type Schema = {
 const travelOptions = computed(() =>
   availableTravels.map(t => ({
     value: t.id,
-    label: `${t.destination} (${t.startDate})`,
+    label: `${t.label} (${t.startDate})`,
   })),
 );
 

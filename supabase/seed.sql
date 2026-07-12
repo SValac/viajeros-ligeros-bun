@@ -405,11 +405,12 @@ on conflict (id) do nothing;
 -- TRAVELS
 -- ============================================================
 insert into public.travels (
-  id, destination, start_date, end_date, price, description,
+  id, label, destination, start_date, end_date, price, description,
   status, minimum_seats, internal_notes
 ) values
 (
   'ff000000-0000-0000-0000-000000000001',
+  'Cañón de Santa Elena, Chihuahua',
   'Cañón de Santa Elena, Chihuahua',
   '2026-07-10',
   '2026-07-14',
@@ -422,6 +423,7 @@ insert into public.travels (
 (
   'ff000000-0000-0000-0000-000000000002',
   'Santuario de Mariposas Monarca, Michoacán',
+  'Santuario de Mariposas Monarca, Michoacán',
   '2026-11-20',
   '2026-11-24',
   4200.00,
@@ -431,6 +433,7 @@ insert into public.travels (
   null
 )
 on conflict (id) do update set
+  label       = excluded.label,
   destination = excluded.destination,
   status      = excluded.status;
 

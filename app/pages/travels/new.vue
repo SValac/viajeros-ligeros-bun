@@ -19,7 +19,7 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
 
   toast.add({
     title: 'Viaje creado',
-    description: `El viaje a ${newTravel.destination} ha sido creado exitosamente`,
+    description: `El viaje ${newTravel.label} ha sido creado exitosamente`,
     color: 'success',
     icon: 'i-lucide-check-circle',
   });
