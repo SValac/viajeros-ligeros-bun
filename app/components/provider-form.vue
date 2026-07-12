@@ -209,13 +209,13 @@ function onCancel() {
 
     <div class="grid grid-cols-3 gap-4">
       <UFormField
-        label="Ciudad"
-        name="location.city"
+        label="País"
+        name="location.country"
         required
       >
         <UInput
-          v-model="state.location.city"
-          placeholder="Ciudad de México"
+          v-model="state.location.country"
+          placeholder="México"
         />
       </UFormField>
 
@@ -231,13 +231,13 @@ function onCancel() {
       </UFormField>
 
       <UFormField
-        label="País"
-        name="location.country"
+        label="Ciudad"
+        name="location.city"
         required
       >
         <UInput
-          v-model="state.location.country"
-          placeholder="México"
+          v-model="state.location.city"
+          placeholder="Ciudad de México"
         />
       </UFormField>
     </div>
