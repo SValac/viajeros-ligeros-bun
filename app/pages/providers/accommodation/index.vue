@@ -291,6 +291,7 @@ const columns: TableColumn<Provider>[] = [
       v-model:open="isFormModalOpen"
       :title="editingProvider ? 'Editar Hospedaje' : 'Nuevo Hospedaje'"
       :description="`Complete los campos para ${editingProvider ? 'editar' : 'crear'} el proveedor.`"
+      :dismissible="false"
       class="sm:max-w-2xl"
     >
       <template #body>
