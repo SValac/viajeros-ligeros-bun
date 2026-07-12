@@ -49,6 +49,16 @@ const schema = z.object({
     country: z.string()
       .min(1, 'El país es requerido')
       .max(100, 'Máximo 100 caracteres'),
+
+    mapLocation: z.object({
+      lat: z.number().min(-90).max(90),
+      lng: z.number().min(-180).max(180),
+      placeId: z.string().optional(),
+      address: z.string().optional(),
+      city: z.string().optional(),
+      state: z.string().optional(),
+      country: z.string().optional(),
+    }).optional(),
   }),
 
   contact: z.object({
@@ -87,6 +97,7 @@ const state = ref<Schema>({
     city: props.provider?.location?.city || '',
     state: props.provider?.location?.state || '',
     country: props.provider?.location?.country || 'México',
+    mapLocation: props.provider?.location?.mapLocation,
   },
   contact: {
     name: props.provider?.contact?.name || '',
@@ -106,6 +117,18 @@ const categoriaOptions = [
   { value: 'food_services', label: 'Comidas' },
   { value: 'other', label: 'Otros' },
 ];
+
+// Auto-fill city/state/country when a new map location is picked
+watch(() => state.value.location.mapLocation, (mapLocation) => {
+  if (!mapLocation)
+    return;
+  if (mapLocation.city)
+    state.value.location.city = mapLocation.city;
+  if (mapLocation.state)
+    state.value.location.state = mapLocation.state;
+  if (mapLocation.country)
+    state.value.location.country = mapLocation.country;
+});
 
 // Handlers
 function onSubmit(event: FormSubmitEvent<Schema>) {
@@ -175,6 +198,14 @@ function onCancel() {
 
     <!-- Ubicación -->
     <USeparator label="Ubicación" />
+
+    <UFormField
+      label="Ubicar en el mapa"
+      description="Opcional. Buscar o seleccionar un punto en el mapa completa automáticamente los campos de abajo."
+      name="location.mapLocation"
+    >
+      <MapLocationPicker v-model="state.location.mapLocation" />
+    </UFormField>
 
     <div class="grid grid-cols-3 gap-4">
       <UFormField

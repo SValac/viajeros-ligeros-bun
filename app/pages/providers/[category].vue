@@ -251,10 +251,27 @@ const columns: TableColumn<Provider>[] = [
     header: 'Ubicación',
     cell: ({ row }) => {
       const location = row.getValue('location') as ProviderLocation;
-      return h('div', { class: 'flex items-center gap-2' }, [
+      const children = [
         h('span', { class: 'i-lucide-map-pin w-3 h-3 text-gray-400' }),
         h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatLocation(location)),
-      ]);
+      ];
+
+      if (location.mapLocation) {
+        const { lat, lng } = location.mapLocation;
+        children.push(h(resolveComponent('UButton'), {
+          as: 'a',
+          href: `https://www.google.com/maps?q=${lat},${lng}`,
+          target: '_blank',
+          rel: 'noopener noreferrer',
+          icon: 'i-lucide-external-link',
+          variant: 'ghost',
+          color: 'neutral',
+          size: 'xs',
+          square: true,
+        }));
+      }
+
+      return h('div', { class: 'flex items-center gap-2' }, children);
     },
   },
   {
