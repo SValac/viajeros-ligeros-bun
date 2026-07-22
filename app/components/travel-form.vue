@@ -48,7 +48,7 @@ const schema = z.object({
   endDate: z.string().min(1, 'Fecha requerida'),
   price: z.number().min(0, 'Precio debe ser positivo').max(999999, 'Precio máximo: 999,999'),
   description: z.string().min(10, 'Mínimo 10 caracteres').max(3000, 'Máximo 1000 caracteres'),
-  status: z.enum(['pending', 'confirmed', 'in_progress', 'completed', 'cancelled']),
+  status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
   internalNotes: z.string().max(500, 'Máximo 500 caracteres').optional(),
 }).refine(
   data => new Date(data.endDate) >= new Date(data.startDate),
@@ -144,7 +144,7 @@ const servicios = ref(travel?.services || []);
 // Opciones de estado para el select
 const estadoOptions: SelectItem[] = [
   { value: 'pending', label: 'Pendiente' },
-  { value: 'confirmed', label: 'Confirmado' },
+  { value: 'published', label: 'Publicado' },
   { value: 'in_progress', label: 'En Curso' },
   { value: 'completed', label: 'Completado' },
   { value: 'cancelled', label: 'Cancelado' },

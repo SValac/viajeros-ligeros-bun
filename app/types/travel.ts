@@ -1,4 +1,4 @@
-export type TravelStatus = 'pending' | 'confirmed' | 'in_progress' | 'completed' | 'cancelled';
+export type TravelStatus = 'pending' | 'published' | 'in_progress' | 'completed' | 'cancelled';
 
 export type MapLocation = {
   lat: number;

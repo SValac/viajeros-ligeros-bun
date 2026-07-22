@@ -1,0 +1,1 @@
+ALTER TYPE public.travel_status RENAME VALUE 'confirmed' TO 'published';
