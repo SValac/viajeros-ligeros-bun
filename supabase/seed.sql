@@ -428,7 +428,7 @@ insert into public.travels (
   '2026-11-24',
   4200.00,
   'Viaje a los bosques donde hibernan las mariposas monarca.',
-  'confirmed',
+  'published',
   25,
   null
 )

@@ -1243,7 +1243,7 @@ export type Database = {
       quotation_status: "draft" | "confirmed"
       travel_status:
         | "pending"
-        | "confirmed"
+        | "published"
         | "in_progress"
         | "completed"
         | "cancelled"
@@ -1392,7 +1392,7 @@ export const Constants = {
       quotation_status: ["draft", "confirmed"],
       travel_status: [
         "pending",
-        "confirmed",
+        "published",
         "in_progress",
         "completed",
         "cancelled",
