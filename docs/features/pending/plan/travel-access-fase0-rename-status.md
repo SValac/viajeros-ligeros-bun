@@ -4,7 +4,9 @@
 y actualizar todo el código frontend que dependía de ese literal.
 
 **Dependencia:** Ninguna — esta es la primera fase.
-**Estado:** Pendiente
+**Estado:** Completada ✅
+
+**Commit:** `dc2519a` (rama `fase0-rename-status`)
 
 ---
 
