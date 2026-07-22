@@ -81,7 +81,7 @@ resultados para revisión antes de avanzar a la siguiente fase.
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
 | [travel-access-fase0-rename-status.md](plan/travel-access-fase0-rename-status.md) | Renombrar `travel_status`: `confirmed` → `published` + código frontend afectado | Ninguna | Completada ✅ |
-| [travel-access-fase1-schema.md](plan/travel-access-fase1-schema.md) | Tablas `travel_access_codes` + `travel_access_attempts` + `normalize_phone_last10` | Fase 0 | Pendiente |
+| [travel-access-fase1-schema.md](plan/travel-access-fase1-schema.md) | Tablas `travel_access_codes` + `travel_access_attempts` + `normalize_phone_last10` | Fase 0 | Completada ✅ |
 | [travel-access-fase2-rpc.md](plan/travel-access-fase2-rpc.md) | `generate_travel_access_code`, `revoke_travel_access_code`, `redeem_travel_access` (el endpoint de Android) | Fase 1 | Pendiente |
 | [travel-access-fase3-repository-domain.md](plan/travel-access-fase3-repository-domain.md) | Types + repository + domain (`travel-access`) | Fase 2 | Pendiente |
 | [travel-access-fase4-store.md](plan/travel-access-fase4-store.md) | Store Pinia `use-travel-access-store.ts` | Fase 3 | Pendiente |
