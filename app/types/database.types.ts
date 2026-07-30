@@ -731,6 +731,76 @@ export type Database = {
           },
         ]
       }
+      travel_access_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          phone_normalized: string
+          success: boolean
+          travel_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone_normalized: string
+          success: boolean
+          travel_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone_normalized?: string
+          success?: boolean
+          travel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_access_attempts_travel_id_fkey"
+            columns: ["travel_id"]
+            isOneToOne: false
+            referencedRelation: "travels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_access_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          travel_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          revoked_at?: string | null
+          travel_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          travel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_access_codes_travel_id_fkey"
+            columns: ["travel_id"]
+            isOneToOne: false
+            referencedRelation: "travels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       travel_accommodations: {
         Row: {
           created_at: string
@@ -1228,6 +1298,7 @@ export type Database = {
         }
         Returns: Json
       }
+      normalize_phone_last10: { Args: { p_phone: string }; Returns: string }
     }
     Enums: {
       cost_split_type: "minimum" | "total"

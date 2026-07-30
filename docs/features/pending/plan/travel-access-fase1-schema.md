@@ -7,7 +7,9 @@ normalización de teléfono `normalize_phone_last10` y su índice.
 **Dependencia:** [Fase 0](travel-access-fase0-rename-status.md) — necesita
 `status = 'published'` ya renombrado, porque las funciones de la Fase 2 van a
 referenciarlo.
-**Estado:** Pendiente
+**Estado:** Completada ✅
+
+**Commit:** `96f5656` (rama `fase1-new-tables-schema`)
 
 ---
 
