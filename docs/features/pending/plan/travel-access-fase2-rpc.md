@@ -290,6 +290,14 @@ exactamente lo que hará Android) y quedó confirmado correcto:
   fallidos nunca se registraban).
 - ✅ `anon` no puede ejecutar `generate_travel_access_code` ni
   `revoke_travel_access_code` → `permission denied for function ...` (código `42501`).
+- ✅ **Re-verificado el 2026-07-30** contra base local recién reseteada: 11 intentos
+  fallidos seguidos → filas 1-10 `invalid_code`, fila 11 `too_many_attempts`; cada
+  intento (éxito o fallo) queda logueado en `travel_access_attempts` con
+  `phone_normalized` correcto (`travel_id` solo se llena cuando el *código* matchea el
+  hash, nunca solo por encontrar el teléfono — a propósito, para no filtrar info).
+- ✅ **Expiración de la ventana de rate limit (15 min)**: envejeciendo los intentos
+  fallidos (`created_at - interval '16 minutes'`) el siguiente intento vuelve a
+  `invalid_code` en vez de `too_many_attempts` — la ventana desliza correctamente.
 
 ### Hallazgos adicionales durante la verificación (no bloquean, pero quedan registrados)
 
@@ -304,6 +312,30 @@ exactamente lo que hará Android) y quedó confirmado correcto:
    que sí tiene el resto de tablas) — bloqueaba ver/crear viajes con hospedaje en toda
    la app. Se corrigió en el commit `7f9c81a` (ver arriba). Vale la pena revisar si
    otras tablas creadas "a mano" en migraciones recientes tienen el mismo problema.
+3. **Editar un archivo de migración ya aplicado no alcanza — hay que resetear**:
+   descubierto el 2026-07-30. `supabase_migrations.schema_migrations` marca una
+   migración como aplicada por versión/nombre, no por contenido. El fix de
+   `RAISE EXCEPTION` en `redeem_travel_access` (punto 2.3 arriba) se editó en el
+   archivo de la migración `20260722152759_travel_access_rpc.sql` **después** de que
+   esa versión ya había corrido contra la base local — la función vieja (con el bug)
+   siguió viva hasta correr `bun run db:reset` de nuevo. Si algo "ya corregido" no se
+   comporta como se espera, primero confirmar que la base local realmente tomó el
+   archivo actual.
+4. **`generate_travel_access_code` no valida que `expires_at` quede en el futuro**:
+   solo chequea `status in ('published', 'in_progress')`, no que `end_date` no haya
+   pasado ya. Un viaje `published` con `end_date` vencido genera un código que nace
+   expirado. Encontrado el 2026-07-30 con datos de prueba viejos; no bloquea (el caso
+   normal es generar el código con el viaje todavía vigente), pero vale la pena
+   agregar la validación si se repite.
 
-No se corrió `get_advisors`/`supabase db advisors` en esta sesión — pendiente antes de
-dar la feature completa por cerrada (Fase 6).
+**`supabase db advisors --local --type all` corrido el 2026-07-30** — 0 `ERROR`, 25
+`WARN`, 44 `INFO`. Hallazgos propios de esta feature, ninguno bloqueante:
+- INFO `unindexed_foreign_keys` en `travel_access_attempts.travel_id` y
+  `travel_access_codes.created_by` — impacto menor, no son las columnas por las que se
+  consulta (el índice real usado es `phone_normalized, created_at`).
+- INFO `rls_enabled_no_policy` en `travel_access_attempts` — **falso positivo respecto
+  al diseño**: es intencional (ver Fase 1), solo el RPC `SECURITY DEFINER` accede.
+- WARN `auth_rls_initplan` en `travel_access_codes_owner_select` (`auth.uid()` sin
+  envolver en `(select auth.uid())`) — mismo patrón preexistente en prácticamente
+  todas las tablas `_owner` del proyecto (24 de los 25 `WARN` totales), no es una
+  regresión de esta feature; si se ataca, es una tarea transversal aparte.

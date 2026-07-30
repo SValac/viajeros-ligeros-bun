@@ -48,13 +48,19 @@ resultados inesperados. El usuario corre los comandos.
    - Poner el viaje en `pending` (ni `published` ni `in_progress`) y reintentar →
      `"error": "travel_not_eligible"`.
    - 11 intentos fallidos seguidos para el mismo teléfono → el 11º devuelve
-     `"error": "too_many_attempts"`.
+     `"error": "too_many_attempts"`. **Re-verificado 2026-07-30** (ver hallazgo #3 en
+     Fase 2: la base local tenía una versión vieja del RPC hasta resetear de nuevo).
+   - La ventana de rate limit desliza: envejeciendo los intentos fallidos más de 15
+     min, el siguiente intento vuelve a `invalid_code`. **Verificado 2026-07-30.**
 3. Confirmar que `anon` **no puede** ejecutar `generate_travel_access_code` ni
    `revoke_travel_access_code` (permission denied). ✅ Ya verificado en Fase 2.
 4. Confirmar que un `SELECT * FROM travelers` / `travel_access_codes` como `anon` o
    como `authenticated` no-owner sigue sin devolver nada extra (RLS no se debilitó).
 5. Correr los advisors de Supabase (`get_advisors` / `supabase db advisors`) y
-   resolver cualquier hallazgo nuevo. **Pendiente** — no se corrió todavía.
+   resolver cualquier hallazgo nuevo. **Hecho (2026-07-30)** — 0 `ERROR`. Ver detalle
+   en [Fase 2](travel-access-fase2-rpc.md#verificación): nada bloqueante, un falso
+   positivo esperado (`travel_access_attempts` sin policies, intencional) y el patrón
+   `auth_rls_initplan` que ya existe en casi todas las tablas del proyecto.
 
 ### Bugs preexistentes encontrados durante la Fase 2 (ajenos a esta feature, sin resolver)
 
