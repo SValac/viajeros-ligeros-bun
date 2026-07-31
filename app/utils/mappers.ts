@@ -23,6 +23,7 @@ import type {
   QuotationPublicPriceFormData,
 } from '~/types/quotation';
 import type { MapLocation, Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
+import type { TravelAccessCode, TravelAccessCodeGenerated } from '~/types/travel-access';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
 import { normalizeBedConfigurations } from '~/utils/hotel-room-helpers';
@@ -607,5 +608,32 @@ export function mapQuotationPublicPriceToInsert(data: QuotationPublicPriceFormDa
     room_type: data.roomType ?? null,
     age_group: data.ageGroup ?? null,
     notes: data.notes ?? null,
+  };
+}
+
+// ============================================================================
+// Travel Access Code
+// ============================================================================
+
+export function mapTravelAccessCodeRowToDomain(row: Omit<Tables<'travel_access_codes'>, 'code_hash'>): TravelAccessCode {
+  return {
+    id: row.id,
+    travelId: row.travel_id,
+    expiresAt: row.expires_at,
+    revokedAt: row.revoked_at,
+    createdAt: row.created_at,
+    createdBy: row.created_by,
+  };
+}
+
+export function mapGeneratedRpcResultToDomain(data: Omit<TravelAccessCodeGenerated, 'revokedAt'>): TravelAccessCodeGenerated {
+  return {
+    id: data.id,
+    code: data.code,
+    travelId: data.travelId,
+    expiresAt: data.expiresAt,
+    revokedAt: null,
+    createdAt: data.createdAt,
+    createdBy: data.createdBy,
   };
 }

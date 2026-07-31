@@ -1290,6 +1290,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_travel_access_code: {
+        Args: { p_travel_id: string }
+        Returns: Json
+      }
       move_or_swap_traveler_seat: {
         Args: {
           p_target_seat: number
@@ -1299,6 +1303,14 @@ export type Database = {
         Returns: Json
       }
       normalize_phone_last10: { Args: { p_phone: string }; Returns: string }
+      redeem_travel_access: {
+        Args: { p_code: string; p_phone: string }
+        Returns: Json
+      }
+      revoke_travel_access_code: {
+        Args: { p_travel_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       cost_split_type: "minimum" | "total"
