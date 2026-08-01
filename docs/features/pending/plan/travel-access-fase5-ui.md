@@ -6,10 +6,9 @@ revocar el código.
 
 **Dependencia:** [Fase 4](travel-access-fase4-store.md) — necesita el store ya
 funcionando.
-**Estado:** Código completo ✅ + pasada de diseño visual (`UEmpty`/`UUser`/`UBadge`).
-5.4 en curso: generar/copiar/WhatsApp/recargar/revocar/regenerar ya verificados en
-navegador (ver bug encontrado y corregido más abajo); falta confirmar el estado
-`not-eligible` y el aspecto visual de `UEmpty`/`UUser` con el theme del proyecto.
+**Estado:** Completada ✅ — código, pasada de diseño visual (`UEmpty`/`UUser`/`UBadge`),
+bug de `onMounted` encontrado y corregido, y checklist 5.4 verificado completo en
+navegador (incluyendo estado `not-eligible` y aspecto visual de `UEmpty`/`UUser`).
 
 ---
 
@@ -100,10 +99,10 @@ arriba.
 5. ✅ Revocar → confirmado funcionando.
 6. ✅ Regenerar sobre un viaje que ya tenía código activo → aparece el modal de
    confirmación, y tras confirmar el código anterior deja de ser válido.
-7. 🔲 Pendiente: un viaje en estado no elegible (ej. `pending`) → confirmar que se ve
-   el `UEmpty` de "Código no disponible todavía".
-8. 🔲 Pendiente: confirmar visualmente que `UEmpty`/`UUser`/`UBadge` combinan bien con
-   el theme del proyecto (primera vez que se usan en este repo).
+7. ✅ Viaje en estado no elegible (`pending`) → se ve bien el `UEmpty` de "Código no
+   disponible todavía".
+8. ✅ `UEmpty`/`UUser`/`UBadge` combinan bien con el theme del proyecto (primera vez
+   que se usan en este repo — confirmado visualmente).
 
 ### Bug encontrado y corregido durante 5.4: `onMounted` nunca traía el código activo
 

@@ -8,8 +8,9 @@ UI de administración para generar/mostrar/revocar ese código.
 
 **Complejidad:** Media-Alta — 3 migraciones nuevas (rename de enum + 2 tablas + 3
 RPCs `SECURITY DEFINER`), capa Repository+Domain+Store nueva, componente de UI nuevo.
-**Estado:** 🚧 EN IMPLEMENTACIÓN — Fases 0-4 completadas, Fase 5 con código completo
-(falta prueba manual en navegador), Fase 6 pendiente.
+**Estado:** 🚧 EN IMPLEMENTACIÓN — Fases 0-5 completadas y desplegadas en producción
+(migraciones aplicadas al proyecto remoto, UI verificada en navegador). Fase 6
+pendiente (verificación end-to-end final).
 
 ---
 
@@ -86,7 +87,7 @@ resultados para revisión antes de avanzar a la siguiente fase.
 | [travel-access-fase2-rpc.md](plan/travel-access-fase2-rpc.md) | `generate_travel_access_code`, `revoke_travel_access_code`, `redeem_travel_access` (el endpoint de Android) | Fase 1 | Completada ✅ |
 | [travel-access-fase3-repository-domain.md](plan/travel-access-fase3-repository-domain.md) | Types + repository + domain (`travel-access`) | Fase 2 | Completada ✅ |
 | [travel-access-fase4-store.md](plan/travel-access-fase4-store.md) | Store Pinia `use-travel-access-store.ts` | Fase 3 | Completada ✅ |
-| [travel-access-fase5-ui.md](plan/travel-access-fase5-ui.md) | Componente `TravelAccessCodeCard` + integración en la página de detalle | Fase 4 | Código completo ✅ (falta prueba manual en navegador) |
+| [travel-access-fase5-ui.md](plan/travel-access-fase5-ui.md) | Componente `TravelAccessCodeCard` + integración en la página de detalle | Fase 4 | Completada ✅ |
 | [travel-access-fase6-verificacion.md](plan/travel-access-fase6-verificacion.md) | Verificación end-to-end (RPC vía `curl` simulando Android + prueba manual en navegador) | Todas | Pendiente |
 
 > Al terminar cada fase, actualizar su "Estado" en este índice y en el propio
