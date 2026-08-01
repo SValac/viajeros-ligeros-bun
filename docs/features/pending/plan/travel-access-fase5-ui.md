@@ -6,7 +6,8 @@ revocar el código.
 
 **Dependencia:** [Fase 4](travel-access-fase4-store.md) — necesita el store ya
 funcionando.
-**Estado:** Pendiente
+**Estado:** Código completo ✅ — `typecheck` y `lint` sin errores. Falta 5.4 (prueba
+manual en navegador, programada para el día siguiente).
 
 ---
 
