@@ -299,6 +299,32 @@ exactamente lo que hará Android) y quedó confirmado correcto:
   fallidos (`created_at - interval '16 minutes'`) el siguiente intento vuelve a
   `invalid_code` en vez de `too_many_attempts` — la ventana desliza correctamente.
 
+### Despliegue a producción (2026-08-01)
+
+Las migraciones pendientes de esta feature (incluyendo esta, `20260722152759`) se
+aplicaron al proyecto remoto/enlazado (`mkosbzhagjbyfvizafta`) con `bun run db:push`.
+Confirmado con `supabase migration list` — columnas `Local`/`Remote` coinciden en las
+29 migraciones. Los 3 RPCs ya están expuestos en vivo vía PostgREST (sin paso de
+deploy adicional, a diferencia de una Edge Function):
+
+```
+POST https://mkosbzhagjbyfvizafta.supabase.co/rest/v1/rpc/generate_travel_access_code
+POST https://mkosbzhagjbyfvizafta.supabase.co/rest/v1/rpc/revoke_travel_access_code
+POST https://mkosbzhagjbyfvizafta.supabase.co/rest/v1/rpc/redeem_travel_access
+```
+
+**El endpoint que consumirá la app Android es el tercero** (`redeem_travel_access`,
+único con grant a `anon`). Headers para los dos primeros (`generate`/`revoke`, solo
+`authenticated`): `apikey: <ANON_KEY>` + `Authorization: Bearer <ADMIN_ACCESS_TOKEN>`
+(el JWT de sesión del admin dueño del viaje, no la anon key sola). Para
+`redeem_travel_access`: `apikey: <ANON_KEY>` + `Authorization: Bearer <ANON_KEY>` (no
+requiere sesión — es el punto, es lo que usará un teléfono sin cuenta).
+
+Pendiente: correr los `curl` de verificación de esta sección pero contra el proyecto
+remoto (los de arriba se corrieron solo contra Supabase local) — no crítico porque la
+lógica es la misma base de datos replicada, pero confirma que `anon`/`authenticated`
+tienen los grants esperados también en remoto.
+
 ### Hallazgos adicionales durante la verificación (no bloquean, pero quedan registrados)
 
 1. **`supabase/seed.sql` está roto desde que se agregó multi-tenancy**: los `insert

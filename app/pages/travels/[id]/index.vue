@@ -508,6 +508,11 @@ definePageMeta({
           </UCard>
         </section>
       </div>
+      <TravelAccessCodeCard
+        :travel-id="travel.id"
+        :travel-label="travel.label"
+        :travel-status="travel.status"
+      />
       <!-- Gallery Section -->
       <UCard>
         <TheSeparator
