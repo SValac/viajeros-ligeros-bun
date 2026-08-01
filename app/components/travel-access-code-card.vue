@@ -76,7 +76,10 @@ function sendCode(phone: string, code: string | null, travelLabel: string) {
 }
 
 onMounted(async () => {
-  await travelerStore.fetchByTravel(props.travelId);
+  await Promise.all([
+    travelerStore.fetchByTravel(props.travelId),
+    travelAccessStore.fetchActiveCode(props.travelId),
+  ]);
 });
 </script>
 
