@@ -21,6 +21,8 @@ const showRegenerateModal = shallowRef(false);
 
 const activeCode = computed(() => travelAccessStore.getActiveCode(props.travelId));
 const revealedCode = computed(() => travelAccessStore.getRevealedCode(props.travelId));
+const travelersForTravel = computed(() => travelerStore.getTravelersByTravel(props.travelId));
+
 const cardState = computed((): CardState => {
   if (props.travelStatus !== 'published' && props.travelStatus !== 'in_progress') {
     return 'not-eligible';
@@ -38,6 +40,7 @@ const cardState = computed((): CardState => {
 });
 
 const showRevokeAndRegenerateButtons = computed(() => cardState.value === 'active-hidden' || cardState.value === 'active-revealed');
+const displayCopyIcon = computed(() => copied.value ? 'i-lucide-check' : 'i-lucide-copy');
 
 async function generateCode() {
   await travelAccessStore.generateCode(props.travelId);
@@ -72,8 +75,6 @@ function sendCode(phone: string, code: string | null, travelLabel: string) {
   window.open(buildWhatsAppShareUrl(phone, code, travelLabel), '_blank');
 }
 
-const displayCopyIcon = computed(() => copied.value ? 'i-lucide-check' : 'i-lucide-copy');
-
 onMounted(async () => {
   await travelerStore.fetchByTravel(props.travelId);
 });
@@ -87,94 +88,148 @@ onMounted(async () => {
         text="Código de acceso"
         icon="i-lucide-key-round"
       />
-      <UAlert
-        v-if="cardState === 'not-eligible'"
-        color="neutral"
-        icon="i-lucide-lock"
-        title="Viaje no elegible"
-        description="el código solo se puede generar cuando el viaje está publicado o en curso"
-      />
 
-      <UButton
-        v-if="cardState === 'no-code'"
-        label="Generar código"
-        icon="i-lucide-key-round"
-        :loading="travelAccessStore.loading"
-        @click="generateCode"
-      />
-
-      <div
-        v-if="cardState === 'active-hidden'"
-      >
-        <p>
-          Código activo. Expira el: {{ formatDate(activeCode?.expiresAt ?? '...') }}
-        </p>
-        <UAlert
-          color="warning"
-          icon="i-lucide-eye-off"
-          description="Por seguridad el código no puede ser mostrado"
+      <div class="space-y-4">
+        <UEmpty
+          v-if="cardState === 'not-eligible'"
+          icon="i-lucide-lock"
+          title="Código no disponible todavía"
+          description="El código de acceso se habilita cuando el viaje está publicado o en curso, para que los viajeros puedan consultar su itinerario desde la app."
         />
-      </div>
 
-      <UButton
-        v-if="showRevokeAndRegenerateButtons"
-        label="Revocar código"
-        color="error"
-        variant="outline"
-        icon="i-lucide-trash-2"
-        :loading="travelAccessStore.loading"
-        @click="revokeCode"
-      />
-
-      <UButton
-        v-if="showRevokeAndRegenerateButtons"
-        label="Regenerar código"
-        color="secondary"
-        icon="i-lucide-rotate-ccw-key"
-        @click="showModal"
-      />
-
-      <div
-        v-if="cardState === 'active-revealed'"
-      >
-        <p class="font-mono p-4 bg-elevated rounded-lg">
-          {{ revealedCode }}
-        </p>
-        <UButton
-          :icon="displayCopyIcon"
-          @click="copyCode"
+        <UEmpty
+          v-else-if="cardState === 'no-code'"
+          icon="i-lucide-key-round"
+          title="Todavía no hay un código generado"
+          description="Generá un código de 6 caracteres y compartilo con los viajeros para que accedan a su itinerario desde la app."
+          :actions="[{
+            label: 'Generar código',
+            icon: 'i-lucide-key-round',
+            loading: travelAccessStore.loading,
+            onClick: generateCode,
+          }]"
         />
-        <div>
-          <div v-for="traveler in travelerStore.getTravelersByTravel(travelId)" :key="traveler.id">
-            <p>{{ traveler.firstName }} {{ traveler.lastName }} : {{ traveler.phone }}</p>
-            <UButton
-              label="Enviar"
-              icon="i-simple-icons-whatsapp"
-              @click="sendCode(traveler.phone, revealedCode, travelLabel)"
+
+        <template v-else>
+          <div class="flex items-center justify-between gap-4 p-4 bg-elevated rounded-lg">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-shield-check" class="size-5 text-success shrink-0" />
+              <span class="font-medium">Código activo</span>
+            </div>
+            <UBadge
+              color="neutral"
+              variant="subtle"
+              icon="i-lucide-calendar-clock"
+              :label="`Expira el ${formatDate(activeCode?.expiresAt ?? '')}`"
             />
           </div>
-        </div>
+
+          <UAlert
+            v-if="cardState === 'active-hidden'"
+            color="warning"
+            variant="subtle"
+            icon="i-lucide-eye-off"
+            title="El código ya no se puede volver a mostrar"
+            description="Por seguridad, solo se muestra en pantalla una vez, justo después de generarlo. Si el viajero lo perdió, generá uno nuevo."
+          />
+
+          <template v-if="cardState === 'active-revealed'">
+            <div>
+              <p class="text-sm text-muted mb-1">
+                Código generado
+              </p>
+              <div class="flex items-center gap-3 p-4 bg-elevated rounded-lg">
+                <span class="flex-1 font-mono text-xl font-semibold tracking-[0.3em]">
+                  {{ revealedCode }}
+                </span>
+                <UButton
+                  :label="copied ? 'Copiado' : 'Copiar'"
+                  :icon="displayCopyIcon"
+                  :color="copied ? 'success' : 'neutral'"
+                  variant="subtle"
+                  @click="copyCode"
+                />
+              </div>
+              <p class="text-xs text-muted mt-1.5">
+                Se muestra una sola vez — copialo o envialo ahora antes de recargar la página.
+              </p>
+            </div>
+
+            <USeparator
+              label="Enviar por WhatsApp"
+              icon="i-simple-icons-whatsapp"
+            />
+
+            <div v-if="travelersForTravel.length > 0" class="space-y-1">
+              <div
+                v-for="traveler in travelersForTravel"
+                :key="traveler.id"
+                class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-elevated transition-colors"
+              >
+                <UUser
+                  :name="`${traveler.firstName} ${traveler.lastName}`"
+                  :description="traveler.phone"
+                  :avatar="{}"
+                  size="sm"
+                />
+                <UButton
+                  label="Enviar"
+                  icon="i-simple-icons-whatsapp"
+                  color="success"
+                  variant="soft"
+                  size="sm"
+                  @click="sendCode(traveler.phone, revealedCode, travelLabel)"
+                />
+              </div>
+            </div>
+            <UEmpty
+              v-else
+              icon="i-lucide-users"
+              title="Sin viajeros registrados"
+              description="Agregá viajeros a este viaje para poder enviarles el código por WhatsApp."
+            />
+          </template>
+
+          <div v-if="showRevokeAndRegenerateButtons" class="flex flex-wrap gap-2 pt-2">
+            <UButton
+              label="Regenerar código"
+              color="secondary"
+              variant="subtle"
+              icon="i-lucide-rotate-ccw-key"
+              @click="showModal"
+            />
+            <UButton
+              label="Revocar código"
+              color="error"
+              variant="outline"
+              icon="i-lucide-trash-2"
+              :loading="travelAccessStore.loading"
+              @click="revokeCode"
+            />
+          </div>
+        </template>
       </div>
     </UCard>
 
     <UModal
       v-model:open="showRegenerateModal"
       :dismissible="false"
+      title="¿Generar un nuevo código?"
+      description="Los viajeros que ya recibieron el código actual no van a poder usarlo para acceder a su itinerario."
     >
-      <template #body>
-        Generar un nuevo código invalidará el actual
-      </template>
-
       <template #footer>
-        <UButton
-          label="Confirmar"
-          color="primary"
-          @click="confirmRegenerate"
-        />
         <UButton
           label="Cancelar"
           color="neutral"
+          variant="ghost"
           @click="closeModal"
+        />
+        <UButton
+          label="Sí, generar nuevo código"
+          color="primary"
+          icon="i-lucide-rotate-ccw-key"
+          :loading="travelAccessStore.loading"
+          @click="confirmRegenerate"
         />
       </template>
     </UModal>
