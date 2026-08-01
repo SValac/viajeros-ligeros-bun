@@ -6,7 +6,7 @@ import { useTravelRepository } from '~/composables/travels/use-travel-repository
 type TravelStats = {
   total: number;
   pending: number;
-  confirmed: number;
+  published: number;
   inProgress: number;
   completed: number;
   cancelled: number;
@@ -49,7 +49,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     return {
       total: travels.value.length,
       pending: travels.value.filter(t => t.status === 'pending').length,
-      confirmed: travels.value.filter(t => t.status === 'confirmed').length,
+      published: travels.value.filter(t => t.status === 'published').length,
       inProgress: travels.value.filter(t => t.status === 'in_progress').length,
       completed: travels.value.filter(t => t.status === 'completed').length,
       cancelled: travels.value.filter(t => t.status === 'cancelled').length,
@@ -58,7 +58,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
   const totalRevenue = computed((): number => {
     return travels.value
-      .filter(t => t.status === 'confirmed' || t.status === 'completed')
+      .filter(t => t.status === 'published' || t.status === 'completed')
       .reduce((sum, travel) => sum + travel.price, 0);
   });
 

@@ -5,7 +5,7 @@ y mantiene el código revelado en memoria (nunca persistido).
 
 **Dependencia:** [Fase 3](travel-access-fase3-repository-domain.md) — necesita el
 repositorio y el dominio ya creados.
-**Estado:** Pendiente
+**Estado:** Completada ✅
 
 ---
 

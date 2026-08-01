@@ -731,6 +731,76 @@ export type Database = {
           },
         ]
       }
+      travel_access_attempts: {
+        Row: {
+          created_at: string
+          id: string
+          phone_normalized: string
+          success: boolean
+          travel_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          phone_normalized: string
+          success: boolean
+          travel_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          phone_normalized?: string
+          success?: boolean
+          travel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_access_attempts_travel_id_fkey"
+            columns: ["travel_id"]
+            isOneToOne: false
+            referencedRelation: "travels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_access_codes: {
+        Row: {
+          code_hash: string
+          created_at: string
+          created_by: string
+          expires_at: string
+          id: string
+          revoked_at: string | null
+          travel_id: string
+        }
+        Insert: {
+          code_hash: string
+          created_at?: string
+          created_by: string
+          expires_at: string
+          id?: string
+          revoked_at?: string | null
+          travel_id: string
+        }
+        Update: {
+          code_hash?: string
+          created_at?: string
+          created_by?: string
+          expires_at?: string
+          id?: string
+          revoked_at?: string | null
+          travel_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_access_codes_travel_id_fkey"
+            columns: ["travel_id"]
+            isOneToOne: false
+            referencedRelation: "travels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       travel_accommodations: {
         Row: {
           created_at: string
@@ -1220,12 +1290,25 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_travel_access_code: {
+        Args: { p_travel_id: string }
+        Returns: Json
+      }
       move_or_swap_traveler_seat: {
         Args: {
           p_target_seat: number
           p_travel_bus_id: string
           p_traveler_id: string
         }
+        Returns: Json
+      }
+      normalize_phone_last10: { Args: { p_phone: string }; Returns: string }
+      redeem_travel_access: {
+        Args: { p_code: string; p_phone: string }
+        Returns: Json
+      }
+      revoke_travel_access_code: {
+        Args: { p_travel_id: string }
         Returns: Json
       }
     }
@@ -1243,7 +1326,7 @@ export type Database = {
       quotation_status: "draft" | "confirmed"
       travel_status:
         | "pending"
-        | "confirmed"
+        | "published"
         | "in_progress"
         | "completed"
         | "cancelled"
@@ -1392,7 +1475,7 @@ export const Constants = {
       quotation_status: ["draft", "confirmed"],
       travel_status: [
         "pending",
-        "confirmed",
+        "published",
         "in_progress",
         "completed",
         "cancelled",

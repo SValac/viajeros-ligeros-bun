@@ -6,7 +6,9 @@ revocar el código.
 
 **Dependencia:** [Fase 4](travel-access-fase4-store.md) — necesita el store ya
 funcionando.
-**Estado:** Pendiente
+**Estado:** Completada ✅ — código, pasada de diseño visual (`UEmpty`/`UUser`/`UBadge`),
+bug de `onMounted` encontrado y corregido, y checklist 5.4 verificado completo en
+navegador (incluyendo estado `not-eligible` y aspecto visual de `UEmpty`/`UUser`).
 
 ---
 
@@ -32,7 +34,9 @@ tarjeta nueva quede consistente visualmente.
 
 ## Diseño de `app/components/travel-access-code-card.vue`
 
-**Props:** `travelId: string`, `travelStatus: TravelStatus`.
+**Props:** `travelId: string`, `travelLabel: string` (necesaria para el mensaje de
+WhatsApp, agregada durante la implementación — no estaba en el diseño original de
+este documento), `travelStatus: TravelStatus`.
 
 **Estados de la tarjeta:**
 
@@ -86,13 +90,44 @@ arriba.
 
 1. `bun run dev`, entrar a un viaje con `status = 'published'` (o `in_progress`), ir a
    su página de detalle.
-2. La tarjeta está deshabilitada con la alerta explicativa en estados no elegibles, y
-   activa en `published`/`in_progress`.
-3. Generar código → aparece en el recuadro, el botón de copiar funciona, los botones
-   de WhatsApp por viajero abren la URL `wa.me` correcta con el mensaje y el código.
-4. Recargar la página → el código ya no se muestra en texto plano, solo metadata +
-   invitación a regenerar.
-5. Revocar → el código viejo deja de funcionar (probar con el `curl` de la
-   [Fase 2](travel-access-fase2-rpc.md)).
-6. Regenerar sobre un viaje que ya tenía código activo → aparece el modal de
+2. ✅ Generar código → aparece en el recuadro, el botón de copiar funciona (feedback
+   "Copiado").
+3. ✅ Los botones de WhatsApp por viajero abren la URL `wa.me` correcta con el mensaje
+   y el código.
+4. ✅ Recargar la página → el código ya no se muestra en texto plano, solo metadata +
+   alerta de seguridad (`active-hidden`).
+5. ✅ Revocar → confirmado funcionando.
+6. ✅ Regenerar sobre un viaje que ya tenía código activo → aparece el modal de
    confirmación, y tras confirmar el código anterior deja de ser válido.
+7. ✅ Viaje en estado no elegible (`pending`) → se ve bien el `UEmpty` de "Código no
+   disponible todavía".
+8. ✅ `UEmpty`/`UUser`/`UBadge` combinan bien con el theme del proyecto (primera vez
+   que se usan en este repo — confirmado visualmente).
+
+### Bug encontrado y corregido durante 5.4: `onMounted` nunca traía el código activo
+
+Al recargar la página después de generar un código, la tarjeta mostraba el estado
+`no-code` (botón "Generar código") en vez de `active-hidden` (metadata + alerta). Causa:
+el `onMounted` del componente solo llamaba a `travelerStore.fetchByTravel(...)` —
+nunca a `travelAccessStore.fetchActiveCode(props.travelId)`. Como el estado de Pinia
+no persiste entre recargas, `activeCodeByTravel` quedaba vacío y `cardState` caía
+siempre a `'no-code'`, sin importar que el código sí existiera en la base.
+
+**Fix:** las dos llamadas de `onMounted` se pusieron en paralelo con `Promise.all`
+(son independientes entre sí, y ambas atrapan sus propios errores internamente sin
+relanzar, así que `Promise.all` no corre riesgo de que una tire abajo a la otra):
+
+```ts
+onMounted(async () => {
+  await Promise.all([
+    travelerStore.fetchByTravel(props.travelId),
+    travelAccessStore.fetchActiveCode(props.travelId),
+  ]);
+});
+```
+
+Ojo con este patrón al escribir `Promise.all`: poner `await` **dentro** de cada
+elemento del array (`[await a(), await b()]`) anula el paralelismo — JS resuelve cada
+`await` del array en orden antes de armar el array, así que para cuando
+`Promise.all` lo recibe ya no hay nada que paralelizar. El `await` va solo una vez,
+afuera, envolviendo el `Promise.all` entero.

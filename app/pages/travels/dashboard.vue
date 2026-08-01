@@ -25,7 +25,7 @@ const revenue = computed(() => travelsStore.totalRevenue);
 function getStatusColor(status: TravelStatus): string {
   const colors: Record<TravelStatus, string> = {
     pending: 'amber',
-    confirmed: 'blue',
+    published: 'blue',
     in_progress: 'purple',
     completed: 'green',
     cancelled: 'red',
@@ -36,7 +36,7 @@ function getStatusColor(status: TravelStatus): string {
 function getStatusLabel(status: TravelStatus): string {
   const labels: Record<TravelStatus, string> = {
     pending: 'Pendiente',
-    confirmed: 'Confirmado',
+    published: 'Publicado',
     in_progress: 'En Curso',
     completed: 'Completado',
     cancelled: 'Cancelado',
@@ -247,15 +247,15 @@ const columns: TableColumn<Travel>[] = [
         </div>
       </UCard>
 
-      <!-- Confirmados -->
+      <!-- Publicados -->
       <UCard>
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              Confirmados
+              Publicados
             </p>
             <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
-              {{ stats.confirmed }}
+              {{ stats.published }}
             </p>
           </div>
           <UIcon

@@ -55,7 +55,7 @@ watchEffect(() => {
 function getStatusColor(status: string): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' {
   const colors: Record<string, 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'> = {
     pending: 'warning',
-    confirmed: 'info',
+    published: 'info',
     in_progress: 'primary',
     completed: 'success',
     cancelled: 'error',
@@ -66,7 +66,7 @@ function getStatusColor(status: string): 'primary' | 'secondary' | 'success' | '
 function getStatusLabel(status: string) {
   const labels: Record<string, string> = {
     pending: 'Pendiente',
-    confirmed: 'Confirmado',
+    published: 'Publicado',
     in_progress: 'En Curso',
     completed: 'Completado',
     cancelled: 'Cancelado',
@@ -508,6 +508,11 @@ definePageMeta({
           </UCard>
         </section>
       </div>
+      <TravelAccessCodeCard
+        :travel-id="travel.id"
+        :travel-label="travel.label"
+        :travel-status="travel.status"
+      />
       <!-- Gallery Section -->
       <UCard>
         <TheSeparator

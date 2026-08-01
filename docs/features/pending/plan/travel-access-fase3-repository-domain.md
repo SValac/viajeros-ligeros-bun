@@ -6,7 +6,7 @@ patrón Repository + Domain ya establecido en el proyecto.
 **Dependencia:** [Fase 2](travel-access-fase2-rpc.md) — necesita los 3 RPCs ya
 desplegados localmente y `bun run db:types` ya corrido (los tipos de
 `travel_access_codes` deben existir en `database.types.ts`).
-**Estado:** Pendiente
+**Estado:** Completada ✅
 
 ---
 
