@@ -5,7 +5,16 @@ import { z } from 'zod';
 
 import type { Provider, ProviderCategory, ProviderFormData } from '~/types/provider';
 
-import { nameSchema, phoneSchema, sanitizeName, sanitizePhone } from '~/utils/form-validation';
+import {
+  businessNameSchema,
+  nameSchema,
+  phoneSchema,
+  sanitizeBusinessName,
+  sanitizeName,
+  sanitizePhone,
+  sanitizeText,
+  textSchema,
+} from '~/utils/form-validation';
 
 type Props = {
   provider?: Provider | null;
@@ -21,9 +30,7 @@ const emit = defineEmits<{
 
 // Schema de validación
 const schema = z.object({
-  name: z.string()
-    .min(3, 'Mínimo 3 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
+  name: businessNameSchema({ min: 3, max: 100 }),
 
   category: z.enum([
     'guides',
@@ -34,23 +41,16 @@ const schema = z.object({
     'other',
   ]),
 
-  description: z.string()
-    .max(500, 'Máximo 500 caracteres')
+  description: textSchema({ max: 500 })
     .optional()
     .or(z.literal('')),
 
   location: z.object({
-    city: z.string()
-      .min(1, 'La ciudad es requerida')
-      .max(100, 'Máximo 100 caracteres'),
+    city: nameSchema({ min: 1, max: 100 }),
 
-    state: z.string()
-      .min(1, 'El estado/provincia es requerido')
-      .max(100, 'Máximo 100 caracteres'),
+    state: nameSchema({ min: 1, max: 100 }),
 
-    country: z.string()
-      .min(1, 'El país es requerido')
-      .max(100, 'Máximo 100 caracteres'),
+    country: nameSchema({ min: 1, max: 100 }),
 
     mapLocation: z.object({
       lat: z.number().min(-90).max(90),
@@ -73,12 +73,12 @@ const schema = z.object({
       .or(z.literal('')),
 
     email: z.string()
+      .trim()
       .email('Email inválido')
       .optional()
       .or(z.literal('')),
 
-    notes: z.string()
-      .max(300, 'Máximo 300 caracteres')
+    notes: textSchema({ max: 300 })
       .optional()
       .or(z.literal('')),
   }),
@@ -119,8 +119,14 @@ const categoriaOptions = [
 ];
 
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeBusinessName);
+const cityInput = useSanitizedModel(() => state.value.location.city, v => state.value.location.city = v, sanitizeName);
+const stateInput = useSanitizedModel(() => state.value.location.state, v => state.value.location.state = v, sanitizeName);
+const countryInput = useSanitizedModel(() => state.value.location.country, v => state.value.location.country = v, sanitizeName);
+const descriptionInput = useSanitizedModel(() => state.value.description ?? '', v => state.value.description = v, sanitizeText);
 const contactNameInput = useSanitizedModel(() => state.value.contact.name ?? '', v => state.value.contact.name = v, sanitizeName);
 const contactPhoneInput = useSanitizedModel(() => state.value.contact.phone ?? '', v => state.value.contact.phone = v, sanitizePhone);
+const contactNotesInput = useSanitizedModel(() => state.value.contact.notes ?? '', v => state.value.contact.notes = v, sanitizeText);
 
 // Auto-fill city/state/country when a new map location is picked
 watch(() => state.value.location.mapLocation, (mapLocation) => {
@@ -162,7 +168,7 @@ function onCancel() {
       required
     >
       <UInput
-        v-model="state.name"
+        v-model="nameInput"
         placeholder="Ejemplo: Transportes del Norte"
       />
     </UFormField>
@@ -194,7 +200,7 @@ function onCancel() {
       name="description"
     >
       <UTextarea
-        v-model="state.description"
+        v-model="descriptionInput"
         :rows="3"
         placeholder="Descripción detallada del proveedor y sus servicios"
       />
@@ -218,7 +224,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.location.country"
+          v-model="countryInput"
           placeholder="México"
         />
       </UFormField>
@@ -229,7 +235,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.location.state"
+          v-model="stateInput"
           placeholder="CDMX"
         />
       </UFormField>
@@ -240,7 +246,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.location.city"
+          v-model="cityInput"
           placeholder="Ciudad de México"
         />
       </UFormField>
@@ -288,7 +294,7 @@ function onCancel() {
       name="contact.notes"
     >
       <UTextarea
-        v-model="state.contact.notes"
+        v-model="contactNotesInput"
         :rows="2"
         placeholder="Horarios, preferencias de contacto, etc."
       />
