@@ -204,6 +204,7 @@ function onCancel() {
       <UTextarea
         v-model="descriptionInput"
         :rows="3"
+        class="w-full"
         placeholder="Descripción detallada del proveedor y sus servicios"
       />
     </UFormField>
@@ -300,6 +301,7 @@ function onCancel() {
       <UTextarea
         v-model="contactNotesInput"
         :rows="2"
+        class="w-full"
         placeholder="Horarios, preferencias de contacto, etc."
       />
     </UFormField>
