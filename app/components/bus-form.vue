@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import type { Bus, BusFormData } from '~/types/bus';
 
+import { businessNameSchema, sanitizeBusinessName } from '~/utils/form-validation';
+
 type Props = {
   bus?: Bus | null;
   providerId: string;
@@ -20,8 +22,8 @@ const emit = defineEmits<{
 const currentYear = new Date().getFullYear();
 
 const schema = z.object({
-  brand: z.string().max(50, 'Máximo 50 caracteres').optional().or(z.literal('')),
-  model: z.string().max(50, 'Máximo 50 caracteres').optional().or(z.literal('')),
+  brand: businessNameSchema({ min: 1, max: 50 }).optional().or(z.literal('')),
+  model: businessNameSchema({ min: 1, max: 50 }).optional().or(z.literal('')),
   year: z.coerce.number()
     .int()
     .min(1950, 'Año mínimo 1950')
@@ -47,6 +49,10 @@ const state = ref<Schema>({
   rentalPrice: props.bus?.rentalPrice || 0,
   active: props.bus?.active ?? true,
 });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const brandInput = useSanitizedModel(() => state.value.brand ?? '', v => state.value.brand = v, sanitizeBusinessName);
+const modelInput = useSanitizedModel(() => state.value.model ?? '', v => state.value.model = v, sanitizeBusinessName);
 
 function onSubmit(event: FormSubmitEvent<Schema>) {
   const formData: BusFormData = {
@@ -81,7 +87,7 @@ function onCancel() {
         name="brand"
       >
         <UInput
-          v-model="state.brand"
+          v-model="brandInput"
           placeholder="Mercedes-Benz"
         />
       </UFormField>
@@ -91,7 +97,7 @@ function onCancel() {
         name="model"
       >
         <UInput
-          v-model="state.model"
+          v-model="modelInput"
           placeholder="Sprinter 516"
         />
       </UFormField>

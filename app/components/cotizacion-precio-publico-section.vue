@@ -6,6 +6,8 @@ import { z } from 'zod';
 
 import type { QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
 
+import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+
 type Props = {
   quotationId: string;
   readonly?: boolean;
@@ -84,12 +86,12 @@ function precioTotalSeleccionado(price: { maxOccupancy: number; breakdown: { sea
 
 // Schema de validación
 const formSchema = z.object({
-  priceType: z.string({ message: 'Ingresa el tipo de precio' }).min(1, 'Campo requerido'),
-  description: z.string({ message: 'Ingresa la descripción' }).min(1, 'Campo requerido'),
+  priceType: businessNameSchema({ min: 1, max: 100 }),
+  description: businessNameSchema({ min: 1, max: 200 }),
   pricePerPerson: z.number({ message: 'Ingresa el precio' }).positive('Debe ser mayor a 0'),
-  roomType: z.string().optional(),
-  ageGroup: z.string().optional(),
-  notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  roomType: businessNameSchema({ max: 100 }).optional().or(z.literal('')),
+  ageGroup: businessNameSchema({ max: 100 }).optional().or(z.literal('')),
+  notes: textSchema({ max: 500 }).optional(),
 });
 
 type FormSchema = z.infer<typeof formSchema>;
@@ -103,6 +105,13 @@ const formState = reactive<Partial<FormSchema>>({
   ageGroup: '',
   notes: '',
 });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const priceTypeInput = useSanitizedModel(() => formState.priceType ?? '', v => formState.priceType = v, sanitizeBusinessName);
+const descriptionInput = useSanitizedModel(() => formState.description ?? '', v => formState.description = v, sanitizeBusinessName);
+const roomTypeInput = useSanitizedModel(() => formState.roomType ?? '', v => formState.roomType = v, sanitizeBusinessName);
+const ageGroupInput = useSanitizedModel(() => formState.ageGroup ?? '', v => formState.ageGroup = v, sanitizeBusinessName);
+const notesInput = useSanitizedModel(() => formState.notes ?? '', v => formState.notes = v, sanitizeText);
 
 // Modal state
 const isFormModalOpen = shallowRef(false);
@@ -444,7 +453,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
           <!-- Tipo -->
           <UFormField label="Tipo de Precio" required>
             <UInput
-              v-model="formState.priceType"
+              v-model="priceTypeInput"
               placeholder="Ej: Habitación Sencilla, Niños 4-10 años"
             />
           </UFormField>
@@ -452,7 +461,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
           <!-- Descripción -->
           <UFormField label="Descripción" required>
             <UInput
-              v-model="formState.description"
+              v-model="descriptionInput"
               placeholder="Ej: En habitación para 1 persona"
             />
           </UFormField>
@@ -472,7 +481,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
             <!-- Tipo Habitación (opcional) -->
             <UFormField label="Tipo Habitación (opcional)">
               <UInput
-                v-model="formState.roomType"
+                v-model="roomTypeInput"
                 placeholder="Ej: Sencilla, Doble"
               />
             </UFormField>
@@ -480,7 +489,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
             <!-- Grupo Etario (opcional) -->
             <UFormField label="Grupo Etario (opcional)">
               <UInput
-                v-model="formState.ageGroup"
+                v-model="ageGroupInput"
                 placeholder="Ej: Adultos, Niños"
               />
             </UFormField>
@@ -489,7 +498,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
           <!-- Notas -->
           <UFormField label="Notas (opcional)">
             <UTextarea
-              v-model="formState.notes"
+              v-model="notesInput"
               placeholder="Observaciones adicionales..."
               :rows="2"
             />

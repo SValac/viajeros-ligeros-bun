@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
+import { nameSchema, phoneSchema, sanitizeName, sanitizePhone, sanitizeText, textSchema } from '~/utils/form-validation';
+
 type Props = {
   coordinator?: Coordinator | null;
 };
@@ -17,24 +19,20 @@ const emit = defineEmits<{
 }>();
 
 const schema = z.object({
-  name: z.string()
-    .min(2, 'Mínimo 2 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
+  name: nameSchema({ min: 2, max: 100 }),
 
   age: z.number({ error: 'Ingresa una edad válida' })
     .int('Debe ser un número entero')
     .min(18, 'Mínimo 18 años')
     .max(99, 'Máximo 99 años'),
 
-  phone: z.string()
-    .min(7, 'Mínimo 7 caracteres')
-    .max(20, 'Máximo 20 caracteres'),
+  phone: phoneSchema({ min: 7, max: 20 }),
 
   email: z.string()
     .email('Email inválido')
     .max(150, 'Máximo 150 caracteres'),
 
-  notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  notes: textSchema({ max: 500 }).optional(),
 });
 
 type Schema = z.output<typeof schema>;
@@ -46,6 +44,11 @@ const state = ref<Schema>({
   email: coordinator?.email ?? '',
   notes: coordinator?.notes ?? '',
 });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeName);
+const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
+const notesInput = useSanitizedModel(() => state.value.notes ?? '', v => state.value.notes = v, sanitizeText);
 
 const isSubmitting = shallowRef(false);
 
@@ -84,7 +87,7 @@ function onCancel() {
         class="col-span-2"
       >
         <UInput
-          v-model="state.name"
+          v-model="nameInput"
           placeholder="Ana García"
         />
       </UFormField>
@@ -109,7 +112,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.phone"
+          v-model="phoneInput"
           type="tel"
           placeholder="+52 55 1234 5678"
         />
@@ -133,7 +136,7 @@ function onCancel() {
       name="notes"
     >
       <UTextarea
-        v-model="state.notes"
+        v-model="notesInput"
         placeholder="Información adicional sobre el coordinador..."
         :rows="3"
       />

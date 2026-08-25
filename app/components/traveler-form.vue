@@ -6,6 +6,8 @@ import { z } from 'zod';
 import type { Travel, TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
+import { businessNameSchema, nameSchema, phoneSchema, sanitizeBusinessName, sanitizeName, sanitizePhone } from '~/utils/form-validation';
+
 type Props = {
   traveler?: Traveler | null;
   initialValues?: Partial<TravelerFormData> | null;
@@ -43,6 +45,12 @@ const state = ref({
   representativeId: traveler?.representativeId ?? initialValues?.representativeId ?? undefined,
 });
 
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const firstNameInput = useSanitizedModel(() => state.value.firstName, v => state.value.firstName = v, sanitizeName);
+const lastNameInput = useSanitizedModel(() => state.value.lastName, v => state.value.lastName = v, sanitizeName);
+const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
+const boardingPointInput = useSanitizedModel(() => state.value.boardingPoint, v => state.value.boardingPoint = v, sanitizeBusinessName);
+
 // Camión seleccionado — fuente de verdad para el máximo de asientos
 const selectedBusForSeat = computed(() =>
   availableBuses.find(b => b.id === state.value.travelBusId),
@@ -52,17 +60,11 @@ const maxSeats = computed(() => selectedBusForSeat.value?.seatCount ?? 1);
 // Schema reactivo al máximo de asientos del camión seleccionado
 const schema = computed(() =>
   z.object({
-    firstName: z.string()
-      .min(2, 'Mínimo 2 caracteres')
-      .max(100, 'Máximo 100 caracteres'),
+    firstName: nameSchema({ min: 2, max: 100 }),
 
-    lastName: z.string()
-      .min(2, 'Mínimo 2 caracteres')
-      .max(100, 'Máximo 100 caracteres'),
+    lastName: nameSchema({ min: 2, max: 100 }),
 
-    phone: z.string()
-      .min(7, 'Mínimo 7 caracteres')
-      .max(20, 'Máximo 20 caracteres'),
+    phone: phoneSchema({ min: 7, max: 20 }),
 
     travelId: z.string().min(1, 'El viaje es requerido'),
 
@@ -74,9 +76,7 @@ const schema = computed(() =>
       .min(1, 'El asiento mínimo es 1')
       .max(maxSeats.value, `Máximo ${maxSeats.value} asientos en este camión`),
 
-    boardingPoint: z.string()
-      .min(2, 'Mínimo 2 caracteres')
-      .max(150, 'Máximo 150 caracteres'),
+    boardingPoint: businessNameSchema({ min: 2, max: 150 }),
 
     isRepresentative: z.boolean(),
 
@@ -197,7 +197,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.firstName"
+          v-model="firstNameInput"
           placeholder="Juan"
         />
       </UFormField>
@@ -208,7 +208,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.lastName"
+          v-model="lastNameInput"
           placeholder="Pérez"
         />
       </UFormField>
@@ -220,7 +220,7 @@ function onCancel() {
       required
     >
       <UInput
-        v-model="state.phone"
+        v-model="phoneInput"
         type="tel"
         placeholder="+52 55 1234 5678"
       />
@@ -279,7 +279,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.boardingPoint"
+          v-model="boardingPointInput"
           placeholder="Terminal Central del Norte"
         />
       </UFormField>

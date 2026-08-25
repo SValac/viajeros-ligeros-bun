@@ -5,6 +5,15 @@ import { z } from 'zod';
 
 import type { TravelBus } from '~/types/travel';
 
+import {
+  businessNameSchema,
+  nameSchema,
+  phoneSchema,
+  sanitizeBusinessName,
+  sanitizeName,
+  sanitizePhone,
+} from '~/utils/form-validation';
+
 type Props = {
   travelBus?: TravelBus | null;
 };
@@ -24,15 +33,15 @@ const currentYear = new Date().getFullYear();
 const schema = z.object({
   providerId: z.string().min(1, 'El proveedor es requerido'),
   busId: z.string().optional(),
-  brand: z.string().max(60).optional().or(z.literal('')),
-  model: z.string().max(60).optional().or(z.literal('')),
+  brand: businessNameSchema({ min: 1, max: 60 }).optional().or(z.literal('')),
+  model: businessNameSchema({ min: 1, max: 60 }).optional().or(z.literal('')),
   year: z.coerce.number().int().min(1950).max(currentYear + 1).optional().or(z.literal('' as unknown as number)),
   seatCount: z.coerce.number().int().min(1, 'Mínimo 1 asiento').max(100, 'Máximo 100 asientos'),
   rentalPrice: z.coerce.number().min(0, 'El precio no puede ser negativo'),
-  operator1Name: z.string().min(2, 'El nombre es requerido').max(100),
-  operator1Phone: z.string().min(7, 'El teléfono es requerido').max(20),
-  operator2Name: z.string().max(100).optional().or(z.literal('')),
-  operator2Phone: z.string().max(20).optional().or(z.literal('')),
+  operator1Name: nameSchema({ min: 2, max: 100 }),
+  operator1Phone: phoneSchema({ min: 7, max: 20 }),
+  operator2Name: nameSchema({ min: 2, max: 100 }).optional().or(z.literal('')),
+  operator2Phone: phoneSchema({ max: 20 }).optional().or(z.literal('')),
 });
 
 type Schema = z.output<typeof schema>;
@@ -50,6 +59,14 @@ const state = ref<Schema>({
   operator2Name: travelBus?.operator2Name ?? '',
   operator2Phone: travelBus?.operator2Phone ?? '',
 });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const brandInput = useSanitizedModel(() => state.value.brand ?? '', v => state.value.brand = v, sanitizeBusinessName);
+const modelInput = useSanitizedModel(() => state.value.model ?? '', v => state.value.model = v, sanitizeBusinessName);
+const operator1NameInput = useSanitizedModel(() => state.value.operator1Name, v => state.value.operator1Name = v, sanitizeName);
+const operator1PhoneInput = useSanitizedModel(() => state.value.operator1Phone, v => state.value.operator1Phone = v, sanitizePhone);
+const operator2NameInput = useSanitizedModel(() => state.value.operator2Name ?? '', v => state.value.operator2Name = v, sanitizeName);
+const operator2PhoneInput = useSanitizedModel(() => state.value.operator2Phone ?? '', v => state.value.operator2Phone = v, sanitizePhone);
 
 // Derived: providers of category agencias-autobus (active)
 const providerOptions = computed(() =>
@@ -163,7 +180,7 @@ function onCancel() {
         name="marca"
       >
         <UInput
-          v-model="state.brand"
+          v-model="brandInput"
           placeholder="Mercedes-Benz"
         />
       </UFormField>
@@ -173,7 +190,7 @@ function onCancel() {
         name="modelo"
       >
         <UInput
-          v-model="state.model"
+          v-model="modelInput"
           placeholder="Sprinter 516"
         />
       </UFormField>
@@ -227,7 +244,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.operator1Name"
+          v-model="operator1NameInput"
           placeholder="Juan Pérez"
         />
       </UFormField>
@@ -238,7 +255,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.operator1Phone"
+          v-model="operator1PhoneInput"
           type="tel"
           placeholder="+52 55 1234 5678"
         />
@@ -251,7 +268,7 @@ function onCancel() {
         name="operador2Nombre"
       >
         <UInput
-          v-model="state.operator2Name"
+          v-model="operator2NameInput"
           placeholder="María López"
         />
       </UFormField>
@@ -261,7 +278,7 @@ function onCancel() {
         name="operador2Telefono"
       >
         <UInput
-          v-model="state.operator2Phone"
+          v-model="operator2PhoneInput"
           type="tel"
           placeholder="+52 55 8765 4321"
         />

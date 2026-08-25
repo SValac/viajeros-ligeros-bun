@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import type { TravelActivity } from '~/types/travel';
 
+import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+
 // Props
 type Props = {
   activity?: TravelActivity | null;
@@ -25,18 +27,13 @@ function createSchema(maxDia: number) {
     day: z.number()
       .min(1, 'El día debe ser al menos 1')
       .max(maxDia, `El día no puede ser mayor a ${maxDia}`),
-    title: z.string()
-      .min(3, 'Mínimo 3 caracteres')
-      .max(100, 'Máximo 100 caracteres'),
-    description: z.string()
-      .min(10, 'Mínimo 10 caracteres')
-      .max(500, 'Máximo 500 caracteres'),
+    title: businessNameSchema({ min: 3, max: 100 }),
+    description: textSchema({ min: 10, max: 500 }),
     time: z.string()
       .regex(/^([01]?\d|2[0-3]):[0-5]\d$/, 'Formato: HH:MM')
       .optional()
       .or(z.literal('')),
-    location: z.string()
-      .max(200, 'Máximo 200 caracteres')
+    location: textSchema({ max: 200 })
       .optional()
       .or(z.literal('')),
     mapLocation: z.object({
@@ -76,6 +73,11 @@ const initialState = computed((): Schema => {
 });
 
 const state = ref<Schema>({ ...initialState.value });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const titleInput = useSanitizedModel(() => state.value.title, v => state.value.title = v, sanitizeBusinessName);
+const descriptionInput = useSanitizedModel(() => state.value.description, v => state.value.description = v, sanitizeText);
+const locationInput = useSanitizedModel(() => state.value.location ?? '', v => state.value.location = v, sanitizeText);
 
 // Reset form when the activity prop changes (e.g., modal reused for a different activity)
 watch(initialState, (next) => {
@@ -140,7 +142,7 @@ function onCancel() {
       required
     >
       <UInput
-        v-model="state.title"
+        v-model="titleInput"
         placeholder="Visita a la Torre Eiffel"
         icon="i-lucide-map-pin"
       />
@@ -167,7 +169,7 @@ function onCancel() {
       description="Opcional"
     >
       <UInput
-        v-model="state.location"
+        v-model="locationInput"
         placeholder="Champ de Mars, París"
         icon="i-lucide-map"
       />
@@ -190,7 +192,7 @@ function onCancel() {
       required
     >
       <UTextarea
-        v-model="state.description"
+        v-model="descriptionInput"
         placeholder="Describe la actividad, qué se hará, qué incluye..."
         :rows="4"
       />

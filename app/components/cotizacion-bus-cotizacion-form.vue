@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import type { CostSplitType, QuotationBus, QuotationBusFormData } from '~/types/quotation';
 
+import { sanitizeText, textSchema } from '~/utils/form-validation';
+
 type Props = {
   bus: QuotationBus;
 };
@@ -28,7 +30,7 @@ const schema = z.object({
   totalCost: z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0'),
   splitType: z.enum(['minimum', 'total']),
   paymentMethod: z.enum(['cash', 'transfer']),
-  remarks: z.string().max(500).optional(),
+  remarks: textSchema({ max: 500 }).optional(),
   confirmed: z.boolean(),
 });
 
@@ -41,6 +43,9 @@ const state = reactive<Partial<FormSchema>>({
   remarks: bus.remarks ?? '',
   confirmed: bus.confirmed ?? false,
 });
+
+// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
+const remarksInput = useSanitizedModel(() => state.remarks ?? '', v => state.remarks = v, sanitizeText);
 
 function onSubmit() {
   const result = schema.safeParse(state);
@@ -113,7 +118,7 @@ function onSubmit() {
     <!-- Observaciones -->
     <UFormField label="Observaciones" name="observaciones">
       <UTextarea
-        v-model="state.remarks"
+        v-model="remarksInput"
         placeholder="Notas sobre el servicio de este autobús..."
         :rows="3"
         class="w-full"
