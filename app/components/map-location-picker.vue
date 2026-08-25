@@ -1,6 +1,12 @@
 <script setup lang="ts">
 import type { MapLocation } from '~/types/travel';
 
+type Props = {
+  disabled?: boolean;
+};
+
+const props = defineProps<Props>();
+
 const modelValue = defineModel<MapLocation | undefined>();
 
 // State
@@ -55,6 +61,8 @@ function initializeMap() {
   }
 
   map.value.addListener('click', (event: any) => {
+    if (props.disabled)
+      return;
     const { lat, lng } = event.latLng;
     updateLocation(lat(), lng());
   });
@@ -71,7 +79,7 @@ async function createMarker(lat: number, lng: number) {
   marker.value = new AdvancedMarkerElement({
     position: { lat, lng },
     map: map.value,
-    gmpDraggable: true,
+    gmpDraggable: !props.disabled,
   });
 
   marker.value.addListener('dragend', () => {
@@ -265,7 +273,8 @@ watch(modelValue, (newVal) => {
             v-model="searchInput"
             type="text"
             placeholder="Buscar lugar (ej: Hotel, Playa, Restaurante...)"
-            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            :disabled="disabled"
             @input="handleSearchInput(searchInput)"
           >
 
@@ -307,7 +316,7 @@ watch(modelValue, (newVal) => {
         </div>
 
         <button
-          v-if="hasLocation"
+          v-if="hasLocation && !disabled"
           type="button"
           class="w-full px-3 py-2 bg-red-100 hover:bg-red-200 text-red-800 font-medium rounded-lg transition-colors"
           @click="clearLocation"

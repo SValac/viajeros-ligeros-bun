@@ -19,6 +19,7 @@ import {
 type Props = {
   provider?: Provider | null;
   fixedCategoria?: ProviderCategory;
+  disabled?: boolean;
 };
 
 const props = defineProps<Props>();
@@ -158,6 +159,7 @@ function onCancel() {
   <UForm
     :schema="schema"
     :state="state"
+    :disabled="disabled"
     class="space-y-4"
     @submit="onSubmit"
   >
@@ -216,10 +218,10 @@ function onCancel() {
       description="Opcional. Buscar o seleccionar un punto en el mapa completa automáticamente los campos de abajo."
       name="location.mapLocation"
     >
-      <MapLocationPicker v-model="state.location.mapLocation" />
+      <MapLocationPicker v-model="state.location.mapLocation" :disabled="disabled" />
     </UFormField>
 
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <UFormField
         label="País"
         name="location.country"
@@ -267,7 +269,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <div class="grid grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <UFormField
         label="Teléfono"
         name="contact.phone"
@@ -315,7 +317,7 @@ function onCancel() {
     </UFormField>
 
     <!-- Botones -->
-    <div class="flex justify-end gap-3 pt-4">
+    <div v-if="!disabled" class="flex justify-end gap-3 pt-4">
       <UButton
         type="button"
         color="neutral"
