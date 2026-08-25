@@ -206,6 +206,8 @@ function onCancel() {
       />
     </UFormField>
 
+    <slot name="extra-fields" />
+
     <!-- Ubicación -->
     <USeparator label="Ubicación" />
 
