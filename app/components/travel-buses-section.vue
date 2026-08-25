@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { QuotationBus } from '~/types/quotation';
 
+import { sanitizeName, sanitizePhone } from '~/utils/form-validation';
+
 type Props = {
   travelId: string;
   editable?: boolean;
@@ -64,6 +66,27 @@ watch(
   },
   { immediate: true },
 );
+
+// Sanea los campos de operador mientras el usuario escribe (nombres sin dígitos, teléfonos sin letras)
+watch(operatorDraft, (drafts) => {
+  Object.values(drafts).forEach((draft) => {
+    const cleanOperator1Name = sanitizeName(draft.operator1Name);
+    if (cleanOperator1Name !== draft.operator1Name)
+      draft.operator1Name = cleanOperator1Name;
+
+    const cleanOperator1Phone = sanitizePhone(draft.operator1Phone);
+    if (cleanOperator1Phone !== draft.operator1Phone)
+      draft.operator1Phone = cleanOperator1Phone;
+
+    const cleanOperator2Name = sanitizeName(draft.operator2Name);
+    if (cleanOperator2Name !== draft.operator2Name)
+      draft.operator2Name = cleanOperator2Name;
+
+    const cleanOperator2Phone = sanitizePhone(draft.operator2Phone);
+    if (cleanOperator2Phone !== draft.operator2Phone)
+      draft.operator2Phone = cleanOperator2Phone;
+  });
+}, { deep: true });
 
 async function saveOperators(bus: QuotationBus) {
   const travelBus = getTravelBusForQuotationBus(bus);

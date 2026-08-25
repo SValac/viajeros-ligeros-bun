@@ -3,12 +3,14 @@ import type { FormSubmitEvent } from '#ui/types';
 
 import { z } from 'zod';
 
+import { nameSchema, sanitizeName } from '~/utils/form-validation';
+
 definePageMeta({
   layout: false,
 });
 
 const schema = z.object({
-  name: z.string().min(2, 'El nombre debe tener al menos 2 caracteres').optional().or(z.literal('')),
+  name: nameSchema({ min: 2, max: 100 }).optional().or(z.literal('')),
   email: z.string().email('Ingresa un email válido'),
   password: z.string().min(8, 'La contraseña debe tener al menos 8 caracteres'),
   confirmPassword: z.string().min(8, 'Confirma tu contraseña'),
@@ -34,6 +36,9 @@ const submitError = ref('');
 const toast = useToast();
 const router = useRouter();
 const { signUp } = useAuthStore();
+
+// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
+const nameInput = useSanitizedModel(() => state.value.name ?? '', v => state.value.name = v, sanitizeName);
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   isSubmitting.value = true;
@@ -99,7 +104,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
           label="Nombre (opcional)"
         >
           <UInput
-            v-model="state.name"
+            v-model="nameInput"
             icon="i-lucide-user"
             placeholder="Tu nombre"
           />

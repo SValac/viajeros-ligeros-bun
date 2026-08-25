@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import type { Provider, ProviderCategory, ProviderFormData } from '~/types/provider';
 
+import { nameSchema, phoneSchema, sanitizeName, sanitizePhone } from '~/utils/form-validation';
+
 type Props = {
   provider?: Provider | null;
   fixedCategoria?: ProviderCategory;
@@ -62,13 +64,11 @@ const schema = z.object({
   }),
 
   contact: z.object({
-    name: z.string()
-      .max(100, 'Máximo 100 caracteres')
+    name: nameSchema({ min: 2, max: 100 })
       .optional()
       .or(z.literal('')),
 
-    phone: z.string()
-      .max(20, 'Máximo 20 caracteres')
+    phone: phoneSchema({ max: 20 })
       .optional()
       .or(z.literal('')),
 
@@ -117,6 +117,10 @@ const categoriaOptions = [
   { value: 'food_services', label: 'Comidas' },
   { value: 'other', label: 'Otros' },
 ];
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const contactNameInput = useSanitizedModel(() => state.value.contact.name ?? '', v => state.value.contact.name = v, sanitizeName);
+const contactPhoneInput = useSanitizedModel(() => state.value.contact.phone ?? '', v => state.value.contact.phone = v, sanitizePhone);
 
 // Auto-fill city/state/country when a new map location is picked
 watch(() => state.value.location.mapLocation, (mapLocation) => {
@@ -250,7 +254,7 @@ function onCancel() {
       name="contact.name"
     >
       <UInput
-        v-model="state.contact.name"
+        v-model="contactNameInput"
         placeholder="Nombre de la persona de contacto"
       />
     </UFormField>
@@ -261,7 +265,7 @@ function onCancel() {
         name="contact.phone"
       >
         <UInput
-          v-model="state.contact.phone"
+          v-model="contactPhoneInput"
           type="tel"
           placeholder="+52 55 1234 5678"
         />
