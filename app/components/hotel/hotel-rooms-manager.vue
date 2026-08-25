@@ -94,50 +94,50 @@ function handleDelete(rt: HotelRoomType) {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-wrap justify-between items-start gap-4">
-      <div>
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-          Habitaciones — {{ provider.name }}
-        </h2>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Gestiona los tipos de habitación del hotel
-        </p>
+  <UCard>
+    <div class="space-y-6">
+      <!-- Header -->
+      <div class="flex flex-wrap justify-between items-start gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+            Habitaciones
+          </h2>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Gestiona los tipos de habitación del hotel
+          </p>
+        </div>
+        <div class="flex items-center gap-3">
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Total habitaciones:
+          </label>
+          <UInput
+            v-model.number="totalRoomsInput"
+            type="number"
+            :min="0"
+            class="w-24"
+            @blur="updateTotalRooms"
+          />
+          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Disponibles: {{ totalRoomsInput - usedRooms }}
+          </label>
+          <UButton icon="i-lucide-plus" @click="openCreateForm">
+            Agregar tipo
+          </UButton>
+        </div>
       </div>
-      <div class="flex items-center gap-3">
-        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Total habitaciones:
-        </label>
-        <UInput
-          v-model.number="totalRoomsInput"
-          type="number"
-          :min="0"
-          class="w-24"
-          @blur="updateTotalRooms"
-        />
-        <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Disponibles: {{ totalRoomsInput - usedRooms }}
-        </label>
-        <UButton icon="i-lucide-plus" @click="openCreateForm">
-          Agregar tipo
-        </UButton>
-      </div>
-    </div>
 
-    <!-- Overflow warning -->
-    <UAlert
-      v-if="hasOverflow"
-      icon="i-lucide-alert-triangle"
-      color="warning"
-      variant="subtle"
-      title="Exceso de habitaciones"
-      :description="`La suma de habitaciones configuradas (${usedRooms}) supera el total declarado (${totalRoomsInput}).`"
-    />
+      <!-- Overflow warning -->
+      <UAlert
+        v-if="hasOverflow"
+        icon="i-lucide-alert-triangle"
+        color="warning"
+        variant="subtle"
+        title="Exceso de habitaciones"
+        :description="`La suma de habitaciones configuradas (${usedRooms}) supera el total declarado (${totalRoomsInput}).`"
+      />
 
-    <!-- Empty state -->
-    <UCard v-if="roomTypes.length === 0">
-      <div class="text-center py-12">
+      <!-- Empty state -->
+      <div v-if="roomTypes.length === 0" class="text-center py-12">
         <UIcon
           name="i-lucide-bed-single"
           class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3"
@@ -157,33 +157,33 @@ function handleDelete(rt: HotelRoomType) {
           Agregar tipo
         </UButton>
       </div>
-    </UCard>
 
-    <!-- Grupos por ocupación -->
-    <div v-else class="space-y-6">
-      <div
-        v-for="group in groupedByOccupancy"
-        :key="group.occupancy"
-        class="space-y-3"
-      >
-        <div class="flex items-center gap-2">
-          <UIcon name="i-lucide-users" class="w-4 h-4 text-gray-400" />
-          <span class="font-semibold text-gray-900 dark:text-white">
-            {{ group.occupancy }} {{ group.occupancy === 1 ? 'persona' : 'personas' }}
-          </span>
-          <UBadge variant="subtle">
-            {{ group.totalRooms }} hab
-          </UBadge>
-        </div>
+      <!-- Grupos por ocupación -->
+      <div v-else class="space-y-6">
+        <div
+          v-for="group in groupedByOccupancy"
+          :key="group.occupancy"
+          class="space-y-3"
+        >
+          <div class="flex items-center gap-2">
+            <UIcon name="i-lucide-users" class="w-4 h-4 text-gray-400" />
+            <span class="font-semibold text-gray-900 dark:text-white">
+              {{ group.occupancy }} {{ group.occupancy === 1 ? 'persona' : 'personas' }}
+            </span>
+            <UBadge variant="subtle">
+              {{ group.totalRooms }} hab
+            </UBadge>
+          </div>
 
-        <div class="space-y-2">
-          <HotelRoomTypeCard
-            v-for="rt in group.types"
-            :key="rt.id"
-            :room-type="rt"
-            @edit="openEditForm(rt)"
-            @delete="handleDelete(rt)"
-          />
+          <div class="space-y-2">
+            <HotelRoomTypeCard
+              v-for="rt in group.types"
+              :key="rt.id"
+              :room-type="rt"
+              @edit="openEditForm(rt)"
+              @delete="handleDelete(rt)"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -206,5 +206,5 @@ function handleDelete(rt: HotelRoomType) {
         />
       </template>
     </UModal>
-  </div>
+  </UCard>
 </template>

@@ -13,6 +13,7 @@ type Props = {
   category: ProviderCategory;
   detailRoute?: (provider: Provider) => string;
   extraColumns?: TableColumn<Provider>[];
+  createRoute?: string;
 };
 
 const props = defineProps<Props>();
@@ -43,6 +44,11 @@ const {
   emptyStateTitle,
   emptyStateDescription,
 } = useProviderCategoryList(props.category, props.detailRoute);
+
+function handleCreateClick() {
+  if (!props.createRoute)
+    openCreateModal();
+}
 
 const nameColumn = computed<TableColumn<Provider>>(() => ({
   accessorKey: 'name',
@@ -142,7 +148,8 @@ const columns = computed<TableColumn<Provider>[]>(() => [
       <UButton
         icon="i-lucide-plus"
         size="lg"
-        @click="openCreateModal"
+        :to="createRoute"
+        @click="handleCreateClick"
       >
         {{ headerCreateButtonLabel }}
       </UButton>
@@ -185,7 +192,11 @@ const columns = computed<TableColumn<Provider>[]>(() => [
           <p class="text-gray-500 dark:text-gray-400 mb-4">
             {{ emptyStateDescription }}
           </p>
-          <UButton icon="i-lucide-plus" @click="openCreateModal">
+          <UButton
+            icon="i-lucide-plus"
+            :to="createRoute"
+            @click="handleCreateClick"
+          >
             {{ emptyStateButtonLabel }}
           </UButton>
         </template>
