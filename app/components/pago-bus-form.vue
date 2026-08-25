@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import type { BusPayment, BusPaymentFormData } from '~/types/quotation';
 
+import { sanitizeText, textSchema } from '~/utils/form-validation';
+
 type Props = {
   quotationBusId: string;
   maxMonto: number;
@@ -29,8 +31,8 @@ const schema = computed(() =>
       .max(maxMonto, `El monto no puede superar $${maxMonto.toFixed(2)}`),
     paymentDate: z.string().min(1, 'Selecciona una fecha'),
     paymentType: z.enum(['cash', 'transfer']),
-    concept: z.string().max(200).optional(),
-    notes: z.string().max(500).optional(),
+    concept: textSchema({ max: 200 }).optional(),
+    notes: textSchema({ max: 500 }).optional(),
   }),
 );
 
@@ -49,6 +51,10 @@ const state = reactive<FormSchema>({
   concept: pago?.concept ?? '',
   notes: pago?.notes ?? '',
 });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const conceptInput = useSanitizedModel(() => state.concept ?? '', v => state.concept = v, sanitizeText);
+const notesInput = useSanitizedModel(() => state.notes ?? '', v => state.notes = v, sanitizeText);
 
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
@@ -116,7 +122,7 @@ function onSubmit() {
 
     <UFormField label="Concepto" name="concepto">
       <UInput
-        v-model="state.concept"
+        v-model="conceptInput"
         placeholder="Ej. Anticipo, Liquidación..."
         class="w-full"
       />
@@ -124,7 +130,7 @@ function onSubmit() {
 
     <UFormField label="Notas" name="notas">
       <UTextarea
-        v-model="state.notes"
+        v-model="notesInput"
         placeholder="Notas adicionales..."
         :rows="3"
         class="w-full"

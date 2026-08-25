@@ -8,6 +8,8 @@ import { z } from 'zod';
 import type { Coordinator } from '~/types/coordinator';
 import type { Travel, TravelFormData } from '~/types/travel';
 
+import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+
 // Props
 type Props = {
   travel?: Travel | null;
@@ -41,15 +43,16 @@ const mostrarPrecio = computed(() => travel !== null);
 
 // Schema de validación Zod
 const schema = z.object({
-  label: z.string().min(3, 'Mínimo 3 caracteres').max(100, 'Máximo 100 caracteres'),
-  destination: z.string().max(100, 'Máximo 100 caracteres').optional(),
+  label: businessNameSchema({ min: 3, max: 100 }),
+  destination: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
   coordinatorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
   startDate: z.string().min(1, 'Fecha requerida'),
   endDate: z.string().min(1, 'Fecha requerida'),
   price: z.number().min(0, 'Precio debe ser positivo').max(999999, 'Precio máximo: 999,999'),
-  description: z.string().min(10, 'Mínimo 10 caracteres').max(3000, 'Máximo 1000 caracteres'),
+  // Contenido HTML del editor enriquecido: solo se despojan caracteres de control, no se restringe el charset.
+  description: textSchema({ min: 10, max: 3000 }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
-  internalNotes: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  internalNotes: textSchema({ max: 500 }).optional().or(z.literal('')),
 }).refine(
   data => new Date(data.endDate) >= new Date(data.startDate),
   { message: 'Fecha fin debe ser mayor o igual a fecha inicio', path: ['startDate'] },
@@ -124,6 +127,11 @@ onUnmounted(() => {
 });
 
 const state = ref<Schema>({ ...initialState.value });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const labelInput = useSanitizedModel(() => state.value.label, v => state.value.label = v, sanitizeBusinessName);
+const destinationInput = useSanitizedModel(() => state.value.destination ?? '', v => state.value.destination = v, sanitizeBusinessName);
+const internalNotesInput = useSanitizedModel(() => state.value.internalNotes ?? '', v => state.value.internalNotes = v, sanitizeText);
 
 const inputDate = useTemplateRef('inputDate');
 
@@ -208,7 +216,7 @@ function onCancel() {
             required
           >
             <UInput
-              v-model="state.label"
+              v-model="labelInput"
               placeholder="Aventura en París"
               icon="i-lucide-tag"
             />
@@ -219,7 +227,7 @@ function onCancel() {
             name="destination"
           >
             <UInput
-              v-model="state.destination"
+              v-model="destinationInput"
               placeholder="París, Francia"
               icon="i-lucide-map-pin"
             />
@@ -422,7 +430,7 @@ function onCancel() {
             description="Información privada solo para el equipo"
           >
             <UTextarea
-              v-model="state.internalNotes"
+              v-model="internalNotesInput"
               placeholder="Preferencias del cliente, observaciones especiales..."
               :rows="5"
               class="w-full"

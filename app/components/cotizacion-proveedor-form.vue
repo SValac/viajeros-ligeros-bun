@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import type { CostSplitType, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { sanitizeText, textSchema } from '~/utils/form-validation';
+
 type Props = {
   quotationId: string;
   proveedorCotizacion?: QuotationProvider | null;
@@ -17,11 +19,11 @@ const emit = defineEmits<{
 
 const schema = z.object({
   providerId: z.string().min(1, 'Selecciona un proveedor'),
-  serviceDescription: z.string().min(3, 'Mínimo 3 caracteres').max(200, 'Máximo 200 caracteres'),
+  serviceDescription: textSchema({ min: 3, max: 200 }),
   totalCost: z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0'),
   paymentMethod: z.enum(['cash', 'transfer']),
   splitType: z.enum(['minimum', 'total']),
-  remarks: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  remarks: textSchema({ max: 500 }).optional(),
   confirmed: z.boolean(),
 });
 
@@ -46,6 +48,10 @@ const state = reactive<Partial<FormSchema>>({
   remarks: proveedorCotizacion?.remarks ?? '',
   confirmed: proveedorCotizacion?.confirmed ?? false,
 });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const serviceDescriptionInput = useSanitizedModel(() => state.serviceDescription ?? '', v => state.serviceDescription = v, sanitizeText);
+const remarksInput = useSanitizedModel(() => state.remarks ?? '', v => state.remarks = v, sanitizeText);
 
 function onSubmit() {
   const result = schema.safeParse(state);
@@ -88,7 +94,7 @@ function onSubmit() {
       required
     >
       <UInput
-        v-model="state.serviceDescription"
+        v-model="serviceDescriptionInput"
         placeholder="Ej. Servicio de transporte Ciudad de México - Puebla"
         class="w-full"
       />
@@ -137,7 +143,7 @@ function onSubmit() {
     <!-- Observaciones -->
     <UFormField label="Observaciones" name="observaciones">
       <UTextarea
-        v-model="state.remarks"
+        v-model="remarksInput"
         placeholder="Notas adicionales sobre este servicio..."
         :rows="3"
         class="w-full"

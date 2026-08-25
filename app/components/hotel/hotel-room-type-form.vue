@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import type { HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
+import { sanitizeText, textSchema } from '~/utils/form-validation';
 import { areRoomTypesIdentical } from '~/utils/hotel-room-helpers';
 
 const props = withDefaults(defineProps<{
@@ -33,7 +34,7 @@ const schema = z.object({
     }),
   ).min(1, 'Agrega al menos una cama'),
   pricePerNight: z.number().positive('El precio debe ser mayor a 0'),
-  additionalDetails: z.string().optional().or(z.literal('')),
+  additionalDetails: textSchema({ max: 500 }).optional().or(z.literal('')),
 });
 
 const isEditing = computed(() => !!props.roomType);
@@ -49,6 +50,9 @@ const state = ref<HotelRoomTypeFormData>({
   pricePerNight: props.roomType?.pricePerNight ?? 0,
   additionalDetails: props.roomType?.additionalDetails ?? '',
 });
+
+// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
+const additionalDetailsInput = useSanitizedModel(() => state.value.additionalDetails ?? '', v => state.value.additionalDetails = v, sanitizeText);
 
 function addCama() {
   state.value.beds.push({ size: 'single', count: 1 });
@@ -162,7 +166,7 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
 
     <UFormField label="Detalles adicionales" name="detallesAdicionales">
       <UTextarea
-        v-model="state.additionalDetails"
+        v-model="additionalDetailsInput"
         :rows="2"
         placeholder="Vista al mar, balcón, etc."
       />

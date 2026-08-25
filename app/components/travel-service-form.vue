@@ -5,6 +5,8 @@ import { z } from 'zod';
 
 import type { TravelService } from '~/types/travel';
 
+import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+
 // Props
 type Props = {
   service?: TravelService | null;
@@ -20,11 +22,8 @@ const emit = defineEmits<{
 
 // Schema de validación Zod
 const schema = z.object({
-  name: z.string()
-    .min(3, 'Mínimo 3 caracteres')
-    .max(100, 'Máximo 100 caracteres'),
-  description: z.string()
-    .max(300, 'Máximo 300 caracteres')
+  name: businessNameSchema({ min: 3, max: 100 }),
+  description: textSchema({ max: 300 })
     .optional()
     .or(z.literal('')),
   included: z.boolean(),
@@ -53,6 +52,10 @@ const initialState = computed((): Schema => {
 });
 
 const state = ref<Schema>({ ...initialState.value });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeBusinessName);
+const descriptionInput = useSanitizedModel(() => state.value.description ?? '', v => state.value.description = v, sanitizeText);
 
 // Handlers
 const isSubmitting = ref(false);
@@ -94,7 +97,7 @@ function onCancel() {
       required
     >
       <UInput
-        v-model="state.name"
+        v-model="nameInput"
         placeholder="Vuelos ida y vuelta"
         icon="i-lucide-package"
       />
@@ -118,7 +121,7 @@ function onCancel() {
       description="Opcional - Detalles adicionales del servicio"
     >
       <UTextarea
-        v-model="state.description"
+        v-model="descriptionInput"
         placeholder="Incluye equipaje de 23kg, asientos preferenciales..."
         :rows="3"
       />

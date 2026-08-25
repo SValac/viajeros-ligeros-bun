@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
-import { nameSchema, phoneSchema, sanitizeName, sanitizePhone } from '~/utils/form-validation';
+import { nameSchema, phoneSchema, sanitizeName, sanitizePhone, sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   coordinator?: Coordinator | null;
@@ -32,7 +32,7 @@ const schema = z.object({
     .email('Email inválido')
     .max(150, 'Máximo 150 caracteres'),
 
-  notes: z.string().max(500, 'Máximo 500 caracteres').optional(),
+  notes: textSchema({ max: 500 }).optional(),
 });
 
 type Schema = z.output<typeof schema>;
@@ -48,6 +48,7 @@ const state = ref<Schema>({
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeName);
 const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
+const notesInput = useSanitizedModel(() => state.value.notes ?? '', v => state.value.notes = v, sanitizeText);
 
 const isSubmitting = shallowRef(false);
 
@@ -135,7 +136,7 @@ function onCancel() {
       name="notes"
     >
       <UTextarea
-        v-model="state.notes"
+        v-model="notesInput"
         placeholder="Información adicional sobre el coordinador..."
         :rows="3"
       />

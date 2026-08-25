@@ -73,11 +73,13 @@ export function businessNameSchema({ min = 2, max = 100 }: BusinessNameSchemaOpt
 }
 
 type TextSchemaOptions = {
+  min?: number;
   max?: number;
 };
 
-export function textSchema({ max = 500 }: TextSchemaOptions = {}) {
+export function textSchema({ min = 0, max = 500 }: TextSchemaOptions = {}) {
   return z.string()
     .trim()
+    .min(min, `Mínimo ${min} caracteres`)
     .max(max, `Máximo ${max} caracteres`);
 }

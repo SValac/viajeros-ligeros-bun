@@ -4,6 +4,8 @@ import { z } from 'zod';
 import type { Bus } from '~/types/bus';
 import type { CostSplitType, QuotationBusStatus } from '~/types/quotation';
 
+import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+
 type Props = {
   quotationId: string;
   open: boolean;
@@ -49,15 +51,15 @@ const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
 
 const busSchema = z.object({
   providerId: z.string({ message: 'Selecciona una agencia' }).min(1, 'Selecciona una agencia'),
-  unitNumber: z.string({ message: 'Número de unidad es requerido' }).min(1).max(50),
+  unitNumber: businessNameSchema({ min: 1, max: 50 }),
   capacity: z.number({ message: 'Ingresa la capacidad' }).int().positive('Debe ser mayor a 0'),
   status: z.enum(['reserved', 'confirmed', 'pending']),
   totalCost: z.number({ message: 'Ingresa el costo total' }).positive('El costo debe ser mayor a 0'),
   splitType: z.enum(['minimum', 'total']),
   paymentMethod: z.enum(['cash', 'transfer']),
-  remarks: z.string().max(500).optional(),
+  remarks: textSchema({ max: 500 }).optional(),
   confirmed: z.boolean(),
-  notes: z.string().max(500).optional(),
+  notes: textSchema({ max: 500 }).optional(),
 });
 
 type BusSchema = z.infer<typeof busSchema>;
@@ -74,6 +76,10 @@ const formState = reactive<Partial<BusSchema>>({
   confirmed: false,
   notes: '',
 });
+
+// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+const unitNumberInput = useSanitizedModel(() => formState.unitNumber ?? '', v => formState.unitNumber = v, sanitizeBusinessName);
+const remarksInput = useSanitizedModel(() => formState.remarks ?? '', v => formState.remarks = v, sanitizeText);
 
 const busSeleccionado = ref<Bus | null>(null);
 
@@ -279,7 +285,7 @@ function handleCancel() {
           <USeparator label="Identificación" />
 
           <UFormField label="Identificador de la Unidad" required>
-            <UInput v-model="formState.unitNumber" placeholder="Ej. BUS-001 o Marca Modelo" />
+            <UInput v-model="unitNumberInput" placeholder="Ej. BUS-001 o Marca Modelo" />
           </UFormField>
 
           <div class="grid grid-cols-2 gap-4">
@@ -315,7 +321,7 @@ function handleCancel() {
 
           <UFormField label="Observaciones">
             <UTextarea
-              v-model="formState.remarks"
+              v-model="remarksInput"
               placeholder="Notas sobre el servicio..."
               :rows="2"
             />

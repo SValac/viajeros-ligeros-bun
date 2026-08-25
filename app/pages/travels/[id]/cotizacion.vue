@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { z } from 'zod';
 
+import { sanitizeText, textSchema } from '~/utils/form-validation';
+
 definePageMeta({
   name: 'travel-cotizacion',
   layout: 'default',
@@ -42,7 +44,7 @@ watchEffect(() => {
 // Form for creating a new cotizacion
 const crearSchema = z.object({
   minimumSeatTarget: z.number().int().nonnegative().optional(),
-  notes: z.string().max(1000, 'Máximo 1000 caracteres').optional(),
+  notes: textSchema({ max: 1000 }).optional(),
 });
 
 type CrearFormSchema = {
@@ -54,6 +56,9 @@ const crearState = reactive<CrearFormSchema>({
   minimumSeatTarget: undefined,
   notes: '',
 });
+
+// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
+const crearNotesInput = useSanitizedModel(() => crearState.notes ?? '', v => crearState.notes = v, sanitizeText);
 
 const isCrearModalOpen = shallowRef(false);
 const isAgregarHospedajeModalOpen = shallowRef(false);
@@ -117,6 +122,9 @@ watch(cotizacion, (c) => {
     paramsState.notes = c.notes ?? '';
   }
 }, { immediate: true });
+
+// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe (sin schema Zod para este form de edición rápida)
+const paramsNotesInput = useSanitizedModel(() => paramsState.notes ?? '', v => paramsState.notes = v, sanitizeText);
 
 async function guardarParametros() {
   if (!cotizacion.value)
@@ -257,7 +265,7 @@ function handleHospedajeAgregado() {
             </div>
             <UFormField label="Notas">
               <UTextarea
-                v-model="paramsState.notes"
+                v-model="paramsNotesInput"
                 :rows="3"
                 class="w-full"
               />
@@ -337,7 +345,7 @@ function handleHospedajeAgregado() {
 
           <UFormField label="Notas" name="notas">
             <UTextarea
-              v-model="crearState.notes"
+              v-model="crearNotesInput"
               placeholder="Observaciones sobre esta cotización..."
               :rows="3"
               class="w-full"

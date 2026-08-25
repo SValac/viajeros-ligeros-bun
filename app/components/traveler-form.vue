@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { Travel, TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
-import { nameSchema, phoneSchema, sanitizeName, sanitizePhone } from '~/utils/form-validation';
+import { businessNameSchema, nameSchema, phoneSchema, sanitizeBusinessName, sanitizeName, sanitizePhone } from '~/utils/form-validation';
 
 type Props = {
   traveler?: Traveler | null;
@@ -49,6 +49,7 @@ const state = ref({
 const firstNameInput = useSanitizedModel(() => state.value.firstName, v => state.value.firstName = v, sanitizeName);
 const lastNameInput = useSanitizedModel(() => state.value.lastName, v => state.value.lastName = v, sanitizeName);
 const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
+const boardingPointInput = useSanitizedModel(() => state.value.boardingPoint, v => state.value.boardingPoint = v, sanitizeBusinessName);
 
 // Camión seleccionado — fuente de verdad para el máximo de asientos
 const selectedBusForSeat = computed(() =>
@@ -75,9 +76,7 @@ const schema = computed(() =>
       .min(1, 'El asiento mínimo es 1')
       .max(maxSeats.value, `Máximo ${maxSeats.value} asientos en este camión`),
 
-    boardingPoint: z.string()
-      .min(2, 'Mínimo 2 caracteres')
-      .max(150, 'Máximo 150 caracteres'),
+    boardingPoint: businessNameSchema({ min: 2, max: 150 }),
 
     isRepresentative: z.boolean(),
 
@@ -280,7 +279,7 @@ function onCancel() {
         required
       >
         <UInput
-          v-model="state.boardingPoint"
+          v-model="boardingPointInput"
           placeholder="Terminal Central del Norte"
         />
       </UFormField>
