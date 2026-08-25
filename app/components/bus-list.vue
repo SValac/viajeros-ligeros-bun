@@ -162,54 +162,56 @@ const columns: TableColumn<Bus>[] = [
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Header -->
-    <div class="flex items-center justify-between">
-      <div>
-        <h3 class="text-lg font-semibold">
-          Unidades registradas
-        </h3>
-        <p class="text-sm text-muted">
-          {{ buses.length }} unidad{{ buses.length !== 1 ? 'es' : '' }} activa{{ buses.length !== 1 ? 's' : '' }}
-        </p>
+  <UCard>
+    <div class="space-y-4">
+      <!-- Header -->
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-lg font-semibold">
+            Unidades registradas
+          </h3>
+          <p class="text-sm text-muted">
+            {{ buses.length }} unidad{{ buses.length !== 1 ? 'es' : '' }} activa{{ buses.length !== 1 ? 's' : '' }}
+          </p>
+        </div>
+        <UButton
+          icon="i-lucide-plus"
+          size="sm"
+          @click="openCreateModal"
+        >
+          Nueva Unidad
+        </UButton>
       </div>
-      <UButton
-        icon="i-lucide-plus"
-        size="sm"
-        @click="openCreateModal"
-      >
-        Nueva Unidad
-      </UButton>
-    </div>
 
-    <!-- Estado vacío -->
-    <div
-      v-if="buses.length === 0"
-      class="text-center py-8 bg-elevated rounded-lg"
-    >
-      <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-3 block" />
-      <h4 class="font-medium mb-1">
-        No hay unidades registradas
-      </h4>
-      <p class="text-sm text-muted mb-4">
-        Agrega la primera unidad de este proveedor
-      </p>
-      <UButton
-        icon="i-lucide-plus"
-        variant="outline"
-        size="sm"
-        @click="openCreateModal"
+      <!-- Estado vacío -->
+      <div
+        v-if="buses.length === 0"
+        class="text-center py-8 bg-elevated rounded-lg"
       >
-        Agregar Unidad
-      </UButton>
-    </div>
+        <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-3 block" />
+        <h4 class="font-medium mb-1">
+          No hay unidades registradas
+        </h4>
+        <p class="text-sm text-muted mb-4">
+          Agrega la primera unidad de este proveedor
+        </p>
+        <UButton
+          icon="i-lucide-plus"
+          variant="outline"
+          size="sm"
+          @click="openCreateModal"
+        >
+          Agregar Unidad
+        </UButton>
+      </div>
 
-    <!-- Tabla -->
-    <UTable
-      v-else
-      :columns="columns"
-      :data="buses"
-    />
+      <!-- Tabla -->
+      <UTable
+        v-else
+        :columns="columns"
+        :data="buses"
+      />
+    </div>
 
     <!-- Modal -->
     <UModal
@@ -226,5 +228,5 @@ const columns: TableColumn<Bus>[] = [
         />
       </template>
     </UModal>
-  </div>
+  </UCard>
 </template>

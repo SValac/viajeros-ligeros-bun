@@ -30,6 +30,7 @@ const extraColumns: TableColumn<Provider>[] = [
   <ProviderCategoryList
     :category="PROVIDER_CATEGORY.BUS_AGENCIES"
     :detail-route="(provider: Provider) => `/providers/bus-agencies/${provider.id}`"
+    create-route="/providers/bus-agencies/new"
     :extra-columns="extraColumns"
   />
 </template>
