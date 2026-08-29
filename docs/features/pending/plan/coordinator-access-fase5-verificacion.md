@@ -45,26 +45,25 @@ Como **Coord 1**:
 
 ### Lectura — debe VER
 
-- [ ] `coordinator_travels` → exactamente A1, A2, A3, A4 (no B1)
+- [ ] `SELECT * FROM travels` → exactamente A1, A2, A3, A4 (no B1)
 - [ ] Actividades, viajeros, fotos, alojamientos, servicios de A1 y A2
 - [ ] Datos del viaje A3 (`completed`) — el historial no se pierde
-- [ ] `coordinator_travel_buses` de A1 → con datos de operadores
+- [ ] `SELECT * FROM travel_buses` de A1 → con datos de operadores
 
 ### Lectura — NO debe ver
 
-- [ ] Ninguna fila de B1, en **ninguna** tabla o vista
-- [ ] `projected_profit`, `total_operation_cost`, `internal_notes` — de ningún viaje
-- [ ] `rental_price` de ningún bus
-- [ ] `SELECT * FROM travels` → 0 filas
-- [ ] `SELECT * FROM travel_buses` → 0 filas
+- [ ] Ninguna fila de B1, en **ninguna** tabla
+- [ ] `SELECT * FROM travel_internals` → 0 filas (costos y márgenes)
 - [ ] `quotations`, `quotation_buses`, `quotation_accommodations`,
       `quotation_accommodation_details`, `quotation_providers`,
       `quotation_public_prices` → 0 filas
 - [ ] `payments`, `provider_payments`, `bus_payments`, `accommodation_payments` → 0 filas
 - [ ] `buses`, `hotel_rooms`, `hotel_room_types` → 0 filas
 - [ ] `travel_access_codes`, `travel_access_attempts` → 0 filas
-- [ ] `coordinators` → solo compañeros de sus viajes (o 0 filas, según la decisión 3a de
+- [ ] `coordinators` → solo compañeros de sus viajes (o 0 filas, según la decisión 2a de
       la Fase 2)
+- [ ] Confirmar que `travels` y `travel_buses` ya **no tienen** columnas financieras —
+      si las tuvieran, el saneamiento no se aplicó y estas policies están filtrando datos
 
 ### Escritura — debe PODER
 
@@ -89,7 +88,7 @@ Como **Coord 1**:
 
 Como **Coord 2** (solo asignado a A2):
 
-- [ ] `coordinator_travels` → solo A2
+- [ ] `SELECT * FROM travels` → solo A2
 - [ ] Ninguna fila de A1, pese a ser de la misma agencia
 - [ ] No puede escribir en A1
 
@@ -98,7 +97,7 @@ Como **Coord 2** (solo asignado a A2):
 - [ ] **Admin A**: la web funciona completa — viajes, cotizaciones, pagos, galería,
       código de acceso, viajeros, alojamientos
 - [ ] **Admin B**: no ve nada de la agencia A (el multi-tenant sigue intacto)
-- [ ] **Anon**: solo columnas públicas de viajes `published` (Fase 0)
+- [ ] **Anon**: sigue viendo solo viajes `published`, sin cambios respecto de antes
 - [ ] **Viajero vía `redeem_travel_access`**: la feature de código de acceso sigue igual
 
 ---
@@ -107,10 +106,8 @@ Como **Coord 2** (solo asignado a A2):
 
 - [ ] `supabase db advisors --local` sin hallazgos nuevos
 - [ ] Advisors contra **remoto** después del `db:push`
-- [ ] Revisar específicamente warnings sobre vistas `SECURITY DEFINER` — van a aparecer por
-      `coordinator_travels` / `coordinator_travel_buses`. **Es esperado y está justificado**
-      (ver Fase 2); documentar la excepción en vez de silenciarla sin más.
 - [ ] Confirmar que `private` **no** está en `schemas` de `config.toml`
+- [ ] Confirmar que `travel_internals` **no** recibió ninguna policy para coordinadores
 - [ ] `curl "$SUPABASE_URL/rest/v1/rpc/is_travel_coordinator"` → 404
 - [ ] `curl "$SUPABASE_URL/rest/v1/rpc/can_coordinator_edit"` → 404
 - [ ] Ninguna policy nueva usa `user_metadata` / `raw_user_meta_data`
@@ -148,9 +145,11 @@ curl -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
 - [ ] Actualizar el estado de todas las fases en
       [coordinator-access-PLAN.md](../coordinator-access-PLAN.md)
 - [ ] Mover el plan de `docs/features/pending/` a `docs/features/completed/`
-- [ ] Documentar el **contrato para la app móvil**: qué vistas y tablas puede consultar,
-      qué puede escribir, y la ventana de estados (`published` / `in_progress`). Es el
-      equivalente a la sección "Despliegue a producción" de
-      `travel-access-fase2-rpc.md`, que resultó ser lo más útil de aquella feature.
-- [ ] Anotar la decisión de `security_invoker = false` en las vistas, con su justificación,
-      para que una auditoría futura no la lea como un descuido.
+- [ ] Documentar el **contrato para la app móvil**: qué tablas puede consultar, qué puede
+      escribir, y la ventana de estados (`published` / `in_progress`). Es el equivalente a
+      la sección "Despliegue a producción" de `travel-access-fase2-rpc.md`, que resultó ser
+      lo más útil de aquella feature.
+- [ ] Documentar la convención que sostiene el aislamiento: **toda columna nueva de costo,
+      margen o nota interna va a `travel_internals`, nunca a `travels`.** Es lo que mantiene
+      la propiedad fail-safe; sin eso, la próxima columna financiera queda expuesta a los
+      coordinadores sin que nadie lo note.

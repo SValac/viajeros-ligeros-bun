@@ -6,10 +6,15 @@ eje de autorización** en RLS para que, desde una app móvil propia (fuera de al
 puedan ver y editar **itinerario, viajeros y fotos** de los viajes a los que están
 asignados — sin ver **nada** de la información financiera de la agencia.
 
-**Complejidad:** Media-Alta — 4 migraciones nuevas (hardening + identidad + RLS lectura +
-RLS escritura), 1 Edge Function nueva (primera del repo), UI de invitación en la web admin.
+**Complejidad:** Media — 3 migraciones nuevas (identidad + RLS lectura + RLS escritura),
+1 Edge Function nueva (primera del repo), UI de invitación en la web admin.
 
 **Estado:** 📋 PLANIFICADO — ninguna fase iniciada.
+
+**⛔ Depende de:** [Saneamiento del modelo de datos](data-model-cleanup-PLAN.md), que se
+hace **antes** y debe estar mergeado a `main`. Esa feature saca las columnas financieras de
+`travels` y `travel_buses`, lo que simplifica bastante este plan (ver "Contexto de diseño").
+**Rebasear esta rama sobre `main` antes de empezar a implementar.**
 
 ---
 
@@ -53,53 +58,45 @@ Además el ciclo de vida es distinto: un viajero existe para *un* viaje; un coor
 3. **Cero acceso financiero:** `quotations`, `quotation_*`, `payments`,
    `provider_payments`, `bus_payments`, `accommodation_payments`. Ninguna política nueva
    toca estas tablas.
-4. **Políticas aditivas**, no reemplazo: las policies `*_owner` existentes quedan
+4. **Autobuses visibles, costo oculto:** el coordinador ve qué autobuses están registrados
+   en el viaje y **de qué agencia son** (`travel_buses` + `providers`). Lo único vedado es
+   el costo que se fija en la cotización (`quotation_buses.total_cost`). Esto tiene una
+   consecuencia sobre el saneamiento — ver Fase 2, Bloque 2b.
+5. **Políticas aditivas**, no reemplazo: las policies `*_owner` existentes quedan
    intactas. Las permissive se combinan con `OR`, así que el admin no pierde nada.
 
 ---
 
-## Los dos problemas de diseño que definen el plan
+## Contexto de diseño: el problema de columnas, resuelto aguas arriba
 
-### 1. RLS es a nivel de fila, no de columna
+**RLS filtra filas, no columnas.** Cuando se diseñó este plan, `travels` guardaba
+`total_operation_cost`, `projected_profit` e `internal_notes`, y `travel_buses` guardaba
+`rental_price`. Darle una policy `SELECT` a un coordinador sobre esas tablas le mostraba
+los márgenes de la agencia, y un `GRANT SELECT (columnas)` tampoco servía porque el admin y
+el coordinador comparten el **mismo rol de Postgres** (`authenticated`).
 
-`public.travels` contiene columnas financieras: **`total_operation_cost`,
-`projected_profit`, `internal_notes`** (y `price`, que sí es público). Una policy
-`SELECT` para coordinadores sobre `travels` les mostraría los márgenes de la agencia — RLS
-no puede filtrar columnas.
+La primera versión de este plan lo resolvía con dos vistas de columnas explícitas
+(`coordinator_travels`, `coordinator_travel_buses`) y `security_invoker = false`. Funcionaba,
+pero era **fail-open**: una columna financiera nueva en `travels` no habría quedado filtrada
+sola.
 
-Tampoco sirve un `GRANT SELECT (col, ...)`: el admin y el coordinador comparten el **mismo
-rol de Postgres** (`authenticated`), y los grants son por rol.
+**Se descartó a favor de separar las columnas en el esquema**, lo que hace la feature de
+[saneamiento del modelo de datos](data-model-cleanup-PLAN.md). Consecuencias para este plan:
 
-**Solución adoptada:** los coordinadores **no reciben ninguna policy sobre `travels`**. El
-encabezado del viaje se lee por una vista `public.coordinator_travels` con lista de
-columnas explícita. Las tablas hijas (`travel_activities`, `travelers`, `travel_media`) no
-tienen columnas financieras, así que ésas sí van con políticas RLS normales.
+- Desaparece la Fase 0 (hardening de `anon`) — quedó resuelta estructuralmente
+- Desaparecen las dos vistas: `travels` y `travel_buses` van con policy `SELECT` normal
+- Desaparece la excepción `security_invoker = false`
+- Las Fases 1, 3, 4 y 5 no cambian
 
-> **Alternativa descartada:** rol de Postgres propio (`coordinator`) vía custom access
-> token hook, que sí habilitaría `GRANT SELECT (columnas)`. Es el camino "correcto" de
-> Postgres puro, pero exige el hook de JWT, un rol nuevo y grants en cada tabla. Para el
-> volumen actual (2 coordinadores) es desproporcionado. Reconsiderar si el modelo de roles
-> crece (ej. proveedores o choferes con app propia).
+Lo que **sí** sigue vigente de aquel análisis: el aislamiento de las tablas financieras
+(`quotations`, `payments`, `*_payments`, y ahora `travel_internals`) se logra **no dándoles
+policy**. El fail-closed hace el trabajo.
 
-### 2. 🔴 Hallazgo: las columnas financieras ya están expuestas a `anon`
-
-Al analizar lo anterior se encontró un **bug de seguridad preexistente**, ajeno a esta
-feature pero de la misma clase:
-
-```sql
--- 20260424031824_travels.sql
-grant select on table "public"."travels" to "anon";
--- 20260506230433_rls_single_admin_policies.sql
-CREATE POLICY "travels_anon_confirmed" ON public.travels
-  FOR SELECT TO anon USING (status = 'confirmed');  -- hoy 'published'
-```
-
-`anon` tiene `SELECT` sobre **todas** las columnas y la policy habilita cualquier viaje
-`published`. Es decir: **cualquiera con la anon key puede leer `total_operation_cost`,
-`projected_profit` e `internal_notes` de todos los viajes publicados.**
-
-Acá `anon` **sí** es un rol propio, así que el `GRANT` por columnas funciona. Se corrige en
-la **Fase 0**.
+> **Alternativa descartada en su momento:** rol de Postgres propio (`coordinator`) vía
+> custom access token hook, que sí habilitaría `GRANT SELECT (columnas)`. Es el camino
+> "correcto" de Postgres puro, pero exige el hook de JWT, un rol nuevo y grants en cada
+> tabla. Para el volumen actual (2 coordinadores) es desproporcionado. Reconsiderar si el
+> modelo de roles crece (ej. proveedores o choferes con app propia).
 
 ---
 
@@ -118,8 +115,8 @@ Supabase remoto (`db:push`).
 **Skills a cargar según la fase:**
 
 ```
-@.claude/skills/supabase                           ← Fases 0-5
-@.claude/skills/supabase-postgres-best-practices   ← Fases 0-3, 5
+@.claude/skills/supabase                           ← Fases 1-5
+@.claude/skills/supabase-postgres-best-practices   ← Fases 1-3, 5
 @.claude/skills/vue @.claude/skills/nuxt
 @.claude/skills/nuxt-ui @.claude/skills/pinia      ← Fase 4 (UI)
 ```
@@ -130,9 +127,8 @@ Supabase remoto (`db:push`).
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [fase0-hardening-columnas.md](plan/coordinator-access-fase0-hardening-columnas.md) | 🔴 Cerrar la exposición de columnas financieras a `anon` en `travels` | Ninguna | Pendiente |
 | [fase1-identidad.md](plan/coordinator-access-fase1-identidad.md) | Schema `private`, `coordinators.user_id`, helpers `is_travel_coordinator` / `can_coordinator_edit` | Ninguna | Pendiente |
-| [fase2-rls-lectura.md](plan/coordinator-access-fase2-rls-lectura.md) | Vista `coordinator_travels` + policies `SELECT` aditivas | Fase 1 | Pendiente |
+| [fase2-rls-lectura.md](plan/coordinator-access-fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | Pendiente |
 | [fase3-rls-escritura.md](plan/coordinator-access-fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | Pendiente |
 | [fase4-invitacion.md](plan/coordinator-access-fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | Pendiente |
 | [fase5-verificacion.md](plan/coordinator-access-fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | Pendiente |
@@ -141,8 +137,8 @@ Supabase remoto (`db:push`).
 > (`Pendiente` → `Completada ✅`), para poder retomar en cualquier sesión sin perder
 > contexto. Misma convención que la feature de código de acceso.
 
-**Fases 0 y 1 son independientes** y pueden hacerse en cualquier orden. La 4 solo depende
-de la 1, así que puede ir en paralelo con 2-3.
+La **Fase 4 solo depende de la 1**, así que puede ir en paralelo con 2-3 — y es la única
+que no necesita el saneamiento mergeado.
 
 ---
 
@@ -151,7 +147,6 @@ de la 1, así que puede ir en paralelo con 2-3.
 ```
 supabase/
 ├── migrations/
-│   ├── <ts>_travels_anon_column_grants.sql        ← Fase 0
 │   ├── <ts>_coordinator_identity.sql              ← Fase 1
 │   ├── <ts>_coordinator_rls_read.sql              ← Fase 2
 │   └── <ts>_coordinator_rls_write.sql             ← Fase 3
@@ -176,14 +171,16 @@ app/
 
 | Recurso | Admin (`owner_id`) | Coordinador asignado | `anon` |
 |---|---|---|---|
-| `travels` (tabla) | RW completo | ❌ sin acceso | SELECT columnas públicas (post-Fase 0) |
-| `coordinator_travels` (vista) | — | SELECT (sin columnas financieras) | ❌ |
+| `travels` | RW completo | R (solo lectura) | SELECT si `published` |
+| `travel_internals` | RW | ❌ **sin acceso** | ❌ |
 | `travel_activities` | RW | R siempre · W si `published`/`in_progress` | SELECT si `published` |
 | `travelers` | RW | R siempre · W si `published`/`in_progress` | ❌ |
 | `travel_media` + bucket | RW | R siempre · W si `published`/`in_progress` | SELECT si `published` |
-| `travel_services`, `travel_accommodations`, `travel_buses` | RW | R (solo lectura) | parcial |
-| `quotations`, `payments`, `*_payments` | RW | ❌ **sin acceso** | ❌ |
-| `coordinators`, `providers`, `buses`, `hotel_rooms` | RW | ❌ sin acceso | ❌ |
+| `travel_buses`, `travel_services`, `travel_accommodations` | RW | R (solo lectura) | parcial |
+| `providers` | RW | R — solo los usados por sus viajes | ❌ |
+| `quotations`, `quotation_*`, `payments`, `*_payments` | RW | ❌ **sin acceso** | ❌ |
+| `coordinators` | RW | ⚠️ decisión abierta (Fase 2, Bloque 2a) | ❌ |
+| `buses`, `hotel_rooms`, `hotel_room_types` | RW | ❌ sin acceso | ❌ |
 
 **Lectura vs. escritura:** la membresía habilita **leer siempre** (el coordinador conserva
 el historial de viajes ya `completed`), pero **escribir solo** mientras el viaje esté en
