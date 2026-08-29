@@ -1,156 +1,212 @@
-# Fase 4 — Formalizar `travel_buses` como satélite de `quotation_buses`
+# Fase 4 — Sincronizar `travel_buses` con `quotation_buses`
 
-**Estado:** Pendiente — **es una decisión, no una tarea**
+**Estado:** Pendiente
 **Dependencia:** Fase 3
-**Migración:** `supabase migration new travel_buses_satellite`
+**Migración:** `supabase migration new travel_buses_sync_constraints`
 
 ---
 
-## ⚠️ Esta fase es opcional
+## ⚠️ Esta fase cambió de propósito
 
-**No bloquea el acceso de coordinadores.** Con la Fase 3 terminada, `travel_buses` ya no
-tiene columnas financieras y el plan de coordinadores funciona con una policy RLS normal.
+La versión original proponía **quitar de `travel_buses` las columnas que "duplican"
+`quotation_buses`** (`provider_id`, `model`, `seat_count`). **Eso quedó descartado.**
 
-Lo de acá es **higiene de modelo**: eliminar duplicación que hoy no molesta pero que va a
-envejecer mal. Si la prioridad es llegar a la app de coordinadores, **posponer esta fase es
-una decisión legítima** — está documentada y se puede retomar cuando sea.
+Decisión del usuario (2026-08-29): *"`travel_buses` es para saber qué autobuses están
+registrados en ese viaje, y de qué agencia son — eso es totalmente visible para el
+coordinador. Lo único que no debería poder ver es el costo del autobús que se pone cuando
+se hace la cotización."*
 
----
+El coordinador **no puede tener acceso a `quotation_buses`**: es donde vive `total_cost`. Si
+`travel_buses` pierde esas columnas, la información que debe ver deja de ser alcanzable.
 
-## El hallazgo
+**La duplicación no es redundancia: es la proyección operativa del autobús, del lado
+correcto de la frontera de seguridad.**
 
-`travel_buses` fue diseñada como tabla autónoma (alta manual del autobús de un viaje), pero
-**en la práctica ya funciona como satélite de `quotation_buses`**. Sus filas las crea el
-flujo de cotización, vinculadas por `quotation_bus_id`, y el camino manual murió (Fase 3).
-
-Columna por columna:
-
-| Columna de `travel_buses` | Origen | ¿Duplica? |
+| Tabla | Rol | Quién la ve |
 |---|---|---|
-| `provider_id` | `quotationBus.providerId` | ✅ sí |
-| `model` | `quotationBus.unitNumber` | ✅ sí |
-| `seat_count` | `quotationBus.capacity` | ✅ sí |
-| `brand`, `year` | catálogo, vía el form muerto | ⚠️ hoy sin fuente |
-| `bus_id` | catálogo, vía el form muerto | ⚠️ hoy sin fuente |
-| `operator1_name/phone` | asignación operativa | ❌ **propio** |
-| `operator2_name/phone` | asignación operativa | ❌ **propio** |
-| `quotation_bus_id` | el vínculo | ❌ propio |
+| `quotation_buses` | Vista **comercial**: `total_cost`, `payment_method`, `split_type`, `confirmed` | Solo admin |
+| `travel_buses` | Vista **operativa**: proveedor, unidad, capacidad, operadores | Admin + coordinador |
 
-De 12 columnas, **solo 5 llevan información propia**.
+Que ambas tengan el número de unidad y la capacidad es **deliberado**. Anotarlo en el
+esquema para que nadie lo "optimice" más adelante.
+
+Lo que sí hay que arreglar es un bug real de esa duplicación.
 
 ---
 
-## Por qué NO mover los operadores a `quotation_buses`
+## 🔴 El bug: la sincronización está incompleta
 
-Es la alternativa obvia —una tabla menos— y es la **decisión equivocada**, por la misma
-razón que motiva toda esta feature.
+`updateBus` (`app/composables/quotation/use-quotation-repository.ts:588-630`) actualiza
+`quotation_buses` con todo lo que venga, pero propaga a `travel_buses` **una sola columna**:
 
-`quotation_buses` es una tabla **financiera**: `total_cost`, `payment_method`,
-`split_type`, `confirmed`. Mover ahí los datos de los operadores obligaría a darle acceso a
-esa tabla a cualquier rol que necesite saber quién maneja el autobús — **el coordinador,
-exactamente el caso que estamos habilitando**. Volveríamos a mezclar lo operativo con lo
-comercial en una sola fila, que es el problema del que venimos.
-
-**La separación correcta es la que ya existe:** la cotización es de la agencia, los
-operadores son de la operación. Lo que falta es que el esquema lo diga.
-
----
-
-## El cambio propuesto
-
-```sql
--- 1. Toda fila debe venir de una cotización, y una cotización tiene un solo travel_bus
-ALTER TABLE public.travel_buses
-  ALTER COLUMN quotation_bus_id SET NOT NULL;
-
-ALTER TABLE public.travel_buses
-  ADD CONSTRAINT travel_buses_quotation_bus_id_key UNIQUE (quotation_bus_id);
-
--- 2. Quitar los duplicados
-ALTER TABLE public.travel_buses
-  DROP COLUMN provider_id,
-  DROP COLUMN model,
-  DROP COLUMN seat_count,
-  DROP COLUMN brand,
-  DROP COLUMN year,
-  DROP COLUMN bus_id;
+```ts
+const { error: travelBusErr } = await supabase
+  .from('travel_buses')
+  .update({ rental_price: updated.totalCost })   // ← lo único que sincroniza
+  .eq('quotation_bus_id', id);
 ```
 
-`travel_buses` queda como: `id`, `travel_id`, `quotation_bus_id`, y los cuatro campos de
-operadores. Una tabla que hace **una sola cosa**: decir quién maneja cada autobús de cada
-viaje.
+Si el admin cambia `provider_id`, `unit_number` o `capacity` en la cotización,
+`travel_buses.provider_id`, `.model` y `.seat_count` **quedan desactualizados en silencio**.
 
-### Prerequisito
+**No es cosmético.** `travel_buses.seat_count` alimenta el mapa de asientos y la asignación
+de viajeros:
 
-El `SET NOT NULL` falla si existen filas con `quotation_bus_id IS NULL` (creadas por el
-camino manual antes de que muriera). La query de control está en la Fase 3. Si las hay:
-vincularlas a mano a su cotización, o borrarlas si son basura de pruebas. **Resolver esto
-antes de correr la migración**, no durante.
+- `app/components/traveler-form.vue:58` → `maxSeats`
+- `app/pages/travels/[id]/travelers/index.vue:798` → `:total-seats`
 
-### Impacto en el código
+Una capacidad desactualizada significa asientos que no existen, o asientos reales que la app
+no ofrece.
 
-`travel-buses-section.vue` ya itera sobre `QuotationBus` y usa `travel_buses` solo para los
-operadores, así que **el componente vivo casi no cambia**. Lo que hay que revisar es de
-dónde lee marca/modelo/capacidad para mostrarlas: si hoy las toma del `TravelBus`, pasan a
-salir del `QuotationBus` que ya tiene en la mano.
+### Ojo con el orden respecto de la Fase 3
 
-| Archivo | Cambio |
-|---|---|
-| `app/types/travel.ts` | `TravelBus` se reduce a `id`, `travelId`, `quotationBusId`, operadores |
-| `app/utils/mappers.ts:198` | `mapTravelBusRowToDomain` se simplifica |
-| `use-quotation-repository.ts:568` | El `insert` deja de copiar provider/model/seat_count |
-| `use-travel-repository.ts:243-268` | `updateTravelBus` solo acepta campos de operador |
-| `travel-buses-section.vue` | Verificar de dónde salen los datos del vehículo |
+La Fase 3 **borra ese bloque entero**, porque `rental_price` deja de existir. Eso no empeora
+nada (las otras tres columnas ya estaban sin sincronizar), pero deja el código sin **ningún**
+punto de propagación. Esta fase lo repone haciendo lo correcto.
+
+Si preferís no dejar esa ventana abierta entre commits, se puede **reemplazar** el bloque
+directamente en la Fase 3 en vez de borrarlo y volver a agregarlo acá. Las dos formas son
+válidas; separarlas mantiene los commits atómicos (Fase 3 = quitar columna financiera,
+Fase 4 = arreglar sincronización).
 
 ---
 
-## Riesgos
+## Bloque 1: arreglar la propagación
 
-1. **Es el cambio más invasivo de la feature** y el de menor beneficio inmediato. Por eso
-   es opcional y va al final.
-2. **`DROP COLUMN` irreversible** sobre datos de producción. `brand`, `year` y `bus_id`
-   pueden tener valores cargados por el form manual que no están en ninguna cotización —
-   **exportar antes**:
-   ```sql
-   SELECT id, travel_id, bus_id, brand, year, model, seat_count
-   FROM public.travel_buses
-   WHERE bus_id IS NOT NULL OR brand IS NOT NULL OR year IS NOT NULL;
-   ```
-3. **Si alguna vez vuelve el alta manual de autobuses** (un bus de último momento sin pasar
-   por cotización), `quotation_bus_id NOT NULL` lo bloquea. Vale preguntarse si ese
-   escenario es real antes de cerrar la puerta. Si lo es, hacer solo el `UNIQUE` y el
-   `DROP` de duplicados, y dejar la columna nullable.
+En `updateBus`, reemplazar la actualización de una sola columna por la de las tres que
+importan:
+
+```ts
+const travelBusUpdate: TablesUpdate<'travel_buses'> = {};
+if (data.providerId !== undefined)
+  travelBusUpdate.provider_id = updated.providerId;
+if (data.unitNumber !== undefined)
+  travelBusUpdate.model = updated.unitNumber;
+if (data.capacity !== undefined)
+  travelBusUpdate.seat_count = updated.capacity;
+
+if (Object.keys(travelBusUpdate).length > 0) {
+  const { error: travelBusErr } = await supabase
+    .from('travel_buses')
+    .update(travelBusUpdate)
+    .eq('quotation_bus_id', id);
+
+  if (travelBusErr)
+    throw new Error(`No se pudo sincronizar el autobús del viaje: ${travelBusErr.message}`);
+}
+```
+
+Se propaga **solo lo que vino en `data`**, siguiendo el mismo patrón condicional que ya usa
+la función para `quotation_buses`. Así una edición que solo toca el costo no reescribe las
+columnas operativas.
+
+> **Alternativa considerada:** un trigger `AFTER UPDATE` en `quotation_buses`. Garantiza la
+> propagación pase lo que pase, incluso desde SQL directo o desde otro cliente. Se
+> **descarta** porque el proyecto no usa triggers para lógica de negocio (solo
+> `moddatetime`), y esconder la sincronización en la base la vuelve invisible para quien lea
+> el repository. Reconsiderar si aparece un segundo escritor de `quotation_buses`.
+
+### El caso del `INSERT`
+
+`insertBus` (`:568`) ya copia `provider_id`, `model` y `seat_count` correctamente al crear.
+Lo único que cambia ahí es quitar `rental_price` — eso ya está en la Fase 3.
 
 ---
 
-## Decisión pendiente
+## Bloque 2: integridad del vínculo
 
-Tres caminos, en orden de ambición:
+```sql
+ALTER TABLE public.travel_buses
+  ADD CONSTRAINT travel_buses_quotation_bus_id_key UNIQUE (quotation_bus_id);
+```
 
-| | Qué se hace | Cuándo elegirlo |
-|---|---|---|
-| **A** | Nada — cerrar la feature en la Fase 3 | La prioridad es llegar a coordinadores |
-| **B** | Solo `UNIQUE` + `DROP` de duplicados, `quotation_bus_id` sigue nullable | Se quiere limpiar pero preservar la puerta del alta manual |
-| **C** | Todo lo de arriba, incluido `NOT NULL` | Se confirma que todo bus nace de una cotización |
+Un bus de la cotización debe tener **como máximo un** `travel_buses`. Hoy nada lo impide, y
+si se duplicara, `updateBus` actualizaría las dos filas y la app mostraría el autobús
+repetido.
 
-**Recomendación: B.** Elimina la duplicación real —que es el problema— sin cerrar
-irreversiblemente un flujo de negocio que nadie confirmó que esté muerto. `NOT NULL` se
-puede agregar después con una migración de una línea; recuperar un flujo eliminado cuesta
-mucho más.
+⚠️ **Verificar antes** que no haya duplicados ya en la base, o la migración falla:
+
+```sql
+SELECT quotation_bus_id, count(*)
+FROM public.travel_buses
+WHERE quotation_bus_id IS NOT NULL
+GROUP BY quotation_bus_id
+HAVING count(*) > 1;
+```
+
+### Sobre `NOT NULL`
+
+**No se agrega.** `UNIQUE` permite múltiples `NULL` en Postgres, así que la restricción no
+molesta a las filas viejas del camino manual.
+
+Poner `NOT NULL` cerraría para siempre la posibilidad de registrar un autobús sin cotización
+—un bus de último momento, un reemplazo por avería en ruta— y nadie confirmó que ese
+escenario esté muerto. Agregarlo después es una migración de una línea; recuperar un flujo
+eliminado cuesta mucho más.
+
+---
+
+## Bloque 3: columnas sin escritor — ✅ **decidido: se quedan**
+
+`brand`, `year` y `bus_id` solo los llenaba el formulario manual que muere en la Fase 3. El
+flujo de cotización **no los escribe**, y `quotation_buses` ni siquiera tiene un vínculo al
+catálogo del que sacarlos. Para toda fila nueva quedan en `NULL` permanentemente.
+
+**Decisión del usuario (2026-08-29): dejarlas por ahora.** Esta fase **no las toca**.
+
+Son tres columnas nullable que no cuestan nada, y la pregunta de fondo —¿el catálogo de
+autobuses debería vincularse a la cotización?— es de producto, no de esquema. Borrarlas
+sigue siendo fácil más adelante; borrarlas ahora cerraría la opción de repoblarlas.
+
+Consecuencia práctica: **esta fase no aplica ningún `DROP COLUMN`**, así que no necesita
+export previo ni entra en el bloque de advertencias de datos destructivos de la Fase 5. Es
+la única fase de la feature que no borra nada.
+
+> Si en el futuro se decide borrarlas, exportar primero las filas viejas que sí tienen
+> datos:
+> ```sql
+> SELECT id, travel_id, bus_id, brand, year
+> FROM public.travel_buses
+> WHERE bus_id IS NOT NULL OR brand IS NOT NULL OR year IS NOT NULL;
+> ```
+
+---
+
+## Fuera de alcance
+
+**Qué pasa con los asientos ya asignados cuando cambia la capacidad.** Si un viaje tiene
+viajeros en los asientos 40-45 y la cotización baja la capacidad a 38, quedan asientos
+huérfanos: el `UNIQUE (travel_id, travel_bus_id, seat)` no valida contra `seat_count`, así
+que nada avisa.
+
+El usuario confirmó que **se está analizando una feature aparte para resolverlo**, con su
+propio plan. Esta fase se limita a que la capacidad esté **actualizada**; qué hacer con los
+viajeros afectados se decide allá.
 
 ---
 
 ## Verificación
 
-Si se ejecuta (B o C):
-
-- [ ] Export de `bus_id` / `brand` / `year` guardado
-- [ ] Cero filas con `quotation_bus_id IS NULL` (solo si se va por C)
-- [ ] La sección de autobuses del viaje muestra marca/modelo/capacidad correctamente,
-      leyéndolas de la cotización
-- [ ] Guardar operadores → persiste
-- [ ] Crear un bus desde la cotización → crea su `travel_buses`
-- [ ] Intentar crear dos `travel_buses` para el mismo `quotation_bus_id` → falla por
-      `UNIQUE`
+- [ ] La query de duplicados del Bloque 2 devuelve 0 filas
+- [ ] Cambiar la **capacidad** de un bus en la cotización → `travel_buses.seat_count` se
+      actualiza
+- [ ] El mapa de asientos refleja la capacidad nueva sin recargar la app
+- [ ] Cambiar el **número de unidad** → `travel_buses.model` se actualiza
+- [ ] Cambiar el **proveedor** → `travel_buses.provider_id` se actualiza
+- [ ] Cambiar **solo el costo** → las columnas operativas **no** se tocan
+- [ ] Crear un bus desde la cotización → `travel_buses` nace con los tres campos correctos
+- [ ] Intentar dos `travel_buses` para el mismo `quotation_bus_id` → falla por `UNIQUE`
 - [ ] Eliminar un bus de la cotización → cascade correcto
+- [ ] Los operadores guardados sobreviven a una edición de la cotización
 - [ ] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+
+---
+
+## Comandos (los corre el usuario)
+
+```bash
+supabase migration new travel_buses_sync_constraints
+bun run db:reset
+bun run db:types
+bun run typecheck && bun run lint:fix
+```

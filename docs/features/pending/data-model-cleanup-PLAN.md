@@ -79,13 +79,34 @@ viejo no lo reflejan.
   la práctica, `insertBuses` (se llama solo al crear un viaje, donde la lista siempre
   llega vacía).
 
-De las columnas de `travel_buses`, **casi todas son duplicados** de `quotation_buses`:
+Varias columnas de `travel_buses` repiten datos de `quotation_buses` — pero **solo una de
+esas repeticiones es un problema**:
 
 | Columna | Estado |
 |---|---|
-| `provider_id`, `model`, `seat_count`, `rental_price` | duplican `provider_id`, `unit_number`, `capacity`, `total_cost` |
-| `brand`, `year`, `bus_id` | vienen del catálogo, solo los llenaba el form muerto |
-| `operator1_*`, `operator2_*` | ✅ **lo único propio**: los choferes asignados |
+| `rental_price` | ❌ Costo: no debe estar acá. **Se elimina (Fase 3)** |
+| `provider_id`, `model`, `seat_count` | ✅ **Se quedan** — proyección operativa deliberada, ver abajo |
+| `brand`, `year`, `bus_id` | ✅ **Se quedan** — sin escritor desde que murió el form manual, pero no molestan (decidido) |
+| `operator1_*`, `operator2_*` | ✅ Propio: los choferes asignados |
+
+### Por qué `provider_id`, `model` y `seat_count` NO se tocan
+
+Decisión del usuario (2026-08-29): *"`travel_buses` es para saber qué autobuses están
+registrados en ese viaje, y de qué agencia son — eso es totalmente visible para el
+coordinador. Lo único que no debería poder ver es el costo del autobús."*
+
+El coordinador **no puede tener acceso a `quotation_buses`**: es donde vive `total_cost`. Si
+`travel_buses` perdiera esas columnas, la información que debe ver dejaría de ser
+alcanzable. **La duplicación es la proyección operativa del autobús, del lado correcto de la
+frontera de seguridad** — `quotation_buses` es la vista comercial (admin), `travel_buses` la
+operativa (admin + coordinador).
+
+Lo que **sí** hay que arreglar es que esa proyección está **desincronizada**: `updateBus`
+(`use-quotation-repository.ts:588-630`) propaga únicamente `rental_price`. Cambiar el
+proveedor, el número de unidad o la capacidad en la cotización deja `travel_buses`
+desactualizado en silencio — y `seat_count` alimenta el mapa de asientos
+(`traveler-form.vue:58`, `travelers/index.vue:798`), así que una capacidad vieja es un bug
+visible. **Ese es el contenido real de la Fase 4.**
 
 ### ¿Y por qué no mover los operadores a `quotation_buses` y borrar `travel_buses`?
 
@@ -94,7 +115,7 @@ Sería una tabla menos, pero **es exactamente lo contrario de lo que estamos hac
 Meter ahí los datos de los operadores obligaría a darle acceso a esa tabla a cualquier rol
 que necesite saber quién maneja el autobús — el coordinador, justamente.
 
-**`travel_buses` se queda, y se formaliza como la tabla operativa del autobús.** Es la
+**`travel_buses` se queda, y queda confirmada como la tabla operativa del autobús.** Es la
 separación correcta: la cotización es de la agencia, los operadores son de la operación.
 
 ---
@@ -119,14 +140,14 @@ con cambios de UI.
 | [fase1-travel-internals.md](plan/data-model-fase1-travel-internals.md) | Separar `travel_internals` de `travels` | Ninguna | Pendiente |
 | [fase2-catalogo-bus-precio.md](plan/data-model-fase2-catalogo-bus-precio.md) | Eliminar `buses.rental_price` del catálogo | Ninguna | Pendiente |
 | [fase3-travel-bus-precio.md](plan/data-model-fase3-travel-bus-precio.md) | Eliminar `travel_buses.rental_price` + borrar el código muerto | Fase 2 | Pendiente |
-| [fase4-travel-bus-satelite.md](plan/data-model-fase4-travel-bus-satelite.md) | **Opcional** — quitar las columnas duplicadas de `travel_buses` | Fase 3 | Pendiente (decisión) |
+| [fase4-travel-bus-satelite.md](plan/data-model-fase4-travel-bus-satelite.md) | 🔴 Arreglar la sincronización `quotation_buses` → `travel_buses` + `UNIQUE` | Fase 3 | Pendiente |
 | [fase5-verificacion.md](plan/data-model-fase5-verificacion.md) | Verificación + despliegue | Todas | Pendiente |
 
 > Actualizar el "Estado" acá y en el doc de cada fase al cerrarla, como en las features
 > anteriores.
 
-Las Fases 1 y 2 son **independientes**. La 4 es una decisión aparte y se puede posponer sin
-bloquear el acceso de coordinadores.
+Las Fases 1 y 2 son **independientes**. La 4 dejó de ser opcional: contiene un bugfix con
+impacto de usuario (ver hallazgo 3).
 
 ---
 
@@ -168,3 +189,8 @@ La Fase 2 de coordinadores queda como policies aditivas planas, sin vistas ni ex
   coordinadores; si resulta que sí, se resuelve ahí con el mismo criterio.
 - Rediseñar el flujo de cotización.
 - Cambiar `travel_accommodations` (no tiene columnas de costo — ya está bien).
+- **Qué hacer con los asientos ya asignados cuando cambia la capacidad de un autobús.** El
+  `UNIQUE (travel_id, travel_bus_id, seat)` no valida contra `seat_count`, así que bajar la
+  capacidad deja viajeros en asientos que ya no existen. El usuario confirmó que se está
+  analizando una **feature aparte** para resolverlo, con su propio plan. La Fase 4 se limita
+  a que la capacidad esté actualizada.

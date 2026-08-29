@@ -22,7 +22,7 @@ se deshace con un rollback de migración.
 
 - [ ] Backup del proyecto remoto `mkosbzhagjbyfvizafta` (o `pg_dump` de `travels`, `buses`,
       `travel_buses`)
-- [ ] Exports de las Fases 2, 3 y 4 guardados fuera del repo
+- [ ] Exports de las Fases 2 y 3 guardados fuera del repo (la Fase 4 no borra nada)
 - [ ] Las queries de control de la Fase 3 corridas **contra remoto**, no solo local — los
       datos de producción pueden tener divergencias que local no muestra
 
@@ -51,6 +51,8 @@ Recorrido completo, con un viaje real:
 - [ ] Catálogo de autobuses de un proveedor: listar, crear, editar (Fase 2)
 - [ ] Flujo de cotización completo: agregar bus, cambiar costo, confirmar, pagos
 - [ ] Sección de autobuses del viaje: operadores y asignación de coordinadores (Fase 3)
+- [ ] Cambiar capacidad / unidad / proveedor de un bus en la cotización → se refleja en la
+      sección de autobuses del viaje y en el mapa de asientos (Fase 4)
 - [ ] Galería de fotos
 - [ ] Código de acceso al viaje: generar, copiar, revocar (feature anterior, no debería
       verse afectada)

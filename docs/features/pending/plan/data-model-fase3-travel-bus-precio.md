@@ -109,9 +109,15 @@ así que esta fase no lo afecta.
 | `use-quotation-repository.ts` | 577 | Quitar del `insert` |
 | `use-quotation-repository.ts` | 626-627 | El `.update()` queda **sin campos** → borrar el statement entero |
 
-⚠️ **Ojo con `use-quotation-repository.ts:626`.** Si `rental_price` era lo único que ese
-`.update()` escribía, dejarlo con un objeto vacío no es un no-op inofensivo: hay que
-eliminar el bloque completo, incluido su manejo de error. Leer el contexto antes de editar.
+⚠️ **Ojo con `use-quotation-repository.ts:626`.** `rental_price` es lo único que ese
+`.update()` escribe, así que dejarlo con un objeto vacío no es un no-op inofensivo: hay que
+eliminar el bloque completo, incluido su manejo de error.
+
+> **Ese bloque vuelve en la [Fase 4](data-model-fase4-travel-bus-satelite.md)**, pero
+> sincronizando lo que corresponde (`provider_id`, `model`, `seat_count`) en vez del costo.
+> Borrarlo acá no empeora nada —esas tres columnas ya estaban sin sincronizar— pero deja el
+> código momentáneamente sin ningún punto de propagación. Si preferís no abrir esa ventana,
+> **reemplazá** el bloque acá mismo con el de la Fase 4 en vez de borrarlo y reponerlo.
 
 ---
 
