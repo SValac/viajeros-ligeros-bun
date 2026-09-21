@@ -82,12 +82,14 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     error.value = null;
     try {
       const travel = await repository.insertTravel(data);
+      const internals = await repository.upsertTravelInternals(travel.id, data);
       const extras = {
         coordinatorIds: data.coordinatorIds,
         itinerary: data.itinerary,
         services: data.services,
         buses: data.buses,
         accommodations: [],
+        internals,
       };
 
       if (data.itinerary.length > 0)
@@ -139,17 +141,25 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         'description',
         'imageUrl',
         'status',
-        'internalNotes',
-        'totalOperationCost',
         'minimumSeats',
-        'projectedProfit',
         'accumulatedTravelers',
       ];
+      const travelInternalKeys: (keyof TravelUpdateData)[] = [
+        'internalNotes',
+        'totalOperationCost',
+        'projectedProfit',
+      ];
       const haveTravelFields = travelRootKeys.some(key => key in data);
+      const haveInternalFields = travelInternalKeys.some(key => key in data);
 
       if (haveTravelFields) {
         travelRow = await repository.updateTravel(id, data);
       }
+
+      let internals: Tables<'travel_internals'> | null = null;
+      if (haveInternalFields)
+        internals = await repository.upsertTravelInternals(id, data);
+
       let itinerary = travels.value[index]?.itinerary ?? [];
       let services = travels.value[index]?.services ?? [];
       let buses = travels.value[index]?.buses ?? [];
@@ -176,6 +186,11 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
             services,
             buses,
             accommodations,
+            internals: internals ?? {
+              internal_notes: existingTravel.internalNotes ?? null,
+              total_operation_cost: existingTravel.totalOperationCost ?? null,
+              projected_profit: existingTravel.projectedProfit ?? null,
+            },
           })
         : {
             ...existingTravel,
@@ -184,6 +199,11 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
             services,
             buses,
             accommodations,
+            ...(internals && {
+              internalNotes: internals.internal_notes ?? undefined,
+              totalOperationCost: internals.total_operation_cost ?? undefined,
+              projectedProfit: internals.projected_profit ?? undefined,
+            }),
           };
 
       return true;

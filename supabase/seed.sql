@@ -406,7 +406,7 @@ on conflict (id) do nothing;
 -- ============================================================
 insert into public.travels (
   id, label, destination, start_date, end_date, price, description,
-  status, minimum_seats, internal_notes
+  status, minimum_seats
 ) values
 (
   'ff000000-0000-0000-0000-000000000001',
@@ -417,8 +417,7 @@ insert into public.travels (
   3800.00,
   'Aventura de 4 días por el cañón más profundo de América del Norte.',
   'pending',
-  20,
-  'Confirmar autobús con Transportes Del Norte antes del 1 de junio.'
+  20
 ),
 (
   'ff000000-0000-0000-0000-000000000002',
@@ -429,13 +428,22 @@ insert into public.travels (
   4200.00,
   'Viaje a los bosques donde hibernan las mariposas monarca.',
   'published',
-  25,
-  null
+  25
 )
 on conflict (id) do update set
   label       = excluded.label,
   destination = excluded.destination,
   status      = excluded.status;
+
+-- ============================================================
+-- TRAVEL INTERNALS
+-- ============================================================
+insert into public.travel_internals (travel_id, internal_notes) values
+(
+  'ff000000-0000-0000-0000-000000000001',
+  'Confirmar autobús con Transportes Del Norte antes del 1 de junio.'
+)
+on conflict (travel_id) do update set internal_notes = excluded.internal_notes;
 
 -- ============================================================
 -- TRAVEL COORDINATORS

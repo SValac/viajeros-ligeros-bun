@@ -21,7 +21,7 @@ export function useTravelRepository() {
   async function fetchAll(): Promise<Travel[]> {
     const { data, error } = await supabase
       .from('travels')
-      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id)')
+      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id), travel_internals(*)')
       .order('created_at', { ascending: false });
 
     if (error)
@@ -56,6 +56,35 @@ export function useTravelRepository() {
     const { data: row, error } = await supabase
       .from('travels')
       .insert({ ...mapTravelToInsert(data), owner_id: authStore.user!.id })
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return row;
+  }
+
+  /**
+   * Creates or replaces the internal (admin-only) data for a travel.
+   * Writes nothing and returns `null` when no internal field is present in `data`,
+   * so editing unrelated travel fields never creates an empty row.
+   * @param travelId - UUID of the parent travel
+   * @param data - Partial internal fields to persist
+   * @returns The upserted raw `travel_internals` row, or `null` if nothing to write
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function upsertTravelInternals(
+    travelId: string,
+    data: Partial<Pick<TravelUpdateData, 'internalNotes' | 'totalOperationCost' | 'projectedProfit'>>,
+  ): Promise<Tables<'travel_internals'> | null> {
+    const hasInternalFields = 'internalNotes' in data || 'totalOperationCost' in data || 'projectedProfit' in data;
+    if (!hasInternalFields)
+      return null;
+
+    const { data: row, error } = await supabase
+      .from('travel_internals')
+      .upsert({ travel_id: travelId, ...mapTravelInternalsToInsert(data) }, { onConflict: 'travel_id' })
       .select()
       .single();
 
@@ -338,14 +367,8 @@ export function useTravelRepository() {
       update.image_url = data.imageUrl ?? null;
     if (data.status !== undefined)
       update.status = data.status;
-    if ('internalNotes' in data)
-      update.internal_notes = data.internalNotes ?? null;
-    if ('totalOperationCost' in data)
-      update.total_operation_cost = data.totalOperationCost ?? null;
     if ('minimumSeats' in data)
       update.minimum_seats = data.minimumSeats ?? null;
-    if ('projectedProfit' in data)
-      update.projected_profit = data.projectedProfit ?? null;
     if ('accumulatedTravelers' in data)
       update.accumulated_travelers = data.accumulatedTravelers ?? null;
 
@@ -524,6 +547,7 @@ export function useTravelRepository() {
     removeTravel,
     removeTravelBus,
     insertTravel,
+    upsertTravelInternals,
     insertTravelBus,
     insertActivities,
     insertServices,
