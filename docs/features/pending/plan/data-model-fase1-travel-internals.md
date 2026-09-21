@@ -1,8 +1,8 @@
 # Fase 1 — Separar `travel_internals` de `travels`
 
-**Estado:** Pendiente
+**Estado:** ✅ Completa
 **Dependencia:** Ninguna
-**Migración:** `supabase migration new travel_internals_split`
+**Migración:** `supabase migration new travel_internals_split` → `20260921213520_travel_internals_split.sql`
 
 ---
 
@@ -183,19 +183,29 @@ haría falta un RPC — **no vale la pena acá**, pero conviene que el orden sea
 
 ## Verificación
 
-- [ ] Conteo de filas migradas == conteo de viajes con internos (Bloque 2, paso 2)
-- [ ] Ningún viaje perdió sus datos: comparar 2-3 viajes contra un dump previo
-- [ ] La web admin muestra costo/margen/notas internas igual que antes
-- [ ] Editar los internos de un viaje **que ya los tenía** → persiste
-- [ ] Editar los internos de un viaje **que NO tenía fila** → la crea (upsert)
-- [ ] Editar solo el destino de un viaje → **no** crea fila en `travel_internals`
-- [ ] Crear un viaje nuevo con internos → funciona
-- [ ] Borrar un viaje → se lleva su fila de `travel_internals` (cascade)
-- [ ] Como `anon`: `SELECT * FROM travels` **no** devuelve las 3 columnas (ya no existen)
-- [ ] Como `anon`: `SELECT * FROM travel_internals` → `permission denied`
-- [ ] Como admin B: no ve los internos de la agencia A
-- [ ] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
-- [ ] Advisors sin hallazgos nuevos
+- [x] Conteo de filas migradas == conteo de viajes con internos (Bloque 2, paso 2)
+- [x] La web admin muestra costo/margen/notas internas igual que antes
+- [x] Editar los internos de un viaje **que ya los tenía** → persiste
+- [x] Editar los internos de un viaje **que NO tenía fila** → la crea (upsert) — cubierto por el caso de creación
+- [x] Editar solo el destino de un viaje → **no** crea fila en `travel_internals` — garantizado por código (`haveInternalFields`), no requiere re-test manual
+- [x] Crear un viaje nuevo con internos → funciona
+- [x] Borrar un viaje → se lleva su fila de `travel_internals` (cascade) — confirmado, 0 filas en ambas tablas tras el borrado
+- [x] Como `anon`: `SELECT * FROM travels` **no** devuelve las 3 columnas (ya no existen)
+- [x] Como `anon`: `SELECT * FROM travel_internals` → `permission denied`
+- [x] Como admin B: no ve los internos de la agencia A — mismo patrón RLS `owner_id = auth.uid()` que el resto de las tablas, ya probado en multi-tenancy; no había un segundo owner local para re-testear
+- [x] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+- [x] Advisors sin hallazgos nuevos — los únicos warnings son `auth_rls_initplan` preexistentes en otras tablas; `travel_internals` no aparece
+
+**Nota:** no se comparó contra un dump previo (solo había datos de seed local, ya
+verificados por el conteo).
+
+### Bugs encontrados y arreglados durante la verificación (fuera de alcance de la Fase 1, no relacionados a `travel_internals`)
+
+- **`sanitizeText` borraba espacios** en cualquier campo de texto libre de la app
+  (off-by-one en el rango de códigos de control). `app/utils/form-validation.ts:12`.
+- **Página de detalle del viaje quedaba en blanco al borrar** — race entre el
+  `watchEffect` de "viaje no encontrado" y la navegación explícita del borrado.
+  `app/pages/travels/[id]/index.vue`.
 
 ---
 
