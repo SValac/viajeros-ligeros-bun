@@ -34,7 +34,14 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
     data.imageUrl = await uploadBanner(travelId, bannerFile);
   }
 
-  const success = await travelsStore.updateTravel(travelId, data);
+  // travel-form.vue has no UI to edit buses — it only carries the travel's
+  // current list forward to satisfy the TravelFormData type. Forwarding it
+  // here would make updateTravel() replace every travel_buses row (new ids)
+  // on every unrelated edit, which unassigns each traveler's bus/seat via
+  // the ON DELETE SET NULL on travelers.travel_bus_id. Buses are edited
+  // exclusively through travel-buses-section.vue's updateTravelBus().
+  const { buses: _buses, ...updateData } = data;
+  const success = await travelsStore.updateTravel(travelId, updateData);
 
   if (success) {
     toast.add({
