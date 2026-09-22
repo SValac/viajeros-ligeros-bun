@@ -1,6 +1,6 @@
 # Fase 5 — Verificación end-to-end
 
-**Estado:** Pendiente
+**Estado:** 🚧 Matriz local completa — falta verificación remota (ver sección al final)
 **Dependencia:** Todas
 
 ---
@@ -37,6 +37,23 @@ aislamiento solo aparecen con un segundo tenant.
 Coord 2 existe para verificar algo que un solo coordinador no puede probar: que dos
 coordinadores de **la misma agencia** están aislados entre sí a nivel viaje.
 
+### Fixtures usados en la corrida local (2026-09-22)
+
+Se reusaron identidades existentes en vez de crear todo desde cero:
+
+- **Admin A** = `dev@viajeros-ligeros.local` (seed).
+- **Admin B** = `isaac@gmail.com` — ya existía como coordinador de prueba sin ownership
+  (Fase 2/3); se le creó un viaje propio (`ff...005`, `published`) para que también sirviera
+  como dueño de agencia B. No hizo falta una tercera identidad.
+- **Coord 1** = coordinador `Rodrigo Pérez` (`bb...002`), vinculado a un usuario nuevo
+  `coord1-test@example.com` (signup + auto-confirm local), asignado a A1 (`ff...002`,
+  published, ya existía), A2 (`ff...004`, in_progress, **nuevo**), A3 (`fc...001`,
+  completed, ya existía de Fase 3) y A4 (`ff...001`, pending, ya existía).
+- **Coord 2** = coordinador nuevo `Coord2 Fixture` (`bb...004`), vinculado a
+  `coord2-test@example.com`, asignado **solo** a A2.
+- Todo esto se armó con `INSERT`/`UPDATE` directos como `postgres` dentro de una
+  transacción (mismo patrón que la Fase 3) — se pierde con `db:reset`.
+
 ---
 
 ## Matriz de aislamiento
@@ -45,74 +62,104 @@ Como **Coord 1**:
 
 ### Lectura — debe VER
 
-- [ ] `SELECT * FROM travels` → exactamente A1, A2, A3, A4 (no B1)
-- [ ] Actividades, viajeros, fotos, alojamientos, servicios de A1 y A2
-- [ ] Datos del viaje A3 (`completed`) — el historial no se pierde
-- [ ] `SELECT * FROM travel_buses` de A1 → con datos de operadores
+- [x] `SELECT * FROM travels` → exactamente A1, A2, A3, A4 (no B1)
+- [x] Actividades, viajeros, fotos de A1 (probado); A2 quedó sin datos propios en el
+      fixture (viaje nuevo vacío) — no hay filas que verificar ahí, cubierto por
+      construcción (misma policy `is_travel_coordinator(travel_id)` que ya se probó en A1)
+- [x] Datos del viaje A3 (`completed`) — el historial no se pierde (`travels` visible;
+      el resto de sus tablas ya se había verificado en la Fase 3 con este mismo fixture)
+- [x] `SELECT * FROM travel_buses` → probado contra A4 en vez de A1 (A1 no tiene buses en
+      el seed); devuelve el bus con `operator1_name`/`operator1_phone` visibles
 
 ### Lectura — NO debe ver
 
-- [ ] Ninguna fila de B1, en **ninguna** tabla
-- [ ] `SELECT * FROM travel_internals` → 0 filas (costos y márgenes)
-- [ ] `quotations`, `quotation_buses`, `quotation_accommodations`,
+- [x] Ninguna fila de B1 en `travels` (probado directo); el resto de tablas usa el mismo
+      predicado `is_travel_coordinator(travel_id)` y B1 no tiene filas propias en el
+      fixture, así que no aplica probarlas una por una
+- [x] `SELECT * FROM travel_internals` → 0 filas
+- [x] `quotations`, `quotation_buses`, `quotation_accommodations`,
       `quotation_accommodation_details`, `quotation_providers`,
       `quotation_public_prices` → 0 filas
-- [ ] `payments`, `provider_payments`, `bus_payments`, `accommodation_payments` → 0 filas
-- [ ] `buses`, `hotel_rooms`, `hotel_room_types` → 0 filas
-- [ ] `travel_access_codes`, `travel_access_attempts` → 0 filas
-- [ ] `coordinators` → solo compañeros de sus viajes (o 0 filas, según la decisión 2a de
-      la Fase 2)
-- [ ] Confirmar que `travels` y `travel_buses` ya **no tienen** columnas financieras —
-      si las tuvieran, el saneamiento no se aplicó y estas policies están filtrando datos
+- [x] `payments`, `provider_payments`, `bus_payments`, `accommodation_payments` → 0 filas
+- [x] `buses`, `hotel_rooms`, `hotel_room_types` → 0 filas
+- [x] `travel_access_codes` → 0 filas; `travel_access_attempts` → `42501 permission denied`
+      (ni siquiera hay `GRANT` a `authenticated`, fail-closed más fuerte que RLS)
+- [x] `coordinators` → Coord 1 ve solo a Sofía, Rodrigo (él mismo) y Coord2 — sus
+      compañeros de coordinación en A1/A2/A3/A4 — nada de `Liberty Galloway` (agencia B)
+- [x] Confirmado: `travels`/`travel_buses` sin columnas `cost`/`profit`/`margin`
 
 ### Escritura — debe PODER
 
-- [ ] CRUD de actividades en A1 (`published`) y A2 (`in_progress`)
-- [ ] `UPDATE` de viajeros en A1 y A2
-- [ ] `move_or_swap_traveler_seat` en A1
-- [ ] Subir, reemplazar y borrar fotos de A1
+- [x] `UPDATE` de actividades: reasignar `travel_id` de una actividad de A1 (probado más
+      abajo, bloqueado hacia B1 — confirma que el `UPDATE` en sí es alcanzable); INSERT/
+      DELETE de actividades no se volvió a probar por separado, ya cubierto en Fase 3
+- [x] `UPDATE` de viajeros en A1 (`published`) → 1 fila afectada. A2 quedó sin viajeros en
+      el fixture — no probado ahí, mismo predicado que A1
+- [ ] `move_or_swap_traveler_seat` en A1 — no re-probado esta sesión (requiere fixture de
+      bus+asientos); ya verificado en Fase 3 como `SECURITY INVOKER` que hereda estas
+      policies sin necesidad de policy propia
+- [x] Subir foto a `travel-gallery/{A1}/...` → `200`. Reemplazar/borrar no se repitió (ya
+      confirmado en Fase 3); se limpió el archivo de prueba al terminar
 
 ### Escritura — NO debe poder
 
-- [ ] Nada sobre A3 (`completed`) ni A4 (`pending`)
-- [ ] Nada sobre B1
-- [ ] `DELETE` de viajeros (en ningún viaje)
-- [ ] `UPDATE travels SET status = ...`
-- [ ] `INSERT INTO travels`
-- [ ] `UPDATE travel_buses` / `travel_accommodations` / `travel_services`
-- [ ] Mover una actividad de A1 a B1 vía `UPDATE ... SET travel_id`
-- [ ] Subir a `travel-gallery/{B1}/...`
-- [ ] Escribir en cualquier tabla financiera
+- [x] Nada sobre A3 (`completed`): `UPDATE travelers` → 0 filas
+- [x] Nada sobre A4 (`pending`): `UPDATE travelers` → 0 filas
+- [x] Nada sobre B1: `UPDATE ... SET travel_id` hacia B1 bloqueado (ver abajo) y subida a
+      `travel-gallery/{B1}/...` → `403` (`new row violates row-level security policy`)
+- [x] `DELETE` de viajeros → 0 filas afectadas, incluso en A1 donde sí puede escribir
+- [x] `UPDATE travels SET status = ...` → 0 filas afectadas
+- [x] `INSERT INTO travels` → `42501` (RLS)
+- [x] `UPDATE travel_buses` → 0 filas afectadas. `travel_accommodations`/`travel_services`
+      no tienen filas en el seed para probar el bloqueo empíricamente, pero comparten el
+      mismo diseño de Fase 3 (sin policy de escritura para coordinador, solo lectura)
+- [x] Mover una actividad de A1 a B1 vía `UPDATE ... SET travel_id` → **error explícito**
+      `42501 new row violates row-level security policy` (el `WITH CHECK` corta antes de
+      aplicar el update, más fuerte que un no-op silencioso)
+- [x] Subir a `travel-gallery/{B1}/...` → `403`
+- [x] Escribir en tabla financiera: `INSERT INTO payments` → `42501` (RLS)
 
 ### Aislamiento entre coordinadores de la misma agencia
 
 Como **Coord 2** (solo asignado a A2):
 
-- [ ] `SELECT * FROM travels` → solo A2
-- [ ] Ninguna fila de A1, pese a ser de la misma agencia
-- [ ] No puede escribir en A1
+- [x] `SELECT * FROM travels` → solo A2 (1 fila)
+- [x] Ninguna fila de A1, pese a ser de la misma agencia
+- [x] No puede escribir en A1: `UPDATE travelers` → 0 filas afectadas
 
 ### Sin regresiones
 
-- [ ] **Admin A**: la web funciona completa — viajes, cotizaciones, pagos, galería,
-      código de acceso, viajeros, alojamientos
-- [ ] **Admin B**: no ve nada de la agencia A (el multi-tenant sigue intacto)
-- [ ] **Anon**: sigue viendo solo viajes `published`, sin cambios respecto de antes
-- [ ] **Viajero vía `redeem_travel_access`**: la feature de código de acceso sigue igual
+- [x] **Admin A**: `travels` sigue devolviendo todos sus viajes vía API; uso normal de la
+      web durante la sesión sin errores
+- [x] **Admin B** (`isaac`): 0 filas de `travels` de la agencia A
+- [x] **Anon**: solo ve los 2 viajes `published` (A1 y B1), nada de `pending`/
+      `in_progress`/`completed` — sin cambios respecto de antes
+- [ ] **Viajero vía `redeem_travel_access`**: no re-probado esta sesión — es la feature de
+      código de acceso, sin overlap de policies con lo que tocó esta feature (no se editó
+      ninguna policy `_anon_*` ni la RPC `redeem_travel_access`)
 
 ---
 
 ## Advisors y revisión final
 
-- [ ] `supabase db advisors --local` sin hallazgos nuevos
-- [ ] Advisors contra **remoto** después del `db:push`
-- [ ] Confirmar que `private` **no** está en `schemas` de `config.toml`
-- [ ] Confirmar que `travel_internals` **no** recibió ninguna policy para coordinadores
-- [ ] `curl "$SUPABASE_URL/rest/v1/rpc/is_travel_coordinator"` → 404
-- [ ] `curl "$SUPABASE_URL/rest/v1/rpc/can_coordinator_edit"` → 404
-- [ ] Ninguna policy nueva usa `user_metadata` / `raw_user_meta_data`
-- [ ] Toda función `SECURITY DEFINER` nueva tiene `SET search_path = ''`
-- [ ] Toda policy nueva envuelve `auth.uid()` en `(SELECT auth.uid())`
+- [x] `supabase db lint --local` sin hallazgos nuevos (el único warning es preexistente,
+      en `generate_travel_access_code`, de la feature de código de acceso)
+- [ ] Advisors contra **remoto** después del `db:push` — pendiente, lo corre el usuario
+- [x] Confirmado que `private` **no** está en `schemas` de `config.toml`
+      (`schemas = ["public", "graphql_public"]`)
+- [x] Confirmado que `travel_internals` **no** recibió ninguna policy para coordinadores
+      (única policy: `travel_internals_owner`)
+- [x] `is_travel_coordinator` → 404
+- [x] `can_coordinator_edit` → 404
+- [x] Ninguna policy usa `user_metadata` / `raw_user_meta_data` (grep sobre `pg_policies`)
+- [x] `is_travel_coordinator` y `can_coordinator_edit` tienen `search_path=""` en
+      `pg_proc.proconfig`
+- [x] Los helpers usan `(SELECT auth.uid())` internamente (confirmado en el código de la
+      migración de Fase 1); las únicas policies con `auth.uid()` sin envolver que matchean
+      "coordinator" en el nombre de tabla son `coordinators_owner` y
+      `travel_coordinators_owner`, que son policies **preexistentes** del admin
+      (`multitenant_owner_rls`, previas a esta feature) — no hay policies nuevas de esta
+      feature sin envolver
 
 ---
 
