@@ -66,6 +66,24 @@ docs/features/provider-catalog-feature.md
 - Los links entre docs de una misma carpeta son relativos (`fase2.md`, no la ruta completa);
   entre carpetas distintas, usar `../otra-feature/PLAN.md`.
 
+### Fases individuales: se mueven apenas cierran, no esperan a que cierre toda la feature
+Una feature con varias fases puede tardar semanas en completarse por entero. **Cada fase
+se mueve a `completed/` en cuanto su propio checklist queda cerrado**, aunque el resto de
+la feature siga en curso — no hay que esperar a la última fase para mover todo junto. Solo
+el `PLAN.md` (índice general) y la(s) fase(s) todavía abiertas se quedan en `pending/`.
+
+Esto significa que, mientras una feature está en progreso, su carpeta vive **partida en
+dos**: las fases ya cerradas en `docs/features/completed/[feature]/faseN.md`, y el
+`PLAN.md` + fase(s) abiertas en `docs/features/pending/[feature]/`. El `PLAN.md` enlaza a
+cada fase con su ruta real (`../../completed/[feature]/faseN.md` para las cerradas,
+`faseN.md` para las que siguen en la misma carpeta). Cuando cierra la última fase, todo el
+contenido de `completed/[feature]/` se junta de nuevo bajo una sola carpeta (moviendo el
+`PLAN.md` ahí también) y `pending/[feature]/` desaparece.
+
+**Ejemplo real:** `coordinator-access` tiene las Fases 1-4 en
+`completed/coordinator-access/` y la Fase 5 (todavía en curso) + el `PLAN.md` en
+`pending/coordinator-access/`.
+
 ### Features Completadas
 Cuando una feature es **completada y mergeada**, su documentación se mueve a:
 ```
@@ -147,12 +165,19 @@ Al crear documentación para una nueva feature, incluir:
 
 Cuando cambies el estado de una feature:
 
-### Feature completada
+### Fase individual cerrada (feature con varias fases sigue en curso)
+```bash
+git mv docs/features/pending/[feature-name]/faseN-*.md docs/features/completed/[feature-name]/
+# actualizar el link a esa fase en pending/[feature-name]/PLAN.md a la nueva ruta
+```
+
+### Feature completada (cerró su última fase)
 ```bash
 # un solo doc
 git mv docs/features/[feature-name].md docs/features/completed/
-# PLAN + fases
-git mv docs/features/pending/[feature-name]/ docs/features/completed/[feature-name]/
+# PLAN + fases: mover el PLAN.md (y cualquier fase que quedara en pending/) a la carpeta
+# de completed/ donde ya viven las fases previas
+git mv docs/features/pending/[feature-name]/PLAN.md docs/features/completed/[feature-name]/
 ```
 
 ### Feature nueva (pendiente → actual)

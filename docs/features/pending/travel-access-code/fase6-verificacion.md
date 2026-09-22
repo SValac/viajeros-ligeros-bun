@@ -4,9 +4,9 @@
 feature, simulando exactamente lo que hará la app Android contra `redeem_travel_access`.
 
 **Dependencia:** Todas las fases anteriores
-([0](fase0-rename-status.md), [1](fase1-schema.md),
-[2](fase2-rpc.md), [3](fase3-repository-domain.md),
-[4](fase4-store.md), [5](fase5-ui.md)).
+([0](../../completed/travel-access-code/fase0-rename-status.md), [1](../../completed/travel-access-code/fase1-schema.md),
+[2](../../completed/travel-access-code/fase2-rpc.md), [3](../../completed/travel-access-code/fase3-repository-domain.md),
+[4](../../completed/travel-access-code/fase4-store.md), [5](../../completed/travel-access-code/fase5-ui.md)).
 **Estado:** Pendiente
 
 ---
@@ -27,7 +27,7 @@ resultados inesperados. El usuario corre los comandos.
    la primera.
 2. Probar `redeem_travel_access` exactamente como lo hará Android — **nota:** esta
    función siempre responde HTTP 200; el resultado va en el campo `success`/`error`
-   del JSON (ver [Fase 2](fase2-rpc.md) — el diseño cambió respecto al
+   del JSON (ver [Fase 2](../../completed/travel-access-code/fase2-rpc.md) — el diseño cambió respecto al
    plan original, ya no usa `RAISE EXCEPTION`):
    ```bash
    curl -s -X POST "http://127.0.0.1:54321/rest/v1/rpc/redeem_travel_access" \
@@ -58,7 +58,7 @@ resultados inesperados. El usuario corre los comandos.
    como `authenticated` no-owner sigue sin devolver nada extra (RLS no se debilitó).
 5. Correr los advisors de Supabase (`get_advisors` / `supabase db advisors`) y
    resolver cualquier hallazgo nuevo. **Hecho (2026-07-30)** — 0 `ERROR`. Ver detalle
-   en [Fase 2](fase2-rpc.md#verificación): nada bloqueante, un falso
+   en [Fase 2](../../completed/travel-access-code/fase2-rpc.md#verificación): nada bloqueante, un falso
    positivo esperado (`travel_access_attempts` sin policies, intencional) y el patrón
    `auth_rls_initplan` que ya existe en casi todas las tablas del proyecto.
 

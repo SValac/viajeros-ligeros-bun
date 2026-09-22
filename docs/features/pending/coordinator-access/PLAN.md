@@ -131,10 +131,10 @@ Supabase remoto (`db:push`).
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [fase1-identidad.md](fase1-identidad.md) | Schema `private`, `coordinators.user_id`, helpers `is_travel_coordinator` / `can_coordinator_edit` | Ninguna | ✅ Completa |
-| [fase2-rls-lectura.md](fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | ✅ Completa |
-| [fase3-rls-escritura.md](fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | ✅ Completa |
-| [fase4-invitacion.md](fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | ✅ Completa |
+| [fase1-identidad.md](../../completed/coordinator-access/fase1-identidad.md) | Schema `private`, `coordinators.user_id`, helpers `is_travel_coordinator` / `can_coordinator_edit` | Ninguna | ✅ Completa |
+| [fase2-rls-lectura.md](../../completed/coordinator-access/fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | ✅ Completa |
+| [fase3-rls-escritura.md](../../completed/coordinator-access/fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | ✅ Completa |
+| [fase4-invitacion.md](../../completed/coordinator-access/fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | ✅ Completa |
 | [fase5-verificacion.md](fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | 🚧 Local ✅ · migraciones+advisors remoto ✅ · checklist manual remoto pendiente |
 
 > Al terminar cada fase, actualizar su "Estado" acá y en el propio documento de la fase
