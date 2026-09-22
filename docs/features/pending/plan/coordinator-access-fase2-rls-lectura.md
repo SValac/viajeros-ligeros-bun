@@ -1,9 +1,9 @@
 # Fase 2 — Segundo eje de RLS: lectura
 
-**Estado:** Pendiente
+**Estado:** ✅ Completa
 **Dependencia:** Fase 1 (los helpers `private.*`) · **y el
 [saneamiento del modelo de datos](../../completed/data-model-cleanup-PLAN.md) mergeado a `main`**
-**Migración:** `supabase migration new coordinator_rls_read`
+**Migración:** `supabase migration new coordinator_rls_read` → `20260922164742_coordinator_rls_read.sql`
 
 ---
 
@@ -154,6 +154,11 @@ deja el modelo coherente.
 **Decisión pendiente:** ¿qué guarda hoy `coordinators.notes`? Si es información interna, la
 separación va **antes** de esta policy.
 
+**Resuelto (2026-09-22):** el usuario confirmó que `notes`/`age` son datos operativos
+(no observaciones internas de desempeño ni condiciones de pago), así que la policy de
+arriba se implementó tal cual, sin separar nada en `coordinator_internals`. Si en el futuro
+`notes` empieza a usarse para algo interno, esta policy hay que revisarla.
+
 ### 2b. Datos de los proveedores — ✅ **confirmado: sí**
 
 Decisión del usuario (2026-08-29): *"`travel_buses` es para saber qué autobuses están
@@ -234,25 +239,64 @@ las columnas".**
 Con el usuario coordinador de prueba de la Fase 1, asignado a un viaje A y **no** asignado
 a un viaje B:
 
-- [ ] Las dos queries de `information_schema` del requisito devuelven 0 filas
-- [ ] `SELECT * FROM travels` → **solo el viaje A**
-- [ ] La respuesta de `travels` no incluye columnas financieras (ya no existen en la tabla)
-- [ ] `SELECT * FROM travel_internals` → **0 filas**
-- [ ] `SELECT * FROM travel_buses` → buses del viaje A, sin columnas de costo
-- [ ] `travel_activities` / `travelers` / `travel_media` / `travel_accommodations` /
+- [x] Las dos queries de `information_schema` del requisito devuelven 0 filas
+- [x] `SELECT * FROM travels` → **solo el viaje A**
+- [x] La respuesta de `travels` no incluye columnas financieras (ya no existen en la tabla)
+- [x] `SELECT * FROM travel_internals` → **0 filas**
+- [x] `SELECT * FROM travel_buses` → buses del viaje A, sin columnas de costo
+- [x] `travel_activities` / `travelers` / `travel_media` / `travel_accommodations` /
       `travel_services` → solo filas del viaje A
-- [ ] Ninguna fila del viaje B en ninguna consulta
-- [ ] `SELECT * FROM quotations` → **0 filas**
-- [ ] `SELECT * FROM payments` → **0 filas**
-- [ ] `SELECT * FROM provider_payments / bus_payments / accommodation_payments` → **0 filas**
-- [ ] `SELECT * FROM buses / hotel_rooms / hotel_room_types` → **0 filas**
-- [ ] `SELECT * FROM travel_access_codes` → **0 filas**
-- [ ] **Escritura todavía bloqueada:** `UPDATE travel_activities SET title='x'` → 0 filas
-- [ ] Como admin dueño: la web sigue igual, sin regresiones
-- [ ] Como `anon`: sin cambios respecto de antes de esta fase
+- [x] Ninguna fila del viaje B en ninguna consulta
+- [x] `SELECT * FROM quotations` → **0 filas**
+- [x] `SELECT * FROM payments` → **0 filas**
+- [x] `SELECT * FROM provider_payments / bus_payments / accommodation_payments` → **0 filas**
+- [x] `SELECT * FROM buses / hotel_rooms / hotel_room_types` → **0 filas**
+- [x] `SELECT * FROM travel_access_codes` → **0 filas**
+- [x] **Escritura todavía bloqueada:** `UPDATE travel_activities SET title='x'` → 0 filas
+- [x] Como admin dueño: la web sigue igual, sin regresiones
+- [x] Como `anon`: sin cambios respecto de antes de esta fase
+- [x] Bonus no planeado: coordinador logueado en la propia web admin
+      (`/travels/dashboard`) ve solo su viaje asignado, sin errores — la UI pensada para el
+      admin ya tolera un resultado filtrado por RLS sin romperse
 - [ ] `EXPLAIN ANALYZE` de `SELECT * FROM travels` como coordinador: el helper no se
-      reevalúa por fila
-- [ ] Advisors sin hallazgos nuevos
+      reevalúa por fila — no corrido, queda para la Fase 5 (matriz de verificación final)
+- [x] Advisors sin hallazgos nuevos (10 nuevos son `multiple_permissive_policies`,
+      esperados y explicados abajo; el resto son los 25 `auth_rls_initplan`
+      preexistentes de la Fase 1)
+
+### Usuario de prueba usado
+
+Dos rondas, porque la primera enseñó algo importante:
+
+1. **Primera ronda** — coordinador `bb000000-…-002` (Rodrigo Pérez, del seed) vinculado a
+   un usuario nuevo de Auth. Cubrió el Bloque 1 completo, pero varias tablas del seed
+   (`travel_activities`, `travel_accommodations`, `travel_services`, `travel_media`,
+   `providers`) dieron 0 filas porque el seed no tiene datos ahí para ningún viaje — no
+   porque la policy fallara. Se generaron viajes/coordinadores nuevos vía UI para tener
+   datos reales que cubrir con el checklist.
+2. **Segunda ronda (la que valida el aislamiento de verdad)** — los viajes nuevos se
+   crearon logueado como un usuario de Auth nuevo, lo que lo convirtió en **dueño**
+   (`owner_id`) de esos viajes y coordinadores — vincularle además `user_id` a un
+   coordinador de ese mismo tenant no prueba nada, porque la policy `*_owner` ya le da
+   acceso a todo. Se creó un **tercer usuario de Auth, sin ser dueño de nada**, vinculado a
+   `Samantha Walsh` (coordinadora de un solo viaje, con bus y actividad reales) para
+   aislar el eje de coordinador del eje de dueño. Con esa identidad: solo ve ese viaje, sus
+   compañeros de coordinación del mismo viaje (no los de otros viajes del mismo tenant), el
+   proveedor de su bus, y nada de lo financiero — confirmado por SQL directo y por la UI
+   real (`/travels/dashboard`).
+
+**Gotcha para la próxima fase:** para probar aislamiento de coordinador hace falta un
+usuario de Auth que **no sea dueño de nada** — si el mismo usuario creó los datos de prueba
+desde la UI, ya es owner de ese tenant y el resultado no prueba el eje de coordinador por
+separado.
+
+### Sobre los 10 hallazgos nuevos de advisors (`multiple_permissive_policies`)
+
+Uno por tabla (`travels`, `travel_buses`, `travel_activities`, `travelers`, `travel_media`,
+`travel_accommodations`, `travel_services`, `travel_coordinators`, `coordinators`,
+`providers`): cada una ahora tiene dos policies permissive de `SELECT` para `authenticated`
+(`*_owner` + `*_coordinator_select`), que Postgres evalúa ambas y combina con `OR`. Es el
+costo explícito y esperado del diseño aditivo del plan — no un error a corregir.
 
 ---
 

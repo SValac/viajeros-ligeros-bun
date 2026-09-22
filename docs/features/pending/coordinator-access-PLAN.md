@@ -9,7 +9,7 @@ asignados — sin ver **nada** de la información financiera de la agencia.
 **Complejidad:** Media — 3 migraciones nuevas (identidad + RLS lectura + RLS escritura),
 1 Edge Function nueva (primera del repo), UI de invitación en la web admin.
 
-**Estado:** 🚧 EN PROGRESO — Fase 1 completa, Fases 2-5 pendientes.
+**Estado:** 🚧 EN PROGRESO — Fases 1-2 completas, Fases 3-5 pendientes.
 
 **✅ Dependencia satisfecha:** [Saneamiento del modelo de datos](../completed/data-model-cleanup-PLAN.md)
 está completo, verificado y mergeado a `main` (2026-09-22). Esa feature sacó las columnas
@@ -129,7 +129,7 @@ Supabase remoto (`db:push`).
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
 | [fase1-identidad.md](plan/coordinator-access-fase1-identidad.md) | Schema `private`, `coordinators.user_id`, helpers `is_travel_coordinator` / `can_coordinator_edit` | Ninguna | ✅ Completa |
-| [fase2-rls-lectura.md](plan/coordinator-access-fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | Pendiente |
+| [fase2-rls-lectura.md](plan/coordinator-access-fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | ✅ Completa |
 | [fase3-rls-escritura.md](plan/coordinator-access-fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | Pendiente |
 | [fase4-invitacion.md](plan/coordinator-access-fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | Pendiente |
 | [fase5-verificacion.md](plan/coordinator-access-fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | Pendiente |
@@ -180,7 +180,7 @@ app/
 | `travel_buses`, `travel_services`, `travel_accommodations` | RW | R (solo lectura) | parcial |
 | `providers` | RW | R — solo los usados por sus viajes | ❌ |
 | `quotations`, `quotation_*`, `payments`, `*_payments` | RW | ❌ **sin acceso** | ❌ |
-| `coordinators` | RW | ⚠️ decisión abierta (Fase 2, Bloque 2a) | ❌ |
+| `coordinators` | RW | R — solo compañeros de coordinación del mismo viaje | ❌ |
 | `buses`, `hotel_rooms`, `hotel_room_types` | RW | ❌ sin acceso | ❌ |
 
 **Lectura vs. escritura:** la membresía habilita **leer siempre** (el coordinador conserva
