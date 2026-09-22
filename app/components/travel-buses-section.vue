@@ -330,6 +330,7 @@ function goToCotizacion() {
     </template>
 
     <TravelSectionEmptyState
+      v-else
       icon="i-lucide-bus"
       title="Sin autobuses apartados"
       :navigate="goToCotizacion"
