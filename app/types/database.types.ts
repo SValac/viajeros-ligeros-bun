@@ -171,6 +171,7 @@ export type Database = {
           owner_id: string
           phone: string
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           age: number
@@ -182,6 +183,7 @@ export type Database = {
           owner_id: string
           phone: string
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           age?: number
@@ -193,6 +195,7 @@ export type Database = {
           owner_id?: string
           phone?: string
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

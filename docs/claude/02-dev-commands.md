@@ -19,7 +19,17 @@ bun run build
 
 # Preview production build
 bun run preview
+
+# Supabase local
+bun run db:start   # levanta Supabase local (Docker)
+bun run db:reset   # aplica migraciones + corre supabase/seed.sql
+bun run db:types   # regenera app/types/database.types.ts
+bun run db:push    # aplica migraciones pendientes al proyecto remoto
 ```
+
+`bun run db:reset` deja la base con datos de ejemplo y un usuario de desarrollo ya logueable:
+`dev@viajeros-ligeros.local` / `password123` (solo existe en local, sembrado en
+`supabase/seed.sql`).
 
 ---
 

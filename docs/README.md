@@ -23,11 +23,22 @@ docs/
 └── features/                    # Documentación de features
     ├── [FEATURE-ACTUAL].md      # Feature en desarrollo (NO en subcarpetas)
     ├── completed/               # Features implementadas y completadas
-    │   ├── travel-feature.md
-    │   ├── feature-itinerary-services.md
-    │   ├── provider-catalog-feature.md
-    │   └── filter-catalogs-feature.md
-    └── pending/                 # Features planificadas pero no iniciadas
+    │   ├── travel-feature.md              # feature de un solo doc → archivo suelto
+    │   ├── filter-catalogs-feature.md
+    │   ├── data-model-cleanup/            # feature con PLAN + fases → carpeta propia
+    │   │   ├── PLAN.md
+    │   │   ├── fase1-travel-internals.md
+    │   │   └── ...
+    │   └── refactor-stores/               # serie de docs relacionados → carpeta propia
+    │       ├── auth-store.md
+    │       └── ...
+    └── pending/                 # Features planificadas o en progreso, no cerradas
+        ├── coordinator-access/
+        │   ├── PLAN.md
+        │   └── fase1-identidad.md ...
+        └── travel-access-code/
+            ├── PLAN.md
+            └── fase0-rename-status.md ...
 
 CLAUDE.md                        # En RAÍZ del proyecto (requerido por Claude Code)
 ```
@@ -42,16 +53,51 @@ El archivo de la feature **que estamos trabajando actualmente** se encuentra en 
 docs/features/provider-catalog-feature.md
 ```
 
+### Un solo doc vs. varios docs relacionados
+- **Feature de un solo documento** (plan único, sin fases): archivo suelto directamente en
+  `completed/` o `pending/` — ej. `docs/features/completed/multi-tenancy.md`.
+- **Feature con PLAN + fases, o una serie de docs relacionados** (refactors de varios
+  stores, migraciones de una misma integración, etc.): su propia **carpeta** nombrada con
+  el slug de la feature, con el plan general como `PLAN.md` y cada fase como
+  `faseN-nombre.md` — ej. `docs/features/pending/coordinator-access/PLAN.md` +
+  `docs/features/pending/coordinator-access/fase1-identidad.md`. Esto evita mezclar las
+  fases de features distintas en una sola carpeta compartida (`pending/plan/` antes tenía
+  las fases de dos features distintas sin ninguna separación).
+- Los links entre docs de una misma carpeta son relativos (`fase2.md`, no la ruta completa);
+  entre carpetas distintas, usar `../otra-feature/PLAN.md`.
+
+### Fases individuales: se mueven apenas cierran, no esperan a que cierre toda la feature
+Una feature con varias fases puede tardar semanas en completarse por entero. **Cada fase
+se mueve a `completed/` en cuanto su propio checklist queda cerrado**, aunque el resto de
+la feature siga en curso — no hay que esperar a la última fase para mover todo junto. Solo
+el `PLAN.md` (índice general) y la(s) fase(s) todavía abiertas se quedan en `pending/`.
+
+Esto significa que, mientras una feature está en progreso, su carpeta vive **partida en
+dos**: las fases ya cerradas en `docs/features/completed/[feature]/faseN.md`, y el
+`PLAN.md` + fase(s) abiertas en `docs/features/pending/[feature]/`. El `PLAN.md` enlaza a
+cada fase con su ruta real (`../../completed/[feature]/faseN.md` para las cerradas,
+`faseN.md` para las que siguen en la misma carpeta). Cuando cierra la última fase, todo el
+contenido de `completed/[feature]/` se junta de nuevo bajo una sola carpeta (moviendo el
+`PLAN.md` ahí también) y `pending/[feature]/` desaparece.
+
+**Ejemplo real:** `coordinator-access` tiene las Fases 1-4 en
+`completed/coordinator-access/` y la Fase 5 (todavía en curso) + el `PLAN.md` en
+`pending/coordinator-access/`.
+
 ### Features Completadas
 Cuando una feature es **completada y mergeada**, su documentación se mueve a:
 ```
-docs/features/completed/[nombre-feature].md
+docs/features/completed/[nombre-feature].md              # un solo doc
+docs/features/completed/[nombre-feature]/PLAN.md          # PLAN + fases
+docs/features/completed/[nombre-feature]/faseN-*.md
 ```
 
 ### Features Pendientes
-Features **planificadas pero no iniciadas** se guardan en:
+Features **planificadas o en progreso, sin cerrar todas sus fases**, se guardan en:
 ```
-docs/features/pending/[nombre-feature].md
+docs/features/pending/[nombre-feature].md                 # un solo doc
+docs/features/pending/[nombre-feature]/PLAN.md            # PLAN + fases
+docs/features/pending/[nombre-feature]/faseN-*.md
 ```
 
 ## Estado Actual
@@ -119,9 +165,19 @@ Al crear documentación para una nueva feature, incluir:
 
 Cuando cambies el estado de una feature:
 
-### Feature completada
+### Fase individual cerrada (feature con varias fases sigue en curso)
 ```bash
+git mv docs/features/pending/[feature-name]/faseN-*.md docs/features/completed/[feature-name]/
+# actualizar el link a esa fase en pending/[feature-name]/PLAN.md a la nueva ruta
+```
+
+### Feature completada (cerró su última fase)
+```bash
+# un solo doc
 git mv docs/features/[feature-name].md docs/features/completed/
+# PLAN + fases: mover el PLAN.md (y cualquier fase que quedara en pending/) a la carpeta
+# de completed/ donde ya viven las fases previas
+git mv docs/features/pending/[feature-name]/PLAN.md docs/features/completed/[feature-name]/
 ```
 
 ### Feature nueva (pendiente → actual)
