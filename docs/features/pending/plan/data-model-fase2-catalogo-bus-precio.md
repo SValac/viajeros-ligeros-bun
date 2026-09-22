@@ -1,8 +1,8 @@
 # Fase 2 — Eliminar `buses.rental_price` del catálogo
 
-**Estado:** Pendiente
+**Estado:** ✅ Completa
 **Dependencia:** Ninguna
-**Migración:** `supabase migration new drop_buses_rental_price`
+**Migración:** `supabase migration new drop_buses_rental_price` → `20260921234555_drop_buses_rental_price.sql`
 
 ---
 
@@ -84,13 +84,21 @@ objeto de estado inicial, o el form queda con un campo fantasma que rompe el sub
 
 ## Verificación
 
-- [ ] Export de los precios guardado (si se decidió conservarlo)
-- [ ] El catálogo de autobuses de un proveedor lista y se ve bien, sin la columna
-- [ ] Crear un autobús nuevo en el catálogo → funciona, sin campo de precio
-- [ ] Editar un autobús existente → funciona
-- [ ] El flujo de cotización de buses sigue intacto (ahí vive el precio real)
-- [ ] `grep -rn "rentalPrice" app/ | grep -v travel-bus` → sin resultados
-- [ ] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+- [x] Export de los precios guardado (si se decidió conservarlo) — no aplicó, catálogo local vacío antes del drop (0 filas)
+- [x] El catálogo de autobuses de un proveedor lista y se ve bien, sin la columna
+- [x] Crear un autobús nuevo en el catálogo → funciona, sin campo de precio
+- [x] Editar un autobús existente → funciona
+- [x] El flujo de cotización de buses sigue intacto (ahí vive el precio real)
+- [x] `grep -rn "rentalPrice" app/ | grep -v travel-bus` → sin resultados nuevos (los que quedan son `TravelBus`/`travel_buses`, Fase 3)
+- [x] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+
+### Ajuste sobre el análisis original del plan
+
+El plan decía que el único uso real de `buses.rental_price` era prellenar el form
+muerto `travel-bus-form.vue`. En la práctica también lo usaba **`cotizacion-bus-form.vue`**
+(vivo, en `/travels/[id]/cotizacion`) para prellenar `totalCost` como precio de referencia
+al elegir una unidad del catálogo. Se sacó ese prellenado (el usuario ahora carga el costo
+a mano) — verificado en el flujo real de cotización.
 
 ---
 
