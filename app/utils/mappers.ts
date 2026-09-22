@@ -113,7 +113,6 @@ export function mapBusRowToDomain(row: Tables<'buses'>): Bus {
     model: row.model ?? undefined,
     year: row.year ?? undefined,
     seatCount: row.seat_count,
-    rentalPrice: row.rental_price,
     active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -127,7 +126,6 @@ export function mapBusToInsert(data: BusFormData): Omit<Tables<'buses'>, 'id' | 
     model: data.model ?? null,
     year: data.year ?? null,
     seat_count: data.seatCount,
-    rental_price: data.rentalPrice,
     active: data.active,
   };
 }
@@ -137,15 +135,21 @@ export function mapBusToInsert(data: BusFormData): Omit<Tables<'buses'>, 'id' | 
 // ============================================================================
 
 export function mapTravelRowToDomain(
-  row: Tables<'travels'>,
+  row: Tables<'travels'> & {
+    travel_internals?: Pick<Tables<'travel_internals'>, 'internal_notes' | 'total_operation_cost' | 'projected_profit'> | Pick<Tables<'travel_internals'>, 'internal_notes' | 'total_operation_cost' | 'projected_profit'>[] | null;
+  },
   extras?: {
     coordinatorIds?: string[];
     itinerary?: TravelActivity[];
     services?: TravelService[];
     buses?: TravelBus[];
     accommodations?: TravelAccommodation[];
+    internals?: Pick<Tables<'travel_internals'>, 'internal_notes' | 'total_operation_cost' | 'projected_profit'> | null;
   },
 ): Travel {
+  const internals = extras?.internals !== undefined
+    ? extras.internals
+    : (Array.isArray(row.travel_internals) ? row.travel_internals[0] : row.travel_internals);
   return {
     id: row.id,
     label: row.label,
@@ -156,10 +160,10 @@ export function mapTravelRowToDomain(
     description: row.description,
     imageUrl: row.image_url ?? undefined,
     status: row.status,
-    internalNotes: row.internal_notes ?? undefined,
-    totalOperationCost: row.total_operation_cost ?? undefined,
+    internalNotes: internals?.internal_notes ?? undefined,
+    totalOperationCost: internals?.total_operation_cost ?? undefined,
     minimumSeats: row.minimum_seats ?? undefined,
-    projectedProfit: row.projected_profit ?? undefined,
+    projectedProfit: internals?.projected_profit ?? undefined,
     accumulatedTravelers: row.accumulated_travelers ?? undefined,
     coordinatorIds: extras?.coordinatorIds ?? [],
     itinerary: extras?.itinerary ?? [],
@@ -205,7 +209,6 @@ export function mapTravelBusRowToDomain(row: Tables<'travel_buses'>): TravelBus 
     operator2Name: row.operator2_name ?? undefined,
     operator2Phone: row.operator2_phone ?? undefined,
     seatCount: row.seat_count,
-    rentalPrice: Number(row.rental_price),
   };
 }
 
@@ -243,11 +246,18 @@ export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>,
     description: data.description,
     image_url: data.imageUrl ?? null,
     status: data.status,
+    minimum_seats: data.minimumSeats ?? null,
+    accumulated_travelers: data.accumulatedTravelers ?? null,
+  };
+}
+
+export function mapTravelInternalsToInsert(
+  data: Partial<Pick<Travel, 'internalNotes' | 'totalOperationCost' | 'projectedProfit'>>,
+): Omit<Tables<'travel_internals'>, 'travel_id' | 'created_at' | 'updated_at'> {
+  return {
     internal_notes: data.internalNotes ?? null,
     total_operation_cost: data.totalOperationCost ?? null,
-    minimum_seats: data.minimumSeats ?? null,
     projected_profit: data.projectedProfit ?? null,
-    accumulated_travelers: data.accumulatedTravelers ?? null,
   };
 }
 

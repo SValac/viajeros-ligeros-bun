@@ -39,9 +39,11 @@ watch(travelId, (id) => {
   }
 });
 
+const isDeleting = ref(false);
+
 // Redirect to dashboard if travel not found
 watchEffect(() => {
-  if (!travel.value && travelId.value) {
+  if (!travel.value && travelId.value && !isDeleting.value) {
     toast.add({
       title: 'Viaje no encontrado',
       description: 'El viaje que buscas no existe',
@@ -140,13 +142,25 @@ async function deleteTravel() {
   const confirmed = confirm(`¿Eliminar el viaje ${travel.value.label}? Esta acción no se puede deshacer.`);
 
   if (confirmed) {
-    await travelsStore.deleteTravel(travel.value.id);
+    isDeleting.value = true;
+    const deleted = await travelsStore.deleteTravel(travel.value.id);
+
+    if (deleted) {
+      toast.add({
+        title: 'Viaje eliminado',
+        description: 'El viaje se ha eliminado correctamente',
+        color: 'success',
+      });
+      router.push('/travels/dashboard');
+      return;
+    }
+
+    isDeleting.value = false;
     toast.add({
-      title: 'Viaje eliminado',
-      description: 'El viaje se ha eliminado correctamente',
-      color: 'success',
+      title: 'No se pudo eliminar el viaje',
+      description: travelsStore.error ?? 'Intentá de nuevo',
+      color: 'error',
     });
-    router.push('/travels/dashboard');
   }
 }
 
@@ -523,5 +537,8 @@ definePageMeta({
         <TravelGallerySection :travel-id="travelId" />
       </UCard>
     </div>
+  </div>
+  <div v-else class="h-full flex items-center justify-center">
+    <UIcon name="i-lucide-loader-circle" class="w-8 h-8 animate-spin text-muted" />
   </div>
 </template>

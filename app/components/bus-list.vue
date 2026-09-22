@@ -137,15 +137,6 @@ const columns: TableColumn<Bus>[] = [
     },
   },
   {
-    accessorKey: 'rentalPrice',
-    header: 'Precio de renta',
-    cell: ({ row }) => {
-      const val = row.getValue('rentalPrice') as number;
-      const formatted = val.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-      return h('span', { class: 'text-sm font-medium' }, formatted);
-    },
-  },
-  {
     id: 'actions',
     header: 'Acciones',
     cell: ({ row }) => {

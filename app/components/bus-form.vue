@@ -34,8 +34,6 @@ const schema = z.object({
     .int()
     .min(1, 'Mínimo 1 asiento')
     .max(100, 'Máximo 100 asientos'),
-  rentalPrice: z.coerce.number()
-    .min(0, 'El precio no puede ser negativo'),
   active: z.boolean(),
 });
 
@@ -46,7 +44,6 @@ const state = ref<Schema>({
   model: props.bus?.model || '',
   year: props.bus?.year ?? undefined,
   seatCount: props.bus?.seatCount || 1,
-  rentalPrice: props.bus?.rentalPrice || 0,
   active: props.bus?.active ?? true,
 });
 
@@ -60,7 +57,6 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
     model: event.data.model || undefined,
     year: event.data.year || undefined,
     seatCount: event.data.seatCount,
-    rentalPrice: event.data.rentalPrice,
     active: event.data.active,
     providerId: props.providerId,
     id: props.bus?.id,
@@ -103,8 +99,8 @@ function onCancel() {
       </UFormField>
     </div>
 
-    <!-- Año, Asientos, Precio -->
-    <div class="grid grid-cols-3 gap-4">
+    <!-- Año, Asientos -->
+    <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Año"
         name="year"
@@ -125,18 +121,6 @@ function onCancel() {
           v-model="state.seatCount"
           type="number"
           placeholder="40"
-        />
-      </UFormField>
-
-      <UFormField
-        label="Precio de renta"
-        name="rentalPrice"
-        required
-      >
-        <UInput
-          v-model="state.rentalPrice"
-          type="number"
-          placeholder="5000"
         />
       </UFormField>
     </div>

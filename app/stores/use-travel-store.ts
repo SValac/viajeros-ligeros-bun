@@ -82,12 +82,14 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     error.value = null;
     try {
       const travel = await repository.insertTravel(data);
+      const internals = await repository.upsertTravelInternals(travel.id, data);
       const extras = {
         coordinatorIds: data.coordinatorIds,
         itinerary: data.itinerary,
         services: data.services,
         buses: data.buses,
         accommodations: [],
+        internals,
       };
 
       if (data.itinerary.length > 0)
@@ -139,17 +141,25 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         'description',
         'imageUrl',
         'status',
-        'internalNotes',
-        'totalOperationCost',
         'minimumSeats',
-        'projectedProfit',
         'accumulatedTravelers',
       ];
+      const travelInternalKeys: (keyof TravelUpdateData)[] = [
+        'internalNotes',
+        'totalOperationCost',
+        'projectedProfit',
+      ];
       const haveTravelFields = travelRootKeys.some(key => key in data);
+      const haveInternalFields = travelInternalKeys.some(key => key in data);
 
       if (haveTravelFields) {
         travelRow = await repository.updateTravel(id, data);
       }
+
+      let internals: Tables<'travel_internals'> | null = null;
+      if (haveInternalFields)
+        internals = await repository.upsertTravelInternals(id, data);
+
       let itinerary = travels.value[index]?.itinerary ?? [];
       let services = travels.value[index]?.services ?? [];
       let buses = travels.value[index]?.buses ?? [];
@@ -176,6 +186,11 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
             services,
             buses,
             accommodations,
+            internals: internals ?? {
+              internal_notes: existingTravel.internalNotes ?? null,
+              total_operation_cost: existingTravel.totalOperationCost ?? null,
+              projected_profit: existingTravel.projectedProfit ?? null,
+            },
           })
         : {
             ...existingTravel,
@@ -184,6 +199,11 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
             services,
             buses,
             accommodations,
+            ...(internals && {
+              internalNotes: internals.internal_notes ?? undefined,
+              totalOperationCost: internals.total_operation_cost ?? undefined,
+              projectedProfit: internals.projected_profit ?? undefined,
+            }),
           };
 
       return true;
@@ -218,55 +238,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
   async function updateTravelStatus(id: string, status: TravelStatus): Promise<boolean> {
     return updateTravel(id, { status });
-  }
-
-  async function addBusToTravel(travelId: string, data: Omit<TravelBus, 'id'>): Promise<TravelBus | null> {
-    const index = travels.value.findIndex(t => t.id === travelId);
-    if (index === -1) {
-      error.value = 'Viaje no encontrado';
-      return null;
-    }
-
-    const existingTravel = travels.value[index];
-    if (!existingTravel) {
-      error.value = 'Viaje no encontrado';
-      return null;
-    }
-
-    const busStore = useBusStore();
-    let resolvedBusId = data.busId;
-
-    if (!resolvedBusId) {
-      const catalogBus = await busStore.addBus({
-        providerId: data.providerId,
-        brand: data.brand,
-        model: data.model,
-        year: data.year,
-        seatCount: data.seatCount,
-        rentalPrice: data.rentalPrice,
-        active: true,
-      });
-      resolvedBusId = catalogBus.id;
-    }
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const newBus = await repository.insertTravelBus(travelId, { ...data, busId: resolvedBusId });
-      travels.value[index] = {
-        ...existingTravel,
-        buses: [...(existingTravel.buses ?? []), newBus],
-      };
-
-      return newBus;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al agregar autobús al viaje';
-      return null;
-    }
-    finally {
-      loading.value = false;
-    }
   }
 
   async function updateTravelBus(travelId: string, busId: string, data: Partial<Omit<TravelBus, 'id'>>): Promise<boolean> {
@@ -435,7 +406,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     updateTravel,
     deleteTravel,
     updateTravelStatus,
-    addBusToTravel,
     updateTravelBus,
     removeBusFromTravel,
     updateTravelAccommodation,
