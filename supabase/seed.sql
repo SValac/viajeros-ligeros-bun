@@ -3,6 +3,7 @@
 -- UUIDs fijos para repetibilidad (solo hex 0-9 a-f).
 --
 -- UUID scheme (prefijo por entidad):
+--   auth user (dueño del seed)  00000000-…-000000000001
 --   providers (transportation) aa100000-…
 --   providers (accommodation)  aa200000-…
 --   providers (guides)         aa300000-…
@@ -24,15 +25,52 @@
 --   travelers                  ac000000-…
 
 -- ============================================================
+-- DEV AUTH USER — dueño (owner_id) de todos los datos de este seed
+-- Login local: dev@viajeros-ligeros.local / password123
+-- Solo existe en local (bun run db:reset la recrea) — nunca en remoto.
+-- ============================================================
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password,
+  email_confirmed_at, confirmation_token, recovery_token,
+  email_change_token_new, email_change,
+  raw_app_meta_data, raw_user_meta_data, created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '00000000-0000-0000-0000-000000000001',
+  'authenticated',
+  'authenticated',
+  'dev@viajeros-ligeros.local',
+  crypt('password123', gen_salt('bf')),
+  now(), '', '', '', '',
+  '{"provider":"email","providers":["email"]}', '{}',
+  now(), now()
+)
+on conflict (id) do nothing;
+
+insert into auth.identities (
+  id, user_id, provider_id, identity_data, provider,
+  last_sign_in_at, created_at, updated_at
+) values (
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
+  '{"sub":"00000000-0000-0000-0000-000000000001","email":"dev@viajeros-ligeros.local"}'::jsonb,
+  'email',
+  now(), now(), now()
+)
+on conflict (provider_id, provider) do nothing;
+
+-- ============================================================
 -- PROVIDERS — transportation
 -- ============================================================
 insert into public.providers (
-  id, name, category, description,
+  id, owner_id, name, category, description,
   location_city, location_state, location_country,
   contact_name, contact_phone, contact_email, active
 ) values
 (
   'aa100000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Aerovías del Sur',
   'transportation',
   'Traslados aéreos y coordinación de vuelos grupales',
@@ -41,6 +79,7 @@ insert into public.providers (
 ),
 (
   'aa100000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
   'Conexiones Turísticas MTY',
   'transportation',
   'Servicio de shuttles y traslados privados para grupos',
@@ -49,6 +88,7 @@ insert into public.providers (
 ),
 (
   'aa100000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000001',
   'Renta de Vans Premium',
   'transportation',
   'Renta de vans de lujo para grupos pequeños',
@@ -61,12 +101,13 @@ on conflict (id) do nothing;
 -- PROVIDERS — accommodation
 -- ============================================================
 insert into public.providers (
-  id, name, category, description,
+  id, owner_id, name, category, description,
   location_city, location_state, location_country,
   contact_name, contact_phone, contact_email, active
 ) values
 (
   'aa200000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Hotel Sierra Madre',
   'accommodation',
   'Hotel boutique en la sierra con vista panorámica',
@@ -75,6 +116,7 @@ insert into public.providers (
 ),
 (
   'aa200000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
   'Posada Los Pinos',
   'accommodation',
   'Posada rústica de montaña, ideal para grupos de naturaleza',
@@ -83,6 +125,7 @@ insert into public.providers (
 ),
 (
   'aa200000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000001',
   'Hotel Colonial Zacatecas',
   'accommodation',
   'Hotel de estilo colonial en el centro histórico',
@@ -95,12 +138,13 @@ on conflict (id) do nothing;
 -- PROVIDERS — guides
 -- ============================================================
 insert into public.providers (
-  id, name, category, description,
+  id, owner_id, name, category, description,
   location_city, location_state, location_country,
   contact_name, contact_phone, contact_email, active
 ) values
 (
   'aa300000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Guías de Montaña MTY',
   'guides',
   'Guías certificados para senderismo y escalada',
@@ -109,6 +153,7 @@ insert into public.providers (
 ),
 (
   'aa300000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
   'Ecoturismo Noreste',
   'guides',
   'Guías especializados en flora y fauna del noreste',
@@ -117,6 +162,7 @@ insert into public.providers (
 ),
 (
   'aa300000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000001',
   'Aventura y Senderos MX',
   'guides',
   'Expediciones y rutas extremas en el norte del país',
@@ -129,12 +175,13 @@ on conflict (id) do nothing;
 -- PROVIDERS — bus_agencies
 -- ============================================================
 insert into public.providers (
-  id, name, category, description,
+  id, owner_id, name, category, description,
   location_city, location_state, location_country,
   contact_name, contact_phone, contact_email, active
 ) values
 (
   'aa400000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Transportes Del Norte',
   'bus_agencies',
   'Empresa de autobuses de largo recorrido y charters grupales',
@@ -143,6 +190,7 @@ insert into public.providers (
 ),
 (
   'aa400000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
   'Autobuses Ejecutivos del Bajío',
   'bus_agencies',
   'Autobuses de lujo para grupos ejecutivos y turísticos',
@@ -151,6 +199,7 @@ insert into public.providers (
 ),
 (
   'aa400000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000001',
   'Flecha Roja Noreste',
   'bus_agencies',
   'Servicio económico de autobuses para grupos escolares y turismo social',
@@ -163,12 +212,13 @@ on conflict (id) do nothing;
 -- PROVIDERS — food_services
 -- ============================================================
 insert into public.providers (
-  id, name, category, description,
+  id, owner_id, name, category, description,
   location_city, location_state, location_country,
   contact_name, contact_phone, contact_email, active
 ) values
 (
   'aa500000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Catering Viajes México',
   'food_services',
   'Servicio de catering y lunch box para grupos en viaje',
@@ -177,6 +227,7 @@ insert into public.providers (
 ),
 (
   'aa500000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
   'Comedor El Camino Real',
   'food_services',
   'Restaurante de carretera con menú para grupos y paradas programadas',
@@ -189,12 +240,13 @@ on conflict (id) do nothing;
 -- PROVIDERS — other
 -- ============================================================
 insert into public.providers (
-  id, name, category, description,
+  id, owner_id, name, category, description,
   location_city, location_state, location_country,
   contact_name, contact_phone, contact_email, active
 ) values
 (
   'aa600000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Seguros Turísticos Nacional',
   'other',
   'Pólizas de seguro de viaje para grupos nacionales',
@@ -207,10 +259,11 @@ on conflict (id) do nothing;
 -- COORDINATORS
 -- ============================================================
 insert into public.coordinators (
-  id, name, age, phone, email, notes
+  id, owner_id, name, age, phone, email, notes
 ) values
 (
   'bb000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Sofía Martínez',
   34,
   '8191234567',
@@ -219,6 +272,7 @@ insert into public.coordinators (
 ),
 (
   'bb000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
   'Rodrigo Pérez',
   28,
   '8199876543',
@@ -227,6 +281,7 @@ insert into public.coordinators (
 ),
 (
   'bb000000-0000-0000-0000-000000000003',
+  '00000000-0000-0000-0000-000000000001',
   'Valeria Salinas',
   31,
   '8195551234',
@@ -405,11 +460,12 @@ on conflict (id) do nothing;
 -- TRAVELS
 -- ============================================================
 insert into public.travels (
-  id, label, destination, start_date, end_date, price, description,
+  id, owner_id, label, destination, start_date, end_date, price, description,
   status, minimum_seats
 ) values
 (
   'ff000000-0000-0000-0000-000000000001',
+  '00000000-0000-0000-0000-000000000001',
   'Cañón de Santa Elena, Chihuahua',
   'Cañón de Santa Elena, Chihuahua',
   '2026-07-10',
@@ -421,6 +477,7 @@ insert into public.travels (
 ),
 (
   'ff000000-0000-0000-0000-000000000002',
+  '00000000-0000-0000-0000-000000000001',
   'Santuario de Mariposas Monarca, Michoacán',
   'Santuario de Mariposas Monarca, Michoacán',
   '2026-11-20',
