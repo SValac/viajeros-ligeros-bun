@@ -22,7 +22,6 @@ const state = ref<Schema>({
 const isSubmitting = ref(false);
 const submitError = ref('');
 const toast = useToast();
-const router = useRouter();
 const { signIn } = useAuthStore();
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
@@ -41,7 +40,11 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       color: 'success',
     });
 
-    await router.push('/');
+    // Full reload, not router.push: init-stores.client.ts only runs once at app boot,
+    // so a client-side navigation would leave every data store on its pre-login
+    // (or previous user's) state until a manual refresh. Same reasoning as the forced
+    // reload on logout in user-menu.vue.
+    window.location.href = '/';
   }
   catch (error) {
     const message = error instanceof Error ? error.message : 'No pudimos iniciar sesión. Intenta de nuevo.';
