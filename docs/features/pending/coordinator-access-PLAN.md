@@ -9,7 +9,7 @@ asignados — sin ver **nada** de la información financiera de la agencia.
 **Complejidad:** Media — 3 migraciones nuevas (identidad + RLS lectura + RLS escritura),
 1 Edge Function nueva (primera del repo), UI de invitación en la web admin.
 
-**Estado:** 🚧 EN PROGRESO — Fases 1-3 completas, Fases 4-5 pendientes.
+**Estado:** 🚧 EN PROGRESO — Fases 1-4 completas, Fase 5 pendiente.
 
 **✅ Dependencia satisfecha:** [Saneamiento del modelo de datos](../completed/data-model-cleanup-PLAN.md)
 está completo, verificado y mergeado a `main` (2026-09-22). Esa feature sacó las columnas
@@ -131,7 +131,7 @@ Supabase remoto (`db:push`).
 | [fase1-identidad.md](plan/coordinator-access-fase1-identidad.md) | Schema `private`, `coordinators.user_id`, helpers `is_travel_coordinator` / `can_coordinator_edit` | Ninguna | ✅ Completa |
 | [fase2-rls-lectura.md](plan/coordinator-access-fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | ✅ Completa |
 | [fase3-rls-escritura.md](plan/coordinator-access-fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | ✅ Completa |
-| [fase4-invitacion.md](plan/coordinator-access-fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | Pendiente |
+| [fase4-invitacion.md](plan/coordinator-access-fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | ✅ Completa |
 | [fase5-verificacion.md](plan/coordinator-access-fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | Pendiente |
 
 > Al terminar cada fase, actualizar su "Estado" acá y en el propio documento de la fase

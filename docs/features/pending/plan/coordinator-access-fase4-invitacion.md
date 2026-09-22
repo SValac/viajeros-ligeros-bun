@@ -1,6 +1,6 @@
 # Fase 4 — Invitación de coordinadores
 
-**Estado:** Pendiente
+**Estado:** ✅ Completa
 **Dependencia:** Fase 1 (necesita `coordinators.user_id`). Independiente de las Fases 2-3,
 puede ir en paralelo.
 **Entregables:** Edge Function `invite-coordinator` (la **primera del repo**) + UI en la
@@ -166,23 +166,51 @@ puede consultar. Opciones: agregar `invited_at` a `coordinators` y mostrar
 "pendiente/activo" de forma aproximada, o que la Edge Function devuelva el estado. **Lo
 primero es más simple y suficiente.**
 
+> **Decisión final (implementación):** se simplificó a solo dos estados — "sin cuenta"
+> (`userId === null`, botón "Invitar") y "invitado" (`userId !== null`, badge + "Revocar").
+> No se agregó `invited_at` ni distinción pendiente/activo ni botón de "reenviar
+> invitación". Suficiente para el volumen actual (pocos coordinadores, la agencia sabe si
+> ya invitó a alguien); reconsiderar si hace falta reenviar una invitación expirada sin
+> tener que revocar y volver a invitar.
+
 ---
 
 ## Verificación
 
-- [ ] Admin invita a un coordinador propio → llega el email, `user_id` queda seteado
-- [ ] El coordinador acepta, setea contraseña y puede loguearse
-- [ ] Logueado, ve **solo** sus viajes asignados (revalida las Fases 2-3 end-to-end)
-- [ ] Admin A intenta invitar a un coordinador de la agencia B → **403**
-- [ ] Llamar a la función sin `Authorization` → **401**
-- [ ] Invitar dos veces al mismo → `already_invited`
-- [ ] Invitar con email ya registrado → error claro, no un 500
-- [ ] Coordinador sin email → botón deshabilitado, la función también lo rechaza
-- [ ] Revocar (`user_id = NULL`) → el coordinador deja de ver datos **de inmediato**, sin
+- [x] Admin invita a un coordinador propio → llega el email, `user_id` queda seteado
+- [x] El coordinador acepta, setea contraseña y puede loguearse (validado en Fase 2/3 con
+      el usuario coordinador de prueba; el link/OTP de Mailpit funciona igual para
+      cualquier invitación de esta fase)
+- [x] Logueado, ve **solo** sus viajes asignados (revalida las Fases 2-3 end-to-end)
+- [x] Admin A intenta invitar a un coordinador de la agencia B → **403** (`not_authorized`)
+- [x] Llamar a la función sin `Authorization` → **401**
+- [x] Invitar dos veces al mismo → `already_invited` (409)
+- [x] Invitar con email ya registrado → `email_already_registered` (409), no un 500
+- [x] Coordinador sin email → botón deshabilitado en la UI, y la función devuelve
+      `missing_email` (400) si se llama igual
+- [x] Revocar (`user_id = NULL`) → el coordinador deja de ver datos **de inmediato**, sin
       esperar el refresh del token
-- [ ] La service_role key **no** aparece en el bundle del cliente:
-      `grep -r "service_role" .output/` sin resultados
-- [ ] `bun run typecheck` y `bun run lint` limpios
+- [x] La service_role key **no** aparece en el bundle del cliente: `bun run build` +
+      `grep -rli "service_role" .output/` sin resultados
+- [x] `bun run typecheck` y `bun run lint` limpios (el único error de lint pendiente en el
+      repo es preexistente en `plans/supabase-sanitization-validations.md`, sin relación
+      con esta fase)
+
+### Bug encontrado y arreglado durante la verificación manual
+
+`revokeAccess()` hacía `update({ user_id: null })` sin `.select()` — PostgREST devuelve
+`204` igual aunque RLS bloquee la fila (0 filas afectadas), así que un revoke fallido se
+veía como éxito y la UI se quedaba pegada sin ningún error. Encadenar `.select().single()`
+(mismo patrón que ya usaba `update()`) hace que un update bloqueado lance un error real.
+Causa más probable del caso real: la sesión del browser no era la del admin dueño al hacer
+el click. Ver commit `fix(coordinator-access): revokeAccess quedaba como no-op silencioso`.
+
+### Datos de prueba usados
+
+Agencia A (`dev@viajeros-ligeros.local`, seed) para los casos propios; agencia B fue el
+propio usuario de prueba `isaac@gmail.com` (creado en Fase 2/3 como coordinador sin
+ownership) reutilizado como dueño de un coordinador nuevo (`Liberty Galloway`) para probar
+el 403 cross-tenant — no hizo falta crear una tercera identidad.
 
 ---
 
