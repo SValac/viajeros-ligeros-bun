@@ -1,8 +1,8 @@
 # Fase 1 — Identidad del coordinador
 
-**Estado:** Pendiente
+**Estado:** ✅ Completa
 **Dependencia:** Ninguna
-**Migración:** `supabase migration new coordinator_identity`
+**Migración:** `supabase migration new coordinator_identity` → `20260922013402_coordinator_identity.sql`
 
 ---
 
@@ -170,17 +170,35 @@ SELECT private.can_coordinator_edit('<travel-id-completed>');    -- false
 
 Checklist:
 
-- [ ] Los 4 helpers devuelven lo esperado ejecutados **como el usuario coordinador** (no
-      como `postgres`; usar `SET request.jwt.claims` o probar vía la app/PostgREST)
-- [ ] `SELECT * FROM travels` como el coordinador → **0 filas** (fail-closed confirmado)
-- [ ] `SELECT * FROM travel_activities` como el coordinador → **0 filas**
-- [ ] `SELECT * FROM travelers` como el coordinador → **0 filas**
-- [ ] La web admin sigue funcionando sin cambios para el admin dueño
-- [ ] `private.is_travel_coordinator` **no** aparece como endpoint:
-      `curl "$SUPABASE_URL/rest/v1/rpc/is_travel_coordinator"` → 404
-- [ ] `bun run db:types` corrido y `bun run typecheck` limpio (la columna `user_id` nueva
-      aparece en `database.types.ts`)
-- [ ] Advisors sin hallazgos nuevos
+- [x] Los 4 helpers devuelven lo esperado ejecutados **como el usuario coordinador** (no
+      como `postgres`; usado `SET request.jwt.claims` + `SET ROLE authenticated` vía psql)
+- [x] `SELECT * FROM travels` como el coordinador → **0 filas** (fail-closed confirmado)
+- [x] `SELECT * FROM travel_activities` como el coordinador → **0 filas**
+- [x] `SELECT * FROM travelers` como el coordinador → **0 filas**
+- [x] La web admin sigue funcionando sin cambios para el admin dueño
+- [x] `private.is_travel_coordinator` **no** aparece como endpoint (404 confirmado)
+- [x] `bun run db:types` corrido y `bun run typecheck` limpio (`user_id` aparece en
+      `database.types.ts`)
+- [x] Advisors sin hallazgos nuevos (25, todos `auth_rls_initplan` preexistentes)
+
+### Usuario de prueba usado
+
+Coordinador `bb000000-…-002` (Rodrigo Pérez, del seed — asignado solo al viaje `published`
+`ff000000-…-002`) vinculado a un usuario de Auth creado desde Studio. Cubre en un solo par
+de viajes los 4 casos del checklist: asignado+published (`true`/`true`) y no-asignado
+(el otro viaje del seed, `pending`) en vez de un viaje `completed` dedicado — el seed no
+tiene ninguno, pero el resultado prueba lo mismo (`can_coordinator_edit` en falso fuera de
+`published`/`in_progress`).
+
+### Bug encontrado durante la verificación manual (no relacionado, ya arreglado aparte)
+
+Al loguearse con un usuario nuevo, cerrar sesión y volver a loguearse con otro, la app no
+mostraba ningún dato (viajes, proveedores, coordinadores) hasta refrescar la página a mano.
+Causa: `login.vue` navegaba con `router.push('/')` (client-side) tras el login, pero
+`init-stores.client.ts` — el que hace el `fetchAll()` de cada store — solo corre una vez al
+arrancar la app. El logout ya forzaba `window.location.href` para este mismo motivo
+(evitar cache de Pinia entre usuarios); al login le faltaba el mismo tratamiento. Ver
+commit `4768758`.
 
 ---
 
