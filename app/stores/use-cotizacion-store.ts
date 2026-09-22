@@ -484,8 +484,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
 
     const nuevoPrecio = getPrecioAsientoCalculado.value(quotationId);
-    if (nuevoPrecio === 0)
-      return;
 
     await repository.updateSeatPrice(quotationId, nuevoPrecio);
 
