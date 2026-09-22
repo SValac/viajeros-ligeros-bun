@@ -98,6 +98,7 @@ export function mapCoordinatorToInsert(data: CoordinatorFormData): Omit<Tables<'
     phone: data.phone,
     email: data.email,
     notes: data.notes ?? null,
+    user_id: null,
   };
 }
 
