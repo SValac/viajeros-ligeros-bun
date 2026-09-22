@@ -5,7 +5,6 @@ export type Bus = {
   brand?: string;
   year?: number;
   seatCount: number;
-  rentalPrice: number;
   active: boolean;
   createdAt: string;
   updatedAt: string;

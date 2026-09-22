@@ -263,7 +263,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         model: data.model,
         year: data.year,
         seatCount: data.seatCount,
-        rentalPrice: data.rentalPrice,
         active: true,
       });
       resolvedBusId = catalogBus.id;

@@ -102,10 +102,6 @@ function seleccionarUnidad(bus: Bus) {
   const partes = [bus.brand, bus.model, bus.year ? `(${bus.year})` : null].filter(Boolean);
   formState.unitNumber = partes.length > 0 ? partes.join(' ') : `Unidad ${bus.id.slice(-6)}`;
   formState.capacity = bus.seatCount;
-  // Pre-llenar costo con precio de renta del catálogo si existe
-  if (bus.rentalPrice && !formState.totalCost) {
-    formState.totalCost = bus.rentalPrice;
-  }
 }
 
 function deseleccionarUnidad() {
@@ -238,9 +234,6 @@ function handleCancel() {
                     </p>
                     <p class="text-sm text-muted">
                       {{ busSeleccionado.seatCount }} asientos
-                      <template v-if="busSeleccionado.rentalPrice">
-                        · ${{ busSeleccionado.rentalPrice.toLocaleString('es-MX') }} renta ref.
-                      </template>
                     </p>
                   </div>
                   <UButton
@@ -268,9 +261,6 @@ function handleCancel() {
                     </p>
                     <p class="text-xs text-muted">
                       {{ bus.seatCount }} asientos
-                      <template v-if="bus.rentalPrice">
-                        · ${{ bus.rentalPrice.toLocaleString('es-MX') }}
-                      </template>
                     </p>
                   </div>
                   <span class="i-lucide-chevron-right w-4 h-4 text-muted" />

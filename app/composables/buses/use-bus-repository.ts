@@ -58,8 +58,6 @@ export function useBusRepository() {
       update.active = data.active;
     if (data.seatCount !== undefined)
       update.seat_count = data.seatCount;
-    if (data.rentalPrice !== undefined)
-      update.rental_price = data.rentalPrice;
     if ('brand' in data)
       update.brand = data.brand ?? null;
     if ('model' in data)

@@ -104,7 +104,6 @@ watch(() => state.value.busId, (newBusId) => {
     state.value.model = bus.model ?? '';
     state.value.year = bus.year;
     state.value.seatCount = bus.seatCount;
-    state.value.rentalPrice = bus.rentalPrice;
   }
 });
 

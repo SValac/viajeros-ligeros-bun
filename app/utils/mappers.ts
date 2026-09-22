@@ -113,7 +113,6 @@ export function mapBusRowToDomain(row: Tables<'buses'>): Bus {
     model: row.model ?? undefined,
     year: row.year ?? undefined,
     seatCount: row.seat_count,
-    rentalPrice: row.rental_price,
     active: row.active,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -127,7 +126,6 @@ export function mapBusToInsert(data: BusFormData): Omit<Tables<'buses'>, 'id' | 
     model: data.model ?? null,
     year: data.year ?? null,
     seat_count: data.seatCount,
-    rental_price: data.rentalPrice,
     active: data.active,
   };
 }

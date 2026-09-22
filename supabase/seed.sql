@@ -239,22 +239,22 @@ on conflict (id) do nothing;
 -- BUSES — Transportes Del Norte (aa400000-…-001)
 -- ============================================================
 insert into public.buses (
-  id, provider_id, model, brand, year, seat_count, rental_price, active
+  id, provider_id, model, brand, year, seat_count, active
 ) values
 (
   'cc410000-0000-0000-0000-000000000001',
   'aa400000-0000-0000-0000-000000000001',
-  'OF-1722', 'Mercedes-Benz', 2022, 44, 12500.00, true
+  'OF-1722', 'Mercedes-Benz', 2022, 44, true
 ),
 (
   'cc410000-0000-0000-0000-000000000002',
   'aa400000-0000-0000-0000-000000000001',
-  'K310', 'Volvo', 2021, 40, 11000.00, true
+  'K310', 'Volvo', 2021, 40, true
 ),
 (
   'cc410000-0000-0000-0000-000000000003',
   'aa400000-0000-0000-0000-000000000001',
-  'OF-1721', 'Mercedes-Benz', 2020, 44, 10500.00, true
+  'OF-1721', 'Mercedes-Benz', 2020, 44, true
 )
 on conflict (id) do nothing;
 
@@ -262,17 +262,17 @@ on conflict (id) do nothing;
 -- BUSES — Autobuses Ejecutivos del Bajío (aa400000-…-002)
 -- ============================================================
 insert into public.buses (
-  id, provider_id, model, brand, year, seat_count, rental_price, active
+  id, provider_id, model, brand, year, seat_count, active
 ) values
 (
   'cc420000-0000-0000-0000-000000000001',
   'aa400000-0000-0000-0000-000000000002',
-  'Tourismo', 'Mercedes-Benz', 2023, 46, 15000.00, true
+  'Tourismo', 'Mercedes-Benz', 2023, 46, true
 ),
 (
   'cc420000-0000-0000-0000-000000000002',
   'aa400000-0000-0000-0000-000000000002',
-  'Touring HD', 'Scania', 2022, 44, 14000.00, true
+  'Touring HD', 'Scania', 2022, 44, true
 )
 on conflict (id) do nothing;
 
@@ -280,17 +280,17 @@ on conflict (id) do nothing;
 -- BUSES — Flecha Roja Noreste (aa400000-…-003)
 -- ============================================================
 insert into public.buses (
-  id, provider_id, model, brand, year, seat_count, rental_price, active
+  id, provider_id, model, brand, year, seat_count, active
 ) values
 (
   'cc430000-0000-0000-0000-000000000001',
   'aa400000-0000-0000-0000-000000000003',
-  '9700', 'Volvo', 2020, 50, 9000.00, true
+  '9700', 'Volvo', 2020, 50, true
 ),
 (
   'cc430000-0000-0000-0000-000000000002',
   'aa400000-0000-0000-0000-000000000003',
-  'Troner Plus', 'Dina', 2019, 48, 8500.00, true
+  'Troner Plus', 'Dina', 2019, 48, true
 )
 on conflict (id) do nothing;
 

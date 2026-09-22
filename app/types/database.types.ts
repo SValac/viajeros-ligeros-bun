@@ -124,7 +124,6 @@ export type Database = {
           id: string
           model: string | null
           provider_id: string
-          rental_price: number
           seat_count: number
           updated_at: string
           year: number | null
@@ -136,7 +135,6 @@ export type Database = {
           id?: string
           model?: string | null
           provider_id: string
-          rental_price: number
           seat_count: number
           updated_at?: string
           year?: number | null
@@ -148,7 +146,6 @@ export type Database = {
           id?: string
           model?: string | null
           provider_id?: string
-          rental_price?: number
           seat_count?: number
           updated_at?: string
           year?: number | null
