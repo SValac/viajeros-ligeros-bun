@@ -34,7 +34,6 @@ export type TravelBus = {
   operator2Phone?: string;
   seatCount: number;
   lastRowSeats?: number;
-  rentalPrice: number;
 };
 
 export type TravelBusInsert = Omit<TravelBus, 'id'>;

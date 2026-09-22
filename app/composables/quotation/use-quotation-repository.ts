@@ -574,7 +574,6 @@ export function useQuotationRepository() {
         operator1_name: 'Por asignar',
         operator1_phone: 'Por asignar',
         seat_count: quotationBus.capacity,
-        rental_price: quotationBus.totalCost,
       })
       .select()
       .single();
@@ -620,17 +619,7 @@ export function useQuotationRepository() {
     if (busErr)
       throw busErr;
 
-    const updated = mapQuotationBusRowToDomain(row);
-
-    const { error: travelBusErr } = await supabase
-      .from('travel_buses')
-      .update({ rental_price: updated.totalCost })
-      .eq('quotation_bus_id', id);
-
-    if (travelBusErr)
-      throw new Error(`No se pudo actualizar el autobús en el viaje: ${travelBusErr.message}`);
-
-    return updated;
+    return mapQuotationBusRowToDomain(row);
   }
 
   async function deleteBus(id: string): Promise<void> {

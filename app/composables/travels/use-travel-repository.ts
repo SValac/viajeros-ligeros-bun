@@ -144,7 +144,6 @@ export function useTravelRepository() {
           operator2_name: b.operator2Name ?? null,
           operator2_phone: b.operator2Phone ?? null,
           seat_count: b.seatCount,
-          rental_price: b.rentalPrice,
         })),
       )
       .select();
@@ -228,40 +227,6 @@ export function useTravelRepository() {
   }
 
   /**
-   * Inserts a single bus record for a travel.
-   * Used by `addBusToTravel` when adding an individual bus outside of a full travel update.
-   * @param travelId - UUID of the parent travel
-   * @param data - Bus data to insert
-   * @returns The inserted bus mapped to a domain object
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function insertTravelBus(travelId: string, data: TravelBusInsert): Promise<TravelBus> {
-    const { data: row, error } = await supabase
-      .from('travel_buses')
-      .insert({
-        travel_id: travelId,
-        bus_id: data.busId ?? null,
-        provider_id: data.providerId,
-        model: data.model ?? null,
-        brand: data.brand ?? null,
-        year: data.year ?? null,
-        operator1_name: data.operator1Name,
-        operator1_phone: data.operator1Phone,
-        operator2_name: data.operator2Name ?? null,
-        operator2_phone: data.operator2Phone ?? null,
-        seat_count: data.seatCount,
-        rental_price: data.rentalPrice,
-      })
-      .select()
-      .single();
-
-    if (error)
-      throw error;
-
-    return mapTravelBusRowToDomain(row);
-  }
-
-  /**
    * Updates a single bus record. Only fields present in `data` are sent to Supabase.
    * @param busId - UUID of the `travel_buses` record to update
    * @param data - Partial bus data; omitted fields are left unchanged
@@ -290,8 +255,6 @@ export function useTravelRepository() {
       update.operator2_phone = data.operator2Phone ?? null;
     if (data.seatCount !== undefined)
       update.seat_count = data.seatCount;
-    if (data.rentalPrice !== undefined)
-      update.rental_price = data.rentalPrice;
 
     const { data: row, error } = await supabase
       .from('travel_buses')
@@ -548,7 +511,6 @@ export function useTravelRepository() {
     removeTravelBus,
     insertTravel,
     upsertTravelInternals,
-    insertTravelBus,
     insertActivities,
     insertServices,
     insertBuses,

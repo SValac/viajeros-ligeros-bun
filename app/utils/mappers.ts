@@ -209,7 +209,6 @@ export function mapTravelBusRowToDomain(row: Tables<'travel_buses'>): TravelBus 
     operator2Name: row.operator2_name ?? undefined,
     operator2Phone: row.operator2_phone ?? undefined,
     seatCount: row.seat_count,
-    rentalPrice: Number(row.rental_price),
   };
 }
 

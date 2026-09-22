@@ -470,7 +470,7 @@ insert into public.travel_buses (
   id, travel_id, bus_id, provider_id,
   model, brand, year,
   operator1_name, operator1_phone,
-  seat_count, rental_price
+  seat_count
 ) values
 (
   'ab000000-0000-0000-0000-000000000001',
@@ -479,7 +479,7 @@ insert into public.travel_buses (
   'aa400000-0000-0000-0000-000000000001',
   'OF-1722', 'Mercedes-Benz', 2022,
   'Fernando Salinas', '8181112233',
-  44, 12500.00
+  44
 )
 on conflict (id) do nothing;
 

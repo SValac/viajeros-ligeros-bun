@@ -909,7 +909,6 @@ export type Database = {
           operator2_phone: string | null
           provider_id: string
           quotation_bus_id: string | null
-          rental_price: number
           seat_count: number
           travel_id: string
           year: number | null
@@ -925,7 +924,6 @@ export type Database = {
           operator2_phone?: string | null
           provider_id: string
           quotation_bus_id?: string | null
-          rental_price: number
           seat_count: number
           travel_id: string
           year?: number | null
@@ -941,7 +939,6 @@ export type Database = {
           operator2_phone?: string | null
           provider_id?: string
           quotation_bus_id?: string | null
-          rental_price?: number
           seat_count?: number
           travel_id?: string
           year?: number | null

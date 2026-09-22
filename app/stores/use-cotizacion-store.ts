@@ -1247,16 +1247,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const updated = await repository.updateBus(id, data);
       busesApartados.value[index] = updated;
-      const travelStore = useTravelsStore();
-      const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion!.travelId);
-      if (travelIndex !== -1) {
-        travelStore.travels[travelIndex] = {
-          ...travelStore.travels[travelIndex]!,
-          buses: (travelStore.travels[travelIndex]!.buses ?? []).map(b =>
-            b.quotationBusId === id ? { ...b, rentalPrice: updated.totalCost } : b,
-          ),
-        };
-      }
       await _syncPrecioToTravel(existing.quotationId);
       return updated;
     }

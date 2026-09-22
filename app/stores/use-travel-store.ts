@@ -240,54 +240,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     return updateTravel(id, { status });
   }
 
-  async function addBusToTravel(travelId: string, data: Omit<TravelBus, 'id'>): Promise<TravelBus | null> {
-    const index = travels.value.findIndex(t => t.id === travelId);
-    if (index === -1) {
-      error.value = 'Viaje no encontrado';
-      return null;
-    }
-
-    const existingTravel = travels.value[index];
-    if (!existingTravel) {
-      error.value = 'Viaje no encontrado';
-      return null;
-    }
-
-    const busStore = useBusStore();
-    let resolvedBusId = data.busId;
-
-    if (!resolvedBusId) {
-      const catalogBus = await busStore.addBus({
-        providerId: data.providerId,
-        brand: data.brand,
-        model: data.model,
-        year: data.year,
-        seatCount: data.seatCount,
-        active: true,
-      });
-      resolvedBusId = catalogBus.id;
-    }
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const newBus = await repository.insertTravelBus(travelId, { ...data, busId: resolvedBusId });
-      travels.value[index] = {
-        ...existingTravel,
-        buses: [...(existingTravel.buses ?? []), newBus],
-      };
-
-      return newBus;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al agregar autobús al viaje';
-      return null;
-    }
-    finally {
-      loading.value = false;
-    }
-  }
-
   async function updateTravelBus(travelId: string, busId: string, data: Partial<Omit<TravelBus, 'id'>>): Promise<boolean> {
     const travelIndex = travels.value.findIndex(t => t.id === travelId);
     if (travelIndex === -1) {
@@ -454,7 +406,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     updateTravel,
     deleteTravel,
     updateTravelStatus,
-    addBusToTravel,
     updateTravelBus,
     removeBusFromTravel,
     updateTravelAccommodation,
