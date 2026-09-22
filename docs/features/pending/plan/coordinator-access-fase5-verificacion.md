@@ -1,6 +1,7 @@
 # Fase 5 — Verificación end-to-end
 
-**Estado:** 🚧 Matriz local completa — falta verificación remota (ver sección al final)
+**Estado:** 🚧 Matriz local completa · migraciones + Edge Function ya en remoto · advisors
+remotos limpios · **falta el checklist manual end-to-end en remoto** (ver sección al final)
 **Dependencia:** Todas
 
 ---
@@ -144,7 +145,8 @@ Como **Coord 2** (solo asignado a A2):
 
 - [x] `supabase db lint --local` sin hallazgos nuevos (el único warning es preexistente,
       en `generate_travel_access_code`, de la feature de código de acceso)
-- [ ] Advisors contra **remoto** después del `db:push` — pendiente, lo corre el usuario
+- [x] Advisors contra **remoto** después del `db:push` (`supabase db lint --linked`) —
+      mismo resultado que local, solo el warning preexistente
 - [x] Confirmado que `private` **no** está en `schemas` de `config.toml`
       (`schemas = ["public", "graphql_public"]`)
 - [x] Confirmado que `travel_internals` **no** recibió ninguna policy para coordinadores
@@ -165,25 +167,28 @@ Como **Coord 2** (solo asignado a A2):
 
 ## Verificación remota
 
-```bash
-# 1. Aplicar migraciones a remoto (lo corre el usuario)
-bun run db:push
-supabase migration list          # Local y Remote deben coincidir
-
-# 2. Repetir la matriz contra remoto con curl / la app móvil
-```
-
-La matriz completa hay que correrla **contra remoto**, no solo local. Diferencias reales
-que aparecen ahí: las políticas de Storage se comportan distinto con el bucket real, y los
-advisors remotos evalúan cosas que el local no.
-
-Un JWT de coordinador para los `curl` se obtiene con:
+**Hecho (2026-09-22):**
 
 ```bash
-curl -X POST "$SUPABASE_URL/auth/v1/token?grant_type=password" \
-  -H "apikey: $ANON_KEY" -H "Content-Type: application/json" \
-  -d '{"email":"coord1@...","password":"..."}'
+bun run db:push                                          # ✅ 3 migraciones aplicadas
+supabase functions deploy invite-coordinator --no-verify-jwt   # ✅ desplegada
+supabase migration list                                   # ✅ Local y Remote coinciden
+supabase db lint --linked                                  # ✅ sin hallazgos nuevos
 ```
+
+**Pendiente — checklist manual end-to-end en remoto** (decisión: se hace la versión corta,
+con un coordinador real en vez de repetir la matriz completa de curl que ya se corrió
+local; en remoto no hay Mailpit, las invitaciones mandan correo real):
+
+- [ ] Invitar a un coordinador real propio desde `/coordinators` en producción → llega el
+      correo de invitación real
+- [ ] El coordinador acepta, setea contraseña, se loguea
+- [ ] Logueado, `/travels/dashboard` muestra **solo** sus viajes asignados
+- [ ] Revocar su acceso → al refrescar esa sesión, ya no ve nada
+- [ ] Admin: la web sigue funcionando sin regresiones (viajes, cotizaciones, pagos, galería)
+
+Este checklist manual queda para una próxima sesión — quien lo retome puede leer esta
+sección para saber exactamente qué falta sin tener que releer toda la fase.
 
 ---
 

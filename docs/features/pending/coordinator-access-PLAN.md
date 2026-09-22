@@ -10,8 +10,9 @@ asignados — sin ver **nada** de la información financiera de la agencia.
 1 Edge Function nueva (primera del repo), UI de invitación en la web admin.
 
 **Estado:** 🚧 EN PROGRESO — Fases 1-4 completas. Fase 5: matriz de aislamiento local
-completa, falta correrla contra el proyecto **remoto** (`db:push` + repetir matriz, lo
-corre el usuario) y cerrar la documentación final.
+completa, migraciones + Edge Function ya en remoto, advisors remotos limpios. Falta el
+checklist manual end-to-end en remoto (invitar/loguear/revocar un coordinador real) y
+cerrar la documentación final — queda para una próxima sesión.
 
 **✅ Dependencia satisfecha:** [Saneamiento del modelo de datos](../completed/data-model-cleanup-PLAN.md)
 está completo, verificado y mergeado a `main` (2026-09-22). Esa feature sacó las columnas
@@ -134,7 +135,7 @@ Supabase remoto (`db:push`).
 | [fase2-rls-lectura.md](plan/coordinator-access-fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | ✅ Completa |
 | [fase3-rls-escritura.md](plan/coordinator-access-fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | ✅ Completa |
 | [fase4-invitacion.md](plan/coordinator-access-fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | ✅ Completa |
-| [fase5-verificacion.md](plan/coordinator-access-fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | 🚧 Local ✅ · Remoto pendiente |
+| [fase5-verificacion.md](plan/coordinator-access-fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | 🚧 Local ✅ · migraciones+advisors remoto ✅ · checklist manual remoto pendiente |
 
 > Al terminar cada fase, actualizar su "Estado" acá y en el propio documento de la fase
 > (`Pendiente` → `Completada ✅`), para poder retomar en cualquier sesión sin perder
