@@ -109,7 +109,12 @@ export function useCoordinatorRepository() {
   }
 
   async function revokeAccess(coordinatorId: string): Promise<void> {
-    const { error } = await supabase.from('coordinators').update({ user_id: null }).eq('id', coordinatorId);
+    const { error } = await supabase
+      .from('coordinators')
+      .update({ user_id: null })
+      .eq('id', coordinatorId)
+      .select()
+      .single();
     if (error) {
       throw error;
     }
