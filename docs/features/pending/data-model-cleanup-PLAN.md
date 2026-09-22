@@ -8,7 +8,8 @@ del precio de autobús y formalizar la relación `travel_buses` ↔ `quotation_b
 **Complejidad:** Media — 4 migraciones, cambios concentrados en mappers/repository, y
 borrado de código muerto.
 
-**Estado:** 🚧 EN PROGRESO — Fases 1, 2 y 3 completas; Fases 4-5 pendientes.
+**Estado:** 🚧 EN PROGRESO — Fases 1-4 completas; falta la Fase 5 (verificación final y
+despliegue).
 
 **⚠️ Esta feature va ANTES de [acceso de coordinadores](coordinator-access-PLAN.md).**
 La simplifica: elimina su Fase 0 y sus dos vistas.
@@ -140,7 +141,7 @@ con cambios de UI.
 | [fase1-travel-internals.md](plan/data-model-fase1-travel-internals.md) | Separar `travel_internals` de `travels` | Ninguna | ✅ Completa |
 | [fase2-catalogo-bus-precio.md](plan/data-model-fase2-catalogo-bus-precio.md) | Eliminar `buses.rental_price` del catálogo | Ninguna | ✅ Completa |
 | [fase3-travel-bus-precio.md](plan/data-model-fase3-travel-bus-precio.md) | Eliminar `travel_buses.rental_price` + borrar el código muerto | Fase 2 | ✅ Completa |
-| [fase4-travel-bus-satelite.md](plan/data-model-fase4-travel-bus-satelite.md) | 🔴 Arreglar la sincronización `quotation_buses` → `travel_buses` + `UNIQUE` | Fase 3 | Pendiente |
+| [fase4-travel-bus-satelite.md](plan/data-model-fase4-travel-bus-satelite.md) | 🔴 Arreglar la sincronización `quotation_buses` → `travel_buses` + `UNIQUE` | Fase 3 | ✅ Completa |
 | [fase5-verificacion.md](plan/data-model-fase5-verificacion.md) | Verificación + despliegue | Todas | Pendiente |
 
 > Actualizar el "Estado" acá y en el doc de cada fase al cerrarla, como en las features

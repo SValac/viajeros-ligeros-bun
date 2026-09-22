@@ -1,8 +1,8 @@
 # Fase 4 — Sincronizar `travel_buses` con `quotation_buses`
 
-**Estado:** Pendiente
-**Dependencia:** Fase 3
-**Migración:** `supabase migration new travel_buses_sync_constraints`
+**Estado:** ✅ Completa
+**Dependencia:** Fase 3 (✅ completa)
+**Migración:** `supabase migration new travel_buses_sync_constraints` → `20260922003113_travel_buses_sync_constraints.sql`
 
 ---
 
@@ -187,18 +187,33 @@ viajeros afectados se decide allá.
 
 ## Verificación
 
-- [ ] La query de duplicados del Bloque 2 devuelve 0 filas
-- [ ] Cambiar la **capacidad** de un bus en la cotización → `travel_buses.seat_count` se
-      actualiza
-- [ ] El mapa de asientos refleja la capacidad nueva sin recargar la app
-- [ ] Cambiar el **número de unidad** → `travel_buses.model` se actualiza
-- [ ] Cambiar el **proveedor** → `travel_buses.provider_id` se actualiza
-- [ ] Cambiar **solo el costo** → las columnas operativas **no** se tocan
-- [ ] Crear un bus desde la cotización → `travel_buses` nace con los tres campos correctos
-- [ ] Intentar dos `travel_buses` para el mismo `quotation_bus_id` → falla por `UNIQUE`
-- [ ] Eliminar un bus de la cotización → cascade correcto
-- [ ] Los operadores guardados sobreviven a una edición de la cotización
-- [ ] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+- [x] La query de duplicados del Bloque 2 devuelve 0 filas
+- [~] Cambiar la **capacidad** de un bus en la cotización → **no aplica hoy**: la UI de
+      edición de un bus en cotización (`cotizacion-bus-cotizacion-form.vue`) solo expone
+      costo y tipo de división; proveedor/unidad/capacidad se muestran de solo lectura. La
+      única forma de cambiarlos es borrar el bus y crear uno nuevo. El código de
+      sincronización queda como corrección preventiva y correcta, pero hoy es
+      inalcanzable desde la UI — confirmado con el usuario.
+- [~] El mapa de asientos refleja la capacidad nueva sin recargar la app — mismo motivo, no
+      aplica hoy
+- [~] Cambiar el **número de unidad** → no aplica hoy, mismo motivo
+- [~] Cambiar el **proveedor** → no aplica hoy, mismo motivo
+- [x] Cambiar **solo el costo** → las columnas operativas **no** se tocan (confirmado)
+- [x] Crear un bus desde la cotización → `travel_buses` nace con los tres campos correctos
+      (ya lo hacía `insertBus`, sin cambios en esta fase)
+- [x] Intentar dos `travel_buses` para el mismo `quotation_bus_id` → falla por `UNIQUE` —
+      verificado que la constraint existe (`contype = 'u'`); no se forzó la violación a
+      mano por falta de un usuario local para armar los datos de prueba
+- [x] Eliminar un bus de la cotización → cascade correcto (verificado en Fase 3)
+- [x] Los operadores guardados sobreviven a una edición de la cotización (confirmado)
+- [x] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+
+### Bug encontrado durante la verificación manual (no relacionado, ya arreglado aparte)
+
+La sección de autobuses de `/travels/[id]` mostraba el empty state ("Sin autobuses
+apartados") **debajo** de la lista real de autobuses, siempre — `TravelSectionEmptyState`
+en `travel-buses-section.vue` no tenía `v-else`, así que se renderizaba sin importar si
+`buses.length > 0`. Un `v-else` de una línea. Ver commit `e998fc0`.
 
 ---
 
