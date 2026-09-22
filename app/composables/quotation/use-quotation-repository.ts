@@ -619,7 +619,29 @@ export function useQuotationRepository() {
     if (busErr)
       throw busErr;
 
-    return mapQuotationBusRowToDomain(row);
+    const updated = mapQuotationBusRowToDomain(row);
+
+    // travel_buses is the operational projection of this bus (visible to coordinators,
+    // unlike quotation_buses which carries the cost) — keep provider/unit/capacity in sync.
+    const travelBusUpdate: TablesUpdate<'travel_buses'> = {};
+    if (data.providerId !== undefined)
+      travelBusUpdate.provider_id = updated.providerId;
+    if (data.unitNumber !== undefined)
+      travelBusUpdate.model = updated.unitNumber;
+    if (data.capacity !== undefined)
+      travelBusUpdate.seat_count = updated.capacity;
+
+    if (Object.keys(travelBusUpdate).length > 0) {
+      const { error: travelBusErr } = await supabase
+        .from('travel_buses')
+        .update(travelBusUpdate)
+        .eq('quotation_bus_id', id);
+
+      if (travelBusErr)
+        throw new Error(`No se pudo sincronizar el autobús del viaje: ${travelBusErr.message}`);
+    }
+
+    return updated;
   }
 
   async function deleteBus(id: string): Promise<void> {
