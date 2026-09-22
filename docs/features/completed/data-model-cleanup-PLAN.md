@@ -8,11 +8,14 @@ del precio de autobús y formalizar la relación `travel_buses` ↔ `quotation_b
 **Complejidad:** Media — 4 migraciones, cambios concentrados en mappers/repository, y
 borrado de código muerto.
 
-**Estado:** 🚧 EN PROGRESO — Fases 1-4 completas; falta la Fase 5 (verificación final y
-despliegue).
+**Estado:** ✅ COMPLETA — 5 fases implementadas, verificadas y desplegadas a remoto
+(2026-09-22).
 
-**⚠️ Esta feature va ANTES de [acceso de coordinadores](coordinator-access-PLAN.md).**
-La simplifica: elimina su Fase 0 y sus dos vistas.
+**⚠️ Esta feature va ANTES de [acceso de coordinadores](coordinator-access-PLAN.md)
+(rama `feature/cordinator-travel-access`, sin mergear).** La simplifica: elimina su Fase 0
+y sus dos vistas — ver la sección "Efecto sobre el plan de coordinadores" más abajo. Ese
+plan **todavía no se actualizó** con este efecto porque vive en una rama separada; queda
+pendiente para cuando se retome ese trabajo.
 
 ---
 
@@ -138,33 +141,27 @@ con cambios de UI.
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [fase1-travel-internals.md](plan/data-model-fase1-travel-internals.md) | Separar `travel_internals` de `travels` | Ninguna | ✅ Completa |
-| [fase2-catalogo-bus-precio.md](plan/data-model-fase2-catalogo-bus-precio.md) | Eliminar `buses.rental_price` del catálogo | Ninguna | ✅ Completa |
-| [fase3-travel-bus-precio.md](plan/data-model-fase3-travel-bus-precio.md) | Eliminar `travel_buses.rental_price` + borrar el código muerto | Fase 2 | ✅ Completa |
-| [fase4-travel-bus-satelite.md](plan/data-model-fase4-travel-bus-satelite.md) | 🔴 Arreglar la sincronización `quotation_buses` → `travel_buses` + `UNIQUE` | Fase 3 | ✅ Completa |
-| [fase5-verificacion.md](plan/data-model-fase5-verificacion.md) | Verificación + despliegue | Todas | Pendiente |
-
-> Actualizar el "Estado" acá y en el doc de cada fase al cerrarla, como en las features
-> anteriores.
+| [fase1-travel-internals.md](data-model-fase1-travel-internals.md) | Separar `travel_internals` de `travels` | Ninguna | ✅ Completa |
+| [fase2-catalogo-bus-precio.md](data-model-fase2-catalogo-bus-precio.md) | Eliminar `buses.rental_price` del catálogo | Ninguna | ✅ Completa |
+| [fase3-travel-bus-precio.md](data-model-fase3-travel-bus-precio.md) | Eliminar `travel_buses.rental_price` + borrar el código muerto | Fase 2 | ✅ Completa |
+| [fase4-travel-bus-satelite.md](data-model-fase4-travel-bus-satelite.md) | 🔴 Arreglar la sincronización `quotation_buses` → `travel_buses` + `UNIQUE` | Fase 3 | ✅ Completa |
+| [fase5-verificacion.md](data-model-fase5-verificacion.md) | Verificación + despliegue | Todas | ✅ Completa |
 
 Las Fases 1 y 2 son **independientes**. La 4 dejó de ser opcional: contiene un bugfix con
 impacto de usuario (ver hallazgo 3).
 
 ---
 
-## ⚠️ Esta feature borra datos en producción
+## ⚠️ Esta feature borra columnas — no aplicó en este despliegue
 
-Las migraciones aplican `DROP COLUMN` sobre una base **con datos reales** (el proyecto
-remoto `mkosbzhagjbyfvizafta` ya está en producción). Un `DROP COLUMN` **no se puede
-deshacer** con un rollback de migración: la data se va.
+Las migraciones aplican `DROP COLUMN`, que normalmente no se puede deshacer con un rollback
+sobre datos reales. **Resultó no ser un riesgo en este despliegue**: el proyecto remoto
+(`mkosbzhagjbyfvizafta`) estaba `INACTIVE` (pausado) y sin datos — se reactivó
+específicamente para este push. Ver Fase 5 para el detalle.
 
-Antes de la Fase 2 o 3 contra remoto:
-
-- [ ] Backup del proyecto remoto (o al menos `pg_dump` de `buses` y `travel_buses`)
-- [ ] Confirmar que ningún reporte o export usa `buses.rental_price`
-- [ ] Confirmar que los valores de `travel_buses.rental_price` coinciden con
-      `quotation_buses.total_cost` (query de la Fase 3) — si hay filas donde difieren, hay
-      historia real ahí y la decisión cambia
+Si en el futuro se repite este tipo de migración (`DROP COLUMN`) contra una base con datos
+reales, sí correr el checklist completo: backup del proyecto, confirmar que ningún
+reporte/export externo usa la columna, y comparar valores antes de borrar.
 
 ---
 
