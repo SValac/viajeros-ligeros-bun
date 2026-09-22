@@ -30,13 +30,18 @@ Features are organized by status under `docs/features/`:
 | Completed | `docs/features/completed/` |
 | Pending | `docs/features/pending/` |
 
-### Completed features
+A feature with a single doc is a loose file (`completed/multi-tenancy.md`); a feature with
+a PLAN + phase docs, or a series of related docs, gets its own folder
+(`completed/data-model-cleanup/PLAN.md` + `fase1-*.md`, `pending/coordinator-access/PLAN.md`
++ `fase1-*.md`). See [docs/README.md](../README.md) for the full convention.
+
+### Completed features (selección)
 
 - `travel-feature.md` — Feature 1: Sistema de gestión de viajes
 - `feature-itinerary-services.md` — Features 2-3: Itinerarios, servicios y detalles
 - `provider-catalog-feature.md` — Feature 4: Catálogo de proveedores
 - `filter-catalogs-feature.md` — Feature 5: Filtrado de catálogos
-- `autobus-en-viaje-feature.md` — Feature 6: Autobuses en viajes y catálogo de unidades
+- `buses/autobus-en-viaje-feature.md` — Feature 6: Autobuses en viajes y catálogo de unidades
 - `feature-traveler-module.md` — Feature 7: Módulo de viajeros (CRUD, jerarquía de grupos, filtros)
 
 ---

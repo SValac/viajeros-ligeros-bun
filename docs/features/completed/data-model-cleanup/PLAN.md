@@ -11,7 +11,7 @@ borrado de código muerto.
 **Estado:** ✅ COMPLETA — 5 fases implementadas, verificadas y desplegadas a remoto
 (2026-09-22).
 
-**⚠️ Esta feature va ANTES de [acceso de coordinadores](coordinator-access-PLAN.md)
+**⚠️ Esta feature va ANTES de [acceso de coordinadores](../../pending/coordinator-access/PLAN.md)
 (rama `feature/cordinator-travel-access`, sin mergear).** La simplifica: elimina su Fase 0
 y sus dos vistas — ver la sección "Efecto sobre el plan de coordinadores" más abajo. Ese
 plan **todavía no se actualizó** con este efecto porque vive en una rama separada; queda
@@ -141,11 +141,11 @@ con cambios de UI.
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [fase1-travel-internals.md](data-model-fase1-travel-internals.md) | Separar `travel_internals` de `travels` | Ninguna | ✅ Completa |
-| [fase2-catalogo-bus-precio.md](data-model-fase2-catalogo-bus-precio.md) | Eliminar `buses.rental_price` del catálogo | Ninguna | ✅ Completa |
-| [fase3-travel-bus-precio.md](data-model-fase3-travel-bus-precio.md) | Eliminar `travel_buses.rental_price` + borrar el código muerto | Fase 2 | ✅ Completa |
-| [fase4-travel-bus-satelite.md](data-model-fase4-travel-bus-satelite.md) | 🔴 Arreglar la sincronización `quotation_buses` → `travel_buses` + `UNIQUE` | Fase 3 | ✅ Completa |
-| [fase5-verificacion.md](data-model-fase5-verificacion.md) | Verificación + despliegue | Todas | ✅ Completa |
+| [fase1-travel-internals.md](fase1-travel-internals.md) | Separar `travel_internals` de `travels` | Ninguna | ✅ Completa |
+| [fase2-catalogo-bus-precio.md](fase2-catalogo-bus-precio.md) | Eliminar `buses.rental_price` del catálogo | Ninguna | ✅ Completa |
+| [fase3-travel-bus-precio.md](fase3-travel-bus-precio.md) | Eliminar `travel_buses.rental_price` + borrar el código muerto | Fase 2 | ✅ Completa |
+| [fase4-travel-bus-satelite.md](fase4-travel-bus-satelite.md) | 🔴 Arreglar la sincronización `quotation_buses` → `travel_buses` + `UNIQUE` | Fase 3 | ✅ Completa |
+| [fase5-verificacion.md](fase5-verificacion.md) | Verificación + despliegue | Todas | ✅ Completa |
 
 Las Fases 1 y 2 son **independientes**. La 4 dejó de ser opcional: contiene un bugfix con
 impacto de usuario (ver hallazgo 3).

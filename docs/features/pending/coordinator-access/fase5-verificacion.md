@@ -195,11 +195,11 @@ sección para saber exactamente qué falta sin tener que releer toda la fase.
 ## Documentación al cerrar
 
 - [ ] Actualizar el estado de todas las fases en
-      [coordinator-access-PLAN.md](../coordinator-access-PLAN.md)
+      [PLAN.md](PLAN.md)
 - [ ] Mover el plan de `docs/features/pending/` a `docs/features/completed/`
 - [ ] Documentar el **contrato para la app móvil**: qué tablas puede consultar, qué puede
       escribir, y la ventana de estados (`published` / `in_progress`). Es el equivalente a
-      la sección "Despliegue a producción" de `travel-access-fase2-rpc.md`, que resultó ser
+      la sección "Despliegue a producción" de `travel-access-code/fase2-rpc.md`, que resultó ser
       lo más útil de aquella feature.
 - [ ] Documentar la convención que sostiene el aislamiento: **toda columna nueva de costo,
       margen o nota interna va a `travel_internals`, nunca a `travels`.** Es lo que mantiene

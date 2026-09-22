@@ -3,7 +3,7 @@
 **Objetivo:** Crear `use-travel-access-store.ts`, el store que orquesta el repositorio
 y mantiene el código revelado en memoria (nunca persistido).
 
-**Dependencia:** [Fase 3](travel-access-fase3-repository-domain.md) — necesita el
+**Dependencia:** [Fase 3](fase3-repository-domain.md) — necesita el
 repositorio y el dominio ya creados.
 **Estado:** Completada ✅
 

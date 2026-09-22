@@ -4,7 +4,7 @@
 `travel_access_attempts` (log de intentos, para throttling), más la función de
 normalización de teléfono `normalize_phone_last10` y su índice.
 
-**Dependencia:** [Fase 0](travel-access-fase0-rename-status.md) — necesita
+**Dependencia:** [Fase 0](fase0-rename-status.md) — necesita
 `status = 'published'` ya renombrado, porque las funciones de la Fase 2 van a
 referenciarlo.
 **Estado:** Completada ✅

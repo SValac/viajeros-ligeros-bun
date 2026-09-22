@@ -1,6 +1,6 @@
 # 📋 TASKS: Integración Google Maps en Travel Activities
 
-**Plan de referencia**: `docs/features/pending/plan/google-maps-integration-plan.md`  
+**Plan de referencia**: `docs/features/completed/google-maps/PLAN.md`  
 **Generado**: 2026-04-24  
 **Status**: Por iniciar
 

@@ -4,9 +4,9 @@
 feature, simulando exactamente lo que hará la app Android contra `redeem_travel_access`.
 
 **Dependencia:** Todas las fases anteriores
-([0](travel-access-fase0-rename-status.md), [1](travel-access-fase1-schema.md),
-[2](travel-access-fase2-rpc.md), [3](travel-access-fase3-repository-domain.md),
-[4](travel-access-fase4-store.md), [5](travel-access-fase5-ui.md)).
+([0](fase0-rename-status.md), [1](fase1-schema.md),
+[2](fase2-rpc.md), [3](fase3-repository-domain.md),
+[4](fase4-store.md), [5](fase5-ui.md)).
 **Estado:** Pendiente
 
 ---
@@ -27,7 +27,7 @@ resultados inesperados. El usuario corre los comandos.
    la primera.
 2. Probar `redeem_travel_access` exactamente como lo hará Android — **nota:** esta
    función siempre responde HTTP 200; el resultado va en el campo `success`/`error`
-   del JSON (ver [Fase 2](travel-access-fase2-rpc.md) — el diseño cambió respecto al
+   del JSON (ver [Fase 2](fase2-rpc.md) — el diseño cambió respecto al
    plan original, ya no usa `RAISE EXCEPTION`):
    ```bash
    curl -s -X POST "http://127.0.0.1:54321/rest/v1/rpc/redeem_travel_access" \
@@ -58,7 +58,7 @@ resultados inesperados. El usuario corre los comandos.
    como `authenticated` no-owner sigue sin devolver nada extra (RLS no se debilitó).
 5. Correr los advisors de Supabase (`get_advisors` / `supabase db advisors`) y
    resolver cualquier hallazgo nuevo. **Hecho (2026-07-30)** — 0 `ERROR`. Ver detalle
-   en [Fase 2](travel-access-fase2-rpc.md#verificación): nada bloqueante, un falso
+   en [Fase 2](fase2-rpc.md#verificación): nada bloqueante, un falso
    positivo esperado (`travel_access_attempts` sin policies, intencional) y el patrón
    `auth_rls_initplan` que ya existe en casi todas las tablas del proyecto.
 
@@ -98,7 +98,7 @@ resultados inesperados. El usuario corre los comandos.
 ## Cierre
 
 Al completar esta fase, actualizar el estado en
-`docs/features/pending/travel-access-code-PLAN.md` (índice de fases y estado general)
+`docs/features/pending/travel-access-code/PLAN.md` (índice de fases y estado general)
 a "✅ Completada" y mover el documento principal (y esta carpeta de fases) de
 `docs/features/pending/` a `docs/features/completed/`, siguiendo la convención ya
 usada por otras features de este proyecto.

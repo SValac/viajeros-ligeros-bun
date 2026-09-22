@@ -14,11 +14,11 @@ Sin cambios en la API pública del store ni en las páginas.
 
 | Documento | Contenido | Estado |
 |---|---|---|
-| [refactor-cotizacion-fase1-domain.md](refactor-cotizacion-fase1-domain.md) | Crear `use-cotizacion-domain.ts` (4 funciones puras) | Completada ✅ |
-| [refactor-cotizacion-fase2a-repository-reads.md](refactor-cotizacion-fase2a-repository-reads.md) | Crear repositorio con `fetchAll` y `fetchByTravel` | Completada ✅ |
-| [refactor-cotizacion-fase2b-repository-writes-simple.md](refactor-cotizacion-fase2b-repository-writes-simple.md) | Migrar 18 operaciones CRUD de una tabla al repositorio | Completada ✅ |
-| [refactor-cotizacion-fase2c-repository-writes-complex.md](refactor-cotizacion-fase2c-repository-writes-complex.md) | Migrar 6 operaciones multi-tabla + helpers de sync | Completada ✅ |
-| [refactor-cotizacion-fase3-cleanup.md](refactor-cotizacion-fase3-cleanup.md) | Limpieza final + verificación de capas | Completada ✅ |
+| [refactor-fase1-domain.md](../cotizacion/refactor-fase1-domain.md) | Crear `use-cotizacion-domain.ts` (4 funciones puras) | Completada ✅ |
+| [refactor-fase2a-repository-reads.md](../cotizacion/refactor-fase2a-repository-reads.md) | Crear repositorio con `fetchAll` y `fetchByTravel` | Completada ✅ |
+| [refactor-fase2b-repository-writes-simple.md](../cotizacion/refactor-fase2b-repository-writes-simple.md) | Migrar 18 operaciones CRUD de una tabla al repositorio | Completada ✅ |
+| [refactor-fase2c-repository-writes-complex.md](../cotizacion/refactor-fase2c-repository-writes-complex.md) | Migrar 6 operaciones multi-tabla + helpers de sync | Completada ✅ |
+| [refactor-fase3-cleanup.md](../cotizacion/refactor-fase3-cleanup.md) | Limpieza final + verificación de capas | Completada ✅ |
 
 ---
 

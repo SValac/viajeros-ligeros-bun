@@ -30,7 +30,7 @@ explícitamente. Responder preguntas y adaptar las explicaciones al nivel del us
 
 **Contexto de referencia:**
 - Store ya refactorizado: `app/stores/use-traveler-store.ts`
-- Plan de referencia completado: `docs/features/pending/plan/refactor-use-traveler-store.md`
+- Plan de referencia completado: `docs/features/completed/refactor-stores/traveler-store.md`
 
 ---
 

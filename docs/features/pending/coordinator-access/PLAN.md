@@ -14,7 +14,7 @@ completa, migraciones + Edge Function ya en remoto, advisors remotos limpios. Fa
 checklist manual end-to-end en remoto (invitar/loguear/revocar un coordinador real) y
 cerrar la documentación final — queda para una próxima sesión.
 
-**✅ Dependencia satisfecha:** [Saneamiento del modelo de datos](../completed/data-model-cleanup-PLAN.md)
+**✅ Dependencia satisfecha:** [Saneamiento del modelo de datos](../../completed/data-model-cleanup/PLAN.md)
 está completo, verificado y mergeado a `main` (2026-09-22). Esa feature sacó las columnas
 financieras de `travels` y `travel_buses`, lo que simplifica bastante este plan (ver
 "Contexto de diseño"). Esta rama ya tiene `main` integrado (merge, no rebase) — el esquema
@@ -38,7 +38,7 @@ acceso que se le dé va a ser explícito y deliberado, nunca heredado por accide
 
 ### Por qué NO se reusa el patrón del código de acceso
 
-Se evaluó reusar el mecanismo de [código de acceso al viaje](travel-access-code-PLAN.md)
+Se evaluó reusar el mecanismo de [código de acceso al viaje](../travel-access-code/PLAN.md)
 (teléfono + código de 6 caracteres, `anon`, stateless). Se **descartó** porque el
 coordinador **escribe**, y un código compartido rompe por tres lados:
 
@@ -85,7 +85,7 @@ pero era **fail-open**: una columna financiera nueva en `travels` no habría que
 sola.
 
 **Se descartó a favor de separar las columnas en el esquema**, lo que hace la feature de
-[saneamiento del modelo de datos](../completed/data-model-cleanup-PLAN.md). Consecuencias para este plan:
+[saneamiento del modelo de datos](../../completed/data-model-cleanup/PLAN.md). Consecuencias para este plan:
 
 - Desaparece la Fase 0 (hardening de `anon`) — quedó resuelta estructuralmente
 - Desaparecen las dos vistas: `travels` y `travel_buses` van con policy `SELECT` normal
@@ -131,11 +131,11 @@ Supabase remoto (`db:push`).
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [fase1-identidad.md](plan/coordinator-access-fase1-identidad.md) | Schema `private`, `coordinators.user_id`, helpers `is_travel_coordinator` / `can_coordinator_edit` | Ninguna | ✅ Completa |
-| [fase2-rls-lectura.md](plan/coordinator-access-fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | ✅ Completa |
-| [fase3-rls-escritura.md](plan/coordinator-access-fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | ✅ Completa |
-| [fase4-invitacion.md](plan/coordinator-access-fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | ✅ Completa |
-| [fase5-verificacion.md](plan/coordinator-access-fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | 🚧 Local ✅ · migraciones+advisors remoto ✅ · checklist manual remoto pendiente |
+| [fase1-identidad.md](fase1-identidad.md) | Schema `private`, `coordinators.user_id`, helpers `is_travel_coordinator` / `can_coordinator_edit` | Ninguna | ✅ Completa |
+| [fase2-rls-lectura.md](fase2-rls-lectura.md) | Policies `SELECT` aditivas sobre las tablas operativas | Fase 1 · **saneamiento mergeado** | ✅ Completa |
+| [fase3-rls-escritura.md](fase3-rls-escritura.md) | Policies `INSERT`/`UPDATE`/`DELETE` + policy de Storage | Fase 2 | ✅ Completa |
+| [fase4-invitacion.md](fase4-invitacion.md) | Edge Function `invite-coordinator` + UI de invitación en la web admin | Fase 1 | ✅ Completa |
+| [fase5-verificacion.md](fase5-verificacion.md) | Matriz de aislamiento end-to-end + advisors | Todas | 🚧 Local ✅ · migraciones+advisors remoto ✅ · checklist manual remoto pendiente |
 
 > Al terminar cada fase, actualizar su "Estado" acá y en el propio documento de la fase
 > (`Pendiente` → `Completada ✅`), para poder retomar en cualquier sesión sin perder

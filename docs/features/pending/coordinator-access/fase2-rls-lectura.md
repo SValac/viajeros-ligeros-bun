@@ -2,7 +2,7 @@
 
 **Estado:** ✅ Completa
 **Dependencia:** Fase 1 (los helpers `private.*`) · **y el
-[saneamiento del modelo de datos](../../completed/data-model-cleanup-PLAN.md) mergeado a `main`**
+[saneamiento del modelo de datos](../../completed/data-model-cleanup/PLAN.md) mergeado a `main`**
 **Migración:** `supabase migration new coordinator_rls_read` → `20260922164742_coordinator_rls_read.sql`
 
 ---
@@ -21,7 +21,7 @@ el admin conserva exactamente el acceso que ya tiene.
 ## ⚠️ Requisito: el saneamiento del modelo de datos va primero
 
 Esta fase asume que ya corrieron las Fases 1-3 de
-[saneamiento del modelo de datos](../../completed/data-model-cleanup-PLAN.md):
+[saneamiento del modelo de datos](../../completed/data-model-cleanup/PLAN.md):
 
 - `travels` ya **no** tiene `total_operation_cost`, `projected_profit` ni `internal_notes`
   (viven en `travel_internals`)
@@ -189,7 +189,7 @@ el coordinador necesita en ruta.
 ### 🔴 Consecuencia para el saneamiento: `travel_buses` NO debe perder sus columnas
 
 Esta decisión **invalida la Fase 4 (opcional) del
-[saneamiento](../../completed/data-model-cleanup-PLAN.md)** tal como está escrita.
+[saneamiento](../../completed/data-model-cleanup/PLAN.md)** tal como está escrita.
 
 Esa fase proponía quitar de `travel_buses` las columnas que "duplican" `quotation_buses`:
 `provider_id`, `model`, `seat_count`. Pero el coordinador **no tiene ni puede tener acceso a

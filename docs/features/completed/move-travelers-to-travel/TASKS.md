@@ -184,4 +184,4 @@ Una tarea se considera **completada** cuando:
 
 ## Documentos Relacionados
 
-- [Plan General](./move-travelers-to-travel-PLAN.md) — Estrategia y contexto general
+- [Plan General](./PLAN.md) — Estrategia y contexto general

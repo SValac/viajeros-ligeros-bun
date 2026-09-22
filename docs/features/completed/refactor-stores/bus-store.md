@@ -33,7 +33,7 @@ explícitamente. Responder preguntas y adaptar las explicaciones al nivel del us
 - Store ya refactorizado: `app/stores/use-traveler-store.ts`
 - Repositorio de referencia: `app/composables/travelers/use-traveler-repository.ts`
 - Dominio de referencia: `app/composables/travelers/use-traveler-domain.ts`
-- Plan de referencia completado: `docs/features/pending/plan/refactor-use-traveler-store.md`
+- Plan de referencia completado: `docs/features/completed/refactor-stores/traveler-store.md`
 
 ---
 

@@ -85,4 +85,4 @@ Actualmente existe una ruta `/travelers` con `index.vue` y `[id].vue` donde se p
 
 ## Documentos Relacionados
 
-- [Task Breakdown](./move-travelers-to-travel-TASKS.md) — Desglose en 8 tareas concretas
+- [Task Breakdown](./TASKS.md) — Desglose en 8 tareas concretas

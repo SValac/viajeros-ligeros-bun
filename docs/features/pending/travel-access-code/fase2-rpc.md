@@ -3,7 +3,7 @@
 **Objetivo:** Crear `generate_travel_access_code`, `revoke_travel_access_code` y
 `redeem_travel_access` — este último es **el endpoint que consumirá la app Android**.
 
-**Dependencia:** [Fase 1](travel-access-fase1-schema.md) — necesita las tablas
+**Dependencia:** [Fase 1](fase1-schema.md) — necesita las tablas
 `travel_access_codes`/`travel_access_attempts` y `normalize_phone_last10` ya creadas.
 **Estado:** Completada ✅
 

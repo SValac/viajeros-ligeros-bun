@@ -4,7 +4,7 @@
 del viaje, para que el admin pueda generar, ver una vez, copiar, enviar por WhatsApp y
 revocar el código.
 
-**Dependencia:** [Fase 4](travel-access-fase4-store.md) — necesita el store ya
+**Dependencia:** [Fase 4](fase4-store.md) — necesita el store ya
 funcionando.
 **Estado:** Completada ✅ — código, pasada de diseño visual (`UEmpty`/`UUser`/`UBadge`),
 bug de `onMounted` encontrado y corregido, y checklist 5.4 verificado completo en

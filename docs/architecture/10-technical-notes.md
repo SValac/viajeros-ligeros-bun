@@ -46,7 +46,7 @@
 - `dompurify` sanitiza todo el HTML del rich text antes de renderizar con `v-html`
 - Auth middleware bloquea acceso a todas las rutas protegidas antes de cargar cualquier store
 - Las credenciales de Supabase son `NUXT_PUBLIC_*` (expuestas al cliente) — no incluir service role key en el frontend
-- **Toda columna nueva de costo, margen o nota interna de un viaje va a `travel_internals`, nunca a `travels`.** RLS filtra filas, no columnas — mezclar datos admin-only con datos operativos en la misma tabla es una fuga estructural esperando a pasar (ver `docs/features/completed/data-model-cleanup-PLAN.md`).
+- **Toda columna nueva de costo, margen o nota interna de un viaje va a `travel_internals`, nunca a `travels`.** RLS filtra filas, no columnas — mezclar datos admin-only con datos operativos en la misma tabla es una fuga estructural esperando a pasar (ver `docs/features/completed/data-model-cleanup/PLAN.md`).
 
 ## Convenciones de código
 

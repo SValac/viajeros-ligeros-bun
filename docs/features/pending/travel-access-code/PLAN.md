@@ -82,13 +82,13 @@ resultados para revisión antes de avanzar a la siguiente fase.
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [travel-access-fase0-rename-status.md](plan/travel-access-fase0-rename-status.md) | Renombrar `travel_status`: `confirmed` → `published` + código frontend afectado | Ninguna | Completada ✅ |
-| [travel-access-fase1-schema.md](plan/travel-access-fase1-schema.md) | Tablas `travel_access_codes` + `travel_access_attempts` + `normalize_phone_last10` | Fase 0 | Completada ✅ |
-| [travel-access-fase2-rpc.md](plan/travel-access-fase2-rpc.md) | `generate_travel_access_code`, `revoke_travel_access_code`, `redeem_travel_access` (el endpoint de Android) | Fase 1 | Completada ✅ |
-| [travel-access-fase3-repository-domain.md](plan/travel-access-fase3-repository-domain.md) | Types + repository + domain (`travel-access`) | Fase 2 | Completada ✅ |
-| [travel-access-fase4-store.md](plan/travel-access-fase4-store.md) | Store Pinia `use-travel-access-store.ts` | Fase 3 | Completada ✅ |
-| [travel-access-fase5-ui.md](plan/travel-access-fase5-ui.md) | Componente `TravelAccessCodeCard` + integración en la página de detalle | Fase 4 | Completada ✅ |
-| [travel-access-fase6-verificacion.md](plan/travel-access-fase6-verificacion.md) | Verificación end-to-end (RPC vía `curl` simulando Android + prueba manual en navegador) | Todas | Pendiente |
+| [fase0-rename-status.md](fase0-rename-status.md) | Renombrar `travel_status`: `confirmed` → `published` + código frontend afectado | Ninguna | Completada ✅ |
+| [fase1-schema.md](fase1-schema.md) | Tablas `travel_access_codes` + `travel_access_attempts` + `normalize_phone_last10` | Fase 0 | Completada ✅ |
+| [fase2-rpc.md](fase2-rpc.md) | `generate_travel_access_code`, `revoke_travel_access_code`, `redeem_travel_access` (el endpoint de Android) | Fase 1 | Completada ✅ |
+| [fase3-repository-domain.md](fase3-repository-domain.md) | Types + repository + domain (`travel-access`) | Fase 2 | Completada ✅ |
+| [fase4-store.md](fase4-store.md) | Store Pinia `use-travel-access-store.ts` | Fase 3 | Completada ✅ |
+| [fase5-ui.md](fase5-ui.md) | Componente `TravelAccessCodeCard` + integración en la página de detalle | Fase 4 | Completada ✅ |
+| [fase6-verificacion.md](fase6-verificacion.md) | Verificación end-to-end (RPC vía `curl` simulando Android + prueba manual en navegador) | Todas | Pendiente |
 
 > Al terminar cada fase, actualizar su "Estado" en este índice y en el propio
 > documento de la fase (`Pendiente` → `Completada ✅`), para poder retomar en

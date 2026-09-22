@@ -40,7 +40,7 @@ cual está escrito.
 ## Regresiones en la web admin
 
 Ya cubierto de forma acumulativa durante la verificación de cada fase (ver los docs
-`data-model-fase{1..4}-*.md`):
+`fase{1..4}-*.md`):
 
 - [x] Detalle de viaje: buses, coordinadores
 - [x] Costo de operación, margen y notas internas se ven y se editan (Fase 1)
@@ -110,11 +110,11 @@ supabase migration list        # Local y Remote deben coincidir
 ## Al cerrar
 
 - [x] Actualizar el estado de todas las fases en
-      [data-model-cleanup-PLAN.md](data-model-cleanup-PLAN.md)
+      [PLAN.md](PLAN.md)
 - [x] Mover el plan a `docs/features/completed/`
-- [ ] **Actualizar coordinator-access-PLAN.md:** eliminar su Fase 0 y reescribir su Fase 2
+- [ ] **Actualizar `pending/coordinator-access/PLAN.md`:** eliminar su Fase 0 y reescribir su Fase 2
       sin vistas (ver la sección "Efecto sobre el plan de coordinadores" en
-      [data-model-cleanup-PLAN.md](data-model-cleanup-PLAN.md)). **Pendiente** — ese plan
+      [PLAN.md](PLAN.md)). **Pendiente** — ese plan
       vive en la rama `feature/cordinator-travel-access`, sin mergear, no en esta. Retomar
       cuando se vuelva a esa rama.
 - [x] Documentar la convención para el futuro: **toda columna nueva de costo, margen o nota

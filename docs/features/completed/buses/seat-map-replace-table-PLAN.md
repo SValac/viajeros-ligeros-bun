@@ -3,7 +3,7 @@
 ## Estado: 🟡 PENDIENTE (actualizado)
 
 **Feature branch sugerido**: `feature/bus-seat-map`
-**Depende de**: `bus-seat-map-visual-PLAN.md` (base visual ya implementada)
+**Depende de**: `seat-map-visual-PLAN.md` (base visual ya implementada)
 
 ---
 
