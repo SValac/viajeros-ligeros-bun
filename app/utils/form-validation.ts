@@ -9,7 +9,7 @@ const BUSINESS_NAME_REGEX = /^[\p{L}\p{N}\s'&.,/()°#-]+$/u;
 
 // Caracteres de control (excepto salto de línea, retorno de carro y tab), típicos de contenido pegado o corrupto.
 // Se construye a partir de sus códigos numéricos para no depender de escapes literales en el código fuente.
-const CONTROL_CHAR_CODES = Array.from({ length: 33 }, (_, i) => i)
+const CONTROL_CHAR_CODES = Array.from({ length: 32 }, (_, i) => i)
   .filter(code => code !== 9 && code !== 10 && code !== 13)
   .concat(127);
 const CONTROL_CHARS_REGEX = new RegExp(`[${CONTROL_CHAR_CODES.map(code => String.fromCharCode(code)).join('')}]`, 'g');

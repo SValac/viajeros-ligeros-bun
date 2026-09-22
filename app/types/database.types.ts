@@ -124,7 +124,6 @@ export type Database = {
           id: string
           model: string | null
           provider_id: string
-          rental_price: number
           seat_count: number
           updated_at: string
           year: number | null
@@ -136,7 +135,6 @@ export type Database = {
           id?: string
           model?: string | null
           provider_id: string
-          rental_price: number
           seat_count: number
           updated_at?: string
           year?: number | null
@@ -148,7 +146,6 @@ export type Database = {
           id?: string
           model?: string | null
           provider_id?: string
-          rental_price?: number
           seat_count?: number
           updated_at?: string
           year?: number | null
@@ -912,7 +909,6 @@ export type Database = {
           operator2_phone: string | null
           provider_id: string
           quotation_bus_id: string | null
-          rental_price: number
           seat_count: number
           travel_id: string
           year: number | null
@@ -928,7 +924,6 @@ export type Database = {
           operator2_phone?: string | null
           provider_id: string
           quotation_bus_id?: string | null
-          rental_price: number
           seat_count: number
           travel_id: string
           year?: number | null
@@ -944,7 +939,6 @@ export type Database = {
           operator2_phone?: string | null
           provider_id?: string
           quotation_bus_id?: string | null
-          rental_price?: number
           seat_count?: number
           travel_id?: string
           year?: number | null
@@ -967,7 +961,7 @@ export type Database = {
           {
             foreignKeyName: "travel_buses_quotation_bus_id_fkey"
             columns: ["quotation_bus_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "quotation_buses"
             referencedColumns: ["id"]
           },
@@ -1005,6 +999,41 @@ export type Database = {
             foreignKeyName: "travel_coordinators_travel_id_fkey"
             columns: ["travel_id"]
             isOneToOne: false
+            referencedRelation: "travels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      travel_internals: {
+        Row: {
+          created_at: string
+          internal_notes: string | null
+          projected_profit: number | null
+          total_operation_cost: number | null
+          travel_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          internal_notes?: string | null
+          projected_profit?: number | null
+          total_operation_cost?: number | null
+          travel_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          internal_notes?: string | null
+          projected_profit?: number | null
+          total_operation_cost?: number | null
+          travel_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "travel_internals_travel_id_fkey"
+            columns: ["travel_id"]
+            isOneToOne: true
             referencedRelation: "travels"
             referencedColumns: ["id"]
           },
@@ -1234,15 +1263,12 @@ export type Database = {
           end_date: string
           id: string
           image_url: string | null
-          internal_notes: string | null
           label: string
           minimum_seats: number | null
           owner_id: string
           price: number
-          projected_profit: number | null
           start_date: string
           status: Database["public"]["Enums"]["travel_status"]
-          total_operation_cost: number | null
           updated_at: string
         }
         Insert: {
@@ -1253,15 +1279,12 @@ export type Database = {
           end_date: string
           id?: string
           image_url?: string | null
-          internal_notes?: string | null
           label: string
           minimum_seats?: number | null
           owner_id: string
           price: number
-          projected_profit?: number | null
           start_date: string
           status?: Database["public"]["Enums"]["travel_status"]
-          total_operation_cost?: number | null
           updated_at?: string
         }
         Update: {
@@ -1272,15 +1295,12 @@ export type Database = {
           end_date?: string
           id?: string
           image_url?: string | null
-          internal_notes?: string | null
           label?: string
           minimum_seats?: number | null
           owner_id?: string
           price?: number
-          projected_profit?: number | null
           start_date?: string
           status?: Database["public"]["Enums"]["travel_status"]
-          total_operation_cost?: number | null
           updated_at?: string
         }
         Relationships: []

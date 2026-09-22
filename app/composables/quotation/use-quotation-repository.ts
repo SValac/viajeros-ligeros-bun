@@ -574,7 +574,6 @@ export function useQuotationRepository() {
         operator1_name: 'Por asignar',
         operator1_phone: 'Por asignar',
         seat_count: quotationBus.capacity,
-        rental_price: quotationBus.totalCost,
       })
       .select()
       .single();
@@ -622,13 +621,25 @@ export function useQuotationRepository() {
 
     const updated = mapQuotationBusRowToDomain(row);
 
-    const { error: travelBusErr } = await supabase
-      .from('travel_buses')
-      .update({ rental_price: updated.totalCost })
-      .eq('quotation_bus_id', id);
+    // travel_buses is the operational projection of this bus (visible to coordinators,
+    // unlike quotation_buses which carries the cost) — keep provider/unit/capacity in sync.
+    const travelBusUpdate: TablesUpdate<'travel_buses'> = {};
+    if (data.providerId !== undefined)
+      travelBusUpdate.provider_id = updated.providerId;
+    if (data.unitNumber !== undefined)
+      travelBusUpdate.model = updated.unitNumber;
+    if (data.capacity !== undefined)
+      travelBusUpdate.seat_count = updated.capacity;
 
-    if (travelBusErr)
-      throw new Error(`No se pudo actualizar el autobús en el viaje: ${travelBusErr.message}`);
+    if (Object.keys(travelBusUpdate).length > 0) {
+      const { error: travelBusErr } = await supabase
+        .from('travel_buses')
+        .update(travelBusUpdate)
+        .eq('quotation_bus_id', id);
+
+      if (travelBusErr)
+        throw new Error(`No se pudo sincronizar el autobús del viaje: ${travelBusErr.message}`);
+    }
 
     return updated;
   }

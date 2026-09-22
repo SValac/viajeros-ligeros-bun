@@ -484,8 +484,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
 
     const nuevoPrecio = getPrecioAsientoCalculado.value(quotationId);
-    if (nuevoPrecio === 0)
-      return;
 
     await repository.updateSeatPrice(quotationId, nuevoPrecio);
 
@@ -1247,16 +1245,30 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const updated = await repository.updateBus(id, data);
       busesApartados.value[index] = updated;
+
+      // Mirror provider/unit/capacity into the travel's cached buses — travel_buses is
+      // the operational projection coordinators see, kept in sync by the repository call
+      // above; this just reflects that in the UI without a refetch.
       const travelStore = useTravelsStore();
-      const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion!.travelId);
-      if (travelIndex !== -1) {
-        travelStore.travels[travelIndex] = {
-          ...travelStore.travels[travelIndex]!,
-          buses: (travelStore.travels[travelIndex]!.buses ?? []).map(b =>
-            b.quotationBusId === id ? { ...b, rentalPrice: updated.totalCost } : b,
-          ),
-        };
+      if (cotizacion) {
+        const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
+        if (travelIndex !== -1) {
+          travelStore.travels[travelIndex] = {
+            ...travelStore.travels[travelIndex]!,
+            buses: (travelStore.travels[travelIndex]!.buses ?? []).map(b =>
+              b.quotationBusId === id
+                ? {
+                    ...b,
+                    ...(data.providerId !== undefined && { providerId: updated.providerId }),
+                    ...(data.unitNumber !== undefined && { model: updated.unitNumber }),
+                    ...(data.capacity !== undefined && { seatCount: updated.capacity }),
+                  }
+                : b,
+            ),
+          };
+        }
       }
+
       await _syncPrecioToTravel(existing.quotationId);
       return updated;
     }
