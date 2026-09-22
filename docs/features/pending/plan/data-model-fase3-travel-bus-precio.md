@@ -1,8 +1,8 @@
 # Fase 3 — Eliminar `travel_buses.rental_price` y el código muerto
 
-**Estado:** Pendiente
-**Dependencia:** Fase 2
-**Migración:** `supabase migration new drop_travel_buses_rental_price`
+**Estado:** ✅ Completa
+**Dependencia:** Fase 2 (✅ completa)
+**Migración:** `supabase migration new drop_travel_buses_rental_price` → `20260922001054_drop_travel_buses_rental_price.sql`
 
 ---
 
@@ -144,17 +144,50 @@ eliminar el bloque completo, incluido su manejo de error.
 
 ## Verificación
 
-- [ ] Las dos queries de control dieron 0 (o su resultado se analizó y documentó)
-- [ ] Export de precios de buses sin cotización, si los había
-- [ ] La sección de autobuses del viaje se ve bien en `[id]/index.vue` y en `edit.vue`
-- [ ] Guardar operadores de un bus → persiste
-- [ ] Asignar coordinadores a un bus → sigue funcionando
-- [ ] Crear un bus desde el flujo de **cotización** → se crea su `travel_buses`
-- [ ] Actualizar el costo de un bus en la cotización → no rompe nada
-- [ ] Eliminar un bus de la cotización → cascade correcto
-- [ ] `grep -rn "rentalPrice\|rental_price" app/` → **sin resultados**
-- [ ] `grep -rn "TravelBusForm\|TravelBusList" app/` → sin resultados
-- [ ] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+- [x] Las dos queries de control dieron 0 — base local, sin datos reales que arriesgar
+- [x] Export de precios de buses sin cotización, si los había — no aplicó, 0 filas
+- [x] La sección de autobuses del viaje se ve bien en `[id]/index.vue` y en `edit.vue`
+- [x] Guardar operadores de un bus → persiste
+- [x] Asignar coordinadores a un bus → sigue funcionando
+- [x] Crear un bus desde el flujo de **cotización** → se crea su `travel_buses`
+- [x] Actualizar el costo de un bus en la cotización → no rompe nada
+- [x] Eliminar un bus de la cotización → cascade correcto
+- [x] `grep -rn "rentalPrice\|rental_price" app/` → **sin resultados**
+- [x] `grep -rn "TravelBusForm\|TravelBusList" app/` → sin resultados
+- [x] `bun run db:types`, `bun run typecheck`, `bun run lint` limpios
+
+### Bug encontrado durante la verificación manual (no relacionado, ya arreglado aparte)
+
+Al borrar el autobús de la cotización, el indicador de "precio por asiento" se quedaba
+mostrando el valor anterior en vez de bajar a $0. Causa: `_syncPrecioToTravel` tenía un
+guard `if (nuevoPrecio === 0) return;` que descartaba el recálculo cada vez que el nuevo
+precio daba exactamente 0 (por ejemplo, al borrar el último costo de la cotización) — se
+quedaba con el valor viejo para siempre, tanto en el indicador como en `travel.price`.
+Pasaba con cualquier costo (bus o proveedor) cuya eliminación llevara el total a 0, no solo
+con autobuses. Arreglado sacando el guard — 0 es un estado legítimo. Ver commit
+`9027268` y memoria `bugfix-seat-price-frozen-at-zero`.
+
+### Hallazgo durante esta fase (crítico, no relacionado directamente — ya arreglado aparte)
+
+Investigando qué llamaba a `insertBuses` (el plan asumía que solo se ejecutaba desde una
+rama muerta de `addTravel`), se encontró que también lo dispara `updateTravel` vía
+`replaceBuses` — y **esa ruta sí está viva**: `travel-form.vue` reenvía `buses: travel?.buses
+?? []` sin cambios en cada edición de viaje, lo que hacía que **editar cualquier campo básico
+de un viaje borrara y recreara todos sus `travel_buses`** (IDs nuevos), desasignando en
+silencio el bus/asiento de cada viajero (`travelers.travel_bus_id` es `ON DELETE SET NULL`).
+Arreglado en un commit separado antes de continuar esta fase — `edit.vue` ya no reenvía
+`buses` a `updateTravel`. Ver memoria `bugfix-travel-edit-wipes-buses`.
+
+Esto también corrige la premisa del plan sobre `insertBuses`/`insertTravelBus`: no se
+borraron `insertBuses`/`replaceBuses` (están vivos), solo `insertTravelBus` y
+`addBusToTravel` (esos sí confirmados muertos, únicos llamadores en los componentes ya
+borrados).
+
+### `use-cotizacion-store.ts` — limpieza adicional
+
+`updateBus` (línea ~1256) mantenía un espejo local de `rentalPrice` en el cache de
+`travelStore.travels[...].buses`, huérfano al desaparecer el campo del tipo `TravelBus`. Se
+sacó junto con el resto (ya no había nada que sincronizar ahí).
 
 ---
 
