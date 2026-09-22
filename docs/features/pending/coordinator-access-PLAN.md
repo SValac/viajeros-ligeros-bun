@@ -9,12 +9,14 @@ asignados — sin ver **nada** de la información financiera de la agencia.
 **Complejidad:** Media — 3 migraciones nuevas (identidad + RLS lectura + RLS escritura),
 1 Edge Function nueva (primera del repo), UI de invitación en la web admin.
 
-**Estado:** 📋 PLANIFICADO — ninguna fase iniciada.
+**Estado:** 📋 PLANIFICADO — ninguna fase iniciada. Dependencia satisfecha, listo para
+arrancar la Fase 1.
 
-**⛔ Depende de:** [Saneamiento del modelo de datos](data-model-cleanup-PLAN.md), que se
-hace **antes** y debe estar mergeado a `main`. Esa feature saca las columnas financieras de
-`travels` y `travel_buses`, lo que simplifica bastante este plan (ver "Contexto de diseño").
-**Rebasear esta rama sobre `main` antes de empezar a implementar.**
+**✅ Dependencia satisfecha:** [Saneamiento del modelo de datos](../completed/data-model-cleanup-PLAN.md)
+está completo, verificado y mergeado a `main` (2026-09-22). Esa feature sacó las columnas
+financieras de `travels` y `travel_buses`, lo que simplifica bastante este plan (ver
+"Contexto de diseño"). Esta rama ya tiene `main` integrado (merge, no rebase) — el esquema
+y el código de esa feature están presentes acá.
 
 ---
 
@@ -81,7 +83,7 @@ pero era **fail-open**: una columna financiera nueva en `travels` no habría que
 sola.
 
 **Se descartó a favor de separar las columnas en el esquema**, lo que hace la feature de
-[saneamiento del modelo de datos](data-model-cleanup-PLAN.md). Consecuencias para este plan:
+[saneamiento del modelo de datos](../completed/data-model-cleanup-PLAN.md). Consecuencias para este plan:
 
 - Desaparece la Fase 0 (hardening de `anon`) — quedó resuelta estructuralmente
 - Desaparecen las dos vistas: `travels` y `travel_buses` van con policy `SELECT` normal
