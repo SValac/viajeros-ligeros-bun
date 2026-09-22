@@ -1,3 +1,5 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
+
 import type { Coordinator, CoordinatorFormData, CoordinatorUpdateData } from '~/types/coordinator';
 import type { TablesUpdate } from '~/types/database.types';
 
@@ -91,5 +93,27 @@ export function useCoordinatorRepository() {
       throw error;
   };
 
-  return { fetchAll, insert, update, remove };
+  async function invite(coordinatorId: string): Promise<void> {
+    const { error } = await supabase.functions.invoke<{ ok: true; email: string }>(
+      'invite-coordinator',
+      { body: { coordinatorId } },
+    );
+
+    if (error) {
+      if (error instanceof FunctionsHttpError) {
+        const body = await error.context.json() as { error?: string };
+        throw new Error(body.error ?? 'unknown_error', { cause: error });
+      }
+      throw error;
+    }
+  }
+
+  async function revokeAccess(coordinatorId: string): Promise<void> {
+    const { error } = await supabase.from('coordinators').update({ user_id: null }).eq('id', coordinatorId);
+    if (error) {
+      throw error;
+    }
+  }
+
+  return { fetchAll, insert, update, invite, revokeAccess, remove };
 }

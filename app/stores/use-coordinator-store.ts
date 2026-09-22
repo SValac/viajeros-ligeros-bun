@@ -1,5 +1,6 @@
 import type { Coordinator, CoordinatorFormData, CoordinatorUpdateData } from '~/types/coordinator';
 
+import { toCoordinatorInviteError } from '~/composables/coordinators/use-coordinator-domain';
 import { useCoordinatorRepository } from '~/composables/coordinators/use-coordinator-repository';
 
 /**
@@ -116,6 +117,40 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     }
   }
 
+  async function inviteCoordinator(id: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.invite(id);
+      await fetchAll();
+    }
+    catch (e) {
+      const domainError = toCoordinatorInviteError(e);
+      error.value = domainError.message;
+      throw domainError;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function revokeCoordinatorAccess(id: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.revokeAccess(id);
+      await fetchAll();
+    }
+    catch (e) {
+      const domainError = toCoordinatorInviteError(e);
+      error.value = domainError.message;
+      throw domainError;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
   return {
     // State
     coordinators,
@@ -128,6 +163,8 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     fetchAll,
     addCoordinator,
     updateCoordinator,
+    inviteCoordinator,
+    revokeCoordinatorAccess,
     deleteCoordinator,
   };
 });

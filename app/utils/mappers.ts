@@ -85,6 +85,7 @@ export function mapCoordinatorRowToDomain(row: Tables<'coordinators'>): Coordina
     age: row.age,
     phone: row.phone,
     email: row.email,
+    userId: row.user_id,
     notes: row.notes ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,

@@ -130,6 +130,11 @@ const columns: TableColumn<Coordinator>[] = [
     },
   },
   {
+    id: 'access',
+    header: 'Acceso a la app',
+    cell: ({ row }) => h(resolveComponent('CoordinatorInviteButton'), { coordinator: row.original }),
+  },
+  {
     id: 'actions',
     header: 'Acciones',
     cell: ({ row }) =>
