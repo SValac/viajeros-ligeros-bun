@@ -4,9 +4,12 @@ import type { TravelService } from '~/types/travel';
 // Props
 type Props = {
   modelValue: TravelService[];
+  editable?: boolean;
 };
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  editable: true,
+});
 
 // Emits
 const emit = defineEmits<{
@@ -136,6 +139,7 @@ function getServiceActions(service: TravelService) {
         </span>
       </div>
       <UButton
+        v-if="editable"
         icon="i-lucide-plus"
         size="sm"
         label="Agregar Servicio"
@@ -159,6 +163,7 @@ function getServiceActions(service: TravelService) {
               <!-- Checkbox -->
               <UCheckbox
                 :model-value="service.included"
+                :disabled="!editable"
                 class="mt-0.5"
                 @update:model-value="toggleIncluido(service)"
               />
@@ -180,7 +185,10 @@ function getServiceActions(service: TravelService) {
             </div>
 
             <!-- Acciones -->
-            <UDropdownMenu :items="getServiceActions(service)">
+            <UDropdownMenu
+              v-if="editable"
+              :items="getServiceActions(service)"
+            >
               <UButton
                 icon="i-lucide-more-vertical"
                 variant="ghost"
@@ -209,6 +217,7 @@ function getServiceActions(service: TravelService) {
               <!-- Checkbox -->
               <UCheckbox
                 :model-value="service.included"
+                :disabled="!editable"
                 class="mt-0.5"
                 @update:model-value="toggleIncluido(service)"
               />
@@ -230,7 +239,10 @@ function getServiceActions(service: TravelService) {
             </div>
 
             <!-- Acciones -->
-            <UDropdownMenu :items="getServiceActions(service)">
+            <UDropdownMenu
+              v-if="editable"
+              :items="getServiceActions(service)"
+            >
               <UButton
                 icon="i-lucide-more-vertical"
                 variant="ghost"
@@ -252,7 +264,7 @@ function getServiceActions(service: TravelService) {
       <p class="text-sm">
         No hay servicios agregados
       </p>
-      <p class="text-xs mt-1">
+      <p v-if="editable" class="text-xs mt-1">
         Haz clic en "Agregar Servicio" para comenzar
       </p>
     </div>
