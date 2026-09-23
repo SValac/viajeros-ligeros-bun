@@ -52,6 +52,10 @@ const schema = z.object({
   // Contenido HTML del editor enriquecido: solo se despojan caracteres de control, no se restringe el charset.
   description: textSchema({ min: 10, max: 3000 }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
+  departureFrom: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
+  summary: textSchema({ max: 200 }).optional().or(z.literal('')),
+  highlights: z.array(businessNameSchema({ min: 1, max: 40 })).max(6, 'Máximo 6 destacados'),
+  featured: z.boolean(),
   internalNotes: textSchema({ max: 500 }).optional().or(z.literal('')),
 }).refine(
   data => new Date(data.endDate) >= new Date(data.startDate),
@@ -72,6 +76,10 @@ const initialState = computed((): Schema => {
       price: travel.price,
       description: travel.description,
       status: travel.status,
+      departureFrom: travel.departureFrom ?? '',
+      summary: travel.summary ?? '',
+      highlights: travel.highlights,
+      featured: travel.featured,
       internalNotes: travel.internalNotes || '',
     };
   }
@@ -85,6 +93,10 @@ const initialState = computed((): Schema => {
     price: 0,
     description: '',
     status: 'pending',
+    departureFrom: '',
+    summary: '',
+    highlights: [],
+    featured: false,
     internalNotes: '',
   };
 });
@@ -131,7 +143,17 @@ const state = ref<Schema>({ ...initialState.value });
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const labelInput = useSanitizedModel(() => state.value.label, v => state.value.label = v, sanitizeBusinessName);
 const destinationInput = useSanitizedModel(() => state.value.destination ?? '', v => state.value.destination = v, sanitizeBusinessName);
+const departureFromInput = useSanitizedModel(() => state.value.departureFrom ?? '', v => state.value.departureFrom = v, sanitizeBusinessName);
+const summaryInput = useSanitizedModel(() => state.value.summary ?? '', v => state.value.summary = v, sanitizeText);
 const internalNotesInput = useSanitizedModel(() => state.value.internalNotes ?? '', v => state.value.internalNotes = v, sanitizeText);
+
+// UInputTags entrega el array completo en cada cambio; se sanitiza cada entrada y se descartan las vacías.
+const highlightsInput = computed<string[]>({
+  get: () => state.value.highlights,
+  set: (value) => {
+    state.value.highlights = value.map(sanitizeBusinessName).filter(v => v.length > 0);
+  },
+});
 
 const inputDate = useTemplateRef('inputDate');
 
@@ -230,6 +252,18 @@ function onCancel() {
               v-model="destinationInput"
               placeholder="París, Francia"
               icon="i-lucide-map-pin"
+            />
+          </UFormField>
+
+          <UFormField
+            label="Punto de salida"
+            name="departureFrom"
+            description="Ciudad/punto de partida que se muestra en el sitio público"
+          >
+            <UInput
+              v-model="departureFromInput"
+              placeholder="Ciudad de México"
+              icon="i-lucide-map-pinned"
             />
           </UFormField>
 
@@ -387,6 +421,50 @@ function onCancel() {
               />
             </UFormField>
           </div>
+
+          <!-- Sitio público -->
+          <div class="flex flex-col gap-4 border-t border-default pt-4">
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-globe" class="w-4 h-4 text-muted" />
+              <h3 class="text-sm font-semibold">
+                Sitio público
+              </h3>
+            </div>
+
+            <UFormField
+              label="Resumen"
+              name="summary"
+              description="Teaser corto para el listado del sitio público. Si se deja vacío, se usa un extracto de la descripción."
+            >
+              <UTextarea
+                v-model="summaryInput"
+                placeholder="Una escapada inolvidable entre lagos y montañas"
+                :rows="2"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField
+              label="Destacados"
+              name="highlights"
+              description="Hasta 6 frases cortas (ej. 'Todo incluido', 'Trato personalizado')"
+            >
+              <UInputTags
+                v-model="highlightsInput"
+                :max="6"
+                placeholder="Escribe y presiona Enter"
+                icon="i-lucide-sparkles"
+              />
+            </UFormField>
+
+            <UFormField name="featured">
+              <USwitch
+                v-model="state.featured"
+                label="Destacar en la sección principal del sitio público"
+              />
+            </UFormField>
+          </div>
+
           <!-- Imagen de portada -->
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium">Imagen de portada</label>

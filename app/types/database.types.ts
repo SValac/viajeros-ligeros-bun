@@ -1261,9 +1261,12 @@ export type Database = {
         Row: {
           accumulated_travelers: number | null
           created_at: string
+          departure_from: string | null
           description: string
           destination: string | null
           end_date: string
+          featured: boolean
+          highlights: string[]
           id: string
           image_url: string | null
           label: string
@@ -1272,14 +1275,18 @@ export type Database = {
           price: number
           start_date: string
           status: Database["public"]["Enums"]["travel_status"]
+          summary: string | null
           updated_at: string
         }
         Insert: {
           accumulated_travelers?: number | null
           created_at?: string
+          departure_from?: string | null
           description: string
           destination?: string | null
           end_date: string
+          featured?: boolean
+          highlights?: string[]
           id?: string
           image_url?: string | null
           label: string
@@ -1288,14 +1295,18 @@ export type Database = {
           price: number
           start_date: string
           status?: Database["public"]["Enums"]["travel_status"]
+          summary?: string | null
           updated_at?: string
         }
         Update: {
           accumulated_travelers?: number | null
           created_at?: string
+          departure_from?: string | null
           description?: string
           destination?: string | null
           end_date?: string
+          featured?: boolean
+          highlights?: string[]
           id?: string
           image_url?: string | null
           label?: string
@@ -1304,6 +1315,7 @@ export type Database = {
           price?: number
           start_date?: string
           status?: Database["public"]["Enums"]["travel_status"]
+          summary?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -1316,6 +1328,13 @@ export type Database = {
       generate_travel_access_code: {
         Args: { p_travel_id: string }
         Returns: Json
+      }
+      get_travel_seats: {
+        Args: { p_travel_id: string }
+        Returns: {
+          seats_left: number
+          seats_total: number
+        }[]
       }
       move_or_swap_traveler_seat: {
         Args: {

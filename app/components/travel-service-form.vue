@@ -27,7 +27,6 @@ const schema = z.object({
     .optional()
     .or(z.literal('')),
   included: z.boolean(),
-  providerId: z.string().optional(),
 });
 
 type Schema = z.output<typeof schema>;
@@ -39,7 +38,6 @@ const initialState = computed((): Schema => {
       name: service.name,
       description: service.description || '',
       included: service.included,
-      providerId: service.providerId,
     };
   }
 
@@ -47,7 +45,6 @@ const initialState = computed((): Schema => {
     name: '',
     description: '',
     included: true, // Por defecto marcado como incluido
-    providerId: undefined,
   };
 });
 
@@ -68,7 +65,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       name: event.data.name,
       description: event.data.description || undefined,
       included: event.data.included,
-      providerId: event.data.providerId,
     };
 
     emit('submit', serviceData);
@@ -100,17 +96,6 @@ function onCancel() {
         v-model="nameInput"
         placeholder="Vuelos ida y vuelta"
         icon="i-lucide-package"
-      />
-    </UFormField>
-
-    <!-- Proveedor (opcional) -->
-    <UFormField
-      label="Proveedor"
-      name="providerId"
-      description="Opcional - Selecciona el proveedor que ofrece este servicio"
-    >
-      <ProviderSelector
-        v-model="state.providerId"
       />
     </UFormField>
 

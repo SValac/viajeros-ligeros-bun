@@ -110,7 +110,6 @@ export function useTravelRepository() {
           name: s.name,
           description: s.description ?? null,
           included: s.included,
-          provider_id: s.providerId ?? null,
         })),
       )
       .select();
@@ -334,6 +333,14 @@ export function useTravelRepository() {
       update.minimum_seats = data.minimumSeats ?? null;
     if ('accumulatedTravelers' in data)
       update.accumulated_travelers = data.accumulatedTravelers ?? null;
+    if ('departureFrom' in data)
+      update.departure_from = data.departureFrom ?? null;
+    if ('summary' in data)
+      update.summary = data.summary ?? null;
+    if (data.highlights !== undefined)
+      update.highlights = data.highlights;
+    if (data.featured !== undefined)
+      update.featured = data.featured;
 
     const { data: row, error } = await supabase
       .from('travels')

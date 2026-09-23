@@ -516,8 +516,9 @@ definePageMeta({
               icon="i-lucide-briefcase"
             />
 
-            <TravelServiciosSection
-              :travel-id="travelId"
+            <TravelServiceList
+              :model-value="travel.services"
+              :editable="false"
             />
           </UCard>
         </section>

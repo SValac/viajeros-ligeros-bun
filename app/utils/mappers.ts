@@ -162,6 +162,10 @@ export function mapTravelRowToDomain(
     description: row.description,
     imageUrl: row.image_url ?? undefined,
     status: row.status,
+    departureFrom: row.departure_from ?? undefined,
+    summary: row.summary ?? undefined,
+    highlights: row.highlights ?? [],
+    featured: row.featured,
     internalNotes: internals?.internal_notes ?? undefined,
     totalOperationCost: internals?.total_operation_cost ?? undefined,
     minimumSeats: row.minimum_seats ?? undefined,
@@ -220,7 +224,6 @@ export function mapTravelServiceRowToDomain(row: Tables<'travel_services'>): Tra
     name: row.name,
     description: row.description ?? undefined,
     included: row.included,
-    providerId: row.provider_id ?? undefined,
   };
 }
 
@@ -250,6 +253,10 @@ export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>,
     status: data.status,
     minimum_seats: data.minimumSeats ?? null,
     accumulated_travelers: data.accumulatedTravelers ?? null,
+    departure_from: data.departureFrom ?? null,
+    summary: data.summary ?? null,
+    highlights: data.highlights ?? [],
+    featured: data.featured ?? false,
   };
 }
 
