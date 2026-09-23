@@ -224,7 +224,6 @@ export function mapTravelServiceRowToDomain(row: Tables<'travel_services'>): Tra
     name: row.name,
     description: row.description ?? undefined,
     included: row.included,
-    providerId: row.provider_id ?? undefined,
   };
 }
 

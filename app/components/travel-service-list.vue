@@ -21,9 +21,6 @@ const editingService = ref<TravelService | null>(null);
 // Toast para feedback
 const toast = useToast();
 
-// Provider store para obtener información de proveedores
-const providerStore = useProviderStore();
-
 // Servicios agrupados
 const serviciosIncluidos = computed(() => {
   return services.value.filter(s => s.included);
@@ -32,14 +29,6 @@ const serviciosIncluidos = computed(() => {
 const serviciosNoIncluidos = computed(() => {
   return services.value.filter(s => !s.included);
 });
-
-// Función para obtener nombre del proveedor
-function getProviderName(providerId?: string): string | null {
-  if (!providerId)
-    return null;
-  const provider = providerStore.getProviderById(providerId);
-  return provider?.name || null;
-}
 
 // Handlers
 function openServiceAddModal() {
@@ -180,21 +169,6 @@ function getServiceActions(service: TravelService) {
                   {{ service.name }}
                 </div>
 
-                <!-- Proveedor (si está vinculado) -->
-                <div
-                  v-if="service.providerId && getProviderName(service.providerId)"
-                  class="flex items-center gap-1.5"
-                >
-                  <UBadge
-                    color="info"
-                    variant="subtle"
-                    size="xs"
-                  >
-                    <span class="i-lucide-handshake w-3 h-3 mr-1" />
-                    {{ getProviderName(service.providerId) }}
-                  </UBadge>
-                </div>
-
                 <!-- Descripción -->
                 <div
                   v-if="service.description"
@@ -243,21 +217,6 @@ function getServiceActions(service: TravelService) {
                 <!-- Nombre -->
                 <div class="font-medium text-sm">
                   {{ service.name }}
-                </div>
-
-                <!-- Proveedor (si está vinculado) -->
-                <div
-                  v-if="service.providerId && getProviderName(service.providerId)"
-                  class="flex items-center gap-1.5"
-                >
-                  <UBadge
-                    color="info"
-                    variant="subtle"
-                    size="xs"
-                  >
-                    <span class="i-lucide-handshake w-3 h-3 mr-1" />
-                    {{ getProviderName(service.providerId) }}
-                  </UBadge>
                 </div>
 
                 <!-- Descripción -->

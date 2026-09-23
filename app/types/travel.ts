@@ -43,7 +43,6 @@ export type TravelService = {
   name: string;
   description?: string;
   included: boolean;
-  providerId?: string;
 };
 
 export type TravelAccommodation = {

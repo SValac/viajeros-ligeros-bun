@@ -110,7 +110,6 @@ export function useTravelRepository() {
           name: s.name,
           description: s.description ?? null,
           included: s.included,
-          provider_id: s.providerId ?? null,
         })),
       )
       .select();
