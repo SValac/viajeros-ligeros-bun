@@ -545,19 +545,6 @@ function onCancel() {
         />
       </UCard>
     </section>
-
-    <!-- Servicios del Viaje -->
-    <section id="services">
-      <UCard>
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-package" class="w-5 h-5 text-muted" />
-            <h2>Servicios</h2>
-          </div>
-        </template>
-        <TravelServiceList v-model="servicios" />
-      </UCard>
-    </section>
     <!-- Botones de acción -->
     <div class="flex col-span-1 xl:col-span-2 items-center justify-center gap-3 pt-4">
       <UButton
