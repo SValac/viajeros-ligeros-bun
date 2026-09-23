@@ -116,17 +116,6 @@ function handleCancel() {
       <UCard>
         <template #header>
           <div class="flex items-center gap-2">
-            <span class="i-lucide-briefcase w-5 h-5 text-muted" />
-            <h2 class="font-semibold text-lg">
-              Servicios cotizados
-            </h2>
-          </div>
-        </template>
-        <TravelServiciosSection :travel-id="travelId" />
-      </UCard>
-      <UCard>
-        <template #header>
-          <div class="flex items-center gap-2">
             <span class="i-lucide-bus w-5 h-5 text-muted" />
             <h2 class="font-semibold text-lg">
               Autobuses
