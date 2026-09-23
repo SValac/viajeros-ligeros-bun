@@ -17,7 +17,11 @@
     "db:reset": "supabase db reset",
     "db:types": "supabase gen types typescript --local > app/types/database.types.ts",
     "db:diff": "supabase db diff",
-    "db:push": "supabase db push"
+    "db:push": "supabase db push",
+    "db:link:prod": "supabase link --project-ref mkosbzhagjbyfvizafta",
+    "db:link:stage": "supabase link --project-ref wfmpttxmztlniiqvkrcl",
+    "db:push:prod": "bun run db:link:prod && supabase db push",
+    "db:push:stage": "bun run db:link:stage && supabase db push"
   },
   "dependencies": {
     "@nuxt/ui": "^4.3.0",
