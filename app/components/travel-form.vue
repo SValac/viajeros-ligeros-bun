@@ -53,7 +53,7 @@ const schema = z.object({
   description: textSchema({ min: 10, max: 3000 }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
   departureFrom: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
-  summary: textSchema({ max: 200 }).optional().or(z.literal('')),
+  summary: textSchema({ min: 10, max: 200 }),
   highlights: z.array(businessNameSchema({ min: 1, max: 40 })).max(6, 'Máximo 6 destacados'),
   featured: z.boolean(),
   internalNotes: textSchema({ max: 500 }).optional().or(z.literal('')),
@@ -434,7 +434,8 @@ function onCancel() {
             <UFormField
               label="Resumen"
               name="summary"
-              description="Teaser corto para el listado del sitio público. Si se deja vacío, se usa un extracto de la descripción."
+              description="Teaser corto para el listado del sitio público."
+              required
             >
               <UTextarea
                 v-model="summaryInput"
