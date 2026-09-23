@@ -250,6 +250,10 @@ export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>,
     status: data.status,
     minimum_seats: data.minimumSeats ?? null,
     accumulated_travelers: data.accumulatedTravelers ?? null,
+    departure_from: null,
+    summary: null,
+    highlights: [],
+    featured: false,
   };
 }
 
