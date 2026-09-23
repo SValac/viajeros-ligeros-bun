@@ -68,6 +68,10 @@ export type Travel = {
   description: string;
   imageUrl?: string;
   status: TravelStatus;
+  departureFrom?: string;
+  summary?: string;
+  highlights: string[];
+  featured: boolean;
   coordinatorIds: string[];
   itinerary: TravelActivity[];
   services: TravelService[];

@@ -143,6 +143,10 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         'status',
         'minimumSeats',
         'accumulatedTravelers',
+        'departureFrom',
+        'summary',
+        'highlights',
+        'featured',
       ];
       const travelInternalKeys: (keyof TravelUpdateData)[] = [
         'internalNotes',
