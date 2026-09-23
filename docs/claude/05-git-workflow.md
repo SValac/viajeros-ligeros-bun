@@ -10,7 +10,7 @@ Vercel project is on the Hobby (free) plan, which has no Custom Environments. St
 - **Stage**: `viajeros-ligeros-bun-git-stage-svalacs-projects.vercel.app`
 - **QA**: `viajeros-ligeros-bun-git-qa-svalacs-projects.vercel.app`
 
-Both currently point at the same Supabase project as Production (no separate stage/QA database).
+Stage and QA share a dedicated Supabase project, isolated from Production (see [Database Migrations](#database-migrations) below).
 
 1. **Feature work** — branch off `main` as `feature/xxx`, open a PR. Every PR gets its own throwaway Preview URL (the `#NN` links in Vercel's Active Branches list) for reviewing that change in isolation.
 2. **QA** — when something needs a stable, shareable link (manual testing, client review) instead of a per-PR URL, merge it into `qa`:
@@ -33,6 +33,36 @@ Both currently point at the same Supabase project as Production (no separate sta
    ```
 
 > **Gotcha**: pushing a brand-new branch whose HEAD is identical to an already-deployed commit (e.g. right after `git checkout -b <branch> main`) does not trigger a Vercel build. Follow it with a real (or empty) commit and push again to get the first deploy.
+
+## Database Migrations
+
+Migration files in `supabase/migrations/` are a single, shared history versioned in git — there are **not** separate migration files per environment. What differs is *when* each database receives them: unlike Vercel (one push deploys code everywhere), Supabase requires an explicit push per project.
+
+Two Supabase projects exist:
+
+| Environment | Project ref |
+| --- | --- |
+| Stage + QA (shared) | `wfmpttxmztlniiqvkrcl` |
+| Production | `mkosbzhagjbyfvizafta` |
+
+Helper scripts in `package.json` switch the CLI's linked project and push — no database password needed, `supabase link` authenticates via the CLI session (`supabase login`):
+
+```bash
+bun run db:link:prod     # link to Production only
+bun run db:link:stage    # link to Stage/QA only
+bun run db:push:prod     # link + db push to Production
+bun run db:push:stage    # link + db push to Stage/QA
+```
+
+Flow for a new migration:
+
+1. `supabase migration new <name>` — creates the timestamped SQL file.
+2. `bun run db:reset` — apply it locally (Docker Postgres) and verify.
+3. `bun run db:push:stage` — push to Stage/QA, verify against those deployed apps.
+4. `bun run db:push:prod` — push to Production once verified.
+5. Commit the migration file with the rest of the change and go through the normal PR flow into `main`.
+
+> **Note**: after switching the linked project, `supabase projects list` shows which one is currently `linked: true`. Check it before any `db push` if picking up work in a new session, to avoid pushing to the wrong database.
 
 ---
 
