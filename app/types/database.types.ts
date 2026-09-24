@@ -199,6 +199,47 @@ export type Database = {
         }
         Relationships: []
       }
+      countries: {
+        Row: {
+          code: string
+          name: string
+        }
+        Insert: {
+          code: string
+          name: string
+        }
+        Update: {
+          code?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      country_states: {
+        Row: {
+          code: string
+          country_code: string
+          name: string
+        }
+        Insert: {
+          code: string
+          country_code: string
+          name: string
+        }
+        Update: {
+          code?: string
+          country_code?: string
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "country_states_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       hotel_room_types: {
         Row: {
           additional_details: string | null
