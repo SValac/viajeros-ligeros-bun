@@ -221,7 +221,9 @@ viajeros-ligeros-web/app/
   `private.is_travel_coordinator`, como en coordinator-access Fase 2.
 - **Campos extra candidatos** (ciudad, sitio web, redes sociales, descripción de la agencia):
   no se incluyen en esta versión. Agregarlos es una migración `ALTER TABLE` sin impacto
-  en RLS, y cualquiera de ellos también sería público.
+  en RLS, y cualquiera de ellos también sería público. **Actualización:** redes sociales,
+  eslogan, correo y la página "Nosotros" se agregaron después, en
+  [agency-site-customization.md](../agency-site-customization.md).
 - **Filtros por datos del viaje** (destino por catálogo, categorías, duración): esta
   feature cubre la dimensión "agencia". Mejorar los filtros por atributos del propio viaje
   es otra feature.
