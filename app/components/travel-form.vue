@@ -171,14 +171,20 @@ watch(dateRange, (range) => {
 const itinerario = ref(travel?.itinerary || []);
 const servicios = ref(travel?.services || []);
 
+// Publicar exige perfil de agencia completo (lo hace cumplir también un trigger en la base).
+// Un viaje que ya está publicado conserva la opción: el trigger solo revisa la transición.
+const agencyProfileStore = useAgencyProfileStore();
+onMounted(() => agencyProfileStore.fetchProfile());
+const canPublish = computed(() => agencyProfileStore.isComplete || travel?.status === 'published');
+
 // Opciones de estado para el select
-const estadoOptions: SelectItem[] = [
+const estadoOptions = computed<SelectItem[]>(() => [
   { value: 'pending', label: 'Pendiente' },
-  { value: 'published', label: 'Publicado' },
+  { value: 'published', label: 'Publicado', disabled: !canPublish.value },
   { value: 'in_progress', label: 'En Curso' },
   { value: 'completed', label: 'Completado' },
   { value: 'cancelled', label: 'Cancelado' },
-];
+]);
 
 // Handlers
 const isSubmitting = ref(false);
@@ -419,6 +425,15 @@ function onCancel() {
                 :items="estadoOptions"
                 icon="i-lucide-circle-dot"
               />
+              <template
+                v-if="!canPublish && !agencyProfileStore.loading"
+                #help
+              >
+                Para publicar, completa el nombre de empresa y el estado en tu
+                <ULink :to="{ name: 'profile' }" class="text-primary underline">
+                  perfil de agencia
+                </ULink>.
+              </template>
             </UFormField>
           </div>
 

@@ -1,6 +1,7 @@
 import type { Tables } from '~/types/database.types';
 import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStatus, TravelUpdateData } from '~/types/travel';
 
+import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
 import { useTravelRepository } from '~/composables/travels/use-travel-repository';
 
 type TravelStats = {
@@ -108,7 +109,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return newTravel;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al agregar viaje';
+      error.value = toTravelSaveErrorMessage(e, 'Error al agregar viaje');
       throw e;
     }
     finally {
@@ -213,7 +214,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al actualizar viaje';
+      error.value = toTravelSaveErrorMessage(e, 'Error al actualizar viaje');
       return false;
     }
     finally {
