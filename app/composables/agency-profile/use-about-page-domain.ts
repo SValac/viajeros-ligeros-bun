@@ -332,6 +332,16 @@ export function toAboutPage(json: Json | null): AboutPage | null {
 }
 
 /**
+ * Deep-copies a stored page into independent editor state, so edits don't touch the
+ * store until they are saved.
+ * @param page - The profile's page (may be a reactive proxy), or `null`
+ * @returns A plain copy, or `null`
+ */
+export function cloneAboutPage(page: AboutPage | null): AboutPage | null {
+  return page ? structuredClone(toRaw(page)) : null;
+}
+
+/**
  * Creates an empty section of the given type, with the minimum number of items.
  * @param type - Section type picked by the user
  * @returns A new section ready to edit

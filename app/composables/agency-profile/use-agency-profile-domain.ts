@@ -1,7 +1,5 @@
 import type { AgencyProfile, AgencyProfileFormData, AgencyProfileUpdateData } from '~/types/agency-profile';
 
-import { serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
-
 export const AGENCY_LOGOS_BUCKET = 'agency-logos';
 
 // Must match the bucket limits in 20260924043319_agency_logos_storage.sql.
@@ -88,7 +86,6 @@ export function mapProfileToForm(profile: AgencyProfile | null): AgencyProfileFo
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
     tagline: profile?.tagline ?? '',
-    aboutPage: profile?.aboutPage ? structuredClone(toRaw(profile.aboutPage)) : null,
     contactEmail: profile?.contactEmail ?? '',
     instagramUrl: profile?.instagramUrl ?? '',
     facebookUrl: profile?.facebookUrl ?? '',
@@ -111,7 +108,6 @@ export function mapFormToUpdate(form: AgencyProfileFormData): AgencyProfileUpdat
     primaryColor: normalizeHexColor(form.primaryColor),
     secondaryColor: normalizeHexColor(form.secondaryColor),
     tagline: trimToNull(form.tagline),
-    aboutPage: serializeAboutPage(form.aboutPage),
     contactEmail: trimToNull(form.contactEmail)?.toLowerCase() ?? null,
     instagramUrl: trimToNull(form.instagramUrl),
     facebookUrl: trimToNull(form.facebookUrl),

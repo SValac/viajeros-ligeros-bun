@@ -29,10 +29,9 @@ export type AgencyProfileFormData = {
   contactEmail: string;
   instagramUrl: string;
   facebookUrl: string;
-  aboutPage: AboutPage | null;
 };
 
-export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagline' | 'contactEmail' | 'instagramUrl' | 'facebookUrl' | 'aboutPage'>> & {
+export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagline' | 'contactEmail' | 'instagramUrl' | 'facebookUrl'>> & {
   logoUrl?: string | null;
   tagline?: string | null;
   aboutPage?: Json | null;
