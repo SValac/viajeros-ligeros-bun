@@ -77,7 +77,7 @@ export type Database = {
       }
       agency_profiles: {
         Row: {
-          about: string | null
+          about_page: Json | null
           company_name: string | null
           contact_email: string | null
           country_code: string
@@ -94,7 +94,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          about?: string | null
+          about_page?: Json | null
           company_name?: string | null
           contact_email?: string | null
           country_code?: string
@@ -111,7 +111,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          about?: string | null
+          about_page?: Json | null
           company_name?: string | null
           contact_email?: string | null
           country_code?: string
@@ -1450,7 +1450,7 @@ export type Database = {
       get_public_agency_profile: {
         Args: { p_agency_id: string }
         Returns: {
-          about: string
+          about_page: Json
           company_name: string
           contact_email: string
           country_code: string
