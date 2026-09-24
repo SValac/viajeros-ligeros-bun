@@ -1,7 +1,31 @@
 # Fase 4 — Perfil en el CRM
 
-**Estado:** Pendiente
+**Estado:** 🚧 En progreso. Subpaso 1 (types) ✅
 **Dependencia:** Fases 2 y 3
+
+### Subpasos
+
+| # | Subpaso | Estado |
+|---|---|---|
+| 1 | `app/types/agency-profile.ts` | ✅ |
+| 2 | Repository | Pendiente |
+| 3 | Domain | Pendiente |
+| 4 | Store | Pendiente |
+| 5 | Componentes + página + `user-menu` | Pendiente |
+
+### Decisiones tomadas en los types
+
+- `AgencyProfileFormData` se declara **explícito**, no con `Pick`/`Omit` de `AgencyProfile`,
+  porque la nulabilidad del formulario difiere de la de la fila.
+- **`companyName: string` es obligatorio en el formulario (opción A).** El domain rechaza el
+  nombre vacío, así que `update()` nunca recibe `null` para ese campo. Encaja con la Fase 5
+  (sin nombre no se publica).
+- `phone`, `stateCode` y los colores son `string | null`: son opcionales. El domain
+  normaliza `''` → `null` antes de guardar.
+- `AgencyProfileUpdateData.logoUrl?: string | null`: es opcional porque el formulario no lo
+  manda, y nullable para poder quitar el logo.
+- Lección: `Omit<T, K>` **no valida** que `K` exista en `T` (`K extends keyof any`). Con
+  claves mal escritas omite nada y en silencio. `Pick` sí falla la compilación.
 **Skills:** vue, nuxt, nuxt-ui, pinia
 
 [← Volver al plan](PLAN.md)
