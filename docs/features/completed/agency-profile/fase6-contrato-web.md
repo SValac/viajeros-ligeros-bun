@@ -4,8 +4,11 @@
 probó como `anon` contra la API local. La web lo implementó en `viajeros-ligeros-web`, rama
 `feat/agency-profile` (reporte de la sesión web, 2026-09-24): embed, `Trip.agency`, filtro
 por estado (visible solo con más de un estado), logo/nombre/estado en la tarjeta y en la de
-reserva, y WhatsApp con el teléfono de la agencia. **Seguimiento en el repo web:** probar
-contra stage y mergear a `main`, siempre después del PR del CRM.
+reserva, y WhatsApp con el teléfono de la agencia. **Mergeada a `main` en el repo web** (PR #4,
+commit `3321e96`, 2026-09-24) después de pasar por qa y stage: la consulta con el embed
+funciona ahí. La insignia y el filtro con datos reales solo se probaron en local, porque stage
+no tenía viajes publicados. `logo_url` se acepta con `http` o `https`, para que funcionen los
+logos del Supabase local.
 **Dependencia:** Fase 2 (desplegada al menos en stage)
 **Repo:** `viajeros-ligeros-web`. La implementa la sesión paralela de ese repo; coordinar
 por `SendMessage` ([[reference_web_repo_peer_session]]).

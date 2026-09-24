@@ -83,14 +83,16 @@ Casos adicionales:
 3. [x] Avisar a la sesión web (Fase 6)
 4. [x] `bun run db:push:prod`
 5. [ ] Mergear este PR a `main`
-6. [ ] **Después**, mergear la web a `main` (seguimiento en el repo web)
+6. [x] Web mergeada a `main` (repo web, PR #4). Entró antes que este PR, sin riesgo porque la
+       base de prod ya tenía las migraciones
 7. [ ] Listar en prod los dueños con viajes ya publicados y perfil incompleto, y avisarles
        (seguimiento)
 
 ## Seguimientos (sin código en este repo)
 
-- **Web:** mergear `feat/agency-profile` en `viajeros-ligeros-web` después de probarla en
-  stage.
+- ~~**Web:** mergear `feat/agency-profile` en `viajeros-ligeros-web`~~ ✅ hecho (PR #4).
+  Falta ver en prod la insignia y el filtro con datos reales, cuando alguna agencia complete
+  su perfil y tenga un viaje publicado.
 - **Advisors remotos** de seguridad y performance en el dashboard de prod.
 - **Dueños con perfil incompleto:** esta consulta, en el SQL editor de prod, lista quién
   tiene viajes publicados sin agencia visible en la web:
