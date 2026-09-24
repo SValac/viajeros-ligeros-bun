@@ -11,7 +11,7 @@ export default defineNuxtConfig({
     },
   },
   devtools: { enabled: true },
-  modules: ['@pinia/nuxt', '@nuxt/eslint', '@nuxt/ui'],
+  modules: ['@pinia/nuxt', '@nuxt/eslint', '@nuxt/ui', '@formkit/auto-animate/nuxt'],
   css: ['~/assets/css/main.css', 'vue3-emoji-picker/css'],
   eslint: {
     config: {
