@@ -75,6 +75,60 @@ export type Database = {
           },
         ]
       }
+      agency_profiles: {
+        Row: {
+          company_name: string | null
+          country_code: string
+          created_at: string
+          id: string
+          logo_url: string | null
+          phone: string | null
+          primary_color: string | null
+          secondary_color: string | null
+          state_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          country_code?: string
+          created_at?: string
+          id: string
+          logo_url?: string | null
+          phone?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          state_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          country_code?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          phone?: string | null
+          primary_color?: string | null
+          secondary_color?: string | null
+          state_code?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_profiles_country_code_fkey"
+            columns: ["country_code"]
+            isOneToOne: false
+            referencedRelation: "countries"
+            referencedColumns: ["code"]
+          },
+          {
+            foreignKeyName: "agency_profiles_state_fk"
+            columns: ["country_code", "state_code"]
+            isOneToOne: false
+            referencedRelation: "country_states"
+            referencedColumns: ["country_code", "code"]
+          },
+        ]
+      }
       bus_payments: {
         Row: {
           amount: number
@@ -1359,7 +1413,15 @@ export type Database = {
           summary?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "travels_owner_agency_profile_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "agency_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
