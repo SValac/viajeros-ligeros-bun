@@ -10,7 +10,19 @@ const { uploadBanner } = useTravelMediaRepository();
 
 // Handlers
 async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
-  const newTravel = await travelsStore.addTravel(data);
+  let newTravel;
+  try {
+    newTravel = await travelsStore.addTravel(data);
+  }
+  catch {
+    toast.add({
+      title: 'Error al crear el viaje',
+      description: travelsStore.error ?? 'No se pudo crear el viaje',
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
+    return;
+  }
 
   if (bannerFile) {
     const imageUrl = await uploadBanner(newTravel.id, bannerFile);

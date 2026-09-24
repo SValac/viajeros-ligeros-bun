@@ -57,7 +57,7 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   else {
     toast.add({
       title: 'Error al actualizar',
-      description: 'No se pudo actualizar el viaje',
+      description: travelsStore.error ?? 'No se pudo actualizar el viaje',
       color: 'error',
       icon: 'i-lucide-alert-circle',
     });

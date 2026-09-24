@@ -46,3 +46,19 @@ export function validateMapLocation(mapLocation: { lat: number; lng: number }): 
   const { lat, lng } = mapLocation;
   return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
+
+/**
+ * Maps an error from saving a travel to a user-facing message. Translates the
+ * `agency_profile_incomplete` exception raised by the `travels_require_profile_to_publish`
+ * trigger; any other error keeps its own message.
+ * @param error - Error thrown by the repository
+ * @param fallback - Message to use when the error has none
+ * @returns A user-facing message
+ */
+export function toTravelSaveErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof Error))
+    return fallback;
+  if (error.message.includes('agency_profile_incomplete'))
+    return 'Para publicar el viaje, completa el nombre de empresa y el estado en tu perfil de agencia.';
+  return error.message || fallback;
+}
