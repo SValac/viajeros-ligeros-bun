@@ -27,6 +27,7 @@ import type { MapLocation, Travel, TravelAccommodation, TravelActivity, TravelBu
 import type { TravelAccessCode, TravelAccessCodeGenerated } from '~/types/travel-access';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
+import { toAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 import { normalizeBedConfigurations } from '~/utils/hotel-room-helpers';
 
 // ============================================================================
@@ -119,10 +120,10 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
     tagline: row.tagline,
-    about: row.about,
     contactEmail: row.contact_email,
     instagramUrl: row.instagram_url,
     facebookUrl: row.facebook_url,
+    aboutPage: toAboutPage(row.about_page),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

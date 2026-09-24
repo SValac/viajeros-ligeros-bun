@@ -74,14 +74,14 @@ export function useAgencyProfileRepository() {
       update.logo_url = data.logoUrl;
     if (data.tagline !== undefined)
       update.tagline = data.tagline;
-    if (data.about !== undefined)
-      update.about = data.about;
     if (data.contactEmail !== undefined)
       update.contact_email = data.contactEmail;
     if (data.instagramUrl !== undefined)
       update.instagram_url = data.instagramUrl;
     if (data.facebookUrl !== undefined)
       update.facebook_url = data.facebookUrl;
+    if (data.aboutPage !== undefined)
+      update.about_page = data.aboutPage;
 
     const { data: row, error } = await supabase
       .from('agency_profiles')
