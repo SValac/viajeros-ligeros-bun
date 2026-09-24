@@ -5,12 +5,12 @@ import { z } from 'zod';
 
 import type { AgencyProfile, AgencyProfileFormData, CountryState } from '~/types/agency-profile';
 
-import { aboutPageSchema } from '~/composables/agency-profile/use-about-page-domain';
 import {
   CONTACT_EMAIL_MAX_LENGTH,
   FACEBOOK_URL_REGEX,
   INSTAGRAM_URL_REGEX,
   isValidLocalPhone,
+  mapFormToUpdate,
   mapProfileToForm,
   SOCIAL_URL_MAX_LENGTH,
   TAGLINE_MAX_LENGTH,
@@ -54,7 +54,6 @@ const schema = z.object({
     .refine(value => value === '' || z.email().safeParse(value).success, 'Email inválido'),
   instagramUrl: optionalMatching(INSTAGRAM_URL_REGEX, 'Debe ser un enlace https://instagram.com/tu-cuenta'),
   facebookUrl: optionalMatching(FACEBOOK_URL_REGEX, 'Debe ser un enlace https://facebook.com/tu-pagina'),
-  aboutPage: aboutPageSchema.nullable(),
 });
 
 type Schema = z.output<typeof schema>;
@@ -63,6 +62,13 @@ type Schema = z.output<typeof schema>;
 // No re-sync on profile changes, so a logo upload never wipes unsaved edits.
 const initialForm = mapProfileToForm(profile);
 const state = ref<AgencyProfileFormData & { phone: string }>({ ...initialForm, phone: initialForm.phone ?? '' });
+
+// Compared through mapFormToUpdate so only edits that would change what gets saved count
+// (e.g. trailing spaces don't). It resets itself after saving, when `profile` updates.
+const isDirty = computed(() =>
+  JSON.stringify(mapFormToUpdate(state.value)) !== JSON.stringify(mapFormToUpdate(mapProfileToForm(profile))),
+);
+useUnsavedChangesGuard(isDirty);
 
 const companyNameInput = useSanitizedModel(() => state.value.companyName, v => state.value.companyName = v, sanitizeBusinessName);
 const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
@@ -250,17 +256,6 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
         :logo-url="profile?.logoUrl ?? null"
         :primary-color="state.primaryColor"
         :secondary-color="state.secondaryColor"
-      />
-    </UPageCard>
-
-    <UPageCard
-      title="Página Nosotros"
-      description="Opcional. Arma la página «Nosotros» de tu sitio por secciones; el diseño lo pone la web, tú solo el contenido. Sin página, tu sitio no la muestra en el menú."
-      variant="subtle"
-    >
-      <AgencyAboutPageEditor
-        v-model="state.aboutPage"
-        :company-name="state.companyName"
       />
     </UPageCard>
 
