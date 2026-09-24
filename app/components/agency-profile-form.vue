@@ -10,6 +10,7 @@ import {
   FACEBOOK_URL_REGEX,
   INSTAGRAM_URL_REGEX,
   isValidLocalPhone,
+  mapFormToUpdate,
   mapProfileToForm,
   SOCIAL_URL_MAX_LENGTH,
   TAGLINE_MAX_LENGTH,
@@ -61,6 +62,13 @@ type Schema = z.output<typeof schema>;
 // No re-sync on profile changes, so a logo upload never wipes unsaved edits.
 const initialForm = mapProfileToForm(profile);
 const state = ref<AgencyProfileFormData & { phone: string }>({ ...initialForm, phone: initialForm.phone ?? '' });
+
+// Compared through mapFormToUpdate so only edits that would change what gets saved count
+// (e.g. trailing spaces don't). It resets itself after saving, when `profile` updates.
+const isDirty = computed(() =>
+  JSON.stringify(mapFormToUpdate(state.value)) !== JSON.stringify(mapFormToUpdate(mapProfileToForm(profile))),
+);
+useUnsavedChangesGuard(isDirty);
 
 const companyNameInput = useSanitizedModel(() => state.value.companyName, v => state.value.companyName = v, sanitizeBusinessName);
 const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);

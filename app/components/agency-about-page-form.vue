@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import type { AboutPage, AgencyProfile } from '~/types/agency-profile';
 
-import { aboutPageSchema, cloneAboutPage } from '~/composables/agency-profile/use-about-page-domain';
+import { aboutPageSchema, cloneAboutPage, serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 
 type Props = {
   profile: AgencyProfile;
@@ -27,6 +27,13 @@ type Schema = z.output<typeof schema>;
 // Initialized once from the loaded profile (the parent page renders this only after
 // loading), so edits stay local until they are saved.
 const state = ref<{ aboutPage: AboutPage | null }>({ aboutPage: cloneAboutPage(profile.aboutPage) });
+
+// Compared as the stored JSON, so only edits that would change what gets saved count.
+// It resets itself after saving, when `profile` updates.
+const isDirty = computed(() =>
+  JSON.stringify(serializeAboutPage(state.value.aboutPage)) !== JSON.stringify(serializeAboutPage(profile.aboutPage)),
+);
+useUnsavedChangesGuard(isDirty);
 
 function onSubmit(event: FormSubmitEvent<Schema>) {
   emit('submit', event.data.aboutPage);

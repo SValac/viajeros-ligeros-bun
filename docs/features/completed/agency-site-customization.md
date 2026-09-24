@@ -122,7 +122,13 @@ el formulario de cada pestaña se inicializa una vez a partir de él.
 
 Cada pestaña guarda solo sus campos. Para agregar una pestaña (por ejemplo, "Home"), se
 crea `app/pages/profile/<nombre>.vue` y se agrega su entrada al arreglo `tabs` de
-`profile.vue`. Las ediciones sin guardar se pierden al cambiar de pestaña.
+`profile.vue`.
+
+**Cambios sin guardar:** cada formulario calcula `isDirty` comparando lo que guardaría
+(`mapFormToUpdate` / `serializeAboutPage`) con el perfil guardado, así que se limpia solo al
+guardar. `useUnsavedChangesGuard(isDirty)` muestra `UnsavedChangesModal` (vía `useOverlay`)
+al navegar dentro de la app, y el aviso nativo del navegador al cerrar o recargar la
+pestaña. Se puede reusar en cualquier formulario que se renderice dentro de `<NuxtPage />`.
 
 ### Editor en el CRM
 
