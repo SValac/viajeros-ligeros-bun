@@ -10,6 +10,14 @@ export const LOGO_MIME_EXTENSIONS: Record<string, string> = {
   'image/webp': 'webp',
 };
 
+// Must match the CHECK constraints in 20260924173904_agency_profile_site_content.sql.
+export const TAGLINE_MAX_LENGTH = 120;
+export const ABOUT_MAX_LENGTH = 2000;
+export const CONTACT_EMAIL_MAX_LENGTH = 254;
+export const SOCIAL_URL_MAX_LENGTH = 200;
+export const INSTAGRAM_URL_REGEX = /^https:\/\/(?:www\.)?instagram\.com\/\S+$/;
+export const FACEBOOK_URL_REGEX = /^https:\/\/(?:www\.)?facebook\.com\/\S+$/;
+
 // Only MX is seeded in the location catalog for now, so every phone is Mexican.
 const MX_DIAL_CODE = '52';
 const MX_LOCAL_DIGITS = 10;
@@ -61,6 +69,21 @@ function normalizeHexColor(value: string | null): string | null {
   return value ? value.toUpperCase() : null;
 }
 
+function trimToNull(value: string): string | null {
+  return value.trim() || null;
+}
+
+/**
+ * Normalizes the "Nosotros" text: unifies line endings and collapses any run of blank
+ * (or whitespace-only) lines into one blank line, since the public site splits
+ * paragraphs on a blank line.
+ * @param value - Text as typed in the form
+ * @returns Normalized text, or `null` when it is empty
+ */
+export function normalizeAbout(value: string): string | null {
+  return trimToNull(value.replace(/\r\n?/g, '\n').replace(/\n\s*\n/g, '\n\n'));
+}
+
 /**
  * Builds the initial form state from a stored profile.
  * @param profile - The agency profile, or `null` before it loads
@@ -74,6 +97,11 @@ export function mapProfileToForm(profile: AgencyProfile | null): AgencyProfileFo
     phone: toLocalPhone(profile?.phone ?? null),
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
+    tagline: profile?.tagline ?? '',
+    about: profile?.about ?? '',
+    contactEmail: profile?.contactEmail ?? '',
+    instagramUrl: profile?.instagramUrl ?? '',
+    facebookUrl: profile?.facebookUrl ?? '',
   };
 }
 
@@ -92,6 +120,11 @@ export function mapFormToUpdate(form: AgencyProfileFormData): AgencyProfileUpdat
     phone: toE164Phone(form.phone),
     primaryColor: normalizeHexColor(form.primaryColor),
     secondaryColor: normalizeHexColor(form.secondaryColor),
+    tagline: trimToNull(form.tagline),
+    about: normalizeAbout(form.about),
+    contactEmail: trimToNull(form.contactEmail)?.toLowerCase() ?? null,
+    instagramUrl: trimToNull(form.instagramUrl),
+    facebookUrl: trimToNull(form.facebookUrl),
   };
 }
 

@@ -5,8 +5,17 @@ import { z } from 'zod';
 
 import type { AgencyProfile, AgencyProfileFormData, CountryState } from '~/types/agency-profile';
 
-import { isValidLocalPhone, mapProfileToForm } from '~/composables/agency-profile/use-agency-profile-domain';
-import { businessNameSchema, sanitizeBusinessName, sanitizePhone } from '~/utils/form-validation';
+import {
+  ABOUT_MAX_LENGTH,
+  CONTACT_EMAIL_MAX_LENGTH,
+  FACEBOOK_URL_REGEX,
+  INSTAGRAM_URL_REGEX,
+  isValidLocalPhone,
+  mapProfileToForm,
+  SOCIAL_URL_MAX_LENGTH,
+  TAGLINE_MAX_LENGTH,
+} from '~/composables/agency-profile/use-agency-profile-domain';
+import { businessNameSchema, sanitizeBusinessName, sanitizePhone, sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   profile: AgencyProfile | null;
@@ -20,6 +29,14 @@ const emit = defineEmits<{
   submit: [data: AgencyProfileFormData];
 }>();
 
+// Optional site fields: an empty string means "not set" (saved as NULL).
+function optionalMatching(regex: RegExp, message: string) {
+  return z.string()
+    .trim()
+    .max(SOCIAL_URL_MAX_LENGTH, `Máximo ${SOCIAL_URL_MAX_LENGTH} caracteres`)
+    .refine(value => value === '' || regex.test(value), message);
+}
+
 // Company name is required (a travel cannot be published without it).
 // State is optional to save, but the profile only counts as complete with one.
 const schema = z.object({
@@ -30,6 +47,14 @@ const schema = z.object({
     .refine(isValidLocalPhone, 'El teléfono debe tener 10 dígitos'),
   primaryColor: z.string().nullable(),
   secondaryColor: z.string().nullable(),
+  tagline: textSchema({ max: TAGLINE_MAX_LENGTH }),
+  about: textSchema({ max: ABOUT_MAX_LENGTH }),
+  contactEmail: z.string()
+    .trim()
+    .max(CONTACT_EMAIL_MAX_LENGTH, `Máximo ${CONTACT_EMAIL_MAX_LENGTH} caracteres`)
+    .refine(value => value === '' || z.email().safeParse(value).success, 'Email inválido'),
+  instagramUrl: optionalMatching(INSTAGRAM_URL_REGEX, 'Debe ser un enlace https://instagram.com/tu-cuenta'),
+  facebookUrl: optionalMatching(FACEBOOK_URL_REGEX, 'Debe ser un enlace https://facebook.com/tu-pagina'),
 });
 
 type Schema = z.output<typeof schema>;
@@ -41,6 +66,11 @@ const state = ref<Schema>({ ...initialForm, phone: initialForm.phone ?? '' });
 
 const companyNameInput = useSanitizedModel(() => state.value.companyName, v => state.value.companyName = v, sanitizeBusinessName);
 const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
+const taglineInput = useSanitizedModel(() => state.value.tagline, v => state.value.tagline = v, sanitizeText);
+const aboutInput = useSanitizedModel(() => state.value.about, v => state.value.about = v, sanitizeText);
+
+const taglineCounter = computed(() => `${state.value.tagline.length}/${TAGLINE_MAX_LENGTH}`);
+const aboutCounter = computed(() => `${state.value.about.length}/${ABOUT_MAX_LENGTH}`);
 
 // USelectMenu works with `string | undefined`; the form keeps `null` for "no state".
 const stateCodeModel = computed({
@@ -111,14 +141,50 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
     </UPageCard>
 
     <UPageCard
+      title="Presentación"
+      description="Opcional. Textos que acompañan a tu agencia en tu sitio web."
+      variant="subtle"
+    >
+      <UFormField
+        label="Eslogan"
+        name="tagline"
+        description="Aparece en el pie de página de tu sitio."
+        :hint="taglineCounter"
+      >
+        <UInput
+          v-model="taglineInput"
+          placeholder="Viaja ligero, viaja seguro"
+          :maxlength="TAGLINE_MAX_LENGTH"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        label="Nosotros"
+        name="about"
+        description="Tu sitio muestra una página «Nosotros» solo si escribes algo aquí. Solo texto; deja una línea en blanco entre párrafos."
+        :hint="aboutCounter"
+      >
+        <UTextarea
+          v-model="aboutInput"
+          :rows="6"
+          autoresize
+          :maxlength="ABOUT_MAX_LENGTH"
+          placeholder="Cuéntales a los viajeros quiénes son y cómo viajan."
+          class="w-full"
+        />
+      </UFormField>
+    </UPageCard>
+
+    <UPageCard
       title="Contacto"
-      description="Se muestra como botón de WhatsApp en tus viajes."
+      description="Cómo te encuentran los viajeros desde tu sitio web."
       variant="subtle"
     >
       <UFormField
         label="Teléfono"
         name="phone"
-        description="10 dígitos, sin lada internacional (+52 se agrega sola)."
+        description="Botón de WhatsApp en tus viajes. 10 dígitos, sin lada internacional (+52 se agrega sola)."
       >
         <UInput
           v-model="phoneInput"
@@ -128,18 +194,70 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
           class="w-full"
         />
       </UFormField>
+
+      <UFormField
+        label="Correo de contacto"
+        name="contactEmail"
+        description="Opcional. Aparece en el pie de página de tu sitio."
+      >
+        <UInput
+          v-model="state.contactEmail"
+          type="email"
+          placeholder="hola@tuagencia.mx"
+          icon="i-lucide-mail"
+          class="w-full"
+        />
+      </UFormField>
+
+      <div class="grid gap-4 sm:grid-cols-2">
+        <UFormField
+          label="Instagram"
+          name="instagramUrl"
+          description="Opcional. Ícono en el pie de página."
+        >
+          <UInput
+            v-model="state.instagramUrl"
+            type="url"
+            placeholder="https://instagram.com/tuagencia"
+            icon="i-simple-icons-instagram"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Facebook"
+          name="facebookUrl"
+          description="Opcional. Ícono en el pie de página."
+        >
+          <UInput
+            v-model="state.facebookUrl"
+            type="url"
+            placeholder="https://facebook.com/tuagencia"
+            icon="i-simple-icons-facebook"
+            class="w-full"
+          />
+        </UFormField>
+      </div>
     </UPageCard>
 
     <UPageCard
       title="Marca"
-      description="Colores de tu agencia en las tarjetas de viaje de la web. Sin color, la web usa el suyo."
+      description="Colores de tu agencia en la web. Sin color, la web usa el suyo."
       variant="subtle"
     >
       <div class="grid gap-4 sm:grid-cols-2">
-        <UFormField label="Color principal" name="primaryColor">
+        <UFormField
+          label="Color principal"
+          name="primaryColor"
+          description="Acento principal de tu sitio y de tus tarjetas de viaje."
+        >
           <AgencyColorInput v-model="state.primaryColor" />
         </UFormField>
-        <UFormField label="Color secundario" name="secondaryColor">
+        <UFormField
+          label="Color secundario"
+          name="secondaryColor"
+          description="Títulos pequeños sobre cada sección (p. ej. «Viajes destacados»). Si no eliges uno, se usa el principal."
+        >
           <AgencyColorInput v-model="state.secondaryColor" />
         </UFormField>
       </div>
