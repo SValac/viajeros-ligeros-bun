@@ -199,17 +199,20 @@ function moveSection(index: number, direction: -1 | 1) {
           </p>
         </div>
 
-        <AgencyAboutSectionCard
-          v-for="(section, index) in page.sections"
-          :key="keyOf(section)"
-          v-model="page.sections[index]!"
-          :name="`${name}.sections.${index}`"
-          :index="index"
-          :is-first="index === 0"
-          :is-last="index === page.sections.length - 1"
-          @move="direction => moveSection(index, direction)"
-          @remove="removeSection(index)"
-        />
+        <!-- Animates adding, removing and reordering sections. -->
+        <div v-auto-animate class="space-y-4">
+          <AgencyAboutSectionCard
+            v-for="(section, index) in page.sections"
+            :key="keyOf(section)"
+            v-model="page.sections[index]!"
+            :name="`${name}.sections.${index}`"
+            :index="index"
+            :is-first="index === 0"
+            :is-last="index === page.sections.length - 1"
+            @move="direction => moveSection(index, direction)"
+            @remove="removeSection(index)"
+          />
+        </div>
 
         <UFormField :name="`${name}.sections`">
           <UDropdownMenu :items="addSectionItems" :disabled="!canAddSection">
