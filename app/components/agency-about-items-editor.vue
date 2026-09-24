@@ -46,77 +46,80 @@ function counter(value: string, limit: number) {
 
 <template>
   <div class="space-y-3">
-    <div
-      v-for="(item, index) in items"
-      :key="keyOf(item)"
-      class="space-y-3 rounded-md border border-default p-3"
-    >
-      <div class="flex items-center justify-between gap-2">
-        <span class="text-sm font-medium text-muted">{{ itemLabel }} {{ index + 1 }}</span>
-        <div class="flex gap-1">
-          <UButton
-            icon="i-lucide-arrow-up"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            :disabled="index === 0"
-            :aria-label="`Subir ${itemLabel.toLowerCase()} ${index + 1}`"
-            @click="move(index, -1)"
-          />
-          <UButton
-            icon="i-lucide-arrow-down"
-            color="neutral"
-            variant="ghost"
-            size="xs"
-            :disabled="index === items.length - 1"
-            :aria-label="`Bajar ${itemLabel.toLowerCase()} ${index + 1}`"
-            @click="move(index, 1)"
-          />
-          <UButton
-            icon="i-lucide-trash-2"
-            color="error"
-            variant="ghost"
-            size="xs"
-            :disabled="!canRemove"
-            :aria-label="`Quitar ${itemLabel.toLowerCase()} ${index + 1}`"
-            @click="remove(index)"
-          />
+    <!-- Animates adding, removing and reordering items. -->
+    <div v-auto-animate class="space-y-3">
+      <div
+        v-for="(item, index) in items"
+        :key="keyOf(item)"
+        class="space-y-3 rounded-md border border-default p-3"
+      >
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-sm font-medium text-muted">{{ itemLabel }} {{ index + 1 }}</span>
+          <div class="flex gap-1">
+            <UButton
+              icon="i-lucide-arrow-up"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :disabled="index === 0"
+              :aria-label="`Subir ${itemLabel.toLowerCase()} ${index + 1}`"
+              @click="move(index, -1)"
+            />
+            <UButton
+              icon="i-lucide-arrow-down"
+              color="neutral"
+              variant="ghost"
+              size="xs"
+              :disabled="index === items.length - 1"
+              :aria-label="`Bajar ${itemLabel.toLowerCase()} ${index + 1}`"
+              @click="move(index, 1)"
+            />
+            <UButton
+              icon="i-lucide-trash-2"
+              color="error"
+              variant="ghost"
+              size="xs"
+              :disabled="!canRemove"
+              :aria-label="`Quitar ${itemLabel.toLowerCase()} ${index + 1}`"
+              @click="remove(index)"
+            />
+          </div>
         </div>
+
+        <UFormField
+          label="Título"
+          :name="`${name}.${index}.title`"
+          required
+        >
+          <UInput
+            v-model="item.title"
+            :maxlength="ABOUT_PAGE_LIMITS.itemTitle"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="Descripción"
+          :name="`${name}.${index}.description`"
+          :hint="counter(item.description, ABOUT_PAGE_LIMITS.itemDescription)"
+          required
+        >
+          <UTextarea
+            v-model="item.description"
+            :rows="2"
+            autoresize
+            :maxlength="ABOUT_PAGE_LIMITS.itemDescription"
+            class="w-full"
+          />
+        </UFormField>
+
+        <slot
+          name="item-extra"
+          :item="item"
+          :index="index"
+          :path="`${name}.${index}`"
+        />
       </div>
-
-      <UFormField
-        label="Título"
-        :name="`${name}.${index}.title`"
-        required
-      >
-        <UInput
-          v-model="item.title"
-          :maxlength="ABOUT_PAGE_LIMITS.itemTitle"
-          class="w-full"
-        />
-      </UFormField>
-
-      <UFormField
-        label="Descripción"
-        :name="`${name}.${index}.description`"
-        :hint="counter(item.description, ABOUT_PAGE_LIMITS.itemDescription)"
-        required
-      >
-        <UTextarea
-          v-model="item.description"
-          :rows="2"
-          autoresize
-          :maxlength="ABOUT_PAGE_LIMITS.itemDescription"
-          class="w-full"
-        />
-      </UFormField>
-
-      <slot
-        name="item-extra"
-        :item="item"
-        :index="index"
-        :path="`${name}.${index}`"
-      />
     </div>
 
     <UFormField :name="name">
