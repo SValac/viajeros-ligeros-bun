@@ -1,5 +1,7 @@
 import type { AgencyProfile, AgencyProfileFormData, AgencyProfileUpdateData } from '~/types/agency-profile';
 
+import { serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
+
 export const AGENCY_LOGOS_BUCKET = 'agency-logos';
 
 // Must match the bucket limits in 20260924043319_agency_logos_storage.sql.
@@ -12,7 +14,6 @@ export const LOGO_MIME_EXTENSIONS: Record<string, string> = {
 
 // Must match the CHECK constraints in 20260924173904_agency_profile_site_content.sql.
 export const TAGLINE_MAX_LENGTH = 120;
-export const ABOUT_MAX_LENGTH = 2000;
 export const CONTACT_EMAIL_MAX_LENGTH = 254;
 export const SOCIAL_URL_MAX_LENGTH = 200;
 export const INSTAGRAM_URL_REGEX = /^https:\/\/(?:www\.)?instagram\.com\/\S+$/;
@@ -74,17 +75,6 @@ function trimToNull(value: string): string | null {
 }
 
 /**
- * Normalizes the "Nosotros" text: unifies line endings and collapses any run of blank
- * (or whitespace-only) lines into one blank line, since the public site splits
- * paragraphs on a blank line.
- * @param value - Text as typed in the form
- * @returns Normalized text, or `null` when it is empty
- */
-export function normalizeAbout(value: string): string | null {
-  return trimToNull(value.replace(/\r\n?/g, '\n').replace(/\n\s*\n/g, '\n\n'));
-}
-
-/**
  * Builds the initial form state from a stored profile.
  * @param profile - The agency profile, or `null` before it loads
  * @returns Form data with `''` for empty text inputs
@@ -98,7 +88,7 @@ export function mapProfileToForm(profile: AgencyProfile | null): AgencyProfileFo
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
     tagline: profile?.tagline ?? '',
-    about: profile?.about ?? '',
+    aboutPage: profile?.aboutPage ? structuredClone(toRaw(profile.aboutPage)) : null,
     contactEmail: profile?.contactEmail ?? '',
     instagramUrl: profile?.instagramUrl ?? '',
     facebookUrl: profile?.facebookUrl ?? '',
@@ -121,7 +111,7 @@ export function mapFormToUpdate(form: AgencyProfileFormData): AgencyProfileUpdat
     primaryColor: normalizeHexColor(form.primaryColor),
     secondaryColor: normalizeHexColor(form.secondaryColor),
     tagline: trimToNull(form.tagline),
-    about: normalizeAbout(form.about),
+    aboutPage: serializeAboutPage(form.aboutPage),
     contactEmail: trimToNull(form.contactEmail)?.toLowerCase() ?? null,
     instagramUrl: trimToNull(form.instagramUrl),
     facebookUrl: trimToNull(form.facebookUrl),
