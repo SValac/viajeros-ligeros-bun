@@ -1,3 +1,4 @@
+import type { AgencyProfile, CountryState } from '~/types/agency-profile';
 import type { Bus, BusFormData } from '~/types/bus';
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 import type { Json, Tables, TablesInsert } from '~/types/database.types';
@@ -100,6 +101,33 @@ export function mapCoordinatorToInsert(data: CoordinatorFormData): Omit<Tables<'
     email: data.email,
     notes: data.notes ?? null,
     user_id: null,
+  };
+}
+
+// ============================================================================
+// Agency profile
+// ============================================================================
+
+export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): AgencyProfile {
+  return {
+    id: row.id,
+    companyName: row.company_name,
+    countryCode: row.country_code,
+    stateCode: row.state_code,
+    phone: row.phone,
+    logoUrl: row.logo_url,
+    primaryColor: row.primary_color,
+    secondaryColor: row.secondary_color,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function mapCountryStateRowToDomain(row: Tables<'country_states'>): CountryState {
+  return {
+    countryCode: row.country_code,
+    code: row.code,
+    name: row.name,
   };
 }
 

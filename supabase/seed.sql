@@ -61,6 +61,19 @@ insert into auth.identities (
 on conflict (provider_id, provider) do nothing;
 
 -- ============================================================
+-- AGENCY PROFILE — the row is created by the auth.users signup trigger;
+-- it must be complete before inserting 'published' travels below
+-- (travels_require_profile_to_publish).
+-- ============================================================
+update public.agency_profiles set
+  company_name = 'Viajeros Ligeros Dev',
+  state_code = 'JAL',
+  phone = '+523312345678',
+  primary_color = '#0EA5E9',
+  secondary_color = '#F59E0B'
+where id = '00000000-0000-0000-0000-000000000001';
+
+-- ============================================================
 -- PROVIDERS — transportation
 -- ============================================================
 insert into public.providers (
