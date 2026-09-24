@@ -1,11 +1,11 @@
 # Fase 6 — Contrato con la web pública
 
-**Estado:** 🚧 Implementada en el repo web, rama `feat/agency-profile`, sin commitear ni
-mergear (reporte de la sesión web, 2026-09-24): embed, `Trip.agency`, filtro por estado
-(visible solo con más de un estado), logo/nombre/estado en la tarjeta y en la de reserva, y
-WhatsApp con el teléfono de la agencia. **Sin probar end-to-end contra una respuesta real:**
-se verifica en el Preview de stage después de `db:push:stage`. El embed sí se probó como
-`anon` contra la API local desde el CRM.
+**Estado:** ✅ Lado CRM completo: el contrato de datos está en stage y prod, y el embed se
+probó como `anon` contra la API local. La web lo implementó en `viajeros-ligeros-web`, rama
+`feat/agency-profile` (reporte de la sesión web, 2026-09-24): embed, `Trip.agency`, filtro
+por estado (visible solo con más de un estado), logo/nombre/estado en la tarjeta y en la de
+reserva, y WhatsApp con el teléfono de la agencia. **Seguimiento en el repo web:** probar
+contra stage y mergear a `main`, siempre después del PR del CRM.
 **Dependencia:** Fase 2 (desplegada al menos en stage)
 **Repo:** `viajeros-ligeros-web`. La implementa la sesión paralela de ese repo; coordinar
 por `SendMessage` ([[reference_web_repo_peer_session]]).

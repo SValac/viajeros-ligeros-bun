@@ -10,11 +10,10 @@ agencia**.
 logos), 1 migración opcional (gate de publicación), módulo nuevo en el CRM (types +
 repository + domain + store + página) y un cambio de contrato en la web.
 
-**Estado:** 🚧 EN PROGRESO — rama `feature/agency-profile`. Fases 1-5 completas: sus docs
-están en [`completed/agency-profile/`](../../completed/agency-profile/) y sus migraciones en
-stage y prod (2026-09-24). Pendiente: PR a `main`, Fase 6 (web implementada en su rama, sin
-probar en stage ni mergear) y cierre de la Fase 7 (prueba en stage, advisors, aviso a dueños
-con perfil incompleto). Al cerrarlas, mover este `PLAN.md` y las fases 6-7 a `completed/`.
+**Estado:** ✅ COMPLETADA (2026-09-24). Migraciones en stage y prod, código probado en QA y
+stage, entra a `main` con el PR de `feature/agency-profile`. Quedan seguimientos sin código en
+este repo: merge de la web, advisors remotos y aviso a los dueños con perfil incompleto (ver
+[fase7-verificacion.md](fase7-verificacion.md#seguimientos-sin-código-en-este-repo)).
 
 ---
 
@@ -155,13 +154,13 @@ vue + nuxt + nuxt-ui + pinia                   ← Fase 4
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [fase1-catalogo-ubicaciones.md](../../completed/agency-profile/fase1-catalogo-ubicaciones.md) | `countries` + `country_states` con semilla MX | Ninguna | ✅ Completa (en prod) |
-| [fase2-tabla-perfil.md](../../completed/agency-profile/fase2-tabla-perfil.md) | `agency_profiles`, trigger de alta, backfill, RLS, FK desde `travels`, índice `owner_id` | Fase 1 | ✅ Completa (en prod) |
-| [fase3-bucket-logos.md](../../completed/agency-profile/fase3-bucket-logos.md) | Bucket `agency-logos` + policies de Storage por carpeta de usuario | Fase 2 | ✅ Completa (en prod) |
-| [fase4-crm-perfil.md](../../completed/agency-profile/fase4-crm-perfil.md) | Types, repository, domain, store y página `/profile` en el CRM | Fases 2-3 | ✅ Completa (en prod) |
-| [fase5-gate-publicacion.md](../../completed/agency-profile/fase5-gate-publicacion.md) | Exigir perfil completo para publicar un viaje | Fase 4 | ✅ Completa (en prod) |
-| [fase6-contrato-web.md](fase6-contrato-web.md) | Embed en `TRIP_SELECT`, filtro por estado, branding en tarjetas (repo web) | Fase 2 | 🚧 Implementada en la rama web, pendiente de probar en stage y mergear |
-| [fase7-verificacion.md](fase7-verificacion.md) | Matriz de acceso, advisors y despliegue stage → prod | Todas | 🚧 Local ✅ · migraciones en stage y prod ✅ · pendiente: PR, prueba en stage, advisors, aviso a dueños |
+| [fase1-catalogo-ubicaciones.md](fase1-catalogo-ubicaciones.md) | `countries` + `country_states` con semilla MX | Ninguna | ✅ Completa |
+| [fase2-tabla-perfil.md](fase2-tabla-perfil.md) | `agency_profiles`, trigger de alta, backfill, RLS, FK desde `travels`, índice `owner_id` | Fase 1 | ✅ Completa |
+| [fase3-bucket-logos.md](fase3-bucket-logos.md) | Bucket `agency-logos` + policies de Storage por carpeta de usuario | Fase 2 | ✅ Completa |
+| [fase4-crm-perfil.md](fase4-crm-perfil.md) | Types, repository, domain, store y página `/profile` en el CRM | Fases 2-3 | ✅ Completa |
+| [fase5-gate-publicacion.md](fase5-gate-publicacion.md) | Exigir perfil completo para publicar un viaje | Fase 4 | ✅ Completa |
+| [fase6-contrato-web.md](fase6-contrato-web.md) | Embed en `TRIP_SELECT`, filtro por estado, branding en tarjetas (repo web) | Fase 2 | ✅ CRM listo · web implementada en su rama (merge: seguimiento en el repo web) |
+| [fase7-verificacion.md](fase7-verificacion.md) | Matriz de acceso, advisors y despliegue stage → prod | Todas | ✅ Completa (seguimientos operativos en el doc) |
 
 > Al terminar cada fase, actualizar su "Estado" acá y en el propio documento de la fase.
 

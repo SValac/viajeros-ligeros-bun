@@ -1,10 +1,10 @@
 # Fase 1 — Catálogo de ubicaciones
 
-**Estado:** Completada ✅ (local) — pendiente de push a stage/prod junto con el resto
+**Estado:** Completada ✅ — en stage y prod desde el 2026-09-24
 **Dependencia:** ninguna
 **Migración:** `20260924015331_location_catalog.sql`
 
-[← Volver al plan](../../pending/agency-profile/PLAN.md)
+[← Volver al plan](PLAN.md)
 
 ---
 

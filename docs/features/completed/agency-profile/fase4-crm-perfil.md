@@ -1,6 +1,6 @@
 # Fase 4 — Perfil en el CRM
 
-**Estado:** Completada ✅ (local). `typecheck` limpio. Subpaso 1 escrito por el usuario (modo
+**Estado:** Completada ✅ (en stage y prod desde el 2026-09-24). `typecheck` limpio. Subpaso 1 escrito por el usuario (modo
 mentor); subpasos 2-5 implementados por el asistente a pedido del usuario.
 **Dependencia:** Fases 2 y 3
 
@@ -50,7 +50,7 @@ mentor); subpasos 2-5 implementados por el asistente a pedido del usuario.
   claves mal escritas omite nada y en silencio. `Pick` sí falla la compilación.
 **Skills:** vue, nuxt, nuxt-ui, pinia
 
-[← Volver al plan](../../pending/agency-profile/PLAN.md)
+[← Volver al plan](PLAN.md)
 
 ---
 

@@ -1,9 +1,9 @@
 # Fase 7 — Verificación y despliegue
 
-**Estado:** 🚧 Matriz local ✅, prueba manual de la UI en local ✅, migraciones en stage y
-prod ✅ (2026-09-24, ambos `db push` sin errores). Código del CRM desplegado en `qa` y
-`stage`. Pendiente: PR a `main`, merge de la web, advisors remotos y aviso a los dueños con
-perfil incompleto.
+**Estado:** Completada ✅ (2026-09-24). Matriz local, prueba manual de la UI en local, pruebas
+del usuario en QA y stage, y migraciones en stage y prod (`db push` sin errores). Quedan
+**seguimientos operativos** sin código en este repo (ver "Seguimientos" al final).
+**Dependencia:** todas
 
 ## Prueba manual en local (2026-09-24, usuario nuevo `isaac@gmail.com`)
 
@@ -13,7 +13,11 @@ perfil incompleto.
   mayúsculas, estado guardado ✅
 - Logo subido y cambiado → queda **un solo** archivo en `{uid}/` (el anterior se borró) ✅
 - Con el perfil completo → el viaje se publicó ✅
-**Dependencia:** todas
+
+## QA y stage (2026-09-24)
+
+- Código mergeado a `qa` y `stage`, desplegado en sus Previews de Vercel ✅
+- Pruebas del usuario en ambos Previews contra la base de stage: completadas ✅
 
 ## Resultado local (2026-09-24)
 
@@ -60,30 +64,47 @@ Actores: **A** (agencia con viaje publicado), **B** (agencia sin viajes publicad
 | Publicar viaje con perfil incompleto | ❌ | ❌ | ❌ | ❌ |
 
 Casos adicionales:
-- [ ] Registrar un usuario nuevo → perfil creado
-- [ ] Invitar un coordinador → **sin** perfil; el registro no falla
-- [ ] B publica su primer viaje → su perfil pasa a ser visible para `anon`
-- [ ] B despublica su único viaje → su perfil deja de ser visible para `anon`
+- [x] Registrar un usuario nuevo → perfil creado (SQL y registro real desde `/register`)
+- [x] Invitar un coordinador → **sin** perfil (SQL con `coordinator_id` en la metadata)
+- [x] B publica su primer viaje → su perfil pasa a ser visible para `anon`
+- [ ] B despublica su único viaje → su perfil deja de ser visible para `anon` (no probado
+      explícitamente; se deduce del `EXISTS ... status = 'published'` de la policy)
 
 ## Advisors
 
-- [ ] `get_advisors` de seguridad y performance limpios en local y stage. Revisar en
-      particular: RLS habilitado en las 3 tablas nuevas, `search_path` fijo en las funciones
-      nuevas y el índice `travels_owner_id_idx` presente
+- [x] Local: `supabase db lint` limpio para las funciones nuevas (solo marca
+      `generate_travel_access_code`, que ya existía)
+- [ ] Remoto: advisors de seguridad y performance en el dashboard de stage/prod (seguimiento)
 
 ## Despliegue
 
-1. `bun run db:push:stage` (lo corre el usuario)
-2. Verificar la matriz en stage + probar el CRM en el Preview de stage
-3. Avisar a la sesión web (Fase 6) y que pruebe contra stage
-4. `bun run db:push:prod` (lo corre el usuario)
-5. **Recién después**, desplegar la web a prod
-6. Listar en prod los dueños de viajes ya publicados con perfil
-   incompleto y avisarles. El trigger no afecta a esos viajes, pero la web los mostrará sin
-   agencia hasta que completen el perfil
+1. [x] `bun run db:push:stage`
+2. [x] Probar el CRM en los Previews de QA y stage
+3. [x] Avisar a la sesión web (Fase 6)
+4. [x] `bun run db:push:prod`
+5. [ ] Mergear este PR a `main`
+6. [ ] **Después**, mergear la web a `main` (seguimiento en el repo web)
+7. [ ] Listar en prod los dueños con viajes ya publicados y perfil incompleto, y avisarles
+       (seguimiento)
+
+## Seguimientos (sin código en este repo)
+
+- **Web:** mergear `feat/agency-profile` en `viajeros-ligeros-web` después de probarla en
+  stage.
+- **Advisors remotos** de seguridad y performance en el dashboard de prod.
+- **Dueños con perfil incompleto:** esta consulta, en el SQL editor de prod, lista quién
+  tiene viajes publicados sin agencia visible en la web:
+  ```sql
+  select u.email, count(t.id) as viajes_publicados
+  from public.travels t
+  join public.agency_profiles p on p.id = t.owner_id
+  join auth.users u on u.id = t.owner_id
+  where t.status = 'published'
+    and (p.company_name is null or p.state_code is null)
+  group by u.email;
+  ```
 
 ## Cierre
 
-- [ ] Mover `docs/features/pending/agency-profile/` a `completed/`, dejando en `pending/`
-      solo lo que quede abierto (convención del repo)
-- [ ] Actualizar estados en `PLAN.md`
+- [x] Docs movidos de `pending/agency-profile/` a `completed/agency-profile/`
+- [x] Estados actualizados en `PLAN.md`

@@ -1,13 +1,13 @@
 # Fase 2 — Tabla `agency_profiles`
 
-**Estado:** Completada ✅ (local). `db:reset` y el seed pasan: el FK de `travels` confirma que
+**Estado:** Completada ✅ (en stage y prod desde el 2026-09-24). `db:reset` y el seed pasan: el FK de `travels` confirma que
 el trigger creó el perfil de dev. Los tipos generados incluyen las relaciones
 `travels → agency_profiles` y `agency_profiles → country_states`. Las pruebas de acceso
 (anon / A contra B / coordinador) se corren en la matriz de la Fase 7.
 **Dependencia:** Fase 1
 **Migración:** `20260924035704_agency_profiles.sql`
 
-[← Volver al plan](../../pending/agency-profile/PLAN.md)
+[← Volver al plan](PLAN.md)
 
 ---
 
