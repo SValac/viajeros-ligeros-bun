@@ -1,8 +1,11 @@
 # Fase 2 — Tabla `agency_profiles`
 
-**Estado:** Pendiente
+**Estado:** Completada ✅ (local). `db:reset` y el seed pasan: el FK de `travels` confirma que
+el trigger creó el perfil de dev. Los tipos generados incluyen las relaciones
+`travels → agency_profiles` y `agency_profiles → country_states`. Las pruebas de acceso
+(anon / A contra B / coordinador) se corren en la matriz de la Fase 7.
 **Dependencia:** Fase 1
-**Migración:** `supabase migration new agency_profiles`
+**Migración:** `20260924035704_agency_profiles.sql`
 
 [← Volver al plan](PLAN.md)
 
@@ -82,10 +85,17 @@ BEGIN
 END;
 $$;
 
+REVOKE ALL ON FUNCTION private.handle_new_agency_profile() FROM PUBLIC, anon, authenticated;
+
 CREATE TRIGGER on_auth_user_created_agency_profile
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION private.handle_new_agency_profile();
 ```
+
+- **`REVOKE`** (`security-rls-performance` del skill; mismo patrón que
+  `coordinator_identity.sql:43`): Postgres le da `EXECUTE` a `PUBLIC` en toda función nueva.
+  Postgres no revisa ese permiso cuando **dispara** un trigger (solo al crearlo), así que
+  revocarlo no afecta el alta y cierra cualquier otra vía de ejecución.
 
 - **Por qué `raw_user_meta_data` y no `app_metadata.role`:** el rol `coordinator` lo setea
   `invite-coordinator` en un `updateUserById` **posterior** al insert. Cuando dispara este

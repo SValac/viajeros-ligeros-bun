@@ -61,6 +61,14 @@ CREATE TRIGGER travels_require_profile_to_publish
 - **Viajes ya publicados en prod:** el trigger no los toca. Hay que revisar a mano que sus
   dueños completen el perfil (ver Fase 7).
 
+## Impacto en `seed.sql`
+
+El seed inserta viajes del usuario de dev (`seed.sql:462`), y algunos pueden ser
+`published`. Con este trigger, `db:reset` fallaría porque el perfil de dev (creado por el
+trigger de alta de la Fase 2) está vacío. En esta misma fase, el seed debe hacer un
+`UPDATE public.agency_profiles SET company_name = ..., state_code = ... WHERE id =
+'00000000-0000-0000-0000-000000000001'` **antes** del insert de `travels`.
+
 ## UI (CRM)
 
 - En `travel-form.vue`, al elegir estado "Publicado": si `isProfileComplete()` es falso,
