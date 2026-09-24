@@ -1,8 +1,11 @@
 # Fase 3 — Bucket de logos
 
-**Estado:** Pendiente
+**Estado:** Completada ✅ (local). La migración aplica en `db:reset`. Las pruebas de
+escritura cruzada entre usuarios se hacen en la Fase 7 (o desde la página de la Fase 4).
+Las 4 policies existentes sobre `storage.objects` filtran por `bucket_id = 'travel-gallery'`,
+así que ninguna da acceso al bucket nuevo.
 **Dependencia:** Fase 2
-**Migración:** `supabase migration new agency_logos_storage`
+**Migración:** `20260924043319_agency_logos_storage.sql`
 
 [← Volver al plan](PLAN.md)
 

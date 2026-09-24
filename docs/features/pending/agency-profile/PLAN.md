@@ -10,7 +10,7 @@ agencia**.
 logos), 1 migración opcional (gate de publicación), módulo nuevo en el CRM (types +
 repository + domain + store + página) y un cambio de contrato en la web.
 
-**Estado:** 🚧 EN PROGRESO — rama `feature/agency-profile`. Fases 1-2 completas en local.
+**Estado:** 🚧 EN PROGRESO — rama `feature/agency-profile`. Fases 1-3 completas en local.
 
 ---
 
@@ -153,7 +153,7 @@ vue + nuxt + nuxt-ui + pinia                   ← Fase 4
 |---|---|---|---|
 | [fase1-catalogo-ubicaciones.md](fase1-catalogo-ubicaciones.md) | `countries` + `country_states` con semilla MX | Ninguna | ✅ Completa (local) |
 | [fase2-tabla-perfil.md](fase2-tabla-perfil.md) | `agency_profiles`, trigger de alta, backfill, RLS, FK desde `travels`, índice `owner_id` | Fase 1 | ✅ Completa (local) |
-| [fase3-bucket-logos.md](fase3-bucket-logos.md) | Bucket `agency-logos` + policies de Storage por carpeta de usuario | Fase 2 | Pendiente |
+| [fase3-bucket-logos.md](fase3-bucket-logos.md) | Bucket `agency-logos` + policies de Storage por carpeta de usuario | Fase 2 | ✅ Completa (local) |
 | [fase4-crm-perfil.md](fase4-crm-perfil.md) | Types, repository, domain, store y página `/profile` en el CRM | Fases 2-3 | Pendiente |
 | [fase5-gate-publicacion.md](fase5-gate-publicacion.md) | Exigir perfil completo para publicar un viaje | Fase 4 | Pendiente |
 | [fase6-contrato-web.md](fase6-contrato-web.md) | Embed en `TRIP_SELECT`, filtro por estado, branding en tarjetas (repo web) | Fase 2 | Pendiente |
