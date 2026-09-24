@@ -77,39 +77,54 @@ export type Database = {
       }
       agency_profiles: {
         Row: {
+          about: string | null
           company_name: string | null
+          contact_email: string | null
           country_code: string
           created_at: string
+          facebook_url: string | null
           id: string
+          instagram_url: string | null
           logo_url: string | null
           phone: string | null
           primary_color: string | null
           secondary_color: string | null
           state_code: string | null
+          tagline: string | null
           updated_at: string
         }
         Insert: {
+          about?: string | null
           company_name?: string | null
+          contact_email?: string | null
           country_code?: string
           created_at?: string
+          facebook_url?: string | null
           id: string
+          instagram_url?: string | null
           logo_url?: string | null
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           state_code?: string | null
+          tagline?: string | null
           updated_at?: string
         }
         Update: {
+          about?: string | null
           company_name?: string | null
+          contact_email?: string | null
           country_code?: string
           created_at?: string
+          facebook_url?: string | null
           id?: string
+          instagram_url?: string | null
           logo_url?: string | null
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
           state_code?: string | null
+          tagline?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -1435,14 +1450,19 @@ export type Database = {
       get_public_agency_profile: {
         Args: { p_agency_id: string }
         Returns: {
+          about: string
           company_name: string
+          contact_email: string
           country_code: string
+          facebook_url: string
+          instagram_url: string
           logo_url: string
           phone: string
           primary_color: string
           secondary_color: string
           state_code: string
           state_name: string
+          tagline: string
         }[]
       }
       get_travel_seats: {

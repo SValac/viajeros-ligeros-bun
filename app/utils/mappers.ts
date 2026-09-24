@@ -118,6 +118,11 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     logoUrl: row.logo_url,
     primaryColor: row.primary_color,
     secondaryColor: row.secondary_color,
+    tagline: row.tagline,
+    about: row.about,
+    contactEmail: row.contact_email,
+    instagramUrl: row.instagram_url,
+    facebookUrl: row.facebook_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
