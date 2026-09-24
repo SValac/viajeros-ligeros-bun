@@ -1,5 +1,6 @@
-import type { AgencyProfile, AgencyProfileFormData, CountryState } from '~/types/agency-profile';
+import type { AboutPage, AgencyProfile, AgencyProfileFormData, CountryState } from '~/types/agency-profile';
 
+import { serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 import {
   getLogoStoragePath,
   isProfileComplete,
@@ -84,6 +85,28 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   }
 
   /**
+   * Saves the "Nosotros" page (serialized to the stored JSON). `null` removes the page
+   * from the agency's site.
+   * @param page - Validated editor state, or `null`
+   * @returns `true` on success; on failure the message is stored in `error`
+   */
+  async function saveAboutPage(page: AboutPage | null): Promise<boolean> {
+    saving.value = true;
+    error.value = null;
+    try {
+      profile.value = await repository.update({ aboutPage: serializeAboutPage(page) });
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al guardar la página Nosotros';
+      return false;
+    }
+    finally {
+      saving.value = false;
+    }
+  }
+
+  /**
    * Replaces the logo: upload the new file → point the profile at it → remove the old file.
    * If the profile update fails, the new file is removed so the bucket keeps no orphan
    * and the profile keeps its previous logo. A failure removing the OLD file is not an
@@ -158,6 +181,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
     // Actions
     fetchProfile,
     saveProfile,
+    saveAboutPage,
     changeLogo,
     removeLogo,
   };
