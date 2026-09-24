@@ -5,8 +5,8 @@ import { z } from 'zod';
 
 import type { AgencyProfile, AgencyProfileFormData, CountryState } from '~/types/agency-profile';
 
+import { aboutPageSchema } from '~/composables/agency-profile/use-about-page-domain';
 import {
-  ABOUT_MAX_LENGTH,
   CONTACT_EMAIL_MAX_LENGTH,
   FACEBOOK_URL_REGEX,
   INSTAGRAM_URL_REGEX,
@@ -48,13 +48,13 @@ const schema = z.object({
   primaryColor: z.string().nullable(),
   secondaryColor: z.string().nullable(),
   tagline: textSchema({ max: TAGLINE_MAX_LENGTH }),
-  about: textSchema({ max: ABOUT_MAX_LENGTH }),
   contactEmail: z.string()
     .trim()
     .max(CONTACT_EMAIL_MAX_LENGTH, `Máximo ${CONTACT_EMAIL_MAX_LENGTH} caracteres`)
     .refine(value => value === '' || z.email().safeParse(value).success, 'Email inválido'),
   instagramUrl: optionalMatching(INSTAGRAM_URL_REGEX, 'Debe ser un enlace https://instagram.com/tu-cuenta'),
   facebookUrl: optionalMatching(FACEBOOK_URL_REGEX, 'Debe ser un enlace https://facebook.com/tu-pagina'),
+  aboutPage: aboutPageSchema.nullable(),
 });
 
 type Schema = z.output<typeof schema>;
@@ -62,15 +62,13 @@ type Schema = z.output<typeof schema>;
 // Initialized once: the page mounts this form only after the profile has loaded.
 // No re-sync on profile changes, so a logo upload never wipes unsaved edits.
 const initialForm = mapProfileToForm(profile);
-const state = ref<Schema>({ ...initialForm, phone: initialForm.phone ?? '' });
+const state = ref<AgencyProfileFormData & { phone: string }>({ ...initialForm, phone: initialForm.phone ?? '' });
 
 const companyNameInput = useSanitizedModel(() => state.value.companyName, v => state.value.companyName = v, sanitizeBusinessName);
 const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
 const taglineInput = useSanitizedModel(() => state.value.tagline, v => state.value.tagline = v, sanitizeText);
-const aboutInput = useSanitizedModel(() => state.value.about, v => state.value.about = v, sanitizeText);
 
 const taglineCounter = computed(() => `${state.value.tagline.length}/${TAGLINE_MAX_LENGTH}`);
-const aboutCounter = computed(() => `${state.value.about.length}/${ABOUT_MAX_LENGTH}`);
 
 // USelectMenu works with `string | undefined`; the form keeps `null` for "no state".
 const stateCodeModel = computed({
@@ -155,22 +153,6 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
           v-model="taglineInput"
           placeholder="Viaja ligero, viaja seguro"
           :maxlength="TAGLINE_MAX_LENGTH"
-          class="w-full"
-        />
-      </UFormField>
-
-      <UFormField
-        label="Nosotros"
-        name="about"
-        description="Tu sitio muestra una página «Nosotros» solo si escribes algo aquí. Solo texto; deja una línea en blanco entre párrafos."
-        :hint="aboutCounter"
-      >
-        <UTextarea
-          v-model="aboutInput"
-          :rows="6"
-          autoresize
-          :maxlength="ABOUT_MAX_LENGTH"
-          placeholder="Cuéntales a los viajeros quiénes son y cómo viajan."
           class="w-full"
         />
       </UFormField>
@@ -268,6 +250,17 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
         :logo-url="profile?.logoUrl ?? null"
         :primary-color="state.primaryColor"
         :secondary-color="state.secondaryColor"
+      />
+    </UPageCard>
+
+    <UPageCard
+      title="Página Nosotros"
+      description="Opcional. Arma la página «Nosotros» de tu sitio por secciones; el diseño lo pone la web, tú solo el contenido. Sin página, tu sitio no la muestra en el menú."
+      variant="subtle"
+    >
+      <AgencyAboutPageEditor
+        v-model="state.aboutPage"
+        :company-name="state.companyName"
       />
     </UPageCard>
 
