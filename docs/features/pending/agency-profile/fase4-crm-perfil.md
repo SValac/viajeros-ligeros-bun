@@ -1,6 +1,7 @@
 # Fase 4 — Perfil en el CRM
 
-**Estado:** 🚧 En progreso. Subpaso 1 (types) ✅
+**Estado:** Completada ✅ (local). `typecheck` limpio. Subpaso 1 escrito por el usuario (modo
+mentor); subpasos 2-5 implementados por el asistente a pedido del usuario.
 **Dependencia:** Fases 2 y 3
 
 ### Subpasos
@@ -8,10 +9,31 @@
 | # | Subpaso | Estado |
 |---|---|---|
 | 1 | `app/types/agency-profile.ts` | ✅ |
-| 2 | Repository | Pendiente |
-| 3 | Domain | Pendiente |
-| 4 | Store | Pendiente |
-| 5 | Componentes + página + `user-menu` | Pendiente |
+| 2 | Repository + mappers en `app/utils/mappers.ts` | ✅ |
+| 3 | Domain | ✅ |
+| 4 | Store | ✅ |
+| 5 | Componentes + página + `user-menu` | ✅ |
+
+### Decisiones de implementación
+
+- **Mappers fila → dominio** en `app/utils/mappers.ts` (convención del repo), no en el domain.
+  El domain queda con la lógica pura: normalización del formulario, teléfono E.164,
+  validación del logo, `isProfileComplete`, `getLogoStoragePath`.
+- **El uid se lee de `supabase.auth.getSession()`**, no de `useAuthStore`: los plugins
+  corren antes que el middleware `auth.global.ts` que llena el auth store.
+- **El store se carga bajo demanda** (página `/profile` y `travel-form`), no en
+  `init-stores.client.ts`, que también corre en `/login`.
+- **`fetchMine()` usa `.single()`:** todo dueño tiene fila (trigger), así que una fila
+  faltante es un error visible y no un `null` silencioso.
+- **Path del logo derivado de la URL pública** (`getLogoStoragePath`), sin columna
+  `logo_path`.
+- **El formulario no se re-sincroniza con el perfil** después de montarse: si lo hiciera,
+  subir un logo borraría las ediciones sin guardar. La página monta el formulario solo
+  cuando el perfil ya cargó.
+- Componentes: `agency-profile-form` (formulario), `agency-logo-upload` (logo),
+  `agency-color-input` (`defineModel<string | null>`, usado dos veces) y
+  `agency-brand-preview` (vista previa de la tarjeta en la web, con color de texto por
+  luminancia).
 
 ### Decisiones tomadas en los types
 

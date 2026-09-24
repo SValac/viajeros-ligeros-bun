@@ -1,6 +1,7 @@
 # Fase 6 — Contrato con la web pública
 
-**Estado:** Pendiente
+**Estado:** Pendiente en el repo web. Contrato enviado a la sesión web el 2026-09-24. El
+embed se probó como `anon` contra la API local y devuelve la forma documentada abajo.
 **Dependencia:** Fase 2 (desplegada al menos en stage)
 **Repo:** `viajeros-ligeros-web`. La implementa la sesión paralela de ese repo; coordinar
 por `SendMessage` ([[reference_web_repo_peer_session]]).

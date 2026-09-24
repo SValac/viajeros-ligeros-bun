@@ -1,7 +1,32 @@
 # Fase 7 — Verificación y despliegue
 
-**Estado:** Pendiente
+**Estado:** 🚧 Matriz local ✅ (2026-09-24). Pendiente: advisors, stage, prod y prueba manual
+de la UI en el navegador.
 **Dependencia:** todas
+
+## Resultado local (2026-09-24)
+
+Script SQL en una transacción con `ROLLBACK`, simulando cada rol con
+`SET ROLE` + `request.jwt.claims`, contra la base local después de `db:reset`:
+
+| Caso | Resultado |
+|---|---|
+| Trigger: dueño nuevo recibe perfil; coordinador invitado no | ✅ |
+| `anon` lee las 32 entidades del catálogo | ✅ |
+| `anon` ve solo agencias con viaje publicado | ✅ |
+| `anon` no puede actualizar (`permission denied`) | ✅ |
+| Usuario B ve solo su perfil y no puede actualizar el de otro (0 filas) | ✅ |
+| INSERT de perfil desde `authenticated` → `permission denied` | ✅ |
+| Teléfono sin `+52` → CHECK `agency_profiles_phone_e164` | ✅ |
+| Estado inexistente → FK `agency_profiles_state_fk` | ✅ |
+| Perfil incompleto + INSERT o UPDATE a `published` → `agency_profile_incomplete` | ✅ |
+| Perfil completo → publica | ✅ |
+| Viaje ya publicado + perfil vaciado + editar otra columna → OK | ✅ |
+| B publica su primer viaje → pasa a ser visible para `anon` | ✅ |
+| UPDATE de perfil no falla (el trigger `moddatetime('updated_at')` es válido) | ✅ |
+| Logo en la carpeta propia → OK; en la carpeta de otro → RLS | ✅ |
+| Coordinador no ve ningún perfil | ✅ |
+| Embed `travels → agency_profiles → country_states` vía REST como `anon` | ✅ |
 
 [← Volver al plan](PLAN.md)
 

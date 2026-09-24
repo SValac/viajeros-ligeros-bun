@@ -1,8 +1,11 @@
 # Fase 5 — Perfil completo para publicar
 
-**Estado:** Pendiente (confirmada por el usuario, 2026-09-23)
+**Estado:** Completada ✅ (local). Trigger verificado (ver Fase 7), seed actualizado,
+opción "Publicado" deshabilitada en `travel-form.vue` y error traducido en
+`toTravelSaveErrorMessage` (`use-travel-domain.ts`). `new.vue` ahora maneja el fallo de
+`addTravel`.
 **Dependencia:** Fase 4
-**Migración:** `supabase migration new require_profile_to_publish`
+**Migración:** `20260924053138_require_profile_to_publish.sql`
 
 [← Volver al plan](PLAN.md)
 
