@@ -1,7 +1,16 @@
 # Fase 7 — Verificación y despliegue
 
-**Estado:** 🚧 Matriz local ✅ (2026-09-24). Pendiente: advisors, stage, prod y prueba manual
-de la UI en el navegador.
+**Estado:** 🚧 Matriz local ✅ y prueba manual de la UI en local ✅ (2026-09-24). Pendiente:
+advisors remotos, stage y prod.
+
+## Prueba manual en local (2026-09-24, usuario nuevo `isaac@gmail.com`)
+
+- Registro desde `/register` → el trigger creó el perfil vacío (`country_code = 'MX'`) ✅
+- Perfil incompleto → "Publicado" deshabilitado en el formulario de viaje ✅
+- Perfil completado desde `/profile`: teléfono normalizado a E.164 (`+52…`), colores en
+  mayúsculas, estado guardado ✅
+- Logo subido y cambiado → queda **un solo** archivo en `{uid}/` (el anterior se borró) ✅
+- Con el perfil completo → el viaje se publicó ✅
 **Dependencia:** todas
 
 ## Resultado local (2026-09-24)
