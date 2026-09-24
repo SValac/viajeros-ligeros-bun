@@ -44,6 +44,7 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `buses/autobus-en-viaje-feature.md` — Feature 6: Autobuses en viajes y catálogo de unidades
 - `feature-traveler-module.md` — Feature 7: Módulo de viajeros (CRUD, jerarquía de grupos, filtros)
 - `agency-profile/PLAN.md` — Perfil de agencia público (catálogo MX, logo, colores, gate de publicación)
+- `agency-site-customization.md` — Sitio por agencia: RPC `get_public_agency_profile`, campos del sitio y página "Nosotros" por secciones
 
 ---
 
