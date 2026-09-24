@@ -1432,6 +1432,19 @@ export type Database = {
         Args: { p_travel_id: string }
         Returns: Json
       }
+      get_public_agency_profile: {
+        Args: { p_agency_id: string }
+        Returns: {
+          company_name: string
+          country_code: string
+          logo_url: string
+          phone: string
+          primary_color: string
+          secondary_color: string
+          state_code: string
+          state_name: string
+        }[]
+      }
       get_travel_seats: {
         Args: { p_travel_id: string }
         Returns: {
