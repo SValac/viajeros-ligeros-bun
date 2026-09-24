@@ -26,11 +26,12 @@ Stage and QA share a dedicated Supabase project, isolated from Production (see [
    git push origin stage
    ```
 4. **Production** — merge the PR into `main` as usual; Vercel deploys it automatically.
-5. **Keep in sync** — periodically merge `main` back into `stage` and `qa` so they don't drift:
+5. **Keep in sync** — right after every PR is merged into `main`, merge `main` back into `stage` and `qa`:
    ```bash
    git checkout stage && git merge main && git push
    git checkout qa && git merge main && git push
    ```
+   Why right away: PRs are squash-merged, so `main` gets one new commit while `stage`/`qa` still have the feature's original commits. If the next feature branches from `main` and touches the same files before the sync, merging it into `stage`/`qa` conflicts. If that happens, check that `git diff --name-only origin/main origin/qa -- app supabase` is empty (qa has no code of its own), then resolve with the feature's side (`git checkout --theirs`).
 
 > **Gotcha**: pushing a brand-new branch whose HEAD is identical to an already-deployed commit (e.g. right after `git checkout -b <branch> main`) does not trigger a Vercel build. Follow it with a real (or empty) commit and push again to get the first deploy.
 
@@ -59,7 +60,7 @@ Flow for a new migration:
 1. `supabase migration new <name>` — creates the timestamped SQL file.
 2. `bun run db:reset` — apply it locally (Docker Postgres) and verify.
 3. `bun run db:push:stage` — push to Stage/QA, verify against those deployed apps.
-4. `bun run db:push:prod` — push to Production once verified.
+4. `bun run db:push:prod` — push to Production once verified. Claude's auto mode blocks this command, so the user runs it (`! bun run db:push:prod` from the Claude Code prompt); Claude then verifies read-only as `anon`. Afterwards the CLI stays linked to Production.
 5. Commit the migration file with the rest of the change and go through the normal PR flow into `main`.
 
 > **Note**: after switching the linked project, `supabase projects list` shows which one is currently `linked: true`. Check it before any `db push` if picking up work in a new session, to avoid pushing to the wrong database.
