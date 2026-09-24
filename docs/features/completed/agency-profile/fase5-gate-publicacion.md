@@ -7,7 +7,7 @@ opción "Publicado" deshabilitada en `travel-form.vue` y error traducido en
 **Dependencia:** Fase 4
 **Migración:** `20260924053138_require_profile_to_publish.sql`
 
-[← Volver al plan](PLAN.md)
+[← Volver al plan](../../pending/agency-profile/PLAN.md)
 
 ---
 

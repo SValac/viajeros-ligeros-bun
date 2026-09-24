@@ -4,7 +4,7 @@
 **Dependencia:** ninguna
 **Migración:** `20260924015331_location_catalog.sql`
 
-[← Volver al plan](PLAN.md)
+[← Volver al plan](../../pending/agency-profile/PLAN.md)
 
 ---
 

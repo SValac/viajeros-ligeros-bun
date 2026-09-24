@@ -50,7 +50,7 @@ mentor); subpasos 2-5 implementados por el asistente a pedido del usuario.
   claves mal escritas omite nada y en silencio. `Pick` sí falla la compilación.
 **Skills:** vue, nuxt, nuxt-ui, pinia
 
-[← Volver al plan](PLAN.md)
+[← Volver al plan](../../pending/agency-profile/PLAN.md)
 
 ---
 

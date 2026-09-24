@@ -7,7 +7,7 @@ así que ninguna da acceso al bucket nuevo.
 **Dependencia:** Fase 2
 **Migración:** `20260924043319_agency_logos_storage.sql`
 
-[← Volver al plan](PLAN.md)
+[← Volver al plan](../../pending/agency-profile/PLAN.md)
 
 ---
 

@@ -7,7 +7,7 @@ el trigger creó el perfil de dev. Los tipos generados incluyen las relaciones
 **Dependencia:** Fase 1
 **Migración:** `20260924035704_agency_profiles.sql`
 
-[← Volver al plan](PLAN.md)
+[← Volver al plan](../../pending/agency-profile/PLAN.md)
 
 ---
 
