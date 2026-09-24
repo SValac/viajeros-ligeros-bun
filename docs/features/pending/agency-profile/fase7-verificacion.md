@@ -1,8 +1,9 @@
 # Fase 7 — Verificación y despliegue
 
-**Estado:** 🚧 Matriz local ✅, prueba manual de la UI en local ✅, migraciones en stage ✅
-(2026-09-24, `db:push:stage` sin errores). Pendiente: probar CRM y web contra stage, advisors
-remotos, `db:push:prod`.
+**Estado:** 🚧 Matriz local ✅, prueba manual de la UI en local ✅, migraciones en stage y
+prod ✅ (2026-09-24, ambos `db push` sin errores). Código del CRM desplegado en `qa` y
+`stage`. Pendiente: PR a `main`, merge de la web, advisors remotos y aviso a los dueños con
+perfil incompleto.
 
 ## Prueba manual en local (2026-09-24, usuario nuevo `isaac@gmail.com`)
 
