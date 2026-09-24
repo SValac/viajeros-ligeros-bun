@@ -1,42 +1,17 @@
 <script setup lang="ts">
-import type { AgencyProfileFormData } from '~/types/agency-profile';
+import type { NavigationMenuItem } from '@nuxt/ui';
 
-definePageMeta({
-  name: 'profile',
-});
-
+// Parent of the profile tabs (app/pages/profile/*). Loads the profile once and renders
+// the active tab only after it is available, since each tab's form initializes from it.
 const agencyProfileStore = useAgencyProfileStore();
-const toast = useToast();
 
 onMounted(() => agencyProfileStore.fetchProfile({ force: true }));
 
-async function handleSubmit(data: AgencyProfileFormData) {
-  const success = await agencyProfileStore.saveProfile(data);
-  if (success) {
-    toast.add({ title: 'Perfil guardado', color: 'success', icon: 'i-lucide-check-circle' });
-    return;
-  }
-  toast.add({
-    title: 'No se pudo guardar el perfil',
-    description: agencyProfileStore.error ?? undefined,
-    color: 'error',
-    icon: 'i-lucide-alert-circle',
-  });
-}
-
-async function handleLogoSelect(file: File) {
-  const success = await agencyProfileStore.changeLogo(file);
-  toast.add(success
-    ? { title: 'Logo actualizado', color: 'success', icon: 'i-lucide-check-circle' }
-    : { title: 'No se pudo subir el logo', description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
-}
-
-async function handleLogoRemove() {
-  const success = await agencyProfileStore.removeLogo();
-  toast.add(success
-    ? { title: 'Logo eliminado', color: 'warning', icon: 'i-lucide-trash-2' }
-    : { title: 'No se pudo quitar el logo', description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
-}
+// To add a tab: create app/pages/profile/<name>.vue and add its entry here.
+const tabs: NavigationMenuItem[] = [
+  { label: 'Datos generales', icon: 'i-lucide-building-2', to: { name: 'profile' }, exact: true },
+  { label: 'Nosotros', icon: 'i-lucide-users', to: { name: 'profile-about' } },
+];
 </script>
 
 <template>
@@ -48,10 +23,16 @@ async function handleLogoRemove() {
           Perfil de agencia
         </h1>
         <p class="mt-1 text-muted">
-          Estos datos son públicos: aparecen junto a tus viajes en la web.
+          Estos datos son públicos: aparecen en tu sitio y junto a tus viajes en la web.
         </p>
       </div>
     </div>
+
+    <UNavigationMenu
+      :items="tabs"
+      highlight
+      class="border-b border-default"
+    />
 
     <div
       v-if="agencyProfileStore.loading && !agencyProfileStore.profile"
@@ -73,31 +54,13 @@ async function handleLogoRemove() {
       <UAlert
         v-if="!agencyProfileStore.isComplete"
         title="Completa tu perfil para publicar viajes"
-        description="Necesitas el nombre de tu empresa y tu estado para que tus viajes aparezcan correctamente en la web."
+        description="Necesitas el nombre de tu empresa y tu estado (en «Datos generales») para que tus viajes aparezcan correctamente en la web."
         color="warning"
         variant="subtle"
         icon="i-lucide-triangle-alert"
       />
 
-      <UPageCard
-        title="Logo"
-        description="Se muestra en las tarjetas y el detalle de tus viajes."
-        variant="subtle"
-      >
-        <AgencyLogoUpload
-          :logo-url="agencyProfileStore.profile.logoUrl"
-          :uploading="agencyProfileStore.uploadingLogo"
-          @select="handleLogoSelect"
-          @remove="handleLogoRemove"
-        />
-      </UPageCard>
-
-      <AgencyProfileForm
-        :profile="agencyProfileStore.profile"
-        :states="agencyProfileStore.states"
-        :saving="agencyProfileStore.saving"
-        @submit="handleSubmit"
-      />
+      <NuxtPage />
     </template>
   </div>
 </template>

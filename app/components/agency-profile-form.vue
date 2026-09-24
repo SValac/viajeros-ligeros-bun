@@ -5,7 +5,6 @@ import { z } from 'zod';
 
 import type { AgencyProfile, AgencyProfileFormData, CountryState } from '~/types/agency-profile';
 
-import { aboutPageSchema } from '~/composables/agency-profile/use-about-page-domain';
 import {
   CONTACT_EMAIL_MAX_LENGTH,
   FACEBOOK_URL_REGEX,
@@ -54,7 +53,6 @@ const schema = z.object({
     .refine(value => value === '' || z.email().safeParse(value).success, 'Email inválido'),
   instagramUrl: optionalMatching(INSTAGRAM_URL_REGEX, 'Debe ser un enlace https://instagram.com/tu-cuenta'),
   facebookUrl: optionalMatching(FACEBOOK_URL_REGEX, 'Debe ser un enlace https://facebook.com/tu-pagina'),
-  aboutPage: aboutPageSchema.nullable(),
 });
 
 type Schema = z.output<typeof schema>;
@@ -250,17 +248,6 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
         :logo-url="profile?.logoUrl ?? null"
         :primary-color="state.primaryColor"
         :secondary-color="state.secondaryColor"
-      />
-    </UPageCard>
-
-    <UPageCard
-      title="Página Nosotros"
-      description="Opcional. Arma la página «Nosotros» de tu sitio por secciones; el diseño lo pone la web, tú solo el contenido. Sin página, tu sitio no la muestra en el menú."
-      variant="subtle"
-    >
-      <AgencyAboutPageEditor
-        v-model="state.aboutPage"
-        :company-name="state.companyName"
       />
     </UPageCard>
 

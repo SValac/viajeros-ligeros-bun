@@ -13,7 +13,7 @@ paralela de ese repo por `SendMessage`.
 
 La web pública tiene un **modo agencia única**. Con `NUXT_PUBLIC_AGENCY_ID`, un deploy
 aparte de la misma web muestra solo los viajes de esa agencia y usa su marca. Para eso,
-cada agencia edita desde el CRM (página `/profile`) el contenido de su sitio. La web pone
+cada agencia edita desde el CRM (perfil de agencia, ver [Páginas del perfil](#páginas-del-perfil)) el contenido de su sitio. La web pone
 el diseño; la agencia solo controla el contenido.
 
 | PR | Migración | Qué agrega |
@@ -107,6 +107,22 @@ Detalles del CHECK que no son obvios:
 - **64 KB, no 20 000 bytes:** una página con todos los campos al máximo pesa ~47 KB. Con
   20 000, una agencia podía respetar todos los contadores y aun así no poder guardar. El tope
   es solo un respaldo; lo que la agencia encuentra son los límites por campo.
+
+### Páginas del perfil
+
+El perfil usa rutas anidadas. `app/pages/profile.vue` es el contenedor: encabezado, carga
+del perfil, aviso de perfil incompleto y un menú de pestañas (`UNavigationMenu` con
+`highlight`) ligado a la URL. Solo renderiza `<NuxtPage />` cuando el perfil ya cargó, porque
+el formulario de cada pestaña se inicializa una vez a partir de él.
+
+| Ruta | Nombre | Archivo | Contenido | Guarda con |
+| --- | --- | --- | --- | --- |
+| `/profile` | `profile` | `profile/index.vue` | Logo y datos generales (identidad, ubicación, presentación, contacto, marca) | `saveProfile` |
+| `/profile/about` | `profile-about` | `profile/about.vue` | Página Nosotros (`AgencyAboutPageForm`) | `saveAboutPage` |
+
+Cada pestaña guarda solo sus campos. Para agregar una pestaña (por ejemplo, "Home"), se
+crea `app/pages/profile/<nombre>.vue` y se agrega su entrada al arreglo `tabs` de
+`profile.vue`. Las ediciones sin guardar se pierden al cambiar de pestaña.
 
 ### Editor en el CRM
 
