@@ -72,6 +72,16 @@ export function useAgencyProfileRepository() {
       update.secondary_color = data.secondaryColor;
     if (data.logoUrl !== undefined)
       update.logo_url = data.logoUrl;
+    if (data.tagline !== undefined)
+      update.tagline = data.tagline;
+    if (data.about !== undefined)
+      update.about = data.about;
+    if (data.contactEmail !== undefined)
+      update.contact_email = data.contactEmail;
+    if (data.instagramUrl !== undefined)
+      update.instagram_url = data.instagramUrl;
+    if (data.facebookUrl !== undefined)
+      update.facebook_url = data.facebookUrl;
 
     const { data: row, error } = await supabase
       .from('agency_profiles')
