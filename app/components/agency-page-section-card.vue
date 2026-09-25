@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { AboutPageSection } from '~/types/agency-profile';
+import type { PageSection } from '~/types/agency-profile';
 
 import {
-  ABOUT_PAGE_LIMITS,
-  ABOUT_SECTION_TYPES,
   createFeatureItem,
   createStepItem,
-} from '~/composables/agency-profile/use-about-page-domain';
+  PAGE_SECTION_LIMITS,
+  PAGE_SECTION_TYPES,
+} from '~/composables/agency-profile/use-page-sections-domain';
 
 type Props = {
   /** Form path of the section, e.g. `aboutPage.sections.2`. */
@@ -23,9 +23,9 @@ const emit = defineEmits<{
   remove: [];
 }>();
 
-const section = defineModel<AboutPageSection>({ required: true });
+const section = defineModel<PageSection>({ required: true });
 
-const typeInfo = computed(() => ABOUT_SECTION_TYPES[section.value.type]);
+const typeInfo = computed(() => PAGE_SECTION_TYPES[section.value.type]);
 
 function counter(value: string, limit: number) {
   return `${value.length}/${limit}`;
@@ -77,8 +77,8 @@ function counter(value: string, limit: number) {
       >
         <UInput
           v-model="section.headline"
-          :maxlength="ABOUT_PAGE_LIMITS.headline"
-          placeholder="Por qué existimos"
+          :maxlength="PAGE_SECTION_LIMITS.headline"
+          placeholder="Por qué viajar con nosotros"
           class="w-full"
         />
       </UFormField>
@@ -91,7 +91,7 @@ function counter(value: string, limit: number) {
       >
         <UInput
           v-model="section.title"
-          :maxlength="ABOUT_PAGE_LIMITS.sectionTitle"
+          :maxlength="PAGE_SECTION_LIMITS.sectionTitle"
           class="w-full"
         />
       </UFormField>
@@ -102,14 +102,14 @@ function counter(value: string, limit: number) {
       label="Texto"
       :name="`${name}.description`"
       description="Deja una línea en blanco entre párrafos."
-      :hint="counter(section.description, ABOUT_PAGE_LIMITS.textDescription)"
+      :hint="counter(section.description, PAGE_SECTION_LIMITS.textDescription)"
       required
     >
       <UTextarea
         v-model="section.description"
         :rows="4"
         autoresize
-        :maxlength="ABOUT_PAGE_LIMITS.textDescription"
+        :maxlength="PAGE_SECTION_LIMITS.textDescription"
         class="w-full"
       />
     </UFormField>
@@ -119,23 +119,23 @@ function counter(value: string, limit: number) {
         label="Descripción"
         :name="`${name}.description`"
         description="Opcional. Aparece bajo el título, antes de las tarjetas."
-        :hint="counter(section.description, ABOUT_PAGE_LIMITS.featuresDescription)"
+        :hint="counter(section.description, PAGE_SECTION_LIMITS.featuresDescription)"
       >
         <UTextarea
           v-model="section.description"
           :rows="2"
           autoresize
-          :maxlength="ABOUT_PAGE_LIMITS.featuresDescription"
+          :maxlength="PAGE_SECTION_LIMITS.featuresDescription"
           class="w-full"
         />
       </UFormField>
 
-      <AgencyAboutItemsEditor
+      <AgencyPageItemsEditor
         v-model="section.items"
         :name="`${name}.items`"
         item-label="Tarjeta"
-        :min="ABOUT_PAGE_LIMITS.featureItems.min"
-        :max="ABOUT_PAGE_LIMITS.featureItems.max"
+        :min="PAGE_SECTION_LIMITS.featureItems.min"
+        :max="PAGE_SECTION_LIMITS.featureItems.max"
         :create="createFeatureItem"
       >
         <template #item-extra="{ item, path }">
@@ -143,16 +143,16 @@ function counter(value: string, limit: number) {
             <AgencyIconPicker v-model="item.icon" />
           </UFormField>
         </template>
-      </AgencyAboutItemsEditor>
+      </AgencyPageItemsEditor>
     </template>
 
-    <AgencyAboutItemsEditor
+    <AgencyPageItemsEditor
       v-else
       v-model="section.items"
       :name="`${name}.items`"
       item-label="Paso"
-      :min="ABOUT_PAGE_LIMITS.stepItems.min"
-      :max="ABOUT_PAGE_LIMITS.stepItems.max"
+      :min="PAGE_SECTION_LIMITS.stepItems.min"
+      :max="PAGE_SECTION_LIMITS.stepItems.max"
       :create="createStepItem"
     />
   </div>

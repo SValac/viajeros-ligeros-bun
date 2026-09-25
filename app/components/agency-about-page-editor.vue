@@ -1,16 +1,10 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui';
-
-import type { AboutPage, AboutPageSectionType } from '~/types/agency-profile';
+import type { AboutPage } from '~/types/agency-profile';
 
 import {
   ABOUT_PAGE_LIMITS,
-  ABOUT_SECTION_TYPES,
   createAboutPageTemplate,
-  createAboutSection,
   createEmptyAboutPage,
-  createListKeys,
-  moveListItem,
 } from '~/composables/agency-profile/use-about-page-domain';
 
 type Props = {
@@ -34,20 +28,6 @@ const isConfirmOpen = computed({
       pendingAction.value = null;
   },
 });
-
-const keyOf = createListKeys();
-
-const sectionCount = computed(() => page.value?.sections.length ?? 0);
-const canAddSection = computed(() => sectionCount.value < ABOUT_PAGE_LIMITS.sections);
-
-const addSectionItems = computed<DropdownMenuItem[]>(() =>
-  (Object.keys(ABOUT_SECTION_TYPES) as AboutPageSectionType[]).map(type => ({
-    label: ABOUT_SECTION_TYPES[type].label,
-    description: ABOUT_SECTION_TYPES[type].description,
-    icon: ABOUT_SECTION_TYPES[type].icon,
-    onSelect: () => addSection(type),
-  })),
-);
 
 function heroCounter(value: string) {
   return `${value.length}/${ABOUT_PAGE_LIMITS.heroDescription}`;
@@ -92,24 +72,6 @@ function cancelPending() {
 function confirmPending() {
   pendingAction.value?.run();
   pendingAction.value = null;
-}
-
-function addSection(type: AboutPageSectionType) {
-  if (!page.value || !canAddSection.value)
-    return;
-  page.value.sections = [...page.value.sections, createAboutSection(type)];
-}
-
-function removeSection(index: number) {
-  if (!page.value)
-    return;
-  page.value.sections = page.value.sections.filter((_, i) => i !== index);
-}
-
-function moveSection(index: number, direction: -1 | 1) {
-  if (!page.value)
-    return;
-  page.value.sections = moveListItem(page.value.sections, index, direction);
 }
 </script>
 
@@ -199,34 +161,10 @@ function moveSection(index: number, direction: -1 | 1) {
           </p>
         </div>
 
-        <!-- Animates adding, removing and reordering sections. -->
-        <div v-auto-animate class="space-y-4">
-          <AgencyAboutSectionCard
-            v-for="(section, index) in page.sections"
-            :key="keyOf(section)"
-            v-model="page.sections[index]!"
-            :name="`${name}.sections.${index}`"
-            :index="index"
-            :is-first="index === 0"
-            :is-last="index === page.sections.length - 1"
-            @move="direction => moveSection(index, direction)"
-            @remove="removeSection(index)"
-          />
-        </div>
-
-        <UFormField :name="`${name}.sections`">
-          <UDropdownMenu :items="addSectionItems" :disabled="!canAddSection">
-            <UButton
-              icon="i-lucide-plus"
-              color="neutral"
-              variant="outline"
-              trailing-icon="i-lucide-chevron-down"
-              :disabled="!canAddSection"
-            >
-              Agregar sección ({{ sectionCount }}/{{ ABOUT_PAGE_LIMITS.sections }})
-            </UButton>
-          </UDropdownMenu>
-        </UFormField>
+        <AgencyPageSectionsEditor
+          v-model="page.sections"
+          :name="`${name}.sections`"
+        />
       </div>
     </template>
 
