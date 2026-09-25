@@ -203,16 +203,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const getAsientoMinimoCalculado = computed(() => {
-    return (quotationId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-      if (!cotizacion || cotizacion.seatPrice === 0)
-        return 0;
-      const costoTotal = getCostoTotal.value(quotationId);
-      return Math.ceil(costoTotal / cotizacion.seatPrice);
-    };
-  });
-
   const getTotalCostoBuses = computed(() => {
     return (quotationId: string): number => {
       return busesApartados.value
@@ -237,8 +227,21 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses.
+  // El hospedaje queda fuera: cada viajero lo paga aparte según su habitación.
+  // Devuelve 0 si aún no hay precio por asiento.
+  const getAsientoConGanancia = computed(() => {
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion || cotizacion.seatPrice === 0)
+        return 0;
+      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
+      return Math.floor(costoTotal / cotizacion.seatPrice) + 1;
+    };
+  });
+
   // Precio calculado a partir del asiento mínimo objetivo (seatPrice de la cotización)
-  // Incluye costos de proveedores, hospedajes y autobuses
+  // Incluye costos de proveedores y autobuses; el hospedaje se suma aparte en la matriz de precios de referencia
   const getPrecioAsientoCalculado = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
@@ -253,16 +256,15 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  // Ganancia con el autobús lleno: capacidad × precio por asiento − (servicios + autobuses).
+  // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
   const getGananciaProyectada = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
       if (!cotizacion || cotizacion.busCapacity === 0)
         return 0;
-      const seatPrice = getPrecioAsientoCalculado.value(quotationId);
-      const costoTotal = getCostoTotal.value(quotationId)
-        + getTotalCostoBuses.value(quotationId)
-        + getTotalCostoHospedajes.value(quotationId);
-      return (cotizacion.busCapacity * seatPrice) - costoTotal;
+      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
+      return (cotizacion.busCapacity * cotizacion.seatPrice) - costoTotal;
     };
   });
 
@@ -1411,7 +1413,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getCostoTotal,
     getCostoTipoMinimo,
     getCostoTipoTotal,
-    getAsientoMinimoCalculado,
+    getAsientoConGanancia,
     getPrecioAsientoCalculado,
     getGananciaProyectada,
     getAnticipadoProveedor,
