@@ -62,15 +62,14 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
   });
 
   const getTravelerPaymentSummary = computed(() => {
-    return (travelerId: string, travelId: string, travelPrice: number): TravelerPaymentSummary => {
+    return (travelerId: string, travelId: string): TravelerPaymentSummary => {
       const config = getAccountConfig.value(travelerId, travelId);
       const travelerPayments = getPaymentsByTravelerAndTravel.value(travelerId, travelId);
-      const summary = calculatePaymentSummary(config, travelPrice, travelerPayments);
+      const summary = calculatePaymentSummary(config, travelerPayments);
 
       return {
         travelId,
         travelerId,
-        totalCost: travelPrice,
         travelerType: config?.travelerType ?? 'adult',
         discounts: config?.discounts ?? [],
         surcharges: config?.surcharges ?? [],
@@ -105,18 +104,27 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
 
   // Actions
   async function fetchByTravel(travelId: string): Promise<void> {
+    await fetchByTravels([travelId]);
+  }
+
+  async function fetchByTravels(travelIds: string[]): Promise<void> {
+    if (travelIds.length === 0)
+      return;
+
     loading.value = true;
     error.value = null;
     try {
       const [fetchedPayments, fetchedConfigs] = await Promise.all([
-        repository.fetchPaymentsByTravel(travelId),
-        repository.fetchConfigsByTravel(travelId),
+        repository.fetchPaymentsByTravels(travelIds),
+        repository.fetchConfigsByTravels(travelIds),
       ]);
 
-      const otherPayments = payments.value.filter(p => p.travelId !== travelId);
+      const ids = new Set(travelIds);
+
+      const otherPayments = payments.value.filter(p => !ids.has(p.travelId));
       payments.value = [...otherPayments, ...fetchedPayments];
 
-      const otherConfigs = accountConfigs.value.filter(c => c.travelId !== travelId);
+      const otherConfigs = accountConfigs.value.filter(c => !ids.has(c.travelId));
       accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
     }
     catch (e) {
@@ -158,7 +166,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     }
 
     const existingPayments = getPaymentsByTravelerAndTravel.value(data.travelerId, data.travelId);
-    const { balance, appliedPrice } = calculatePaymentSummary(config, 0, existingPayments);
+    const { balance, appliedPrice } = calculatePaymentSummary(config, existingPayments);
     const validationError = validatePaymentAmount(data.amount, balance, appliedPrice);
     if (validationError) {
       return { error: validationError };
@@ -265,6 +273,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     getTravelCashSummary,
     // Actions
     fetchByTravel,
+    fetchByTravels,
     fetchByTraveler,
     addPayment,
     updatePayment,

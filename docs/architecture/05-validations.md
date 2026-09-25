@@ -90,7 +90,7 @@ async updateTotalRooms(providerId, newTotal) {
 
 `getTravelerPaymentSummary` aplica la lógica de precios en este orden:
 
-1. **Precio base**: precio público del viaje (`travel.price`)
+1. **Precio base**: `0` si el viajero no tiene precio configurado. `travel.price` es el precio de entrada del sitio público y **no** participa en los cálculos de pagos
 2. **Override de tipo**: si `travelerType === 'child'`, usa `childPrice` si está configurado
 3. **Override de precio público**: si hay `publicPriceId`, usa `publicPriceAmount`
 4. **Descuentos**: aplica lista de descuentos (fijo o porcentaje)

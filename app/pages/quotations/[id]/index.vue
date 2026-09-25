@@ -14,6 +14,10 @@ const cotizacion = computed(() => quotation.value!);
 const acumuladoViajeros = computed(() =>
   paymentStore.getTravelCashSummary(travelId.value).totalCollected,
 );
+
+onMounted(async () => {
+  await paymentStore.fetchByTravel(travelId.value);
+});
 </script>
 
 <template>

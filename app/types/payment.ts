@@ -41,7 +41,6 @@ export type TravelerAccountConfig = {
 export type TravelerPaymentSummary = {
   travelId: string;
   travelerId: string;
-  totalCost: number;
   travelerType: TravelerType;
   appliedPrice: number;
   discounts: AdjustmentItem[];

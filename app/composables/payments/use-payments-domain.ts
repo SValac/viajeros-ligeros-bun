@@ -33,16 +33,17 @@ export function getPaymentStatus(totalPaid: number, finalCost: number): PaymentS
  * Consolidates discount/surcharge calculation in a single place — both
  * `getTravelerPaymentSummary` and `addPayment` delegate here.
  * @param config - The traveler's account config; `undefined` if not yet configured
- * @param travelPrice - The base travel price used as fallback when no override is set
+ * Travelers without a configured price cost 0: the travel's entry price is public
+ * marketing info and never feeds payment calculations.
  * @param travelerPayments - All payments already made by this traveler for this travel
  * @returns Calculated financial breakdown including applied price, costs, balance and status
  */
-export function calculatePaymentSummary(config: TravelerAccountConfig | undefined, travelPrice: number, travelerPayments: Payment[]): PaymentCalculation {
+export function calculatePaymentSummary(config: TravelerAccountConfig | undefined, travelerPayments: Payment[]): PaymentCalculation {
   const travelerType = config?.travelerType ?? 'adult';
   const appliedPrice = config?.publicPriceAmount ?? (
     travelerType === 'child' && config?.childPrice != null
       ? config.childPrice
-      : travelPrice
+      : 0
   );
 
   const discounts = config?.discounts ?? [];

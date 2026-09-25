@@ -73,10 +73,6 @@ function getTravelName(id: string) {
   return travelStore.getTravelById(id)?.label ?? id;
 }
 
-function getTravelPrice(id: string) {
-  return travelStore.getTravelById(id)?.price ?? 0;
-}
-
 const filteredPayments = computed(() => {
   return paymentStore.getPaymentsByTraveler(travelerId.value).filter((p: Payment) => {
     if (travelFilter.value !== 'all' && p.travelId !== travelFilter.value)
@@ -213,10 +209,6 @@ const editingConfigPreciosPublicos = computed(() => {
   return cotizacion ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.id) : [];
 });
 
-const editingConfigTravelPrice = computed(() =>
-  editingConfigTravelId.value ? getTravelPrice(editingConfigTravelId.value) : 0,
-);
-
 async function handleConfigSubmit(config: TravelerAccountConfig) {
   await paymentStore.setAccountConfig(config);
   toast.add({ title: 'Configuración guardada', color: 'success' });
@@ -226,8 +218,7 @@ async function handleConfigSubmit(config: TravelerAccountConfig) {
 const editingSummary = computed(() => {
   if (!editingPayment.value)
     return null;
-  const travelPrice = getTravelPrice(editingPayment.value.travelId);
-  return paymentStore.getTravelerPaymentSummary(travelerId.value, editingPayment.value.travelId, travelPrice);
+  return paymentStore.getTravelerPaymentSummary(travelerId.value, editingPayment.value.travelId);
 });
 
 const editMaxAmount = computed(() => {
@@ -329,7 +320,7 @@ watch(travelerTravelIds, (ids) => {
 
           <!-- Summary card -->
           <PaymentSummaryCard
-            :summary="paymentStore.getTravelerPaymentSummary(travelerId, id, getTravelPrice(id))"
+            :summary="paymentStore.getTravelerPaymentSummary(travelerId, id)"
             :traveler-name="travelerName"
           />
 
@@ -376,7 +367,6 @@ watch(travelerTravelIds, (ids) => {
           v-if="editingConfigTravelId"
           :traveler-id="travelerId"
           :travel-id="editingConfigTravelId"
-          :travel-base-price="editingConfigTravelPrice"
           :precios-publicos="editingConfigPreciosPublicos"
           :config="editingConfig"
           @submit="handleConfigSubmit"
