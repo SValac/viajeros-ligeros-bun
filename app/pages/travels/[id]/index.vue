@@ -3,7 +3,6 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const travelsStore = useTravelsStore();
-const cotizacionStore = useCotizacionStore();
 const coordinatorStore = useCoordinatorStore();
 
 // Get travel ID from route params
@@ -11,32 +10,10 @@ const travelId = computed(() => route.params.id as string);
 
 // Get travel data from store
 const travel = computed(() => travelsStore.getTravelById(travelId.value));
-const tieneCotizacion = computed(() => cotizacionStore.hasQuotation(travelId.value));
-
-const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
-const preciosPublicos = computed(() =>
-  cotizacion.value ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.value.id) : [],
-);
 
 const coordinadoresDelViaje = computed(() => {
   const ids = travel.value?.coordinatorIds ?? [];
   return ids.map(id => coordinatorStore.getCoordinatorById(id)).filter(Boolean);
-});
-
-async function loadCotizacionData(id: string) {
-  await cotizacionStore.fetchByTravel(id);
-}
-
-onMounted(() => {
-  if (travelId.value) {
-    void loadCotizacionData(travelId.value);
-  }
-});
-
-watch(travelId, (id) => {
-  if (id) {
-    void loadCotizacionData(id);
-  }
 });
 
 const isDeleting = ref(false);
@@ -84,13 +61,6 @@ function formatDate(dateString: string) {
   });
 }
 
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
-
 function calculateDuration(inicio: string, fin: string) {
   const start = new Date(inicio);
   const end = new Date(fin);
@@ -125,12 +95,6 @@ function goToHabitaciones() {
 function goToPayments() {
   if (travel.value) {
     router.push({ name: 'payments-travel', params: { id: travel.value.id } });
-  }
-}
-
-function goToCotizacion() {
-  if (travel.value) {
-    router.push({ name: 'travel-cotizacion', params: { id: travel.value.id } });
   }
 }
 
@@ -206,22 +170,6 @@ definePageMeta({
             color="neutral"
             @click="goToPayments"
           />
-          <UButton
-            icon="i-lucide-file-text"
-            variant="outline"
-            :color="tieneCotizacion ? 'success' : 'neutral'"
-            @click="goToCotizacion"
-          >
-            Cotización
-            <UBadge
-              v-if="tieneCotizacion"
-              label="Con cotización"
-              color="success"
-              variant="subtle"
-              size="xs"
-              class="ml-1"
-            />
-          </UButton>
           <UButton
             icon="i-lucide-pencil"
             label="Editar"
@@ -375,78 +323,6 @@ definePageMeta({
                 </div>
               </div>
             </div>
-          </section>
-
-          <!-- Public Prices Section -->
-          <section id="public-prices">
-            <TheSeparator
-              size="lg"
-              text="Precios al Público"
-              icon="i-lucide-tag"
-            />
-            <template v-if="preciosPublicos.length > 0">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div
-                  v-for="precio in preciosPublicos"
-                  :key="precio.id"
-                  class="p-4 bg-elevated rounded-lg flex items-start justify-between gap-4"
-                >
-                  <div class="flex-1 min-w-0">
-                    <div class="font-medium">
-                      {{ precio.priceType }}
-                    </div>
-                    <div class="text-sm text-muted mt-0.5">
-                      {{ precio.description }}
-                    </div>
-                    <div v-if="precio.roomType || precio.ageGroup" class="flex items-center gap-2 mt-1.5">
-                      <UBadge
-                        v-if="precio.roomType"
-                        :label="precio.roomType"
-                        color="neutral"
-                        variant="subtle"
-                        size="xs"
-                      />
-                      <UBadge
-                        v-if="precio.ageGroup"
-                        :label="precio.ageGroup"
-                        color="neutral"
-                        variant="subtle"
-                        size="xs"
-                      />
-                    </div>
-                    <div v-if="precio.notes" class="text-xs text-muted mt-1.5 italic">
-                      {{ precio.notes }}
-                    </div>
-                  </div>
-                  <div class="text-right shrink-0">
-                    <div class="text-xs text-muted mb-0.5">
-                      Por persona
-                    </div>
-                    <div class="text-lg font-bold text-primary">
-                      {{ formatCurrency(precio.pricePerPerson) }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <TravelSectionEmptyState
-              icon="i-lucide-tag"
-              title="Sin precios al público"
-              description="Agrega los precios en la sección de"
-              :navigate="() => router.push({ name: 'travel-cotizacion', params: { id: travel?.id } })"
-            />
-          </section>
-          <!-- Buses Section -->
-          <section id="buses" class="mb-6">
-            <TheSeparator
-              size="xl"
-              text="Autobuses"
-              icon="i-lucide-bus"
-            />
-            <TravelBusesSection
-              :travel-id="travelId"
-            />
           </section>
 
           <!-- Internal Notes Section -->
