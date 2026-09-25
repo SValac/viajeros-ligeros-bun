@@ -1,9 +1,9 @@
 # Feature: Sitio personalizable por agencia
 
-**Estado:** ✅ COMPLETADA (2026-09-24). PRs #60, #61 y #62 mergeados a `main`. Las tres
-migraciones están en local, stage/QA y prod.
-**En curso (2026-09-25):** página principal personalizable (`home_page`), rama
-`feature/agency-home-page`.
+**Estado:** ✅ COMPLETADA. PRs #60, #61 y #62 (2026-09-24) y #66 (página principal,
+2026-09-25) mergeados a `main`. Las cuatro migraciones están en local, stage/QA y prod.
+**Pendiente:** prueba de punta a punta con una agencia real. El proyecto de Vercel de la
+agencia y los previews de qa/stage de la web todavía no tienen `NUXT_PUBLIC_AGENCY_ID`.
 **Continúa:** [agency-profile/PLAN.md](agency-profile/PLAN.md). Cubre los "campos extra
 candidatos" que esa feature dejó fuera de alcance.
 **Repo web:** `viajeros-ligeros-web` implementa el lado público. Se coordina con la sesión
@@ -23,7 +23,7 @@ el diseño; la agencia solo controla el contenido.
 | #60 | `20260924165343_public_agency_profile_rpc.sql` | RPC `get_public_agency_profile` |
 | #61 | `20260924173904_agency_profile_site_content.sql` | `tagline`, `contact_email`, `instagram_url`, `facebook_url` (y `about`, ya eliminado) |
 | #62 | `20260924183111_agency_about_page.sql` | `about_page jsonb` (reemplaza a `about`) |
-| — | `20260925194210_agency_home_page.sql` | `home_page jsonb` |
+| #66 | `20260925194210_agency_home_page.sql` | `home_page jsonb` |
 
 ## RPC `get_public_agency_profile(p_agency_id uuid)`
 

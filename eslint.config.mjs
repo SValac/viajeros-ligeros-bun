@@ -42,7 +42,7 @@ export default withNuxt(
           'error',
           {
             case: 'kebabCase',
-            ignore: ['README.md', 'CLAUDE.md'],
+            ignore: ['README.md', 'CLAUDE.md', 'AGENTS.md'],
           },
         ],
       },
