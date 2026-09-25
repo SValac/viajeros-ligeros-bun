@@ -277,7 +277,8 @@ export function mapTravelAccommodationRowToDomain(row: Tables<'travel_accommodat
   };
 }
 
-export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at' | 'owner_id'> {
+// slug is omitted: the database assigns it on first publish (see travels_assign_slug trigger).
+export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at' | 'owner_id' | 'slug'> {
   return {
     label: data.label,
     destination: data.destination ?? null,
