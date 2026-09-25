@@ -35,8 +35,15 @@ El layout es CSR-only (`ssr: false` en `nuxt.config.ts`). Las páginas de auth (
 | `/travels/new` | `pages/travels/new.vue` | Crear viaje |
 | `/travels/[id]` | `pages/travels/[id]/index.vue` | Detalle del viaje |
 | `/travels/[id]/edit` | `pages/travels/[id]/edit.vue` | Editar viaje |
-| `/travels/[id]/cotizacion` | `pages/travels/[id]/cotizacion.vue` | Cotización del viaje |
 | `/travels/[id]/travelers` | `pages/travels/[id]/travelers/index.vue` | Viajeros del viaje |
+
+### Cotizaciones
+Uso interno del CRM, no se publica en la web. `[id]` es el id del **viaje** (la cotización es 1:1 con el viaje).
+
+| Ruta | Archivo | Descripción |
+|------|---------|-------------|
+| `/quotations` | `pages/quotations/index.vue` | Viajes con el estado de su cotización |
+| `/quotations/[id]` | `pages/quotations/[id].vue` | Cotización del viaje: costos, hospedaje, autobuses, precios al público y asignación de operadores/coordinadores |
 
 ### Proveedores
 | Ruta | Descripción |
