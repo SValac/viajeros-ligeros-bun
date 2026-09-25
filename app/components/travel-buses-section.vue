@@ -317,7 +317,7 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
         Sin autobuses apartados
       </p>
       <p class="text-sm text-muted">
-        Agrégalos en la sección Autobuses de esta cotización.
+        Agrégalos en la sección de arriba.
       </p>
     </div>
   </div>

@@ -1,35 +1,28 @@
 <script setup lang="ts">
+import type { NavigationMenuItem } from '@nuxt/ui';
+
 import { z } from 'zod';
 
+import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
-// `id` es el id del viaje: la cotización es 1:1 con el viaje y la página
-// debe funcionar antes de que exista (estado "Crear cotización").
-definePageMeta({
-  name: 'quotation-detail',
-  layout: 'default',
-});
+// Padre de las pestañas de la cotización (app/pages/quotations/[id]/*). Muestra el
+// encabezado, el estado y la navegación; las pestañas solo se renderizan cuando la
+// cotización existe. Sin cotización, muestra el estado vacío para crearla.
 
-const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 
 const travelStore = useTravelsStore();
 const cotizacionStore = useCotizacionStore();
-const paymentStore = usePaymentStore();
 
-const travelId = computed(() => route.params.id as string);
+const { travelId, quotation: cotizacion, readonly } = useQuotationRoute();
 
 onMounted(async () => {
   await cotizacionStore.fetchByTravel(travelId.value);
 });
 
 const travel = computed(() => travelStore.getTravelById(travelId.value));
-const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
-const readonly = computed(() => cotizacion.value?.status === 'confirmed');
-const acumuladoViajeros = computed(() =>
-  paymentStore.getTravelCashSummary(travelId.value).totalCollected,
-);
 
 // Redirect if travel not found
 watchEffect(() => {
@@ -41,6 +34,21 @@ watchEffect(() => {
     });
     router.push({ name: 'quotations-index' });
   }
+});
+
+// Para agregar una pestaña: crear app/pages/quotations/[id]/<name>.vue y agregarla aquí.
+const tabs = computed<NavigationMenuItem[]>(() => {
+  const quotationId = cotizacion.value?.id ?? '';
+  const params = { id: travelId.value };
+  const count = (n: number) => (n > 0 ? String(n) : undefined);
+
+  return [
+    { label: 'Resumen', icon: 'i-lucide-layout-dashboard', to: { name: 'quotation-detail', params }, exact: true },
+    { label: 'Servicios', icon: 'i-lucide-building', to: { name: 'quotation-services', params }, badge: count(cotizacionStore.getProveedoresByQuotation(quotationId).length) },
+    { label: 'Hospedaje', icon: 'i-lucide-door-open', to: { name: 'quotation-accommodation', params }, badge: count(cotizacionStore.getHospedajesByQuotation(quotationId).length) },
+    { label: 'Autobuses', icon: 'i-lucide-bus', to: { name: 'quotation-buses', params }, badge: count(cotizacionStore.getBusesByQuotation(quotationId).length) },
+    { label: 'Precios al público', icon: 'i-lucide-tag', to: { name: 'quotation-prices', params }, badge: count(cotizacionStore.getPreciosPublicosByQuotation(quotationId).length) },
+  ];
 });
 
 // Form for creating a new cotizacion
@@ -63,8 +71,6 @@ const crearState = reactive<CrearFormSchema>({
 const crearNotesInput = useSanitizedModel(() => crearState.notes ?? '', v => crearState.notes = v, sanitizeText);
 
 const isCrearModalOpen = shallowRef(false);
-const isAgregarHospedajeModalOpen = shallowRef(false);
-const isAgregarBusModalOpen = shallowRef(false);
 
 function goToQuotations() {
   router.push({ name: 'quotations-index' });
@@ -102,50 +108,6 @@ async function handleCrearCotizacion() {
 
 function handleCotizacionConfirmada() {
   toast.add({ title: 'Cotización confirmada exitosamente', color: 'success' });
-}
-
-// Editable params state (synced with store)
-const editandoParametros = shallowRef(false);
-
-function openEditarParametros() {
-  editandoParametros.value = true;
-}
-
-function cerrarEditarParametros() {
-  editandoParametros.value = false;
-}
-
-const paramsState = reactive({
-  busCapacity: cotizacion.value?.busCapacity ?? 0,
-  minimumSeatTarget: cotizacion.value?.minimumSeatTarget ?? 0,
-  notes: cotizacion.value?.notes ?? '',
-});
-
-watch(cotizacion, (c) => {
-  if (c) {
-    paramsState.busCapacity = c.busCapacity;
-    paramsState.minimumSeatTarget = c.minimumSeatTarget;
-    paramsState.notes = c.notes ?? '';
-  }
-}, { immediate: true });
-
-// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe (sin schema Zod para este form de edición rápida)
-const paramsNotesInput = useSanitizedModel(() => paramsState.notes ?? '', v => paramsState.notes = v, sanitizeText);
-
-async function guardarParametros() {
-  if (!cotizacion.value)
-    return;
-  await cotizacionStore.updateQuotation(cotizacion.value.id, {
-    busCapacity: paramsState.busCapacity,
-    minimumSeatTarget: paramsState.minimumSeatTarget,
-    notes: paramsState.notes,
-  });
-  editandoParametros.value = false;
-  toast.add({ title: 'Parámetros actualizados', color: 'success' });
-}
-
-function handleHospedajeAgregado() {
-  // No hace nada extra, el modal se cierra desde el componente
 }
 </script>
 
@@ -199,153 +161,23 @@ function handleHospedajeAgregado() {
 
       <!-- Con cotización -->
       <template v-else>
-        <!-- Header con acciones -->
+        <!-- Estado + confirmar -->
         <CotizacionHeaderActions
           :quotation-id="cotizacion.id"
           :readonly="readonly"
           @cotizacion-confirmada="handleCotizacionConfirmada"
         />
 
-        <!-- Resumen financiero -->
-        <CotizacionResumenFinanciero
-          :quotation-id="cotizacion.id"
-          :acumulado-viajeros="acumuladoViajeros"
+        <UNavigationMenu
+          :items="tabs"
+          highlight
+          class="border-b border-default"
         />
 
-        <!-- Parámetros editables (solo borrador) -->
-        <UCard v-if="!readonly">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <h2 class="font-semibold flex items-center gap-2">
-                <span class="i-lucide-settings w-5 h-5 text-muted" />
-                Parámetros de la Cotización
-              </h2>
-              <UButton
-                v-if="!editandoParametros"
-                icon="i-lucide-pencil"
-                size="xs"
-                variant="ghost"
-                color="neutral"
-                label="Editar"
-                @click="openEditarParametros"
-              />
-            </div>
-          </template>
-
-          <div v-if="!editandoParametros" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <p class="text-xs text-muted mb-1">
-                Capacidad del Autobús
-              </p>
-              <p class="font-medium">
-                {{ cotizacion.busCapacity }}
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-muted mb-1">
-                Asiento Mínimo Objetivo
-              </p>
-              <p class="font-medium">
-                {{ cotizacion.minimumSeatTarget }}
-              </p>
-            </div>
-            <div>
-              <p class="text-xs text-muted mb-1">
-                Notas
-              </p>
-              <p class="text-sm">
-                {{ cotizacion.notes || '—' }}
-              </p>
-            </div>
-          </div>
-
-          <div v-else class="space-y-4">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <UFormField label="Capacidad del Autobús">
-                <UInput
-                  v-model.number="paramsState.busCapacity"
-                  type="number"
-                  class="w-full"
-                />
-              </UFormField>
-              <UFormField label="Asiento Mínimo Objetivo">
-                <UInput
-                  v-model.number="paramsState.minimumSeatTarget"
-                  type="number"
-                  class="w-full"
-                />
-              </UFormField>
-            </div>
-            <UFormField label="Notas">
-              <UTextarea
-                v-model="paramsNotesInput"
-                :rows="3"
-                class="w-full"
-              />
-            </UFormField>
-            <div class="flex justify-end gap-3">
-              <UButton
-                variant="ghost"
-                color="neutral"
-                label="Cancelar"
-                @click="cerrarEditarParametros"
-              />
-              <UButton
-                label="Guardar"
-                @click="guardarParametros"
-              />
-            </div>
-          </div>
-        </UCard>
-
-        <!-- Sección Servicios -->
-        <section id="servicios">
-          <CotizacionProveedoresSection
-            :quotation-id="cotizacion.id"
-            :readonly="readonly"
-          />
-        </section>
-
-        <!-- Sección Hospedaje -->
-        <section id="hospedaje">
-          <CotizacionHospedajeSection
-            :quotation-id="cotizacion.id"
-            :readonly="readonly"
-            @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
-          />
-        </section>
-
-        <!-- Sección Autobuses -->
-        <section id="autobuses">
-          <CotizacionBusesSection
-            :quotation-id="cotizacion.id"
-            :readonly="readonly"
-            @agregar-bus="isAgregarBusModalOpen = true"
-          />
-        </section>
-
-        <!-- Sección Precio al Público -->
-        <section id="precio-publico">
-          <CotizacionPrecioPublicoSection
-            :quotation-id="cotizacion.id"
-            :readonly="readonly"
-          />
-        </section>
-
-        <!-- Sección Asignación de autobuses (operadores y coordinadores) -->
-        <section id="asignacion-autobuses">
-          <UCard>
-            <template #header>
-              <h2 class="font-semibold flex items-center gap-2">
-                <span class="i-lucide-bus w-5 h-5 text-muted" />
-                Asignación de Autobuses
-              </h2>
-            </template>
-            <TravelBusesSection :travel-id="travelId" editable />
-          </UCard>
-        </section>
+        <NuxtPage />
       </template>
     </div>
+
     <!-- Modal: crear cotización -->
     <UModal
       v-model:open="isCrearModalOpen"
@@ -394,23 +226,5 @@ function handleHospedajeAgregado() {
         </UForm>
       </template>
     </UModal>
-
-    <!-- Modal: agregar hospedaje -->
-    <CotizacionHospedajeForm
-      v-if="cotizacion"
-      :open="isAgregarHospedajeModalOpen"
-      :quotation-id="cotizacion.id"
-      @update:open="(v) => isAgregarHospedajeModalOpen = v"
-      @hospedaje-agregado="handleHospedajeAgregado"
-    />
-
-    <!-- Modal: agregar autobús -->
-    <CotizacionBusForm
-      v-if="cotizacion"
-      :open="isAgregarBusModalOpen"
-      :quotation-id="cotizacion.id"
-      @update:open="(v) => isAgregarBusModalOpen = v"
-      @bus-agregado="isAgregarBusModalOpen = false"
-    />
   </div>
 </template>
