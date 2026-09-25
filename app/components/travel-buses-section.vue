@@ -10,7 +10,6 @@ type Props = {
 
 const { travelId, editable = false } = defineProps<Props>();
 
-const router = useRouter();
 const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const coordinatorStore = useCoordinatorStore();
@@ -158,10 +157,6 @@ function getCoordinadorName(id: string): string {
 function onCoordinadoresChange(busId: string, selected: string[]) {
   const capped = selected.slice(0, 2) as [] | [string] | [string, string];
   cotizacionStore.updateBusQuotation(busId, { coordinatorIds: capped });
-}
-
-function goToCotizacion() {
-  router.push({ name: 'travel-cotizacion', params: { id: travelId } });
 }
 </script>
 
@@ -314,26 +309,16 @@ function goToCotizacion() {
           </p>
         </UCard>
       </div>
-
-      <div class="mt-4 p-4 bg-elevated/50 rounded-lg text-center">
-        <p class="text-sm text-muted mb-2">
-          ¿Necesitas agregar o modificar autobuses?
-        </p>
-        <UButton
-          variant="outline"
-          size="sm"
-          label="Ir a Cotización"
-          icon="i-lucide-arrow-right"
-          @click="goToCotizacion"
-        />
-      </div>
     </template>
 
-    <TravelSectionEmptyState
-      v-else
-      icon="i-lucide-bus"
-      title="Sin autobuses apartados"
-      :navigate="goToCotizacion"
-    />
+    <div v-else class="p-8 text-center bg-elevated rounded-lg">
+      <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
+      <p class="text-muted font-medium mb-1">
+        Sin autobuses apartados
+      </p>
+      <p class="text-sm text-muted">
+        Agrégalos en la sección Autobuses de esta cotización.
+      </p>
+    </div>
   </div>
 </template>
