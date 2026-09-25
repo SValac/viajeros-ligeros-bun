@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { PendingPageAction } from '~/components/agency-page-confirm-modal.vue';
 import type { AboutPage } from '~/types/agency-profile';
 
 import {
@@ -19,15 +20,7 @@ const { name = 'aboutPage', companyName } = defineProps<Props>();
 // `null` = the agency has no "Nosotros" page on its site.
 const page = defineModel<AboutPage | null>({ required: true });
 
-type PendingAction = { title: string; description: string; confirmLabel: string; run: () => void };
-const pendingAction = ref<PendingAction | null>(null);
-const isConfirmOpen = computed({
-  get: () => pendingAction.value !== null,
-  set: (open: boolean) => {
-    if (!open)
-      pendingAction.value = null;
-  },
-});
+const pendingAction = ref<PendingPageAction | null>(null);
 
 function heroCounter(value: string) {
   return `${value.length}/${ABOUT_PAGE_LIMITS.heroDescription}`;
@@ -63,15 +56,6 @@ function requestRemovePage() {
       page.value = null;
     },
   };
-}
-
-function cancelPending() {
-  pendingAction.value = null;
-}
-
-function confirmPending() {
-  pendingAction.value?.run();
-  pendingAction.value = null;
 }
 </script>
 
@@ -168,25 +152,6 @@ function confirmPending() {
       </div>
     </template>
 
-    <UModal
-      v-model:open="isConfirmOpen"
-      :title="pendingAction?.title"
-      :description="pendingAction?.description"
-    >
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            @click="cancelPending"
-          >
-            Cancelar
-          </UButton>
-          <UButton color="error" @click="confirmPending">
-            {{ pendingAction?.confirmLabel }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
+    <AgencyPageConfirmModal v-model="pendingAction" />
   </div>
 </template>
