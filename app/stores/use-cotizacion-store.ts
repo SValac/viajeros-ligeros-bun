@@ -237,7 +237,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.price
+  // Precio calculado a partir del asiento mínimo objetivo (seatPrice de la cotización)
   // Incluye costos de proveedores, hospedajes y autobuses
   const getPrecioAsientoCalculado = computed(() => {
     return (quotationId: string): number => {
@@ -475,8 +475,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Helper interno — recalcula seatPrice y lo sincroniza a travel.price
-  async function _syncPrecioToTravel(quotationId: string): Promise<void> {
+  // Helper interno — recalcula seatPrice de la cotización.
+  // travel.price es el precio público de entrada y se edita en el formulario del viaje.
+  async function _syncSeatPrice(quotationId: string): Promise<void> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
     if (!cotizacion || cotizacion.status === 'confirmed')
       return;
@@ -495,9 +496,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         updatedAt: new Date().toISOString(),
       };
     }
-
-    const travelStore = useTravelsStore();
-    await travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
   }
 
   // Helper interno — sincroniza habitaciones de cotización hacia travel_accommodations
@@ -662,7 +660,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       cotizaciones.value[index] = updated;
 
       if ('minimumSeatTarget' in data) {
-        await _syncPrecioToTravel(id);
+        await _syncSeatPrice(id);
       }
 
       return updated;
@@ -728,7 +726,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const newProveedor = await repository.insertProvider(data);
       proveedoresQuotation.value.push(newProveedor);
-      await _syncPrecioToTravel(data.quotationId);
+      await _syncSeatPrice(data.quotationId);
       return newProveedor;
     }
     catch (e) {
@@ -761,7 +759,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const updated = await repository.updateProvider(id, data);
       proveedoresQuotation.value[index] = updated;
-      await _syncPrecioToTravel(existing.quotationId);
+      await _syncSeatPrice(existing.quotationId);
       return updated;
     }
     catch (e) {
@@ -790,7 +788,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
       pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
-      await _syncPrecioToTravel(quotationId);
+      await _syncSeatPrice(quotationId);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -933,7 +931,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const newHospedaje = await repository.insertAccommodation(data);
       hospedajesQuotation.value.push(newHospedaje);
-      await _syncPrecioToTravel(data.quotationId);
+      await _syncSeatPrice(data.quotationId);
       const addSyncResult = await _syncHospedajeToTravel(data.quotationId);
       return { ...newHospedaje, skippedOccupied: addSyncResult.skippedOccupied };
     }
@@ -967,7 +965,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const updated = await repository.updateAccommodation(id, data, existing.nightCount, existing.details);
       hospedajesQuotation.value[index] = updated;
-      await _syncPrecioToTravel(existing.quotationId);
+      await _syncSeatPrice(existing.quotationId);
       const updateSyncResult = await _syncHospedajeToTravel(existing.quotationId);
       return { ...updated, skippedOccupied: updateSyncResult.skippedOccupied };
     }
@@ -997,7 +995,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
-      await _syncPrecioToTravel(quotationId);
+      await _syncSeatPrice(quotationId);
       const deleteSyncResult = await _syncHospedajeToTravel(quotationId);
       return deleteSyncResult.skippedOccupied;
     }
@@ -1215,7 +1213,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           buses: [...(travelStore.travels[travelIndex]!.buses ?? []), mapTravelBusRowToDomain(travelBusRow)],
         };
       }
-      await _syncPrecioToTravel(data.quotationId);
+      await _syncSeatPrice(data.quotationId);
       return newBus;
     }
     catch (e) {
@@ -1269,7 +1267,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         }
       }
 
-      await _syncPrecioToTravel(existing.quotationId);
+      await _syncSeatPrice(existing.quotationId);
       return updated;
     }
     catch (e) {
@@ -1311,7 +1309,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           };
         }
       }
-      await _syncPrecioToTravel(quotationId);
+      await _syncSeatPrice(quotationId);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';

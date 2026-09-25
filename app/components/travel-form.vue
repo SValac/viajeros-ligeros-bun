@@ -34,13 +34,6 @@ const coordinatorItems = computed(() =>
   })),
 );
 
-// Si el viaje tiene cotización activa, el precio es de solo lectura (lo gestiona la cotización)
-const cotizacionStore = useCotizacionStore();
-const tieneCotizacion = computed(() => travel ? cotizacionStore.hasQuotation(travel.id) : false);
-
-// El precio solo se muestra en modo edición; en creación lo gestiona la cotización
-const mostrarPrecio = computed(() => travel !== null);
-
 // Schema de validación Zod
 const schema = z.object({
   label: businessNameSchema({ min: 3, max: 100 }),
@@ -398,10 +391,9 @@ function onCancel() {
           <!-- Precio y Estado (Grid 2 columnas) -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <UFormField
-              v-if="mostrarPrecio"
               label="Precio (MX)"
               name="price"
-              :description="tieneCotizacion ? 'Gestionado por la cotización del viaje' : undefined"
+              description="Precio de entrada que se muestra en el sitio público"
               required
             >
               <UInput
@@ -411,7 +403,6 @@ function onCancel() {
                 step="0.01"
                 icon="i-lucide-dollar-sign"
                 placeholder="0.00"
-                :disabled="tieneCotizacion"
               />
             </UFormField>
 
