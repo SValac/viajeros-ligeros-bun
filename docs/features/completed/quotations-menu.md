@@ -1,6 +1,6 @@
 # Feature: Menú de Cotizaciones
 
-**Estado:** 🚧 En desarrollo, rama `feature/quotations-menu`.
+**Estado:** ✅ COMPLETADA. PR #70 mergeado a `main` (2026-09-25).
 
 ---
 
