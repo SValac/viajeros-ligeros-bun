@@ -82,6 +82,8 @@ export function useAgencyProfileRepository() {
       update.facebook_url = data.facebookUrl;
     if (data.aboutPage !== undefined)
       update.about_page = data.aboutPage;
+    if (data.homePage !== undefined)
+      update.home_page = data.homePage;
 
     const { data: row, error } = await supabase
       .from('agency_profiles')
