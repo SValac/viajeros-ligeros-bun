@@ -5,6 +5,10 @@ import UserMenu from './user-menu.vue';
 
 const route = useRoute();
 
+// Logo y nombre vienen del perfil de la agencia (/profile); sin ellos (o sin perfil, p. ej. un coordinador) quedan los de la app
+const agencyProfileStore = useAgencyProfileStore();
+onMounted(() => agencyProfileStore.fetchProfile());
+
 const items = computed<NavigationMenuItem[][]>(() => [[{
   label: 'Inicio',
   icon: 'i-lucide-house',
@@ -80,12 +84,16 @@ const items = computed<NavigationMenuItem[][]>(() => [[{
     :ui="{ footer: 'border-t border-default' }"
   >
     <template #header="{ collapsed }">
-      <Logo class="w-auto shrink-0 mx-auto" />
+      <Logo
+        :src="agencyProfileStore.profile?.logoUrl"
+        :alt="agencyProfileStore.profile?.companyName || 'Logo'"
+        class="w-auto shrink-0 mx-auto"
+      />
       <h1
         v-if="!collapsed"
         class="text-center text-lg font-semibold"
       >
-        Viajeros Ligeros
+        {{ agencyProfileStore.profile?.companyName || 'Viajeros Ligeros' }}
       </h1>
     </template>
 

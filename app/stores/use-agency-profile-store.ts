@@ -13,7 +13,7 @@ import { serializeHomePage } from '~/composables/agency-profile/use-home-page-do
 /**
  * Cache and orchestrator for the signed-in user's agency profile and the state catalog.
  * Delegates all Supabase I/O to `useAgencyProfileRepository`.
- * Loaded on demand (profile page, travel form) instead of in `init-stores`, because
+ * Loaded on demand (sidebar, profile page, travel form) instead of in `init-stores`, because
  * plugins run before the auth middleware and on the login page.
  * @returns Store state, getters and actions
  */
