@@ -24,9 +24,11 @@ onMounted(async () => {
 
 const travel = computed(() => travelStore.getTravelById(travelId.value));
 
-// Redirect if travel not found
-watchEffect(() => {
-  if (!travel.value && travelId.value) {
+// Redirect if travel not found.
+// `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
+// y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
+watch(travel, (value) => {
+  if (!value && travelId.value) {
     toast.add({
       title: 'Viaje no encontrado',
       description: 'El viaje que buscas no existe',
@@ -34,7 +36,7 @@ watchEffect(() => {
     });
     router.push({ name: 'quotations-index' });
   }
-});
+}, { immediate: true });
 
 // Para agregar una pestaña: crear app/pages/quotations/[id]/<name>.vue y agregarla aquí.
 const tabs = computed<NavigationMenuItem[]>(() => {
