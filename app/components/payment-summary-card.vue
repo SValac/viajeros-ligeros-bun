@@ -48,11 +48,6 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
       </div>
 
       <div class="flex justify-between text-muted">
-        <span>Precio base</span>
-        <span>{{ formatCurrency(summary.totalCost) }}</span>
-      </div>
-
-      <div v-if="summary.travelerType === 'child' || summary.appliedPrice !== summary.totalCost" class="flex justify-between text-muted">
         <span>Precio aplicado</span>
         <span>{{ formatCurrency(summary.appliedPrice) }}</span>
       </div>

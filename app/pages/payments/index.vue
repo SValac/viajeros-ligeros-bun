@@ -20,7 +20,7 @@ const travelSummaries = computed(() => {
   return publishedTravels.value.map((travel) => {
     const travelers = travelerStore.getTravelersByTravel(travel.id);
     const summaries = travelers.map(t =>
-      paymentStore.getTravelerPaymentSummary(t.id, travel.id, travel.price),
+      paymentStore.getTravelerPaymentSummary(t.id, travel.id),
     );
 
     const totalExpected = summaries.reduce((sum: number, s) => sum + s.finalCost, 0);
