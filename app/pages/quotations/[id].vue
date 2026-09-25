@@ -3,8 +3,10 @@ import { z } from 'zod';
 
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
+// `id` es el id del viaje: la cotización es 1:1 con el viaje y la página
+// debe funcionar antes de que exista (estado "Crear cotización").
 definePageMeta({
-  name: 'travel-cotizacion',
+  name: 'quotation-detail',
   layout: 'default',
 });
 
@@ -37,7 +39,7 @@ watchEffect(() => {
       description: 'El viaje que buscas no existe',
       color: 'error',
     });
-    router.push('/travels/dashboard');
+    router.push({ name: 'quotations-index' });
   }
 });
 
@@ -64,8 +66,12 @@ const isCrearModalOpen = shallowRef(false);
 const isAgregarHospedajeModalOpen = shallowRef(false);
 const isAgregarBusModalOpen = shallowRef(false);
 
+function goToQuotations() {
+  router.push({ name: 'quotations-index' });
+}
+
 function goToTravelDetail() {
-  router.push(`/travels/${travelId.value}`);
+  router.push({ name: 'travel-detail', params: { id: travelId.value } });
 }
 
 function openCrearModal() {
@@ -153,7 +159,7 @@ function handleHospedajeAgregado() {
             icon="i-lucide-arrow-left"
             variant="ghost"
             color="neutral"
-            @click="goToTravelDetail"
+            @click="goToQuotations"
           />
           <div>
             <h1 class="text-2xl font-bold">
@@ -164,6 +170,13 @@ function handleHospedajeAgregado() {
             </p>
           </div>
         </div>
+        <UButton
+          icon="i-lucide-map"
+          label="Ver viaje"
+          variant="outline"
+          color="neutral"
+          @click="goToTravelDetail"
+        />
       </div>
 
       <!-- Sin cotización -->
@@ -317,6 +330,19 @@ function handleHospedajeAgregado() {
             :quotation-id="cotizacion.id"
             :readonly="readonly"
           />
+        </section>
+
+        <!-- Sección Asignación de autobuses (operadores y coordinadores) -->
+        <section id="asignacion-autobuses">
+          <UCard>
+            <template #header>
+              <h2 class="font-semibold flex items-center gap-2">
+                <span class="i-lucide-bus w-5 h-5 text-muted" />
+                Asignación de Autobuses
+              </h2>
+            </template>
+            <TravelBusesSection :travel-id="travelId" editable />
+          </UCard>
         </section>
       </template>
     </div>
