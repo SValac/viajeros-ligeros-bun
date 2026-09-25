@@ -11,7 +11,6 @@ definePageMeta({
 
 // Store
 const travelsStore = useTravelsStore();
-const cotizacionStore = useCotizacionStore();
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
 const router = useRouter();
@@ -101,11 +100,6 @@ function getRowActions(travel: Travel) {
         icon: 'i-lucide-pencil',
         onSelect: () => navigateToEdit(travel.id),
       },
-      {
-        label: cotizacionStore.hasQuotation(travel.id) ? 'Ver cotización' : 'Crear cotización',
-        icon: cotizacionStore.hasQuotation(travel.id) ? 'i-lucide-file-check' : 'i-lucide-file-plus',
-        onSelect: () => router.push({ name: 'travel-cotizacion', params: { id: travel.id } }),
-      },
     ],
     [
       {
@@ -172,21 +166,6 @@ const columns: TableColumn<Travel>[] = [
     header: 'Precio',
     cell: ({ row }) => {
       return h('span', { class: 'font-semibold text-gray-900 dark:text-white' }, formatCurrency(row.getValue('price')));
-    },
-  },
-  {
-    id: 'cotizacion',
-    header: 'Cotización',
-    cell: ({ row }) => {
-      const hasCot = cotizacionStore.hasQuotation(row.original.id);
-      if (!hasCot)
-        return h('span', { class: 'text-xs text-gray-400' }, '—');
-      return h(resolveComponent('UBadge'), {
-        color: 'success',
-        variant: 'subtle',
-        size: 'xs',
-        icon: 'i-lucide-file-check',
-      }, () => 'Con cotización');
     },
   },
   {

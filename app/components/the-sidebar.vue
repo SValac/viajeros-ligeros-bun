@@ -3,7 +3,9 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 
 import UserMenu from './user-menu.vue';
 
-const items: NavigationMenuItem[][] = [[{
+const route = useRoute();
+
+const items = computed<NavigationMenuItem[][]>(() => [[{
   label: 'Inicio',
   icon: 'i-lucide-house',
   to: '/',
@@ -11,6 +13,12 @@ const items: NavigationMenuItem[][] = [[{
   label: 'Viajes',
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
+}, {
+  label: 'Cotizaciones',
+  icon: 'i-lucide-calculator',
+  to: { name: 'quotations-index' },
+  // `/quotations/[id]` es ruta hermana (no hija) de `/quotations`: forzar el activo
+  active: route.path.startsWith('/quotations'),
 }, {
   label: 'Pagos',
   icon: 'i-lucide-credit-card',
@@ -62,7 +70,7 @@ const items: NavigationMenuItem[][] = [[{
   icon: 'i-lucide-info',
   to: 'https://github.com/nuxt/ui',
   target: '_blank',
-}]];
+}]]);
 </script>
 
 <template>
