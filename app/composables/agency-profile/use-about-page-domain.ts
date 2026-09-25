@@ -1,196 +1,29 @@
 import { z } from 'zod';
 
-import type {
-  AboutPage,
-  AboutPageFeatureItem,
-  AboutPageSection,
-  AboutPageSectionType,
-  AboutPageStepItem,
-} from '~/types/agency-profile';
+import type { AboutPage } from '~/types/agency-profile';
 import type { Json } from '~/types/database.types';
 
-import { sanitizeText } from '~/utils/form-validation';
+import {
+  asRecord,
+  asString,
+  cleanLine,
+  cleanText,
+  optionalText,
+  pageSectionsSchema,
+  requiredLine,
+  serializePageSections,
+  toPageSections,
+  withOptional,
+} from '~/composables/agency-profile/use-page-sections-domain';
 
-// Contract shared with the public site (viajeros-ligeros-web), which re-validates on read.
+// "Nosotros" page contract shared with the public site (viajeros-ligeros-web), which
+// re-validates on read. Sections follow the shared contract in use-page-sections-domain.ts.
 // The structural part is also enforced by the agency_profiles_about_page_valid CHECK in
 // 20260924183111_agency_about_page.sql.
 export const ABOUT_PAGE_LIMITS = {
   heroTitle: 100,
   heroDescription: 400,
-  headline: 40,
-  sectionTitle: 100,
-  textDescription: 1000,
-  featuresDescription: 400,
-  itemTitle: 60,
-  itemDescription: 200,
-  sections: 8,
-  featureItems: { min: 2, max: 8 },
-  stepItems: { min: 2, max: 6 },
 } as const;
-
-// The web renders these as `i-lucide-<key>` and falls back to a default icon otherwise.
-export const ABOUT_PAGE_ICONS = [
-  'users',
-  'map-pinned',
-  'map',
-  'compass',
-  'mountain',
-  'palmtree',
-  'tent',
-  'bus',
-  'plane',
-  'hotel',
-  'bed-double',
-  'utensils',
-  'camera',
-  'heart',
-  'shield-check',
-  'star',
-  'smartphone',
-  'file-check',
-  'wallet',
-  'clock',
-  'calendar-check',
-  'sparkles',
-  'sun',
-  'ticket',
-  'handshake',
-  'message-circle',
-  'badge-check',
-  'leaf',
-  'route',
-  'luggage',
-] as const;
-
-export type AboutPageIcon = (typeof ABOUT_PAGE_ICONS)[number];
-
-// Names shown in the CRM icon picker.
-export const ABOUT_PAGE_ICON_LABELS: Record<AboutPageIcon, string> = {
-  'users': 'Personas',
-  'map-pinned': 'Ubicación',
-  'map': 'Mapa',
-  'compass': 'Brújula',
-  'mountain': 'Montaña',
-  'palmtree': 'Playa',
-  'tent': 'Campamento',
-  'bus': 'Autobús',
-  'plane': 'Avión',
-  'hotel': 'Hotel',
-  'bed-double': 'Cama',
-  'utensils': 'Comida',
-  'camera': 'Cámara',
-  'heart': 'Corazón',
-  'shield-check': 'Seguridad',
-  'star': 'Estrella',
-  'smartphone': 'Celular',
-  'file-check': 'Documentos',
-  'wallet': 'Cartera',
-  'clock': 'Reloj',
-  'calendar-check': 'Calendario',
-  'sparkles': 'Destellos',
-  'sun': 'Sol',
-  'ticket': 'Boleto',
-  'handshake': 'Acuerdo',
-  'message-circle': 'Mensaje',
-  'badge-check': 'Garantía',
-  'leaf': 'Naturaleza',
-  'route': 'Ruta',
-  'luggage': 'Equipaje',
-};
-
-const DEFAULT_ICON: AboutPageIcon = 'star';
-
-export function isAboutPageIcon(value: string): value is AboutPageIcon {
-  return (ABOUT_PAGE_ICONS as readonly string[]).includes(value);
-}
-
-export const ABOUT_SECTION_TYPES: Record<AboutPageSectionType, { label: string; description: string; icon: string }> = {
-  text: {
-    label: 'Texto',
-    description: 'Un título con uno o varios párrafos.',
-    icon: 'i-lucide-align-left',
-  },
-  features: {
-    label: 'Tarjetas con ícono',
-    description: 'Una cuadrícula de 2 a 8 tarjetas, cada una con ícono.',
-    icon: 'i-lucide-layout-grid',
-  },
-  steps: {
-    label: 'Pasos',
-    description: 'De 2 a 6 pasos numerados, en orden.',
-    icon: 'i-lucide-list-ordered',
-  },
-};
-
-const LINE_BREAK_REGEX = /[\r\n]/;
-
-function requiredLine(max: number) {
-  return z.string()
-    .trim()
-    .min(1, 'Este campo es obligatorio')
-    .max(max, `Máximo ${max} caracteres`)
-    .refine(value => !LINE_BREAK_REGEX.test(value), 'Sin saltos de línea');
-}
-
-function optionalLine(max: number) {
-  return z.string()
-    .trim()
-    .max(max, `Máximo ${max} caracteres`)
-    .refine(value => !LINE_BREAK_REGEX.test(value), 'Sin saltos de línea');
-}
-
-function requiredText(max: number) {
-  return z.string()
-    .trim()
-    .min(1, 'Este campo es obligatorio')
-    .max(max, `Máximo ${max} caracteres`);
-}
-
-function optionalText(max: number) {
-  return z.string()
-    .trim()
-    .max(max, `Máximo ${max} caracteres`);
-}
-
-const featureItemSchema = z.object({
-  title: requiredLine(ABOUT_PAGE_LIMITS.itemTitle),
-  description: requiredText(ABOUT_PAGE_LIMITS.itemDescription),
-  // A string refine (not z.enum) so the output stays `string`, like the editor state.
-  icon: z.string().refine(isAboutPageIcon, 'Elige un ícono de la lista'),
-});
-
-const stepItemSchema = z.object({
-  title: requiredLine(ABOUT_PAGE_LIMITS.itemTitle),
-  description: requiredText(ABOUT_PAGE_LIMITS.itemDescription),
-});
-
-const { featureItems, stepItems } = ABOUT_PAGE_LIMITS;
-
-const sectionSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('text'),
-    headline: optionalLine(ABOUT_PAGE_LIMITS.headline),
-    title: requiredLine(ABOUT_PAGE_LIMITS.sectionTitle),
-    description: requiredText(ABOUT_PAGE_LIMITS.textDescription),
-  }),
-  z.object({
-    type: z.literal('features'),
-    headline: optionalLine(ABOUT_PAGE_LIMITS.headline),
-    title: requiredLine(ABOUT_PAGE_LIMITS.sectionTitle),
-    description: optionalText(ABOUT_PAGE_LIMITS.featuresDescription),
-    items: z.array(featureItemSchema)
-      .min(featureItems.min, `Agrega al menos ${featureItems.min} tarjetas`)
-      .max(featureItems.max, `Máximo ${featureItems.max} tarjetas`),
-  }),
-  z.object({
-    type: z.literal('steps'),
-    headline: optionalLine(ABOUT_PAGE_LIMITS.headline),
-    title: requiredLine(ABOUT_PAGE_LIMITS.sectionTitle),
-    items: z.array(stepItemSchema)
-      .min(stepItems.min, `Agrega al menos ${stepItems.min} pasos`)
-      .max(stepItems.max, `Máximo ${stepItems.max} pasos`),
-  }),
-]);
 
 /**
  * Validates the "Nosotros" editor state (`''` = optional text not set). Mirrors the
@@ -202,59 +35,8 @@ export const aboutPageSchema = z.object({
     title: requiredLine(ABOUT_PAGE_LIMITS.heroTitle),
     description: optionalText(ABOUT_PAGE_LIMITS.heroDescription),
   }),
-  sections: z.array(sectionSchema)
-    .max(ABOUT_PAGE_LIMITS.sections, `Máximo ${ABOUT_PAGE_LIMITS.sections} secciones`),
+  sections: pageSectionsSchema,
 });
-
-/**
- * Unifies line endings and collapses any run of blank (or whitespace-only) lines into
- * one blank line, since the public site splits paragraphs on a blank line.
- * @param value - Text as typed in the form
- * @returns The normalized, trimmed text (`''` when empty)
- */
-export function normalizeParagraphs(value: string): string {
-  return value.replace(/\r\n?/g, '\n').replace(/\n\s*\n/g, '\n\n').trim();
-}
-
-function cleanLine(value: string): string {
-  return sanitizeText(value).trim();
-}
-
-function cleanText(value: string): string {
-  return normalizeParagraphs(sanitizeText(value));
-}
-
-// Adds `key` only when the text is not empty, so optional fields are omitted instead of `""`.
-function withOptional<T extends Record<string, Json>>(target: T, key: string, value: string): T {
-  return value ? { ...target, [key]: value } : target;
-}
-
-function serializeSection(section: AboutPageSection): Json {
-  const base = withOptional({ type: section.type }, 'headline', cleanLine(section.headline));
-
-  switch (section.type) {
-    case 'text':
-      return { ...base, title: cleanLine(section.title), description: cleanText(section.description) };
-    case 'features':
-      return {
-        ...withOptional({ ...base, title: cleanLine(section.title) }, 'description', cleanText(section.description)),
-        items: section.items.map(item => ({
-          title: cleanLine(item.title),
-          description: cleanText(item.description),
-          icon: item.icon,
-        })),
-      };
-    case 'steps':
-      return {
-        ...base,
-        title: cleanLine(section.title),
-        items: section.items.map(item => ({
-          title: cleanLine(item.title),
-          description: cleanText(item.description),
-        })),
-      };
-  }
-}
 
 /**
  * Converts the editor state into the JSON stored in `agency_profiles.about_page`:
@@ -269,46 +51,8 @@ export function serializeAboutPage(page: AboutPage | null): Json | null {
 
   return {
     hero: withOptional({ title: cleanLine(page.hero.title) }, 'description', cleanText(page.hero.description)),
-    sections: page.sections.map(serializeSection),
+    sections: serializePageSections(page.sections),
   };
-}
-
-function asRecord(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
-}
-
-function asString(value: unknown): string {
-  return typeof value === 'string' ? value : '';
-}
-
-function asArray(value: unknown): unknown[] {
-  return Array.isArray(value) ? value : [];
-}
-
-function toFeatureItem(value: unknown): AboutPageFeatureItem {
-  const item = asRecord(value);
-  return { title: asString(item.title), description: asString(item.description), icon: asString(item.icon) || DEFAULT_ICON };
-}
-
-function toStepItem(value: unknown): AboutPageStepItem {
-  const item = asRecord(value);
-  return { title: asString(item.title), description: asString(item.description) };
-}
-
-function toSection(value: unknown): AboutPageSection | null {
-  const section = asRecord(value);
-  const common = { headline: asString(section.headline), title: asString(section.title) };
-
-  switch (section.type) {
-    case 'text':
-      return { type: 'text', ...common, description: asString(section.description) };
-    case 'features':
-      return { type: 'features', ...common, description: asString(section.description), items: asArray(section.items).map(toFeatureItem) };
-    case 'steps':
-      return { type: 'steps', ...common, items: asArray(section.items).map(toStepItem) };
-    default:
-      return null;
-  }
 }
 
 /**
@@ -325,9 +69,7 @@ export function toAboutPage(json: Json | null): AboutPage | null {
   const hero = asRecord(json.hero);
   return {
     hero: { title: asString(hero.title), description: asString(hero.description) },
-    sections: asArray(json.sections)
-      .map(toSection)
-      .filter((section): section is AboutPageSection => section !== null),
+    sections: toPageSections(json.sections),
   };
 }
 
@@ -339,36 +81,6 @@ export function toAboutPage(json: Json | null): AboutPage | null {
  */
 export function cloneAboutPage(page: AboutPage | null): AboutPage | null {
   return page ? structuredClone(toRaw(page)) : null;
-}
-
-/**
- * Creates an empty section of the given type, with the minimum number of items.
- * @param type - Section type picked by the user
- * @returns A new section ready to edit
- */
-export function createAboutSection(type: AboutPageSectionType): AboutPageSection {
-  switch (type) {
-    case 'text':
-      return { type, headline: '', title: '', description: '' };
-    case 'features':
-      return {
-        type,
-        headline: '',
-        title: '',
-        description: '',
-        items: Array.from({ length: featureItems.min }, createFeatureItem),
-      };
-    case 'steps':
-      return { type, headline: '', title: '', items: Array.from({ length: stepItems.min }, createStepItem) };
-  }
-}
-
-export function createFeatureItem(): AboutPageFeatureItem {
-  return { title: '', description: '', icon: DEFAULT_ICON };
-}
-
-export function createStepItem(): AboutPageStepItem {
-  return { title: '', description: '' };
 }
 
 /**
@@ -430,41 +142,5 @@ export function createAboutPageTemplate(companyName: string): AboutPage {
         description: 'Parejas, grupos de amigos y viajeros solos que buscan desconectar de la rutina sin tener coche, sin armar el grupo por su cuenta y sin gastar el fin de semana planeando.',
       },
     ],
-  };
-}
-
-/**
- * Returns a copy of the list with one element moved one position up or down.
- * Out-of-range moves return the list unchanged.
- * @param list - Current list
- * @param index - Current position of the element
- * @param direction - `-1` to move up, `1` to move down
- * @returns The reordered copy (or the same list when the move is out of range)
- */
-export function moveListItem<T>(list: T[], index: number, direction: -1 | 1): T[] {
-  const target = index + direction;
-  if (target < 0 || target >= list.length)
-    return list;
-  const copy = [...list];
-  [copy[index], copy[target]] = [copy[target] as T, copy[index] as T];
-  return copy;
-}
-
-/**
- * Hands out stable keys for list elements that have no id, so `v-for` keeps each
- * input bound to its element when the list is reordered.
- * @returns A function that returns the same key for the same object
- */
-export function createListKeys() {
-  const keys = new WeakMap<object, number>();
-  let next = 0;
-  return (item: object): number => {
-    const raw = toRaw(item);
-    let key = keys.get(raw);
-    if (key === undefined) {
-      key = next++;
-      keys.set(raw, key);
-    }
-    return key;
   };
 }

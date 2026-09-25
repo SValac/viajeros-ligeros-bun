@@ -10,6 +10,7 @@ onMounted(() => agencyProfileStore.fetchProfile({ force: true }));
 // To add a tab: create app/pages/profile/<name>.vue and add its entry here.
 const tabs: NavigationMenuItem[] = [
   { label: 'Datos generales', icon: 'i-lucide-building-2', to: { name: 'profile' }, exact: true },
+  { label: 'Página principal', icon: 'i-lucide-house', to: { name: 'profile-home' } },
   { label: 'Nosotros', icon: 'i-lucide-users', to: { name: 'profile-about' } },
 ];
 </script>

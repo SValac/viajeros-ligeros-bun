@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { ABOUT_PAGE_ICON_LABELS, ABOUT_PAGE_ICONS } from '~/composables/agency-profile/use-about-page-domain';
+import { PAGE_SECTION_ICON_LABELS, PAGE_SECTION_ICONS } from '~/composables/agency-profile/use-page-sections-domain';
 
 // Stores the bare key (`map-pinned`); the public site renders it as `i-lucide-<key>`.
 const model = defineModel<string>({ required: true });
 
-const items = ABOUT_PAGE_ICONS.map(key => ({
+const items = PAGE_SECTION_ICONS.map(key => ({
   value: key as string,
-  label: ABOUT_PAGE_ICON_LABELS[key],
+  label: PAGE_SECTION_ICON_LABELS[key],
   icon: `i-lucide-${key}`,
 }));
 

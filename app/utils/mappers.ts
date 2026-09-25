@@ -28,6 +28,7 @@ import type { TravelAccessCode, TravelAccessCodeGenerated } from '~/types/travel
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
 import { toAboutPage } from '~/composables/agency-profile/use-about-page-domain';
+import { toHomePage } from '~/composables/agency-profile/use-home-page-domain';
 import { normalizeBedConfigurations } from '~/utils/hotel-room-helpers';
 
 // ============================================================================
@@ -124,6 +125,7 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     instagramUrl: row.instagram_url,
     facebookUrl: row.facebook_url,
     aboutPage: toAboutPage(row.about_page),
+    homePage: toHomePage(row.home_page),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

@@ -83,6 +83,7 @@ export type Database = {
           country_code: string
           created_at: string
           facebook_url: string | null
+          home_page: Json | null
           id: string
           instagram_url: string | null
           logo_url: string | null
@@ -100,6 +101,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           facebook_url?: string | null
+          home_page?: Json | null
           id: string
           instagram_url?: string | null
           logo_url?: string | null
@@ -117,6 +119,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           facebook_url?: string | null
+          home_page?: Json | null
           id?: string
           instagram_url?: string | null
           logo_url?: string | null
@@ -1455,6 +1458,7 @@ export type Database = {
           contact_email: string
           country_code: string
           facebook_url: string
+          home_page: Json
           instagram_url: string
           logo_url: string
           phone: string

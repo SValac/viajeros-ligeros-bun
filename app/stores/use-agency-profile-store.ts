@@ -1,4 +1,4 @@
-import type { AboutPage, AgencyProfile, AgencyProfileFormData, CountryState } from '~/types/agency-profile';
+import type { AboutPage, AgencyProfile, AgencyProfileFormData, CountryState, HomePage } from '~/types/agency-profile';
 
 import { serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 import {
@@ -8,6 +8,7 @@ import {
   validateLogoFile,
 } from '~/composables/agency-profile/use-agency-profile-domain';
 import { useAgencyProfileRepository } from '~/composables/agency-profile/use-agency-profile-repository';
+import { serializeHomePage } from '~/composables/agency-profile/use-home-page-domain';
 
 /**
  * Cache and orchestrator for the signed-in user's agency profile and the state catalog.
@@ -107,6 +108,28 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   }
 
   /**
+   * Saves the home page (serialized to the stored JSON). `null` restores the site's
+   * default home.
+   * @param page - Validated editor state, or `null`
+   * @returns `true` on success; on failure the message is stored in `error`
+   */
+  async function saveHomePage(page: HomePage | null): Promise<boolean> {
+    saving.value = true;
+    error.value = null;
+    try {
+      profile.value = await repository.update({ homePage: serializeHomePage(page) });
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al guardar la página principal';
+      return false;
+    }
+    finally {
+      saving.value = false;
+    }
+  }
+
+  /**
    * Replaces the logo: upload the new file → point the profile at it → remove the old file.
    * If the profile update fails, the new file is removed so the bucket keeps no orphan
    * and the profile keeps its previous logo. A failure removing the OLD file is not an
@@ -182,6 +205,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
     fetchProfile,
     saveProfile,
     saveAboutPage,
+    saveHomePage,
     changeLogo,
     removeLogo,
   };
