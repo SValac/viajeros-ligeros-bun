@@ -16,6 +16,15 @@ const publishedTravels = computed(() =>
   travelStore.allTravels.filter(travel => travel.status === 'published'),
 );
 
+// Los viajes llegan de forma asíncrona (init-stores); se cargan pagos y configuraciones
+// cuando cambia el conjunto de viajes publicados.
+const publishedTravelIds = computed(() => publishedTravels.value.map(travel => travel.id).join(','));
+
+watch(publishedTravelIds, (ids) => {
+  if (ids)
+    paymentStore.fetchByTravels(ids.split(','));
+}, { immediate: true });
+
 const travelSummaries = computed(() => {
   return publishedTravels.value.map((travel) => {
     const travelers = travelerStore.getTravelersByTravel(travel.id);

@@ -104,18 +104,27 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
 
   // Actions
   async function fetchByTravel(travelId: string): Promise<void> {
+    await fetchByTravels([travelId]);
+  }
+
+  async function fetchByTravels(travelIds: string[]): Promise<void> {
+    if (travelIds.length === 0)
+      return;
+
     loading.value = true;
     error.value = null;
     try {
       const [fetchedPayments, fetchedConfigs] = await Promise.all([
-        repository.fetchPaymentsByTravel(travelId),
-        repository.fetchConfigsByTravel(travelId),
+        repository.fetchPaymentsByTravels(travelIds),
+        repository.fetchConfigsByTravels(travelIds),
       ]);
 
-      const otherPayments = payments.value.filter(p => p.travelId !== travelId);
+      const ids = new Set(travelIds);
+
+      const otherPayments = payments.value.filter(p => !ids.has(p.travelId));
       payments.value = [...otherPayments, ...fetchedPayments];
 
-      const otherConfigs = accountConfigs.value.filter(c => c.travelId !== travelId);
+      const otherConfigs = accountConfigs.value.filter(c => !ids.has(c.travelId));
       accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
     }
     catch (e) {
@@ -264,6 +273,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     getTravelCashSummary,
     // Actions
     fetchByTravel,
+    fetchByTravels,
     fetchByTraveler,
     addPayment,
     updatePayment,
