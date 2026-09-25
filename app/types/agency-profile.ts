@@ -14,6 +14,7 @@ export type AgencyProfile = {
   instagramUrl: string | null;
   facebookUrl: string | null;
   aboutPage: AboutPage | null;
+  homePage: HomePage | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -35,6 +36,7 @@ export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagli
   logoUrl?: string | null;
   tagline?: string | null;
   aboutPage?: Json | null;
+  homePage?: Json | null;
   contactEmail?: string | null;
   instagramUrl?: string | null;
   facebookUrl?: string | null;
@@ -46,52 +48,69 @@ export type CountryState = {
   name: string;
 };
 
-// "Nosotros" page, as edited in the CRM. Optional texts are `''` while editing and are
-// left out of the stored JSON (see serializeAboutPage). The public site owns the design;
-// the agency only controls the content, which sections exist and their order.
-export type AboutPageHero = {
-  title: string;
-  description: string;
-};
+// Pages of the agency's public site, as edited in the CRM. Optional texts are `''` while
+// editing and are left out of the stored JSON (see serializeAboutPage / serializeHomePage).
+// The public site owns the design; the agency only controls the content, which sections
+// exist and their order.
 
-export type AboutPageFeatureItem = {
+export type PageSectionFeatureItem = {
   title: string;
   description: string;
   icon: string;
 };
 
-export type AboutPageStepItem = {
+export type PageSectionStepItem = {
   title: string;
   description: string;
 };
 
-export type AboutPageTextSection = {
+export type PageTextSection = {
   type: 'text';
   headline: string;
   title: string;
   description: string;
 };
 
-export type AboutPageFeaturesSection = {
+export type PageFeaturesSection = {
   type: 'features';
   headline: string;
   title: string;
   description: string;
-  items: AboutPageFeatureItem[];
+  items: PageSectionFeatureItem[];
 };
 
-export type AboutPageStepsSection = {
+export type PageStepsSection = {
   type: 'steps';
   headline: string;
   title: string;
-  items: AboutPageStepItem[];
+  items: PageSectionStepItem[];
 };
 
-export type AboutPageSection = AboutPageTextSection | AboutPageFeaturesSection | AboutPageStepsSection;
+export type PageSection = PageTextSection | PageFeaturesSection | PageStepsSection;
 
-export type AboutPageSectionType = AboutPageSection['type'];
+export type PageSectionType = PageSection['type'];
 
+// Title + optional paragraphs: the hero of both pages and the home's closing CTA.
+export type PageTextBlock = {
+  title: string;
+  description: string;
+};
+
+// "Nosotros" page. `null` on the profile = the site has no such page.
 export type AboutPage = {
-  hero: AboutPageHero;
-  sections: AboutPageSection[];
+  hero: PageTextBlock;
+  sections: PageSection[];
+};
+
+// Home page. `null` on the profile = the site's default home. Unlike AboutPage, every
+// fixed block is optional: an empty title leaves the block out of the stored JSON and
+// the site shows its default text for it.
+export type HomePage = {
+  hero: PageTextBlock;
+  featured: {
+    headline: string;
+    title: string;
+  };
+  sections: PageSection[];
+  cta: PageTextBlock;
 };

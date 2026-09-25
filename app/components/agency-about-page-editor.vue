@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui';
-
-import type { AboutPage, AboutPageSectionType } from '~/types/agency-profile';
+import type { PendingPageAction } from '~/components/agency-page-confirm-modal.vue';
+import type { AboutPage } from '~/types/agency-profile';
 
 import {
   ABOUT_PAGE_LIMITS,
-  ABOUT_SECTION_TYPES,
   createAboutPageTemplate,
-  createAboutSection,
   createEmptyAboutPage,
-  createListKeys,
-  moveListItem,
 } from '~/composables/agency-profile/use-about-page-domain';
 
 type Props = {
@@ -25,29 +20,7 @@ const { name = 'aboutPage', companyName } = defineProps<Props>();
 // `null` = the agency has no "Nosotros" page on its site.
 const page = defineModel<AboutPage | null>({ required: true });
 
-type PendingAction = { title: string; description: string; confirmLabel: string; run: () => void };
-const pendingAction = ref<PendingAction | null>(null);
-const isConfirmOpen = computed({
-  get: () => pendingAction.value !== null,
-  set: (open: boolean) => {
-    if (!open)
-      pendingAction.value = null;
-  },
-});
-
-const keyOf = createListKeys();
-
-const sectionCount = computed(() => page.value?.sections.length ?? 0);
-const canAddSection = computed(() => sectionCount.value < ABOUT_PAGE_LIMITS.sections);
-
-const addSectionItems = computed<DropdownMenuItem[]>(() =>
-  (Object.keys(ABOUT_SECTION_TYPES) as AboutPageSectionType[]).map(type => ({
-    label: ABOUT_SECTION_TYPES[type].label,
-    description: ABOUT_SECTION_TYPES[type].description,
-    icon: ABOUT_SECTION_TYPES[type].icon,
-    onSelect: () => addSection(type),
-  })),
-);
+const pendingAction = ref<PendingPageAction | null>(null);
 
 function heroCounter(value: string) {
   return `${value.length}/${ABOUT_PAGE_LIMITS.heroDescription}`;
@@ -68,7 +41,7 @@ function requestTemplate() {
   }
   pendingAction.value = {
     title: '¿Usar la plantilla de ejemplo?',
-    description: 'Se reemplazará todo el contenido actual de la página Nosotros. El cambio se guarda hasta que presiones «Guardar perfil».',
+    description: 'Se reemplazará todo el contenido actual de la página Nosotros. El cambio se guarda hasta que presiones «Guardar página Nosotros».',
     confirmLabel: 'Reemplazar',
     run: applyTemplate,
   };
@@ -77,39 +50,12 @@ function requestTemplate() {
 function requestRemovePage() {
   pendingAction.value = {
     title: '¿Quitar la página Nosotros?',
-    description: 'Tu sitio dejará de mostrarla. El cambio se guarda hasta que presiones «Guardar perfil».',
+    description: 'Tu sitio dejará de mostrarla. El cambio se guarda hasta que presiones «Guardar página Nosotros».',
     confirmLabel: 'Quitar página',
     run: () => {
       page.value = null;
     },
   };
-}
-
-function cancelPending() {
-  pendingAction.value = null;
-}
-
-function confirmPending() {
-  pendingAction.value?.run();
-  pendingAction.value = null;
-}
-
-function addSection(type: AboutPageSectionType) {
-  if (!page.value || !canAddSection.value)
-    return;
-  page.value.sections = [...page.value.sections, createAboutSection(type)];
-}
-
-function removeSection(index: number) {
-  if (!page.value)
-    return;
-  page.value.sections = page.value.sections.filter((_, i) => i !== index);
-}
-
-function moveSection(index: number, direction: -1 | 1) {
-  if (!page.value)
-    return;
-  page.value.sections = moveListItem(page.value.sections, index, direction);
 }
 </script>
 
@@ -199,56 +145,13 @@ function moveSection(index: number, direction: -1 | 1) {
           </p>
         </div>
 
-        <!-- Animates adding, removing and reordering sections. -->
-        <div v-auto-animate class="space-y-4">
-          <AgencyAboutSectionCard
-            v-for="(section, index) in page.sections"
-            :key="keyOf(section)"
-            v-model="page.sections[index]!"
-            :name="`${name}.sections.${index}`"
-            :index="index"
-            :is-first="index === 0"
-            :is-last="index === page.sections.length - 1"
-            @move="direction => moveSection(index, direction)"
-            @remove="removeSection(index)"
-          />
-        </div>
-
-        <UFormField :name="`${name}.sections`">
-          <UDropdownMenu :items="addSectionItems" :disabled="!canAddSection">
-            <UButton
-              icon="i-lucide-plus"
-              color="neutral"
-              variant="outline"
-              trailing-icon="i-lucide-chevron-down"
-              :disabled="!canAddSection"
-            >
-              Agregar sección ({{ sectionCount }}/{{ ABOUT_PAGE_LIMITS.sections }})
-            </UButton>
-          </UDropdownMenu>
-        </UFormField>
+        <AgencyPageSectionsEditor
+          v-model="page.sections"
+          :name="`${name}.sections`"
+        />
       </div>
     </template>
 
-    <UModal
-      v-model:open="isConfirmOpen"
-      :title="pendingAction?.title"
-      :description="pendingAction?.description"
-    >
-      <template #footer>
-        <div class="flex w-full justify-end gap-2">
-          <UButton
-            color="neutral"
-            variant="ghost"
-            @click="cancelPending"
-          >
-            Cancelar
-          </UButton>
-          <UButton color="error" @click="confirmPending">
-            {{ pendingAction?.confirmLabel }}
-          </UButton>
-        </div>
-      </template>
-    </UModal>
+    <AgencyPageConfirmModal v-model="pendingAction" />
   </div>
 </template>
