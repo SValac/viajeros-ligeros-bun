@@ -2,6 +2,8 @@
 
 **Estado:** ✅ COMPLETADA (2026-09-24). PRs #60, #61 y #62 mergeados a `main`. Las tres
 migraciones están en local, stage/QA y prod.
+**En curso (2026-09-25):** página principal personalizable (`home_page`), rama
+`feature/agency-home-page`.
 **Continúa:** [agency-profile/PLAN.md](agency-profile/PLAN.md). Cubre los "campos extra
 candidatos" que esa feature dejó fuera de alcance.
 **Repo web:** `viajeros-ligeros-web` implementa el lado público. Se coordina con la sesión
@@ -21,6 +23,7 @@ el diseño; la agencia solo controla el contenido.
 | #60 | `20260924165343_public_agency_profile_rpc.sql` | RPC `get_public_agency_profile` |
 | #61 | `20260924173904_agency_profile_site_content.sql` | `tagline`, `contact_email`, `instagram_url`, `facebook_url` (y `about`, ya eliminado) |
 | #62 | `20260924183111_agency_about_page.sql` | `about_page jsonb` (reemplaza a `about`) |
+| — | `20260925194210_agency_home_page.sql` | `home_page jsonb` |
 
 ## RPC `get_public_agency_profile(p_agency_id uuid)`
 
@@ -33,7 +36,7 @@ agencia no tenga salidas (entre temporadas, o antes de lanzar), así que la lee 
 - Devuelve 0 o 1 fila, en este orden: `company_name`, `phone`, `logo_url`,
   `primary_color`, `secondary_color`, `country_code`, `state_code`, `state_name` (join a
   `country_states`), `tagline`, `contact_email`, `instagram_url`, `facebook_url`,
-  `about_page`.
+  `about_page`, `home_page`. Las columnas nuevas se agregan siempre al final.
 - Solo si el perfil está completo (`company_name` y `state_code` no nulos), el mismo
   criterio que `private.ensure_profile_complete_on_publish`. Si se cambia uno, hay que
   cambiar el otro.
@@ -79,7 +82,7 @@ menú). Todo el texto es plano, sin HTML.
 - Los títulos y el `headline` no admiten saltos de línea.
 - Los números de los pasos (01, 02…) los genera la web a partir del orden; no se guardan.
 - El CTA final de WhatsApp es fijo en la web y no se configura.
-- `icon` es una de 30 claves de lucide (lista en `ABOUT_PAGE_ICONS`). La web la muestra como
+- `icon` es una de 30 claves de lucide (lista en `PAGE_SECTION_ICONS`). La web la muestra como
   `i-lucide-<clave>` y usa un ícono por defecto si no la reconoce.
 - **Los opcionales vacíos no se guardan:** se omite la llave en vez de guardar `""`. Para la
   web es importante, porque un `""` le hace descartar la sección entera.
@@ -87,7 +90,8 @@ menú). Todo el texto es plano, sin HTML.
 ### Validación en capas
 
 1. **CRM (zod, completa):** `aboutPageSchema` en
-   `app/composables/agency-profile/use-about-page-domain.ts`. Valida longitudes, número de
+   `app/composables/agency-profile/use-about-page-domain.ts`, con las secciones de
+   `pageSectionsSchema` (`use-page-sections-domain.ts`). Valida longitudes, número de
    items e íconos.
 2. **Base (CHECK `agency_profiles_about_page_valid`, estructural):** objeto; `hero` objeto
    con `title` string; `sections` array de ≤ 8; cada sección un objeto con `type` en
@@ -108,6 +112,40 @@ Detalles del CHECK que no son obvios:
   20 000, una agencia podía respetar todos los contadores y aun así no poder guardar. El tope
   es solo un respaldo; lo que la agencia encuentra son los límites por campo.
 
+## Página principal (`home_page jsonb`)
+
+`NULL` = la web muestra su página principal predeterminada. El diseño y el orden son fijos
+en la web: hero → viajes destacados (la cuadrícula se llena sola) → `sections` → CTA final
+(los botones de WhatsApp y catálogo los pone la web).
+
+```jsonc
+{
+  "hero":     { "title": "1–100", "description": "≤ 400, opcional, párrafos" },  // opcional
+  "featured": { "headline": "≤ 40, opcional", "title": "1–100" },            // opcional
+  "sections": [ /* 0 a 8, mismo contrato que about_page.sections */ ],        // siempre presente
+  "cta":      { "title": "1–100", "description": "≤ 400, opcional, párrafos" }   // opcional
+}
+```
+
+- **A diferencia de Nosotros, cada bloque fijo es opcional.** Si falta `hero`, `featured` o
+  `cta`, la web usa su texto predeterminado para ese bloque. Así una agencia puede cambiar
+  solo una parte. En el editor, un título vacío significa "bloque predeterminado":
+  `serializeHomePage` omite el bloque. Si el título está vacío pero hay otro texto en el
+  bloque, zod marca error en el título (si no, ese texto se perdería sin aviso).
+- El CRM siempre escribe `sections` (puede ser `[]`). En un sitio de agencia, `sections`
+  reemplaza la sección "Por qué viajar con nosotros" de Viajeros Ligeros; sin secciones no
+  hay nada entre los destacados y el CTA.
+- **Textos predeterminados:** `getHomePageDefaults` copia los de la web
+  (`use-site-brand.ts` → `defaultAgencyHomePage`). Solo se usan como placeholders: los del
+  antetítulo y la descripción se muestran mientras el título del bloque está vacío, porque
+  con título propio los opcionales vacíos simplemente no aparecen. Si la web los cambia,
+  hay que actualizarlos aquí.
+- **CHECK `agency_profiles_home_page_valid`:** objeto; `hero` / `featured` / `cta` ausentes
+  o con `title` string; `sections` array obligatorio con las mismas reglas que `about_page`;
+  tope de 64 KB.
+- **Plantilla de ejemplo:** la página principal de Viajeros Ligeros (`viajeros-ligeros-web`
+  → `app/lib/home-page-viajeros-ligeros.ts`).
+
 ### Páginas del perfil
 
 El perfil usa rutas anidadas. `app/pages/profile.vue` es el contenedor: encabezado, carga
@@ -118,14 +156,14 @@ el formulario de cada pestaña se inicializa una vez a partir de él.
 | Ruta | Nombre | Archivo | Contenido | Guarda con |
 | --- | --- | --- | --- | --- |
 | `/profile` | `profile` | `profile/index.vue` | Logo y datos generales (identidad, ubicación, presentación, contacto, marca) | `saveProfile` |
+| `/profile/home` | `profile-home` | `profile/home.vue` | Página principal (`AgencyHomePageForm`) | `saveHomePage` |
 | `/profile/about` | `profile-about` | `profile/about.vue` | Página Nosotros (`AgencyAboutPageForm`) | `saveAboutPage` |
 
-Cada pestaña guarda solo sus campos. Para agregar una pestaña (por ejemplo, "Home"), se
-crea `app/pages/profile/<nombre>.vue` y se agrega su entrada al arreglo `tabs` de
+Cada pestaña guarda solo sus campos. Para agregar una pestaña, se crea `app/pages/profile/<nombre>.vue` y se agrega su entrada al arreglo `tabs` de
 `profile.vue`.
 
 **Cambios sin guardar:** cada formulario calcula `isDirty` comparando lo que guardaría
-(`mapFormToUpdate` / `serializeAboutPage`) con el perfil guardado, así que se limpia solo al
+(`mapFormToUpdate` / `serializeAboutPage` / `serializeHomePage`) con el perfil guardado, así que se limpia solo al
 guardar. `useUnsavedChangesGuard(isDirty)` muestra `UnsavedChangesModal` (vía `useOverlay`)
 al navegar dentro de la app, y el aviso nativo del navegador al cerrar o recargar la
 pestaña. Se puede reusar en cualquier formulario que se renderice dentro de `<NuxtPage />`.
@@ -134,15 +172,24 @@ pestaña. Se puede reusar en cualquier formulario que se renderice dentro de `<N
 
 | Componente | Responsabilidad |
 | --- | --- |
-| `agency-about-page-editor.vue` | Crear o quitar la página, hero, lista de secciones, agregar sección por tipo, plantilla de ejemplo, modal de confirmación |
-| `agency-about-section-card.vue` | Una sección: campos comunes y los de su tipo, subir, bajar, quitar |
-| `agency-about-items-editor.vue` | Items de una sección (genérico): agregar, quitar, reordenar, respetando mín./máx.; slot `item-extra` para el ícono |
+| `agency-about-page-editor.vue` | Nosotros: crear o quitar la página, hero, secciones, plantilla de ejemplo |
+| `agency-home-page-editor.vue` | Página principal: personalizar o restaurar la predeterminada, bloques fijos, secciones, plantilla de ejemplo |
+| `agency-home-block-fields.vue` | Un bloque fijo de la home (hero, destacados, CTA). Solo muestra los campos cuyo `v-model` se enlaza |
+| `agency-page-sections-editor.vue` | Lista de secciones (compartida): agregar por tipo, subir, bajar, quitar |
+| `agency-page-section-card.vue` | Una sección: campos comunes y los de su tipo |
+| `agency-page-items-editor.vue` | Items de una sección (genérico): agregar, quitar, reordenar, respetando mín./máx.; slot `item-extra` para el ícono |
+| `agency-page-confirm-modal.vue` | Confirmación de acciones que reemplazan o borran la página |
 | `agency-icon-picker.vue` | `USelectMenu` con las 30 claves, con nombre en español e ícono |
 
+El contrato de secciones (límites, íconos, schema, serialización, lectura) vive en
+`use-page-sections-domain.ts`; `use-about-page-domain.ts` y `use-home-page-domain.ts` solo
+agregan lo propio de cada página. Mismo reparto que en la web (`app/lib/page-sections.ts`).
+
 - **Estado del editor ≠ JSON guardado:** en el editor los opcionales son `''`.
-  `serializeAboutPage` recorta, quita caracteres de control, normaliza párrafos y omite los
-  vacíos. `toAboutPage` lee el JSON guardado de forma tolerante y rellena con `''`.
-- **Plantilla de ejemplo:** copia el contenido real de Viajeros Ligeros
+  `serializeAboutPage` / `serializeHomePage` recortan, quitan caracteres de control,
+  normalizan párrafos y omiten los vacíos. `toAboutPage` / `toHomePage` leen el JSON
+  guardado de forma tolerante y rellenan con `''`.
+- **Plantilla de ejemplo (Nosotros):** copia el contenido real de Viajeros Ligeros
   (`viajeros-ligeros-web` → `app/lib/about-page-viajeros-ligeros.ts`) y pone el nombre de la
   agencia en el hero.
 - **Claves de `v-for`:** las secciones y los items no tienen id. `createListKeys` asigna

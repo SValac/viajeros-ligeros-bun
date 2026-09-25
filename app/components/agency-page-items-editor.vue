@@ -1,7 +1,7 @@
-<script setup lang="ts" generic="T extends AboutPageStepItem">
-import type { AboutPageStepItem } from '~/types/agency-profile';
+<script setup lang="ts" generic="T extends PageSectionStepItem">
+import type { PageSectionStepItem } from '~/types/agency-profile';
 
-import { ABOUT_PAGE_LIMITS, createListKeys, moveListItem } from '~/composables/agency-profile/use-about-page-domain';
+import { createListKeys, moveListItem, PAGE_SECTION_LIMITS } from '~/composables/agency-profile/use-page-sections-domain';
 
 type Props = {
   /** Form path of the list, e.g. `aboutPage.sections.2.items`. */
@@ -93,7 +93,7 @@ function counter(value: string, limit: number) {
         >
           <UInput
             v-model="item.title"
-            :maxlength="ABOUT_PAGE_LIMITS.itemTitle"
+            :maxlength="PAGE_SECTION_LIMITS.itemTitle"
             class="w-full"
           />
         </UFormField>
@@ -101,14 +101,14 @@ function counter(value: string, limit: number) {
         <UFormField
           label="Descripción"
           :name="`${name}.${index}.description`"
-          :hint="counter(item.description, ABOUT_PAGE_LIMITS.itemDescription)"
+          :hint="counter(item.description, PAGE_SECTION_LIMITS.itemDescription)"
           required
         >
           <UTextarea
             v-model="item.description"
             :rows="2"
             autoresize
-            :maxlength="ABOUT_PAGE_LIMITS.itemDescription"
+            :maxlength="PAGE_SECTION_LIMITS.itemDescription"
             class="w-full"
           />
         </UFormField>
