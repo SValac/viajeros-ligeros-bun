@@ -11,16 +11,16 @@ export function usePaymentsRepository() {
   const supabase = useSupabase();
 
   /**
-   * Fetches all payments for a travel ordered by payment date descending.
-   * @param travelId - UUID of the travel to fetch payments for
-   * @returns Payments belonging to the given travel
+   * Fetches all payments for one or more travels ordered by payment date descending.
+   * @param travelIds - UUIDs of the travels to fetch payments for
+   * @returns Payments belonging to the given travels
    * @throws {PostgrestError} on Supabase failure
    */
-  async function fetchPaymentsByTravel(travelId: string): Promise<Payment[]> {
+  async function fetchPaymentsByTravels(travelIds: string[]): Promise<Payment[]> {
     const { data, error } = await supabase
       .from('payments')
       .select('*')
-      .eq('travel_id', travelId)
+      .in('travel_id', travelIds)
       .order('payment_date', { ascending: false });
     if (error)
       throw error;
@@ -48,16 +48,16 @@ export function usePaymentsRepository() {
   };
 
   /**
-   * Fetches all traveler account configs for a travel.
-   * @param travelId - UUID of the travel to fetch configs for
-   * @returns Account configs belonging to the given travel
+   * Fetches all traveler account configs for one or more travels.
+   * @param travelIds - UUIDs of the travels to fetch configs for
+   * @returns Account configs belonging to the given travels
    * @throws {PostgrestError} on Supabase failure
    */
-  async function fetchConfigsByTravel(travelId: string): Promise<TravelerAccountConfig[]> {
+  async function fetchConfigsByTravels(travelIds: string[]): Promise<TravelerAccountConfig[]> {
     const { data, error } = await supabase
       .from('traveler_account_configs')
       .select('*')
-      .eq('travel_id', travelId);
+      .in('travel_id', travelIds);
 
     if (error)
       throw error;
@@ -165,9 +165,9 @@ export function usePaymentsRepository() {
   };
 
   return {
-    fetchPaymentsByTravel,
+    fetchPaymentsByTravels,
     fetchPaymentsByTraveler,
-    fetchConfigsByTravel,
+    fetchConfigsByTravels,
     fetchConfigsByTraveler,
     insertPayment,
     updatePayment,

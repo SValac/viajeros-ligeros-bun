@@ -12,13 +12,24 @@ const paymentStore = usePaymentStore();
 const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 
-const allTravels = computed(() => travelStore.allTravels);
+const publishedTravels = computed(() =>
+  travelStore.allTravels.filter(travel => travel.status === 'published'),
+);
+
+// Los viajes llegan de forma asíncrona (init-stores); se cargan pagos y configuraciones
+// cuando cambia el conjunto de viajes publicados.
+const publishedTravelIds = computed(() => publishedTravels.value.map(travel => travel.id).join(','));
+
+watch(publishedTravelIds, (ids) => {
+  if (ids)
+    paymentStore.fetchByTravels(ids.split(','));
+}, { immediate: true });
 
 const travelSummaries = computed(() => {
-  return allTravels.value.map((travel) => {
+  return publishedTravels.value.map((travel) => {
     const travelers = travelerStore.getTravelersByTravel(travel.id);
     const summaries = travelers.map(t =>
-      paymentStore.getTravelerPaymentSummary(t.id, travel.id, travel.price),
+      paymentStore.getTravelerPaymentSummary(t.id, travel.id),
     );
 
     const totalExpected = summaries.reduce((sum: number, s) => sum + s.finalCost, 0);
@@ -195,17 +206,17 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     <UCard>
       <template #header>
         <h2 class="font-semibold text-lg">
-          Viajes activos
+          Viajes publicados
         </h2>
       </template>
 
       <div v-if="travelSummaries.length === 0" class="text-center py-12">
         <UIcon name="i-lucide-inbox" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 class="text-lg font-medium mb-2">
-          No hay viajes registrados
+          No hay viajes publicados
         </h3>
         <p class="text-muted mb-4">
-          Primero registra un viaje para gestionar sus pagos
+          Publica un viaje para gestionar sus pagos
         </p>
         <UButton icon="i-lucide-map" @click="goToTravelsDashboard">
           Ir a Viajes

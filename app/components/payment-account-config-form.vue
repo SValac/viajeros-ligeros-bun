@@ -5,7 +5,6 @@ import type { QuotationPublicPrice } from '~/types/quotation';
 const props = defineProps<{
   travelerId: string;
   travelId: string;
-  travelBasePrice: number;
   preciosPublicos: QuotationPublicPrice[];
   config?: TravelerAccountConfig;
 }>();
