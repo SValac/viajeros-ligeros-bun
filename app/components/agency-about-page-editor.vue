@@ -41,7 +41,7 @@ function requestTemplate() {
   }
   pendingAction.value = {
     title: '¿Usar la plantilla de ejemplo?',
-    description: 'Se reemplazará todo el contenido actual de la página Nosotros. El cambio se guarda hasta que presiones «Guardar perfil».',
+    description: 'Se reemplazará todo el contenido actual de la página Nosotros. El cambio se guarda hasta que presiones «Guardar página Nosotros».',
     confirmLabel: 'Reemplazar',
     run: applyTemplate,
   };
@@ -50,7 +50,7 @@ function requestTemplate() {
 function requestRemovePage() {
   pendingAction.value = {
     title: '¿Quitar la página Nosotros?',
-    description: 'Tu sitio dejará de mostrarla. El cambio se guarda hasta que presiones «Guardar perfil».',
+    description: 'Tu sitio dejará de mostrarla. El cambio se guarda hasta que presiones «Guardar página Nosotros».',
     confirmLabel: 'Quitar página',
     run: () => {
       page.value = null;
