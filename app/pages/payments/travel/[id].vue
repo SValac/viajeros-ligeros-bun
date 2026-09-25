@@ -39,8 +39,6 @@ const enrolledTravelers = computed(() =>
   travelerStore.getTravelersByTravel(travelId.value),
 );
 
-const travelPrice = computed(() => travel.value?.price ?? 0);
-
 const expanded = ref<ExpandedStateList>({});
 
 // Status filter
@@ -70,7 +68,7 @@ const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
 
     // Apply status filter at the representative level.
     if (statusFilter.value !== 'all') {
-      const summary = paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value);
+      const summary = paymentStore.getTravelerPaymentSummary(t.id, travelId.value);
       if (summary.status !== statusFilter.value)
         continue;
     }
@@ -100,7 +98,7 @@ const cashSummary = computed(() => {
   const summaries = enrolledTravelers.value
     .filter((t: Traveler) => !!paymentStore.getAccountConfig(t.id, travelId.value)?.publicPriceId)
     .map((t: Traveler) =>
-      paymentStore.getTravelerPaymentSummary(t.id, travelId.value, travelPrice.value),
+      paymentStore.getTravelerPaymentSummary(t.id, travelId.value),
     );
   const totalExpected = summaries.reduce((sum: number, s) => sum + s.finalCost, 0);
   const totalCollected = summaries.reduce((sum: number, s) => sum + s.totalPaid, 0);
@@ -142,7 +140,6 @@ const selectedSummary = computed(() => {
   return paymentStore.getTravelerPaymentSummary(
     selectedTraveler.value.id,
     travelId.value,
-    travelPrice.value,
   );
 });
 
@@ -243,7 +240,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
       if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       return h('span', { class: 'text-sm' }, formatCurrency(s.finalCost));
     },
   },
@@ -254,7 +251,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
       if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       if (s.totalDiscountAmount <= 0)
         return h('span', { class: 'text-sm text-muted' }, '—');
       return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalDiscountAmount));
@@ -267,7 +264,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
       if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       if (s.totalSurchargeAmount <= 0)
         return h('span', { class: 'text-sm text-muted' }, '—');
       return h('span', { class: 'text-sm text-warning' }, formatCurrency(s.totalSurchargeAmount));
@@ -280,7 +277,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
       if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalPaid));
     },
   },
@@ -291,7 +288,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
       if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       return h('span', { class: s.balance > 0 ? 'text-sm text-error' : 'text-sm text-success' }, formatCurrency(s.balance));
     },
   },
@@ -302,7 +299,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
       if (!config?.publicPriceId)
         return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => 'Sin configurar');
-      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value, travelPrice.value);
+      const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       const cfg = statusConfig[s.status] ?? { color: 'neutral', label: s.status };
       return h(resolveComponent('UBadge'), { color: cfg.color, variant: 'subtle' }, () => cfg.label);
     },
@@ -519,7 +516,6 @@ watch(travelId, async (id) => {
           v-if="selectedTraveler"
           :traveler-id="selectedTraveler.id"
           :travel-id="travelId"
-          :travel-base-price="travelPrice"
           :precios-publicos="preciosPublicos"
           :config="selectedConfig"
           @submit="handleConfigSubmit"

@@ -203,16 +203,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const getAsientoMinimoCalculado = computed(() => {
-    return (quotationId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-      if (!cotizacion || cotizacion.seatPrice === 0)
-        return 0;
-      const costoTotal = getCostoTotal.value(quotationId);
-      return Math.ceil(costoTotal / cotizacion.seatPrice);
-    };
-  });
-
   const getTotalCostoBuses = computed(() => {
     return (quotationId: string): number => {
       return busesApartados.value
@@ -237,8 +227,21 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Precio calculado a partir del asiento mínimo objetivo: fuente de verdad para travel.price
-  // Incluye costos de proveedores, hospedajes y autobuses
+  // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses.
+  // El hospedaje queda fuera: cada viajero lo paga aparte según su habitación.
+  // Devuelve 0 si aún no hay precio por asiento.
+  const getAsientoConGanancia = computed(() => {
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion || cotizacion.seatPrice === 0)
+        return 0;
+      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
+      return Math.floor(costoTotal / cotizacion.seatPrice) + 1;
+    };
+  });
+
+  // Precio calculado a partir del asiento mínimo objetivo (seatPrice de la cotización)
+  // Incluye costos de proveedores y autobuses; el hospedaje se suma aparte en la matriz de precios de referencia
   const getPrecioAsientoCalculado = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
@@ -253,16 +256,15 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  // Ganancia con el autobús lleno: capacidad × precio por asiento − (servicios + autobuses).
+  // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
   const getGananciaProyectada = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
       if (!cotizacion || cotizacion.busCapacity === 0)
         return 0;
-      const seatPrice = getPrecioAsientoCalculado.value(quotationId);
-      const costoTotal = getCostoTotal.value(quotationId)
-        + getTotalCostoBuses.value(quotationId)
-        + getTotalCostoHospedajes.value(quotationId);
-      return (cotizacion.busCapacity * seatPrice) - costoTotal;
+      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
+      return (cotizacion.busCapacity * cotizacion.seatPrice) - costoTotal;
     };
   });
 
@@ -475,8 +477,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Helper interno — recalcula seatPrice y lo sincroniza a travel.price
-  async function _syncPrecioToTravel(quotationId: string): Promise<void> {
+  // Helper interno — recalcula seatPrice de la cotización.
+  // travel.price es el precio público de entrada y se edita en el formulario del viaje.
+  async function _syncSeatPrice(quotationId: string): Promise<void> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
     if (!cotizacion || cotizacion.status === 'confirmed')
       return;
@@ -495,9 +498,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         updatedAt: new Date().toISOString(),
       };
     }
-
-    const travelStore = useTravelsStore();
-    await travelStore.updateTravel(cotizacion.travelId, { price: nuevoPrecio });
   }
 
   // Helper interno — sincroniza habitaciones de cotización hacia travel_accommodations
@@ -662,7 +662,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       cotizaciones.value[index] = updated;
 
       if ('minimumSeatTarget' in data) {
-        await _syncPrecioToTravel(id);
+        await _syncSeatPrice(id);
       }
 
       return updated;
@@ -728,7 +728,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const newProveedor = await repository.insertProvider(data);
       proveedoresQuotation.value.push(newProveedor);
-      await _syncPrecioToTravel(data.quotationId);
+      await _syncSeatPrice(data.quotationId);
       return newProveedor;
     }
     catch (e) {
@@ -761,7 +761,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const updated = await repository.updateProvider(id, data);
       proveedoresQuotation.value[index] = updated;
-      await _syncPrecioToTravel(existing.quotationId);
+      await _syncSeatPrice(existing.quotationId);
       return updated;
     }
     catch (e) {
@@ -790,7 +790,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
       pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
-      await _syncPrecioToTravel(quotationId);
+      await _syncSeatPrice(quotationId);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -933,7 +933,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const newHospedaje = await repository.insertAccommodation(data);
       hospedajesQuotation.value.push(newHospedaje);
-      await _syncPrecioToTravel(data.quotationId);
+      await _syncSeatPrice(data.quotationId);
       const addSyncResult = await _syncHospedajeToTravel(data.quotationId);
       return { ...newHospedaje, skippedOccupied: addSyncResult.skippedOccupied };
     }
@@ -967,7 +967,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const updated = await repository.updateAccommodation(id, data, existing.nightCount, existing.details);
       hospedajesQuotation.value[index] = updated;
-      await _syncPrecioToTravel(existing.quotationId);
+      await _syncSeatPrice(existing.quotationId);
       const updateSyncResult = await _syncHospedajeToTravel(existing.quotationId);
       return { ...updated, skippedOccupied: updateSyncResult.skippedOccupied };
     }
@@ -997,7 +997,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
-      await _syncPrecioToTravel(quotationId);
+      await _syncSeatPrice(quotationId);
       const deleteSyncResult = await _syncHospedajeToTravel(quotationId);
       return deleteSyncResult.skippedOccupied;
     }
@@ -1215,7 +1215,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           buses: [...(travelStore.travels[travelIndex]!.buses ?? []), mapTravelBusRowToDomain(travelBusRow)],
         };
       }
-      await _syncPrecioToTravel(data.quotationId);
+      await _syncSeatPrice(data.quotationId);
       return newBus;
     }
     catch (e) {
@@ -1269,7 +1269,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         }
       }
 
-      await _syncPrecioToTravel(existing.quotationId);
+      await _syncSeatPrice(existing.quotationId);
       return updated;
     }
     catch (e) {
@@ -1311,7 +1311,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           };
         }
       }
-      await _syncPrecioToTravel(quotationId);
+      await _syncSeatPrice(quotationId);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1413,7 +1413,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getCostoTotal,
     getCostoTipoMinimo,
     getCostoTipoTotal,
-    getAsientoMinimoCalculado,
+    getAsientoConGanancia,
     getPrecioAsientoCalculado,
     getGananciaProyectada,
     getAnticipadoProveedor,

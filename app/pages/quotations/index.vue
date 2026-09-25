@@ -73,6 +73,17 @@ const columns: TableColumn<QuotationRow>[] = [
     },
   },
   {
+    id: 'travelStatus',
+    header: 'Estado del viaje',
+    cell: ({ row }) => {
+      const { status } = row.original.travel;
+      return h(resolveComponent('UBadge'), {
+        color: getTravelStatusColor(status),
+        variant: 'subtle',
+      }, () => getTravelStatusLabel(status));
+    },
+  },
+  {
     id: 'status',
     header: 'Cotización',
     cell: ({ row }) => {
