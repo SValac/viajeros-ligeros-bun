@@ -18,9 +18,11 @@ const coordinadoresDelViaje = computed(() => {
 
 const isDeleting = ref(false);
 
-// Redirect to dashboard if travel not found
-watchEffect(() => {
-  if (!travel.value && travelId.value && !isDeleting.value) {
+// Redirect to dashboard if travel not found.
+// `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
+// y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
+watch(travel, (value) => {
+  if (!value && travelId.value && !isDeleting.value) {
     toast.add({
       title: 'Viaje no encontrado',
       description: 'El viaje que buscas no existe',
@@ -28,7 +30,7 @@ watchEffect(() => {
     });
     router.push('/travels/dashboard');
   }
-});
+}, { immediate: true });
 
 // Helper functions
 function getStatusColor(status: string): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' {
