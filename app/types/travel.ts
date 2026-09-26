@@ -63,7 +63,6 @@ export type Travel = {
   destination?: string;
   startDate: string;
   endDate: string;
-  price: number;
   description: string;
   imageUrl?: string;
   status: TravelStatus;

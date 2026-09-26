@@ -41,7 +41,6 @@ const schema = z.object({
   coordinatorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
   startDate: z.string().min(1, 'Fecha requerida'),
   endDate: z.string().min(1, 'Fecha requerida'),
-  price: z.number().min(0, 'Precio debe ser positivo').max(999999, 'Precio máximo: 999,999'),
   // Contenido HTML del editor enriquecido: solo se despojan caracteres de control, no se restringe el charset.
   description: textSchema({ min: 10, max: 3000 }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
@@ -66,7 +65,6 @@ const initialState = computed((): Schema => {
       coordinatorIds: travel.coordinatorIds ?? [],
       startDate: travel.startDate,
       endDate: travel.endDate,
-      price: travel.price,
       description: travel.description,
       status: travel.status,
       departureFrom: travel.departureFrom ?? '',
@@ -83,7 +81,6 @@ const initialState = computed((): Schema => {
     coordinatorIds: [],
     startDate: '',
     endDate: '',
-    price: 0,
     description: '',
     status: 'pending',
     departureFrom: '',
@@ -388,45 +385,27 @@ function onCancel() {
             </UInputDate>
           </UFormField>
 
-          <!-- Precio y Estado (Grid 2 columnas) -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <UFormField
-              label="Precio (MX)"
-              name="price"
-              description="Precio de entrada que se muestra en el sitio público"
-              required
+          <!-- Estado -->
+          <UFormField
+            label="Estado"
+            name="status"
+            required
+          >
+            <USelect
+              v-model="state.status"
+              :items="estadoOptions"
+              icon="i-lucide-circle-dot"
+            />
+            <template
+              v-if="!canPublish && !agencyProfileStore.loading"
+              #help
             >
-              <UInput
-                v-model.number="state.price"
-                type="number"
-                min="0"
-                step="0.01"
-                icon="i-lucide-dollar-sign"
-                placeholder="0.00"
-              />
-            </UFormField>
-
-            <UFormField
-              label="Estado"
-              name="status"
-              required
-            >
-              <USelect
-                v-model="state.status"
-                :items="estadoOptions"
-                icon="i-lucide-circle-dot"
-              />
-              <template
-                v-if="!canPublish && !agencyProfileStore.loading"
-                #help
-              >
-                Para publicar, completa el nombre de empresa y el estado en tu
-                <ULink :to="{ name: 'profile' }" class="text-primary underline">
-                  perfil de agencia
-                </ULink>.
-              </template>
-            </UFormField>
-          </div>
+              Para publicar, completa el nombre de empresa y el estado en tu
+              <ULink :to="{ name: 'profile' }" class="text-primary underline">
+                perfil de agencia
+              </ULink>.
+            </template>
+          </UFormField>
 
           <!-- Sitio público -->
           <div class="flex flex-col gap-4 border-t border-default pt-4">

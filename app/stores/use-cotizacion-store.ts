@@ -485,7 +485,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   // Helper interno — recalcula seatPrice de la cotización.
-  // travel.price es el precio público de entrada y se edita en el formulario del viaje.
   async function _syncSeatPrice(quotationId: string): Promise<void> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
     if (!cotizacion || cotizacion.status === 'confirmed')
