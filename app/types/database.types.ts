@@ -1379,13 +1379,13 @@ export type Database = {
           destination: string | null
           end_date: string
           featured: boolean
+          from_price: number | null
           highlights: string[]
           id: string
           image_url: string | null
           label: string
           minimum_seats: number | null
           owner_id: string
-          price: number
           slug: string | null
           start_date: string
           status: Database["public"]["Enums"]["travel_status"]
@@ -1406,7 +1406,6 @@ export type Database = {
           label: string
           minimum_seats?: number | null
           owner_id: string
-          price: number
           slug?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["travel_status"]
@@ -1427,7 +1426,6 @@ export type Database = {
           label?: string
           minimum_seats?: number | null
           owner_id?: string
-          price?: number
           slug?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["travel_status"]
@@ -1449,6 +1447,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      from_price: {
+        Args: { t: Database["public"]["Tables"]["travels"]["Row"] }
+        Returns: number
+      }
       generate_travel_access_code: {
         Args: { p_travel_id: string }
         Returns: Json
