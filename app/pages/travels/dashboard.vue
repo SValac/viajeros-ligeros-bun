@@ -18,7 +18,6 @@ const router = useRouter();
 // Computed
 const travels = computed(() => travelsStore.allTravels);
 const stats = computed(() => travelsStore.stats);
-const revenue = computed(() => travelsStore.totalRevenue);
 
 // Funciones auxiliares
 function getStatusColor(status: TravelStatus): string {
@@ -50,13 +49,6 @@ function formatDate(dateString: string): string {
     month: 'short',
     year: 'numeric',
   });
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
 }
 
 function formatDateRange(start: string, end: string): string {
@@ -162,13 +154,6 @@ const columns: TableColumn<Travel>[] = [
     },
   },
   {
-    accessorKey: 'price',
-    header: 'Precio',
-    cell: ({ row }) => {
-      return h('span', { class: 'font-semibold text-gray-900 dark:text-white' }, formatCurrency(row.getValue('price')));
-    },
-  },
-  {
     id: 'actions',
     header: 'Acciones',
     cell: ({ row }) => {
@@ -207,7 +192,7 @@ const columns: TableColumn<Travel>[] = [
     </div>
 
     <!-- Estadísticas -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <!-- Total -->
       <UCard>
         <div class="flex items-center justify-between">
@@ -258,24 +243,6 @@ const columns: TableColumn<Travel>[] = [
           <UIcon
             name="i-lucide-plane"
             class="w-10 h-10 text-purple-400"
-          />
-        </div>
-      </UCard>
-
-      <!-- Ingresos -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Ingresos Totales
-            </p>
-            <p class="text-2xl font-bold text-green-600 dark:text-green-400 mt-1">
-              {{ formatCurrency(revenue) }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-dollar-sign"
-            class="w-10 h-10 text-green-400"
           />
         </div>
       </UCard>

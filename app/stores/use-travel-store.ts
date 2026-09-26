@@ -57,12 +57,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     };
   });
 
-  const totalRevenue = computed((): number => {
-    return travels.value
-      .filter(t => t.status === 'published' || t.status === 'completed')
-      .reduce((sum, travel) => sum + travel.price, 0);
-  });
-
   // Actions
   async function fetchAll(): Promise<void> {
     loading.value = true;
@@ -138,7 +132,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         'destination',
         'startDate',
         'endDate',
-        'price',
         'description',
         'imageUrl',
         'status',
@@ -404,7 +397,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     getTravelsByStatus,
     getAccommodationsByTravel,
     stats,
-    totalRevenue,
     // Actions
     fetchAll,
     addTravel,
