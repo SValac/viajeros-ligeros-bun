@@ -5,7 +5,7 @@ import { computed, h, reactive, ref, shallowRef } from 'vue';
 
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
-import { sanitizeBusinessName } from '~/utils/form-validation';
+import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 
 type Props = {
   quotationId: string;
@@ -41,7 +41,7 @@ const hayDatos = computed(() => {
 // Selección de tipo de habitación por hotel
 // ============================================================================
 
-type EntradaGrupo = { roomType: string; costPerPerson: number };
+type EntradaGrupo = { roomType: string; costPerPerson: number; additionalDetails?: string };
 type PrecioReferencia = (typeof matrizPreciosReferencia.value)[number];
 
 // Map<`${maxOccupancy}::${hotelName}`, localIndex>
@@ -59,12 +59,16 @@ function selectLocalIndex(maxOccupancy: number, hotelName: string, localIndex: n
   seleccion.set(seleccionKey(maxOccupancy, hotelName), localIndex);
 }
 
-function gruposHotel(accommodation: Array<{ hotelName: string; roomType: string; costPerPerson: number }>): [string, EntradaGrupo[]][] {
+function gruposHotel(accommodation: PrecioReferencia['breakdown']['accommodation']): [string, EntradaGrupo[]][] {
   const map = new Map<string, EntradaGrupo[]>();
   for (const entry of accommodation) {
     if (!map.has(entry.hotelName))
       map.set(entry.hotelName, []);
-    map.get(entry.hotelName)!.push({ roomType: entry.roomType, costPerPerson: entry.costPerPerson });
+    map.get(entry.hotelName)!.push({
+      roomType: entry.roomType,
+      costPerPerson: entry.costPerPerson,
+      additionalDetails: entry.additionalDetails,
+    });
   }
   return [...map.entries()];
 }
@@ -118,6 +122,15 @@ function etiquetaOcupacion(maxOccupancy: number): string {
   return `Habitación para ${maxOccupancy} persona${maxOccupancy > 1 ? 's' : ''}`;
 }
 
+// "Detalles adicionales" de los tipos de habitación seleccionados; con varios hoteles, uno por línea con su nombre
+function descripcionDesdeHabitaciones(hospedaje: Array<EntradaGrupo & { hotelName: string }>): string {
+  const conDetalles = hospedaje.filter(entrada => entrada.additionalDetails?.trim());
+  const lineas = conDetalles.length === 1
+    ? [conDetalles[0]!.additionalDetails!.trim()]
+    : conDetalles.map(entrada => `${entrada.hotelName} - ${entrada.additionalDetails!.trim()}`);
+  return sanitizeText(lineas.join('\n')).slice(0, 500);
+}
+
 // Abrir formulario para agregar, precargado con un precio de referencia
 function abrirDesdePlantilla(price: PrecioReferencia) {
   const hospedaje = hospedajeSeleccionado(price);
@@ -128,6 +141,7 @@ function abrirDesdePlantilla(price: PrecioReferencia) {
     priceType: toBusinessName(etiquetaOcupacion(price.maxOccupancy), 100),
     pricePerPerson: Math.round(precioTotalSeleccionado(price) * 100) / 100,
     roomType: toBusinessName(tiposHabitacion.join(', '), 100),
+    description: descripcionDesdeHabitaciones(hospedaje),
   };
   isFormModalOpen.value = true;
 }

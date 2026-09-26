@@ -24,7 +24,8 @@ const grupoEtarioOptions = GRUPOS_ETARIOS.map(grupo => ({ label: grupo, value: g
 
 const schema = z.object({
   priceType: businessNameSchema({ min: 1, max: 100 }),
-  description: businessNameSchema({ min: 1, max: 200 }),
+  // Texto libre, igual que los "Detalles adicionales" del tipo de habitación con los que se precarga
+  description: textSchema({ min: 1, max: 500 }),
   pricePerPerson: z.number({ message: 'Ingresa el precio' }).positive('Debe ser mayor a 0'),
   roomType: businessNameSchema({ max: 100 }).optional().or(z.literal('')),
   ageGroup: z.enum(GRUPOS_ETARIOS, { message: 'Selecciona un grupo etario' }),
@@ -38,7 +39,7 @@ const inicial = precio ?? plantilla;
 
 const state = reactive<Partial<FormSchema>>({
   priceType: inicial?.priceType ?? '',
-  description: precio?.description ?? '',
+  description: inicial?.description ?? '',
   pricePerPerson: inicial?.pricePerPerson ?? 0,
   roomType: inicial?.roomType ?? '',
   ageGroup: (inicial?.ageGroup as FormSchema['ageGroup'] | undefined) ?? 'Todos',
@@ -47,7 +48,7 @@ const state = reactive<Partial<FormSchema>>({
 
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const priceTypeInput = useSanitizedModel(() => state.priceType ?? '', v => state.priceType = v, sanitizeBusinessName);
-const descriptionInput = useSanitizedModel(() => state.description ?? '', v => state.description = v, sanitizeBusinessName);
+const descriptionInput = useSanitizedModel(() => state.description ?? '', v => state.description = v, sanitizeText);
 const roomTypeInput = useSanitizedModel(() => state.roomType ?? '', v => state.roomType = v, sanitizeBusinessName);
 const notesInput = useSanitizedModel(() => state.notes ?? '', v => state.notes = v, sanitizeText);
 
