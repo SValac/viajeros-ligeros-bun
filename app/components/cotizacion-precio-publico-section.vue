@@ -45,11 +45,11 @@ const hayDatos = computed(() => {
 type EntradaGrupo = { roomType: string; costPerPerson: number };
 type PrecioReferencia = (typeof matrizPreciosReferencia.value)[number];
 
-// Map<`::${hotelName}`, localIndex>
+// Map<`${maxOccupancy}::${hotelName}`, localIndex>
 const seleccion = reactive(new Map<string, number>());
 
 function seleccionKey(maxOccupancy: number, hotelName: string): string {
-  return `::${hotelName}`;
+  return `${maxOccupancy}::${hotelName}`;
 }
 
 function getSelectedLocalIndex(maxOccupancy: number, hotelName: string): number {
