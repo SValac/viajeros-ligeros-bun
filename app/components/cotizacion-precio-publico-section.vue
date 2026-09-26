@@ -2,11 +2,10 @@
 import type { TableColumn } from '@nuxt/ui';
 
 import { computed, h, reactive, ref, shallowRef } from 'vue';
-import { z } from 'zod';
 
-import type { QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
+import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
-import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 
 type Props = {
   quotationId: string;
@@ -89,55 +88,23 @@ function precioTotalSeleccionado(price: PrecioReferencia): number {
 // CRUD de Precios de Venta
 // ============================================================================
 
-// Schema de validación
-const formSchema = z.object({
-  priceType: businessNameSchema({ min: 1, max: 100 }),
-  description: businessNameSchema({ min: 1, max: 200 }),
-  pricePerPerson: z.number({ message: 'Ingresa el precio' }).positive('Debe ser mayor a 0'),
-  roomType: businessNameSchema({ max: 100 }).optional().or(z.literal('')),
-  ageGroup: businessNameSchema({ max: 100 }).optional().or(z.literal('')),
-  notes: textSchema({ max: 500 }).optional(),
-});
-
-type FormSchema = z.infer<typeof formSchema>;
-
-// Estado del formulario
-const formState = reactive<Partial<FormSchema>>({
-  priceType: '',
-  description: '',
-  pricePerPerson: 0,
-  roomType: '',
-  ageGroup: '',
-  notes: '',
-});
-
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
-const priceTypeInput = useSanitizedModel(() => formState.priceType ?? '', v => formState.priceType = v, sanitizeBusinessName);
-const descriptionInput = useSanitizedModel(() => formState.description ?? '', v => formState.description = v, sanitizeBusinessName);
-const roomTypeInput = useSanitizedModel(() => formState.roomType ?? '', v => formState.roomType = v, sanitizeBusinessName);
-const ageGroupInput = useSanitizedModel(() => formState.ageGroup ?? '', v => formState.ageGroup = v, sanitizeBusinessName);
-const notesInput = useSanitizedModel(() => formState.notes ?? '', v => formState.notes = v, sanitizeText);
-
 // Modal state
 const isFormModalOpen = shallowRef(false);
 const editingPrecio = ref<QuotationPublicPrice | null>(null);
-const desdePlantilla = shallowRef(false);
+const plantilla = ref<QuotationPublicPriceTemplate | null>(null);
 
-// Reset formulario
-function resetForm() {
-  formState.priceType = '';
-  formState.description = '';
-  formState.pricePerPerson = 0;
-  formState.roomType = '';
-  formState.ageGroup = '';
-  formState.notes = '';
-  editingPrecio.value = null;
-  desdePlantilla.value = false;
-}
+const modalDescription = computed(() => {
+  if (editingPrecio.value)
+    return 'Actualiza los detalles del precio';
+  if (plantilla.value)
+    return 'Revisa y ajusta los datos precargados desde el precio de referencia';
+  return 'Define un nuevo precio de venta para los viajeros';
+});
 
 // Abrir formulario para agregar
 function abrirFormulario() {
-  resetForm();
+  editingPrecio.value = null;
+  plantilla.value = null;
   isFormModalOpen.value = true;
 }
 
@@ -153,24 +120,20 @@ function etiquetaOcupacion(maxOccupancy: number): string {
 
 // Abrir formulario para agregar, precargado con un precio de referencia
 function abrirDesdePlantilla(price: PrecioReferencia) {
-  resetForm();
   const hospedaje = hospedajeSeleccionado(price);
-  const hoteles = hospedaje.map(entrada => entrada.hotelName);
   const tiposHabitacion = [...new Set(hospedaje.map(entrada => entrada.roomType.replaceAll(' + ', ' y ')))];
   const desglose = [
     `asiento ${formatCurrency(price.breakdown.seatPrice)}`,
     ...hospedaje.map(entrada => `${entrada.hotelName} (${entrada.roomType}) ${formatCurrency(entrada.costPerPerson)}`),
   ];
 
-  formState.priceType = toBusinessName(etiquetaOcupacion(price.maxOccupancy), 100);
-  formState.description = toBusinessName(
-    hoteles.length > 0 ? `Incluye asiento y hospedaje en ${hoteles.join(', ')}` : 'Incluye asiento',
-    200,
-  );
-  formState.pricePerPerson = Math.round(precioTotalSeleccionado(price) * 100) / 100;
-  formState.roomType = toBusinessName(tiposHabitacion.join(', '), 100);
-  formState.notes = sanitizeText(`Costo base: ${desglose.join(' + ')}`).slice(0, 500);
-  desdePlantilla.value = true;
+  editingPrecio.value = null;
+  plantilla.value = {
+    priceType: toBusinessName(etiquetaOcupacion(price.maxOccupancy), 100),
+    pricePerPerson: Math.round(precioTotalSeleccionado(price) * 100) / 100,
+    roomType: toBusinessName(tiposHabitacion.join(', '), 100),
+    notes: sanitizeText(`Costo base: ${desglose.join(' + ')}`).slice(0, 500),
+  };
   isFormModalOpen.value = true;
 }
 
@@ -181,32 +144,15 @@ function cerrarFormulario() {
 // Abrir formulario para editar
 function abrirEdicion(price: QuotationPublicPrice) {
   editingPrecio.value = price;
-  formState.priceType = price.priceType;
-  formState.description = price.description;
-  formState.pricePerPerson = price.pricePerPerson;
-  formState.roomType = price.roomType ?? '';
-  formState.ageGroup = price.ageGroup ?? '';
-  formState.notes = price.notes ?? '';
+  plantilla.value = null;
   isFormModalOpen.value = true;
 }
 
-// Guardar (crear o actualizar)
-async function guardarPrecio() {
-  const result = formSchema.safeParse(formState);
-  if (!result.success) {
-    toast.add({
-      title: 'Error en el formulario',
-      description: result.error.issues.map((e: any) => e.message).join(', '),
-      color: 'error',
-    });
-    return;
-  }
-
+// Guardar (crear o actualizar). El formulario ya validó los datos.
+async function guardarPrecio(data: QuotationPublicPriceFormData) {
   if (editingPrecio.value) {
     // Actualizar
-    const updated = await cotizacionStore.updatePrecioPublico(editingPrecio.value.id, {
-      ...result.data,
-    } as Partial<QuotationPublicPriceFormData>);
+    const updated = await cotizacionStore.updatePrecioPublico(editingPrecio.value.id, data);
 
     if (!updated) {
       toast.add({
@@ -224,10 +170,7 @@ async function guardarPrecio() {
   }
   else {
     // Crear
-    const response = await cotizacionStore.addPrecioPublico({
-      quotationId: props.quotationId,
-      ...result.data,
-    } as QuotationPublicPriceFormData);
+    const response = await cotizacionStore.addPrecioPublico(data);
 
     if ('error' in response) {
       toast.add({
@@ -244,7 +187,6 @@ async function guardarPrecio() {
     });
   }
 
-  resetForm();
   isFormModalOpen.value = false;
 }
 
@@ -495,84 +437,17 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
     <UModal
       v-model:open="isFormModalOpen"
       :title="editingPrecio ? 'Editar Precio' : 'Agregar Precio de Venta'"
-      :description="editingPrecio
-        ? 'Actualiza los detalles del precio'
-        : desdePlantilla
-          ? 'Revisa y ajusta los datos precargados desde el precio de referencia'
-          : 'Define un nuevo precio de venta para los viajeros'"
-      class="sm:max-w-xl"
+      :description="modalDescription"
+      class="sm:max-w-2xl"
     >
       <template #body>
-        <form class="space-y-4" @submit.prevent="guardarPrecio">
-          <!-- Tipo -->
-          <UFormField label="Tipo de Precio" required>
-            <UInput
-              v-model="priceTypeInput"
-              placeholder="Ej: Habitación Sencilla, Niños 4-10 años"
-            />
-          </UFormField>
-
-          <!-- Descripción -->
-          <UFormField label="Descripción" required>
-            <UInput
-              v-model="descriptionInput"
-              placeholder="Ej: En habitación para 1 persona"
-            />
-          </UFormField>
-
-          <!-- Precio por Persona -->
-          <UFormField label="Precio por Persona" required>
-            <UInput
-              v-model.number="formState.pricePerPerson"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder="Ej: 2550"
-            />
-          </UFormField>
-
-          <div class="grid grid-cols-2 gap-4">
-            <!-- Tipo Habitación (opcional) -->
-            <UFormField label="Tipo Habitación (opcional)">
-              <UInput
-                v-model="roomTypeInput"
-                placeholder="Ej: Sencilla, Doble"
-              />
-            </UFormField>
-
-            <!-- Grupo Etario (opcional) -->
-            <UFormField label="Grupo Etario (opcional)">
-              <UInput
-                v-model="ageGroupInput"
-                placeholder="Ej: Adultos, Niños"
-              />
-            </UFormField>
-          </div>
-
-          <!-- Notas -->
-          <UFormField label="Notas (opcional)">
-            <UTextarea
-              v-model="notesInput"
-              placeholder="Observaciones adicionales..."
-              :rows="2"
-            />
-          </UFormField>
-
-          <!-- Acciones -->
-          <div class="flex justify-end gap-3 pt-4">
-            <UButton
-              type="button"
-              variant="ghost"
-              color="neutral"
-              label="Cancelar"
-              @click="cerrarFormulario"
-            />
-            <UButton
-              type="submit"
-              :label="editingPrecio ? 'Actualizar' : 'Agregar Precio'"
-            />
-          </div>
-        </form>
+        <CotizacionPrecioPublicoForm
+          :quotation-id="quotationId"
+          :precio="editingPrecio"
+          :plantilla="plantilla"
+          @submit="guardarPrecio"
+          @cancel="cerrarFormulario"
+        />
       </template>
     </UModal>
   </UCard>

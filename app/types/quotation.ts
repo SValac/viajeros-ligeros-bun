@@ -164,6 +164,9 @@ export type QuotationPublicPriceFormData = Omit<QuotationPublicPrice, 'id' | 'cr
   id?: string;
 };
 
+// Valores con los que se precarga el formulario de precio público desde un precio de referencia
+export type QuotationPublicPriceTemplate = Partial<Omit<QuotationPublicPriceFormData, 'id' | 'quotationId'>>;
+
 export type QuotationFetchResult = {
   quotation: Quotation;
   providers: QuotationProvider[];
