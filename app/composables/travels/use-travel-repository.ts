@@ -321,8 +321,6 @@ export function useTravelRepository() {
       update.start_date = data.startDate;
     if (data.endDate !== undefined)
       update.end_date = data.endDate;
-    if (data.price !== undefined)
-      update.price = data.price;
     if (data.description !== undefined)
       update.description = data.description;
     if ('imageUrl' in data)

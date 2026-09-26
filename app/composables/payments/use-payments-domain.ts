@@ -33,8 +33,7 @@ export function getPaymentStatus(totalPaid: number, finalCost: number): PaymentS
  * Consolidates discount/surcharge calculation in a single place — both
  * `getTravelerPaymentSummary` and `addPayment` delegate here.
  * @param config - The traveler's account config; `undefined` if not yet configured
- * Travelers without a configured price cost 0: the travel's entry price is public
- * marketing info and never feeds payment calculations.
+ * Travelers without a configured price cost 0.
  * @param travelerPayments - All payments already made by this traveler for this travel
  * @returns Calculated financial breakdown including applied price, costs, balance and status
  */
