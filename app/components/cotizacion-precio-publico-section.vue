@@ -43,6 +43,7 @@ const hayDatos = computed(() => {
 // ============================================================================
 
 type EntradaGrupo = { roomType: string; costPerPerson: number };
+type PrecioReferencia = (typeof matrizPreciosReferencia.value)[number];
 
 // Map<`::${hotelName}`, localIndex>
 const seleccion = reactive(new Map<string, number>());
@@ -69,14 +70,18 @@ function gruposHotel(accommodation: Array<{ hotelName: string; roomType: string;
   return [...map.entries()];
 }
 
-function totalHospedajeSeleccionado(price: { maxOccupancy: number; breakdown: { accommodation: Array<{ hotelName: string; roomType: string; costPerPerson: number }> } }): number {
-  return gruposHotel(price.breakdown.accommodation).reduce((sum, [hotelName, tipos]) => {
+function hospedajeSeleccionado(price: PrecioReferencia): Array<EntradaGrupo & { hotelName: string }> {
+  return gruposHotel(price.breakdown.accommodation).map(([hotelName, tipos]) => {
     const idx = getSelectedLocalIndex(price.maxOccupancy, hotelName);
-    return sum + (tipos[idx] ?? tipos[0]!).costPerPerson;
-  }, 0);
+    return { hotelName, ...(tipos[idx] ?? tipos[0]!) };
+  });
 }
 
-function precioTotalSeleccionado(price: { maxOccupancy: number; breakdown: { seatPrice: number; accommodation: Array<{ hotelName: string; roomType: string; costPerPerson: number }> } }): number {
+function totalHospedajeSeleccionado(price: PrecioReferencia): number {
+  return hospedajeSeleccionado(price).reduce((sum, entrada) => sum + entrada.costPerPerson, 0);
+}
+
+function precioTotalSeleccionado(price: PrecioReferencia): number {
   return price.breakdown.seatPrice + totalHospedajeSeleccionado(price);
 }
 
@@ -116,6 +121,7 @@ const notesInput = useSanitizedModel(() => formState.notes ?? '', v => formState
 // Modal state
 const isFormModalOpen = shallowRef(false);
 const editingPrecio = ref<QuotationPublicPrice | null>(null);
+const desdePlantilla = shallowRef(false);
 
 // Reset formulario
 function resetForm() {
@@ -126,11 +132,45 @@ function resetForm() {
   formState.ageGroup = '';
   formState.notes = '';
   editingPrecio.value = null;
+  desdePlantilla.value = false;
 }
 
 // Abrir formulario para agregar
 function abrirFormulario() {
   resetForm();
+  isFormModalOpen.value = true;
+}
+
+// Los valores precargados no pasan por los proxies sanitizados, así que se limpian aquí
+// para que no fallen la validación al guardar (p. ej. el '+' de las camas combinadas).
+function toBusinessName(value: string, max: number): string {
+  return sanitizeBusinessName(value).replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+function etiquetaOcupacion(maxOccupancy: number): string {
+  return `Habitación para ${maxOccupancy} persona${maxOccupancy > 1 ? 's' : ''}`;
+}
+
+// Abrir formulario para agregar, precargado con un precio de referencia
+function abrirDesdePlantilla(price: PrecioReferencia) {
+  resetForm();
+  const hospedaje = hospedajeSeleccionado(price);
+  const hoteles = hospedaje.map(entrada => entrada.hotelName);
+  const tiposHabitacion = [...new Set(hospedaje.map(entrada => entrada.roomType.replaceAll(' + ', ' y ')))];
+  const desglose = [
+    `asiento ${formatCurrency(price.breakdown.seatPrice)}`,
+    ...hospedaje.map(entrada => `${entrada.hotelName} (${entrada.roomType}) ${formatCurrency(entrada.costPerPerson)}`),
+  ];
+
+  formState.priceType = toBusinessName(etiquetaOcupacion(price.maxOccupancy), 100);
+  formState.description = toBusinessName(
+    hoteles.length > 0 ? `Incluye asiento y hospedaje en ${hoteles.join(', ')}` : 'Incluye asiento',
+    200,
+  );
+  formState.pricePerPerson = Math.round(precioTotalSeleccionado(price) * 100) / 100;
+  formState.roomType = toBusinessName(tiposHabitacion.join(', '), 100);
+  formState.notes = sanitizeText(`Costo base: ${desglose.join(' + ')}`).slice(0, 500);
+  desdePlantilla.value = true;
   isFormModalOpen.value = true;
 }
 
@@ -308,7 +348,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                 <div class="flex items-center gap-2">
                   <span class="i-lucide-bed-double w-4 h-4 text-muted" />
                   <p class="font-semibold">
-                    Habitación para {{ price.maxOccupancy }} persona{{ price.maxOccupancy > 1 ? 's' : '' }}
+                    {{ etiquetaOcupacion(price.maxOccupancy) }}
                   </p>
                 </div>
                 <div class="text-right">
@@ -395,6 +435,16 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                   {{ formatCurrency(precioTotalSeleccionado(price)) }}
                 </span>
               </div>
+              <div v-if="!props.readonly" class="flex justify-end mt-3">
+                <UButton
+                  icon="i-lucide-copy-plus"
+                  size="xs"
+                  variant="soft"
+                  label="Usar como plantilla"
+                  class="w-full sm:w-auto justify-center"
+                  @click="abrirDesdePlantilla(price)"
+                />
+              </div>
             </template>
           </UCard>
         </div>
@@ -435,7 +485,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
         <div v-else class="bg-muted/10 rounded-lg p-6 text-center text-muted">
           <span class="i-lucide-inbox w-6 h-6 mx-auto mb-2 block opacity-50" />
           <p class="text-sm">
-            No hay precios de venta agregados. Use los precios de referencia anteriores como guía.
+            No hay precios de venta agregados. Use «Usar como plantilla» en un precio de referencia para empezar.
           </p>
         </div>
       </div>
@@ -445,7 +495,11 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
     <UModal
       v-model:open="isFormModalOpen"
       :title="editingPrecio ? 'Editar Precio' : 'Agregar Precio de Venta'"
-      :description="editingPrecio ? 'Actualiza los detalles del precio' : 'Define un nuevo precio de venta para los viajeros'"
+      :description="editingPrecio
+        ? 'Actualiza los detalles del precio'
+        : desdePlantilla
+          ? 'Revisa y ajusta los datos precargados desde el precio de referencia'
+          : 'Define un nuevo precio de venta para los viajeros'"
       class="sm:max-w-xl"
     >
       <template #body>
