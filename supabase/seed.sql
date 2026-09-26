@@ -473,7 +473,7 @@ on conflict (id) do nothing;
 -- TRAVELS
 -- ============================================================
 insert into public.travels (
-  id, owner_id, label, destination, start_date, end_date, price, description,
+  id, owner_id, label, destination, start_date, end_date, description,
   status, minimum_seats
 ) values
 (
@@ -483,7 +483,6 @@ insert into public.travels (
   'Cañón de Santa Elena, Chihuahua',
   '2026-07-10',
   '2026-07-14',
-  3800.00,
   'Aventura de 4 días por el cañón más profundo de América del Norte.',
   'pending',
   20
@@ -495,7 +494,6 @@ insert into public.travels (
   'Santuario de Mariposas Monarca, Michoacán',
   '2026-11-20',
   '2026-11-24',
-  4200.00,
   'Viaje a los bosques donde hibernan las mariposas monarca.',
   'published',
   25
