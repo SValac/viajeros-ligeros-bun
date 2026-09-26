@@ -5,7 +5,7 @@ import { computed, h, reactive, ref, shallowRef } from 'vue';
 
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
-import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
+import { sanitizeBusinessName } from '~/utils/form-validation';
 
 type Props = {
   quotationId: string;
@@ -122,17 +122,12 @@ function etiquetaOcupacion(maxOccupancy: number): string {
 function abrirDesdePlantilla(price: PrecioReferencia) {
   const hospedaje = hospedajeSeleccionado(price);
   const tiposHabitacion = [...new Set(hospedaje.map(entrada => entrada.roomType.replaceAll(' + ', ' y ')))];
-  const desglose = [
-    `asiento ${formatCurrency(price.breakdown.seatPrice)}`,
-    ...hospedaje.map(entrada => `${entrada.hotelName} (${entrada.roomType}) ${formatCurrency(entrada.costPerPerson)}`),
-  ];
 
   editingPrecio.value = null;
   plantilla.value = {
     priceType: toBusinessName(etiquetaOcupacion(price.maxOccupancy), 100),
     pricePerPerson: Math.round(precioTotalSeleccionado(price) * 100) / 100,
     roomType: toBusinessName(tiposHabitacion.join(', '), 100),
-    notes: sanitizeText(`Costo base: ${desglose.join(' + ')}`).slice(0, 500),
   };
   isFormModalOpen.value = true;
 }
