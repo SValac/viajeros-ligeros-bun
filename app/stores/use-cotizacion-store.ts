@@ -144,6 +144,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           hotelName: string;
           roomType: string;
           costPerPerson: number;
+          additionalDetails?: string;
         }>;
         totalAccommodation: number;
       };
@@ -162,6 +163,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         hotelName: string;
         roomType: string;
         costPerPerson: number;
+        additionalDetails?: string;
       }>> = new Map();
 
       for (const hospedaje of hospedajes) {
@@ -181,7 +183,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           if (!porOcupacion.has(ocupacion)) {
             porOcupacion.set(ocupacion, []);
           }
-          porOcupacion.get(ocupacion)!.push({ hotelName, roomType, costPerPerson });
+          porOcupacion.get(ocupacion)!.push({
+            hotelName,
+            roomType,
+            costPerPerson,
+            additionalDetails: roomTypeRecord?.additionalDetails,
+          });
         }
       }
 
