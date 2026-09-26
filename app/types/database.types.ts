@@ -1386,7 +1386,6 @@ export type Database = {
           label: string
           minimum_seats: number | null
           owner_id: string
-          price: number | null
           slug: string | null
           start_date: string
           status: Database["public"]["Enums"]["travel_status"]
@@ -1407,7 +1406,6 @@ export type Database = {
           label: string
           minimum_seats?: number | null
           owner_id: string
-          price?: number | null
           slug?: string | null
           start_date: string
           status?: Database["public"]["Enums"]["travel_status"]
@@ -1428,7 +1426,6 @@ export type Database = {
           label?: string
           minimum_seats?: number | null
           owner_id?: string
-          price?: number | null
           slug?: string | null
           start_date?: string
           status?: Database["public"]["Enums"]["travel_status"]
