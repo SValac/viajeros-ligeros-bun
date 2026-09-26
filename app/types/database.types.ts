@@ -1472,6 +1472,17 @@ export type Database = {
           tagline: string
         }[]
       }
+      get_travel_public_prices: {
+        Args: { p_travel_id: string }
+        Returns: {
+          age_group: string
+          description: string
+          id: string
+          price_per_person: number
+          price_type: string
+          room_type: string
+        }[]
+      }
       get_travel_seats: {
         Args: { p_travel_id: string }
         Returns: {
