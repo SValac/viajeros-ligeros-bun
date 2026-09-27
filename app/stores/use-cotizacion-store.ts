@@ -686,10 +686,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
   }
 
-  async function confirmarQuotation(
-    id: string,
-    travelStore: ReturnType<typeof useTravelsStore>,
-  ): Promise<{ success: boolean; error?: string }> {
+  /**
+   * Confirms a quotation, locking its providers, lodging and buses (payments stay open).
+   * It doesn't touch the travel's services: those are the public list shown on the web,
+   * edited on their own, while the quotation's providers are internal costs.
+   * @param id - UUID of the quotation to confirm
+   * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
+   */
+  async function confirmarQuotation(id: string): Promise<{ success: boolean; error?: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === id);
     if (!cotizacion)
       return { success: false, error: 'Cotización no encontrada' };
@@ -698,32 +702,29 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { success: false, error: 'Todos los proveedores deben estar confirmados' };
     }
 
-    loading.value = true;
-    error.value = null;
-    try {
-      const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === id);
-      const services = proveedores.map(p => ({
-        id: `serv-cotizacion-${p.id}`,
-        name: p.serviceDescription,
-        description: p.remarks,
-        included: true,
-        providerId: p.providerId,
-      }));
+    const updated = await updateQuotation(id, { status: 'confirmed' });
+    if (!updated)
+      return { success: false, error: error.value ?? 'No se pudo confirmar la cotización' };
+    return { success: true };
+  }
 
-      const updated = await travelStore.updateTravel(cotizacion.travelId, { services });
-      if (!updated)
-        return { success: false, error: 'No se pudo actualizar el viaje' };
-
-      await updateQuotation(id, { status: 'confirmed' });
+  /**
+   * Sends a confirmed quotation back to draft so its providers, lodging and buses can be
+   * edited again. Payments are unaffected (they're allowed in both states).
+   * @param id - UUID of the quotation to reopen
+   * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
+   */
+  async function reabrirQuotation(id: string): Promise<{ success: boolean; error?: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === id);
+    if (!cotizacion)
+      return { success: false, error: 'Cotización no encontrada' };
+    if (cotizacion.status !== 'confirmed')
       return { success: true };
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { success: false, error: error.value };
-    }
-    finally {
-      loading.value = false;
-    }
+
+    const updated = await updateQuotation(id, { status: 'draft' });
+    if (!updated)
+      return { success: false, error: error.value ?? 'No se pudo reabrir la cotización' };
+    return { success: true };
   }
 
   async function addProveedorQuotation(data: QuotationProviderFormData): Promise<QuotationProvider | { error: string }> {
@@ -842,10 +843,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!proveedor)
       return { error: 'Proveedor no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
-    if (cotizacion?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
     if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
@@ -898,11 +895,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function deleteProviderPayment(id: string): Promise<void> {
     const pago = pagosProveedor.value.find(p => p.id === id);
     if (!pago)
-      return;
-
-    const proveedor = proveedoresQuotation.value.find(p => p.id === pago.quotationProviderId);
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor?.quotationId);
-    if (cotizacion?.status === 'confirmed')
       return;
 
     loading.value = true;
@@ -1052,10 +1044,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!hospedaje)
       return { error: 'Hospedaje no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
-    if (cotizacion?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
     if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
@@ -1107,11 +1095,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function deletePagoHospedaje(id: string): Promise<void> {
     const pago = pagosHospedaje.value.find(p => p.id === id);
     if (!pago)
-      return;
-
-    const hospedaje = hospedajesQuotation.value.find(h => h.id === pago.quotationAccommodationId);
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje?.quotationId);
-    if (cotizacion?.status === 'confirmed')
       return;
 
     loading.value = true;
@@ -1336,10 +1319,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!bus)
       return { error: 'Autobús no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
-    if (cotizacion?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
     if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
@@ -1461,6 +1440,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     createQuotation,
     updateQuotation,
     confirmarQuotation,
+    reabrirQuotation,
     addProveedorQuotation,
     updateProveedorQuotation,
     deleteProveedorQuotation,

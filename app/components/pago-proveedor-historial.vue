@@ -3,11 +3,10 @@ import type { ProviderPayment, ProviderPaymentFormData } from '~/types/quotation
 
 type Props = {
   quotationProviderId: string;
-  readonly?: boolean;
   proveedorNombre?: string;
 };
 
-const { quotationProviderId, readonly = false, proveedorNombre } = defineProps<Props>();
+const { quotationProviderId, proveedorNombre } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
@@ -98,7 +97,6 @@ async function confirmDelete() {
         </span>
       </h3>
       <UButton
-        v-if="!readonly"
         icon="i-lucide-plus"
         size="sm"
         label="Registrar pago"
@@ -127,7 +125,7 @@ async function confirmDelete() {
               <th class="pb-2 pr-4 font-medium">
                 Notas
               </th>
-              <th v-if="!readonly" class="pb-2 font-medium">
+              <th class="pb-2 font-medium">
                 Acciones
               </th>
             </tr>
@@ -158,7 +156,7 @@ async function confirmDelete() {
               <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
                 {{ pago.notes || '—' }}
               </td>
-              <td v-if="!readonly" class="py-2">
+              <td class="py-2">
                 <div class="flex items-center gap-1">
                   <UButton
                     icon="i-lucide-pencil"
@@ -189,7 +187,6 @@ async function confirmDelete() {
         No hay pagos registrados
       </p>
       <UButton
-        v-if="!readonly"
         size="xs"
         variant="ghost"
         label="Registrar primer pago"
