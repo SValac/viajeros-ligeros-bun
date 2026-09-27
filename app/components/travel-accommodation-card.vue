@@ -6,7 +6,10 @@ type Props = {
   accommodation: TravelAccommodation;
   occupants: Traveler[];
   providerName?: string;
-  roomTypeName?: string;
+  /** Room type's own description (e.g. "Suite junior con jacuzzi"), what tells same-size rooms apart. */
+  roomTypeDetails?: string;
+  /** Room type's beds, already formatted (e.g. "1 cama king"). */
+  roomTypeBeds?: string;
 };
 
 type Emits = {
@@ -89,9 +92,14 @@ function toggleEditing() {
       </div>
 
       <!-- Room type info -->
-      <p v-if="roomTypeName" class="text-xs text-muted">
-        {{ roomTypeName }}
-      </p>
+      <div v-if="roomTypeDetails || roomTypeBeds">
+        <p v-if="roomTypeDetails" class="text-sm font-medium">
+          {{ roomTypeDetails }}
+        </p>
+        <p v-if="roomTypeBeds" class="text-xs text-muted">
+          {{ roomTypeBeds }}
+        </p>
+      </div>
 
       <!-- Occupants list -->
       <div class="space-y-1">

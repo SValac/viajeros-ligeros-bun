@@ -69,17 +69,25 @@ const unassignedTravelers = computed(() =>
   ).length,
 );
 
-function getRoomTypeName(hotelRoomTypeId?: string): string | undefined {
-  if (!hotelRoomTypeId)
-    return undefined;
+type RoomTypeInfo = { details?: string; beds?: string };
+
+// Rooms of the same size can be different types (e.g. "doble estándar" vs "suite junior"),
+// so each card and the add-traveler modal show the type's own description, not just beds.
+const roomTypeInfoById = computed(() => {
+  const map = new Map<string, RoomTypeInfo>();
   for (const data of hotelRoomStore.hotelRoomsData) {
-    const rt = data.roomTypes.find(r => r.id === hotelRoomTypeId);
-    if (rt) {
-      const bedsDesc = rt.beds.map(b => `${b.count} ${b.size}`).join(', ');
-      return bedsDesc || undefined;
+    for (const rt of data.roomTypes) {
+      map.set(rt.id, {
+        details: rt.additionalDetails?.trim() || undefined,
+        beds: formatBedConfiguration(rt.beds) || undefined,
+      });
     }
   }
-  return undefined;
+  return map;
+});
+
+function getRoomTypeInfo(hotelRoomTypeId?: string): RoomTypeInfo {
+  return (hotelRoomTypeId && roomTypeInfoById.value.get(hotelRoomTypeId)) || {};
 }
 
 type OccupancyGroup = {
@@ -129,6 +137,12 @@ watch(tabs, (availableTabs) => {
 
 // Modal for adding traveler to a room
 const addingToAccommodation = shallowRef<TravelAccommodation | null>(null);
+
+// Shown in the modal header, to compare with each traveler's paid room below.
+const addingRoomTypeLabel = computed(() => {
+  const { details, beds } = getRoomTypeInfo(addingToAccommodation.value?.hotelRoomTypeId);
+  return [details, beds].filter(Boolean).join(' · ') || undefined;
+});
 const isAddModalOpen = shallowRef(false);
 
 // The public price each traveler paid says which room type (and hotels) they belong in.
@@ -360,7 +374,8 @@ async function updateAccommodation(
                   :accommodation="acc"
                   :occupants="travelerStore.getTravelersByAccommodation(acc.id)"
                   :provider-name="item.group.providerName"
-                  :room-type-name="getRoomTypeName(acc.hotelRoomTypeId)"
+                  :room-type-details="getRoomTypeInfo(acc.hotelRoomTypeId).details"
+                  :room-type-beds="getRoomTypeInfo(acc.hotelRoomTypeId).beds"
                   @add-traveler="openAddTravelerModal"
                   @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
                   @update="updateAccommodation"
@@ -373,7 +388,11 @@ async function updateAccommodation(
     </div>
 
     <!-- Add Traveler Modal -->
-    <UModal v-model:open="isAddModalOpen" title="Agregar viajero a la habitación">
+    <UModal
+      v-model:open="isAddModalOpen"
+      title="Agregar viajero a la habitación"
+      :description="addingRoomTypeLabel"
+    >
       <template #body>
         <div class="space-y-2">
           <p v-if="availableTravelersForRoom.length === 0" class="text-sm text-muted text-center py-4">
