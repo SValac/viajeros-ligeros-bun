@@ -2,6 +2,7 @@ import type { Tables } from '~/types/database.types';
 import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStatus, TravelUpdateData } from '~/types/travel';
 
 import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
+import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 import { useTravelRepository } from '~/composables/travels/use-travel-repository';
 
 type TravelStats = {
@@ -15,6 +16,7 @@ type TravelStats = {
 
 export const useTravelsStore = defineStore('useTravelsStore', () => {
   const repository = useTravelRepository();
+  const mediaRepository = useTravelMediaRepository();
 
   // State
   const travels = ref<Travel[]>([]);
@@ -219,12 +221,15 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      // Coordinators can read the travels they're assigned to but not delete them.
+      // Checked up front: coordinators can delete gallery files, so without it a
+      // coordinator would wipe the files and then fail to delete the row.
       if (!await repository.isOwnedByCurrentUser(id)) {
         error.value = 'Solo el dueño del viaje puede eliminarlo';
         return false;
       }
 
+      // Files go first: once the row is gone, the bucket's RLS no longer lets us remove them.
+      await mediaRepository.removeAllForTravel(id);
       await repository.removeTravel(id);
     }
     catch (e) {
