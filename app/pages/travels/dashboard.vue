@@ -74,7 +74,14 @@ async function handleDelete(travel: Travel) {
         description: `${travel.label} se eliminó correctamente`,
         color: 'warning',
       });
+      return;
     }
+
+    toast.add({
+      title: 'No se pudo eliminar el viaje',
+      description: travelsStore.error ?? 'Intentá de nuevo',
+      color: 'error',
+    });
   }
 }
 
