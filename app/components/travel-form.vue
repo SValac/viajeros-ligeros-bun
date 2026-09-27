@@ -157,10 +157,6 @@ watch(dateRange, (range) => {
   state.value.endDate = range.end?.toString() ?? '';
 });
 
-// Estado para itinerario y servicios (separados del schema Zod)
-const itinerario = ref(travel?.itinerary || []);
-const servicios = ref(travel?.services || []);
-
 // Publicar exige perfil de agencia completo (lo hace cumplir también un trigger en la base).
 // Un viaje que ya está publicado conserva la opción: el trigger solo revisa la transición.
 const agencyProfileStore = useAgencyProfileStore();
@@ -186,8 +182,10 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     const formData: TravelFormData = {
       ...event.data,
       imageUrl: pendingBannerFile.value ? undefined : (existingBannerUrl.value || undefined),
-      itinerary: itinerario.value,
-      services: servicios.value,
+      // Itinerary and services are edited in their own tabs; the edit page leaves them out
+      // of the update so this copy never overwrites them.
+      itinerary: travel?.itinerary ?? [],
+      services: travel?.services ?? [],
       buses: travel?.buses ?? [],
     };
 
@@ -406,9 +404,18 @@ function onCancel() {
               </ULink>.
             </template>
           </UFormField>
+        </div>
+      </UCard>
+    </section>
 
+    <section id="sitio-publico">
+      <UCard>
+        <template #header>
+          <h2>Sitio público y contenido</h2>
+        </template>
+        <div class="flex flex-col gap-4">
           <!-- Sitio público -->
-          <div class="flex flex-col gap-4 border-t border-default pt-4">
+          <div class="flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-globe" class="w-4 h-4 text-muted" />
               <h3 class="text-sm font-semibold">
@@ -514,23 +521,6 @@ function onCancel() {
       </UCard>
     </section>
 
-    <!-- Itinerario del Viaje -->
-    <section id="itinerary">
-      <UCard>
-        <template #header>
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-list-check" class="w-5 h-5 text-muted" />
-            <h2>Itinerario</h2>
-          </div>
-        </template>
-        <TravelActivityList
-          v-model="itinerario"
-          :start-date="state.startDate"
-          :end-date="state.endDate"
-          :travel-id="travel?.id"
-        />
-      </UCard>
-    </section>
     <!-- Botones de acción -->
     <div class="flex col-span-1 xl:col-span-2 items-center justify-center gap-3 pt-4">
       <UButton
