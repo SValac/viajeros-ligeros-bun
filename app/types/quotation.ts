@@ -166,6 +166,11 @@ export type QuotationPublicPrice = {
   roomType?: string;
   ageGroup?: string;
   notes?: string;
+  /**
+   * Room occupancy the price is for. Set from the reference price when created from a
+   * template (users can't edit it); unset for hand-written prices. The web groups by it.
+   */
+  maxOccupancy?: number;
   createdAt: string;
   updatedAt: string;
 };
