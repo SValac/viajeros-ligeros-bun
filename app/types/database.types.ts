@@ -759,6 +759,7 @@ export type Database = {
           created_at: string
           description: string
           id: string
+          max_occupancy: number | null
           notes: string | null
           price_per_person: number
           price_type: string
@@ -771,6 +772,7 @@ export type Database = {
           created_at?: string
           description: string
           id?: string
+          max_occupancy?: number | null
           notes?: string | null
           price_per_person: number
           price_type: string
@@ -783,6 +785,7 @@ export type Database = {
           created_at?: string
           description?: string
           id?: string
+          max_occupancy?: number | null
           notes?: string | null
           price_per_person?: number
           price_type?: string
@@ -1505,6 +1508,7 @@ export type Database = {
           age_group: string
           description: string
           id: string
+          max_occupancy: number
           price_per_person: number
           price_type: string
           room_type: string

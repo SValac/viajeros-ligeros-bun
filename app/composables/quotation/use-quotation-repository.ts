@@ -356,6 +356,8 @@ export function useQuotationRepository() {
       update.age_group = data.ageGroup ?? null;
     if (data.notes !== undefined)
       update.notes = data.notes ?? null;
+    if (data.maxOccupancy !== undefined)
+      update.max_occupancy = data.maxOccupancy;
 
     const { data: row, error } = await supabase
       .from('quotation_public_prices')

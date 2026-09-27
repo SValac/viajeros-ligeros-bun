@@ -659,6 +659,7 @@ export function mapQuotationPublicPriceRowToDomain(row: Tables<'quotation_public
     roomType: row.room_type ?? undefined,
     ageGroup: row.age_group ?? undefined,
     notes: row.notes ?? undefined,
+    maxOccupancy: row.max_occupancy ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -673,6 +674,7 @@ export function mapQuotationPublicPriceToInsert(data: QuotationPublicPriceFormDa
     room_type: data.roomType ?? null,
     age_group: data.ageGroup ?? null,
     notes: data.notes ?? null,
+    max_occupancy: data.maxOccupancy ?? null,
   };
 }
 
