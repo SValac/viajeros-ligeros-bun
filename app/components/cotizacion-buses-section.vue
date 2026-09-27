@@ -96,26 +96,27 @@ async function confirmDelete() {
 }
 
 function getBusActions(bus: QuotationBus) {
-  const readActions = [
+  // Payments go on after the quotation is confirmed; only its structure is locked.
+  const paymentActions = [
     {
       label: 'Ver historial de pagos',
       icon: 'i-lucide-receipt',
       onSelect: () => openHistorial(bus),
     },
+    {
+      label: 'Registrar pago',
+      icon: 'i-lucide-banknote',
+      disabled: cotizacionStore.getSaldoPendienteBus(bus.id) <= 0,
+      onSelect: () => openHistorial(bus),
+    },
   ];
 
   if (readonly)
-    return [readActions];
+    return [paymentActions];
 
   return [
-    readActions,
+    paymentActions,
     [
-      {
-        label: 'Registrar pago',
-        icon: 'i-lucide-banknote',
-        disabled: cotizacionStore.getSaldoPendienteBus(bus.id) <= 0,
-        onSelect: () => openHistorial(bus),
-      },
       {
         label: 'Editar detalles',
         icon: 'i-lucide-pencil',
@@ -324,7 +325,6 @@ function getBusActions(bus: QuotationBus) {
           v-if="selectedBus"
           :quotation-bus-id="selectedBus.id"
           :bus-label="selectedBus.unitNumber"
-          :readonly="readonly"
         />
       </div>
     </template>

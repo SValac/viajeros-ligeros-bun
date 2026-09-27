@@ -842,10 +842,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!proveedor)
       return { error: 'Proveedor no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
-    if (cotizacion?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
     if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
@@ -898,11 +894,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function deleteProviderPayment(id: string): Promise<void> {
     const pago = pagosProveedor.value.find(p => p.id === id);
     if (!pago)
-      return;
-
-    const proveedor = proveedoresQuotation.value.find(p => p.id === pago.quotationProviderId);
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor?.quotationId);
-    if (cotizacion?.status === 'confirmed')
       return;
 
     loading.value = true;
@@ -1052,10 +1043,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!hospedaje)
       return { error: 'Hospedaje no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
-    if (cotizacion?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
     if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
 
@@ -1107,11 +1094,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function deletePagoHospedaje(id: string): Promise<void> {
     const pago = pagosHospedaje.value.find(p => p.id === id);
     if (!pago)
-      return;
-
-    const hospedaje = hospedajesQuotation.value.find(h => h.id === pago.quotationAccommodationId);
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje?.quotationId);
-    if (cotizacion?.status === 'confirmed')
       return;
 
     loading.value = true;
@@ -1335,10 +1317,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     const bus = busesApartados.value.find(b => b.id === data.quotationBusId);
     if (!bus)
       return { error: 'Autobús no encontrado' };
-
-    const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
-    if (cotizacion?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
 
     if (data.amount <= 0)
       return { error: 'El monto debe ser mayor a 0' };
