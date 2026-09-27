@@ -27,6 +27,50 @@ const preciosPublicos = computed(() => {
   return cotizacionStore.getPreciosPublicosByQuotation(props.quotationId);
 });
 
+// ============================================================================
+// Visibilidad del tipo de habitación y descripción en la web
+// ============================================================================
+
+const cotizacion = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId));
+
+type PublicVisibilityField = 'showPublicRoomType' | 'showPublicDescription';
+
+const PUBLIC_VISIBILITY_TOASTS: Record<PublicVisibilityField, { shown: string; hidden: string }> = {
+  showPublicRoomType: {
+    shown: 'Tipo de habitación visible en la web',
+    hidden: 'Tipo de habitación oculto en la web',
+  },
+  showPublicDescription: {
+    shown: 'Descripción visible en la web',
+    hidden: 'Descripción oculta en la web',
+  },
+};
+
+const savingVisibilityField = shallowRef<PublicVisibilityField | null>(null);
+
+// Display preferences for the public web, not part of the quotation's structure, so they
+// stay editable once the quotation is confirmed. The DB hides the fields in the RPC.
+async function setPublicVisibility(field: PublicVisibilityField, value: boolean) {
+  savingVisibilityField.value = field;
+  const updated = await cotizacionStore.updateQuotation(props.quotationId, { [field]: value });
+  savingVisibilityField.value = null;
+
+  if (!updated) {
+    toast.add({
+      title: 'No se pudo guardar',
+      description: cotizacionStore.error ?? 'Intenta de nuevo',
+      color: 'error',
+    });
+    return;
+  }
+
+  toast.add({
+    title: value ? PUBLIC_VISIBILITY_TOASTS[field].shown : PUBLIC_VISIBILITY_TOASTS[field].hidden,
+    description: 'Aplica a todos los precios de venta del viaje.',
+    color: 'success',
+  });
+}
+
 // Helper para formatear moneda
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
@@ -432,6 +476,25 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
             size="xs"
             label="Agregar Precio"
             @click="abrirFormulario"
+          />
+        </div>
+
+        <div class="flex flex-col gap-3 sm:flex-row sm:gap-8">
+          <USwitch
+            :model-value="cotizacion?.showPublicRoomType ?? true"
+            :loading="savingVisibilityField === 'showPublicRoomType'"
+            :disabled="savingVisibilityField !== null"
+            label="Mostrar tipo de habitación en la web"
+            description="Las camas de cada precio (p. ej. 1 cama king)."
+            @update:model-value="value => setPublicVisibility('showPublicRoomType', value)"
+          />
+          <USwitch
+            :model-value="cotizacion?.showPublicDescription ?? true"
+            :loading="savingVisibilityField === 'showPublicDescription'"
+            :disabled="savingVisibilityField !== null"
+            label="Mostrar descripción en la web"
+            description="El detalle de las habitaciones de cada precio."
+            @update:model-value="value => setPublicVisibility('showPublicDescription', value)"
           />
         </div>
 

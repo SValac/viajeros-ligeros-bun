@@ -140,6 +140,10 @@ export function useQuotationRepository() {
       update.status = data.status;
     if (data.notes !== undefined)
       update.notes = data.notes ?? null;
+    if (data.showPublicRoomType !== undefined)
+      update.show_public_room_type = data.showPublicRoomType;
+    if (data.showPublicDescription !== undefined)
+      update.show_public_description = data.showPublicDescription;
 
     const { data: row, error: err } = await supabase
       .from('quotations')
