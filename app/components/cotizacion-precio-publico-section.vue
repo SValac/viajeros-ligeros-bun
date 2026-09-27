@@ -41,7 +41,7 @@ const hayDatos = computed(() => {
 // Selección de tipo de habitación por hotel
 // ============================================================================
 
-type EntradaGrupo = { roomType: string; costPerPerson: number; additionalDetails?: string };
+type EntradaGrupo = { roomType: string; nightCount: number; costPerPerson: number; additionalDetails?: string };
 type PrecioReferencia = (typeof matrizPreciosReferencia.value)[number];
 
 // Map<`${maxOccupancy}::${hotelName}`, localIndex>
@@ -66,6 +66,7 @@ function gruposHotel(accommodation: PrecioReferencia['breakdown']['accommodation
       map.set(entry.hotelName, []);
     map.get(entry.hotelName)!.push({
       roomType: entry.roomType,
+      nightCount: entry.nightCount,
       costPerPerson: entry.costPerPerson,
       additionalDetails: entry.additionalDetails,
     });
@@ -120,6 +121,10 @@ function toBusinessName(value: string, max: number): string {
 
 function etiquetaOcupacion(maxOccupancy: number): string {
   return `Habitación para ${maxOccupancy} persona${maxOccupancy > 1 ? 's' : ''}`;
+}
+
+function etiquetaNoches(nightCount: number): string {
+  return `${nightCount} noche${nightCount !== 1 ? 's' : ''}`;
 }
 
 // "Detalles adicionales" de los tipos de habitación seleccionados; con varios hoteles, uno por línea con su nombre
@@ -337,7 +342,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                     <div class="flex justify-between items-center pl-2">
                       <span class="text-muted">
                         {{ hotelName }}
-                        <span class="text-xs opacity-60">· {{ tipos[0]!.roomType }}</span>
+                        <span class="text-xs opacity-60">· {{ tipos[0]!.roomType }} · {{ etiquetaNoches(tipos[0]!.nightCount) }}</span>
                       </span>
                       <span class="font-medium">{{ formatCurrency(tipos[0]!.costPerPerson) }}</span>
                     </div>
@@ -357,7 +362,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                       />
                       <span class="flex-1 text-muted">
                         {{ hotelName }}
-                        <span class="text-xs opacity-60">· {{ tipo.roomType }}</span>
+                        <span class="text-xs opacity-60">· {{ tipo.roomType }} · {{ etiquetaNoches(tipo.nightCount) }}</span>
                       </span>
                       <span
                         class="font-medium"
