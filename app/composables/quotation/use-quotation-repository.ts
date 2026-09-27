@@ -664,11 +664,14 @@ export function useQuotationRepository() {
   }
 
   async function getOccupiedAccommodationIds(travelId: string): Promise<Set<string>> {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('traveler_room_assignments')
       .select('travel_accommodation_id')
       .eq('travel_id', travelId);
-    return new Set<string>((data ?? []).map(r => r.travel_accommodation_id));
+    // Treating a failed read as "no occupied rooms" would let the reconcile delete occupied ones.
+    if (error)
+      throw error;
+    return new Set<string>(data.map(r => r.travel_accommodation_id));
   }
 
   async function deleteUnoccupiedAccommodations(ids: string[]): Promise<void> {
