@@ -3,48 +3,39 @@ import type { TravelFormData } from '~/types/travel';
 
 import { getGalleryStoragePath } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
+import { useTravelRoute } from '~/composables/travels/use-travel-route';
 
-const route = useRoute();
+// General data only (name, dates, coordinators, status, public site, banner, notes). The
+// itinerary, services and gallery are edited in their own tabs. The "not found" redirect
+// lives in the parent page (app/pages/travels/[id].vue).
+definePageMeta({
+  name: 'travel-edit',
+});
+
 const router = useRouter();
 const travelsStore = useTravelsStore();
 const toast = useToast();
 const { uploadBanner, removeFile } = useTravelMediaRepository();
 
-// Obtener el ID del viaje desde la ruta
-const travelId = route.params.id as string;
+const { travelId, travel } = useTravelRoute();
 
-// Obtener el viaje del store
-const travel = computed(() => travelsStore.getTravelById(travelId));
+function goToSummary() {
+  router.push({ name: 'travel-detail', params: { id: travelId.value } });
+}
 
-// Si el viaje no existe, redirigir al dashboard
-onMounted(() => {
-  if (!travel.value) {
-    toast.add({
-      title: 'Viaje no encontrado',
-      description: 'El viaje que intentas editar no existe',
-      color: 'error',
-      icon: 'i-lucide-alert-circle',
-    });
-    router.push('/travels/dashboard');
-  }
-});
-
-// Handlers
 async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   const previousBannerUrl = travel.value?.imageUrl;
 
   if (bannerFile) {
-    data.imageUrl = await uploadBanner(travelId, bannerFile);
+    data.imageUrl = await uploadBanner(travelId.value, bannerFile);
   }
 
-  // travel-form.vue has no UI to edit buses — it only carries the travel's
-  // current list forward to satisfy the TravelFormData type. Forwarding it
-  // here would make updateTravel() replace every travel_buses row (new ids)
-  // on every unrelated edit, which unassigns each traveler's bus/seat via
-  // the ON DELETE SET NULL on travelers.travel_bus_id. Buses are edited
-  // exclusively through travel-buses-section.vue's updateTravelBus().
-  const { buses: _buses, ...updateData } = data;
-  const success = await travelsStore.updateTravel(travelId, updateData);
+  // The form carries buses, itinerary and services forward only to satisfy the TravelFormData
+  // type; each has its own editor. Forwarding them would make updateTravel() replace those
+  // lists with the copy the form had when it opened. For buses that also unassigns every
+  // traveler's bus/seat (ON DELETE SET NULL on travelers.travel_bus_id).
+  const { buses: _buses, itinerary: _itinerary, services: _services, ...updateData } = data;
+  const success = await travelsStore.updateTravel(travelId.value, updateData);
 
   // Remove the banner file the travel no longer points to: the previous one if it was
   // replaced or removed, or the new upload if the update failed. A failure here is not an
@@ -66,9 +57,7 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
       color: 'success',
       icon: 'i-lucide-check-circle',
     });
-
-    // Navegar de vuelta al dashboard
-    // router.push('/travels/dashboard');
+    goToSummary();
   }
   else {
     toast.add({
@@ -79,71 +68,13 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
     });
   }
 }
-
-function handleCancel() {
-  router.push('/travels/dashboard');
-}
 </script>
 
 <template>
-  <div
+  <TravelForm
     v-if="travel"
-    class="mx-auto p-6"
-  >
-    <!-- Header -->
-    <div class="mb-6">
-      <div class="flex items-center gap-3 mb-2">
-        <UButton
-          icon="i-lucide-arrow-left"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          to="/travels/dashboard"
-        />
-        <h1 class="text-3xl font-bold">
-          Editar Viaje
-        </h1>
-      </div>
-      <p class="text-muted text-sm">
-        Nombre: {{ travel.label }}
-      </p>
-    </div>
-
-    <!-- Row 1: Formulario + Servicios -->
-    <section id="form" class="mb-6">
-      <TravelForm
-        :travel="travel"
-        @submit="handleSubmit"
-        @cancel="handleCancel"
-      />
-    </section>
-    <section id="services" class="mb-4">
-      <UCard>
-        <template #header>
-          <div class="flex items-center gap-2">
-            <span class="i-lucide-package w-5 h-5 text-muted" />
-            <h2 class="font-semibold text-lg">
-              Servicios del viaje
-            </h2>
-          </div>
-        </template>
-        <TravelServicesEditor :travel-id="travelId" />
-      </UCard>
-    </section>
-  </div>
-
-  <!-- Loading state mientras se verifica el viaje -->
-  <div
-    v-else
-    class="container mx-auto p-6 max-w-4xl"
-  >
-    <div class="flex items-center justify-center py-12">
-      <div class="text-center">
-        <div class="i-lucide-loader-circle w-8 h-8 mx-auto mb-4 animate-spin" />
-        <p class="text-muted">
-          Cargando viaje...
-        </p>
-      </div>
-    </div>
-  </div>
+    :travel="travel"
+    @submit="handleSubmit"
+    @cancel="goToSummary"
+  />
 </template>
