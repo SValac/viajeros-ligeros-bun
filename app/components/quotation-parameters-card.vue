@@ -14,14 +14,26 @@ const toast = useToast();
 
 const editandoParametros = shallowRef(false);
 
+// Reference for the manual total: the physical seats of the quotation's buses. The total can be
+// lower (e.g. seats kept for coordinators), so it isn't filled automatically.
+const asientosAutobuses = computed(() =>
+  cotizacionStore.getBusesByQuotation(quotation.id).reduce((sum, bus) => sum + bus.capacity, 0),
+);
+const referenciaAutobuses = computed(() => {
+  const n = cotizacionStore.getBusesByQuotation(quotation.id).length;
+  if (n === 0)
+    return 'Aún no hay autobuses en la cotización';
+  return `Autobuses: ${asientosAutobuses.value} asientos (${n} unidad${n === 1 ? '' : 'es'})`;
+});
+
 const paramsState = reactive({
-  busCapacity: quotation.busCapacity,
+  totalSeats: quotation.totalSeats,
   minimumSeatTarget: quotation.minimumSeatTarget,
   notes: quotation.notes ?? '',
 });
 
 function openEditarParametros() {
-  paramsState.busCapacity = quotation.busCapacity;
+  paramsState.totalSeats = quotation.totalSeats;
   paramsState.minimumSeatTarget = quotation.minimumSeatTarget;
   paramsState.notes = quotation.notes ?? '';
   editandoParametros.value = true;
@@ -36,7 +48,7 @@ const paramsNotesInput = useSanitizedModel(() => paramsState.notes ?? '', v => p
 
 async function guardarParametros() {
   await cotizacionStore.updateQuotation(quotation.id, {
-    busCapacity: paramsState.busCapacity,
+    totalSeats: paramsState.totalSeats,
     minimumSeatTarget: paramsState.minimumSeatTarget,
     notes: paramsState.notes,
   });
@@ -68,15 +80,18 @@ async function guardarParametros() {
     <div v-if="!editandoParametros" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <p class="text-xs text-muted mb-1">
-          Capacidad del Autobús
+          Capacidad total de asientos
         </p>
         <p class="font-medium">
-          {{ quotation.busCapacity }}
+          {{ quotation.totalSeats }}
+        </p>
+        <p class="text-xs text-muted">
+          {{ referenciaAutobuses }}
         </p>
       </div>
       <div>
         <p class="text-xs text-muted mb-1">
-          Asiento Mínimo Objetivo
+          Meta mínima de asientos
         </p>
         <p class="font-medium">
           {{ quotation.minimumSeatTarget }}
@@ -94,14 +109,17 @@ async function guardarParametros() {
 
     <div v-else class="space-y-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <UFormField label="Capacidad del Autobús">
+        <UFormField
+          label="Capacidad total de asientos"
+          :help="`Asientos a la venta entre todos los autobuses. ${referenciaAutobuses}.`"
+        >
           <UInput
-            v-model.number="paramsState.busCapacity"
+            v-model.number="paramsState.totalSeats"
             type="number"
             class="w-full"
           />
         </UFormField>
-        <UFormField label="Asiento Mínimo Objetivo">
+        <UFormField label="Meta mínima de asientos">
           <UInput
             v-model.number="paramsState.minimumSeatTarget"
             type="number"

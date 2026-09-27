@@ -111,7 +111,7 @@ function formatCurrency(amount: number): string {
           </span>
           <span class="text-xs text-muted">
             Reparto total: <span class="font-medium">{{ formatCurrency(costoCapacidadConBuses) }}</span>
-            ÷ {{ cotizacion?.busCapacity ?? 0 }} asientos
+            ÷ {{ cotizacion?.totalSeats ?? 0 }} asientos
           </span>
           <span class="text-xs text-muted italic">
             Hospedaje no incluido
@@ -125,7 +125,7 @@ function formatCurrency(amount: number): string {
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
           <span class="i-lucide-target w-4 h-4 text-warning" />
-          Asiento Mínimo Objetivo
+          Meta mínima de asientos
         </p>
         <p class="text-2xl font-bold text-warning">
           {{ cotizacion?.minimumSeatTarget ?? 0 }}
@@ -133,7 +133,7 @@ function formatCurrency(amount: number): string {
         <p v-if="asientoConGanancia === 0" class="text-xs text-muted">
           Sin precio por asiento todavía
         </p>
-        <p v-else-if="asientoConGanancia > (cotizacion?.busCapacity ?? 0)" class="text-xs text-error">
+        <p v-else-if="asientoConGanancia > (cotizacion?.totalSeats ?? 0)" class="text-xs text-error">
           Sin ganancia aun con el autobús lleno
         </p>
         <p v-else class="text-xs text-muted">
@@ -153,7 +153,7 @@ function formatCurrency(amount: number): string {
           {{ formatCurrency(gananciaProyectada) }}
         </p>
         <p class="text-xs text-muted pt-1">
-          ({{ cotizacion?.busCapacity ?? 0 }} asientos × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}) − costo total
+          ({{ cotizacion?.totalSeats ?? 0 }} asientos × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}) − costo total
           <span class="block italic">Hospedaje no incluido</span>
         </p>
       </div>

@@ -98,7 +98,7 @@ async function handleCrearCotizacion() {
   await cotizacionStore.createQuotation({
     travelId: travelId.value,
     seatPrice: 0,
-    busCapacity: 0,
+    totalSeats: 0,
     minimumSeatTarget: result.data.minimumSeatTarget ?? 0,
     status: 'draft',
     notes: result.data.notes,
@@ -194,7 +194,7 @@ function handleCotizacionConfirmada() {
           class="space-y-4"
           @submit="handleCrearCotizacion"
         >
-          <UFormField label="Asiento Mínimo Objetivo" name="minimumSeatTarget">
+          <UFormField label="Meta mínima de asientos" name="minimumSeatTarget">
             <UInput
               v-model.number="crearState.minimumSeatTarget"
               type="number"

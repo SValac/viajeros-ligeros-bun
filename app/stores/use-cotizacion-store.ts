@@ -272,10 +272,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getGananciaProyectada = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-      if (!cotizacion || cotizacion.busCapacity === 0)
+      if (!cotizacion || cotizacion.totalSeats === 0)
         return 0;
       const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
-      return (cotizacion.busCapacity * cotizacion.seatPrice) - costoTotal;
+      return (cotizacion.totalSeats * cotizacion.seatPrice) - costoTotal;
     };
   });
 
@@ -299,7 +299,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       const splitType = proveedor.splitType ?? 'minimum';
       const divisor = splitType === 'total'
-        ? cotizacion.busCapacity
+        ? cotizacion.totalSeats
         : cotizacion.minimumSeatTarget;
 
       if (divisor === 0)
@@ -480,7 +480,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!cotizacion)
         return 0;
       const divisor = bus.splitType === 'total'
-        ? cotizacion.busCapacity
+        ? cotizacion.totalSeats
         : cotizacion.minimumSeatTarget;
       if (divisor === 0)
         return 0;
