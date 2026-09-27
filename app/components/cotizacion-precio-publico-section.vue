@@ -188,6 +188,7 @@ function abrirDesdePlantilla(price: PrecioReferencia) {
   editingPrecio.value = null;
   plantilla.value = {
     priceType: toBusinessName(etiquetaOcupacion(price.maxOccupancy), 100),
+    maxOccupancy: price.maxOccupancy,
     pricePerPerson: Math.round(precioTotalSeleccionado(price) * 100) / 100,
     roomType: toBusinessName(tiposHabitacion.join(', '), 100),
     description: descripcionDesdeHabitaciones(hospedaje),
