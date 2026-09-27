@@ -808,6 +808,8 @@ export type Database = {
           minimum_seat_target: number
           notes: string | null
           seat_price: number
+          show_public_description: boolean
+          show_public_room_type: boolean
           status: Database["public"]["Enums"]["quotation_status"]
           travel_id: string
           updated_at: string
@@ -819,6 +821,8 @@ export type Database = {
           minimum_seat_target: number
           notes?: string | null
           seat_price: number
+          show_public_description?: boolean
+          show_public_room_type?: boolean
           status?: Database["public"]["Enums"]["quotation_status"]
           travel_id: string
           updated_at?: string
@@ -830,6 +834,8 @@ export type Database = {
           minimum_seat_target?: number
           notes?: string | null
           seat_price?: number
+          show_public_description?: boolean
+          show_public_room_type?: boolean
           status?: Database["public"]["Enums"]["quotation_status"]
           travel_id?: string
           updated_at?: string
