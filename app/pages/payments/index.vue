@@ -3,6 +3,8 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
+import type { TravelStatus } from '~/types/travel';
+
 definePageMeta({
   name: 'payments-index',
 });
@@ -12,21 +14,25 @@ const paymentStore = usePaymentStore();
 const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 
-const publishedTravels = computed(() =>
-  travelStore.allTravels.filter(travel => travel.status === 'published'),
+// Travelers pay before, during and after the trip, so a travel stays here once published
+// (not while pending, nor once cancelled).
+const PAYABLE_STATUSES = new Set<TravelStatus>(['published', 'in_progress', 'completed']);
+
+const payableTravels = computed(() =>
+  travelStore.allTravels.filter(travel => PAYABLE_STATUSES.has(travel.status)),
 );
 
 // Los viajes llegan de forma asíncrona (init-stores); se cargan pagos y configuraciones
-// cuando cambia el conjunto de viajes publicados.
-const publishedTravelIds = computed(() => publishedTravels.value.map(travel => travel.id).join(','));
+// cuando cambia el conjunto de viajes con pagos.
+const payableTravelIds = computed(() => payableTravels.value.map(travel => travel.id).join(','));
 
-watch(publishedTravelIds, (ids) => {
+watch(payableTravelIds, (ids) => {
   if (ids)
     paymentStore.fetchByTravels(ids.split(','));
 }, { immediate: true });
 
 const travelSummaries = computed(() => {
-  return publishedTravels.value.map((travel) => {
+  return payableTravels.value.map((travel) => {
     const travelers = travelerStore.getTravelersByTravel(travel.id);
     const summaries = travelers.map(t =>
       paymentStore.getTravelerPaymentSummary(t.id, travel.id),
@@ -54,7 +60,7 @@ const globalStats = computed(() => {
     travelsWithPayments: totals.filter(t => t.totalCollected > 0).length,
     totalCollected: totals.reduce((sum, t) => sum + t.totalCollected, 0),
     totalBalance: totals.reduce((sum, t) => sum + t.balance, 0),
-    completedTravels: totals.filter(t => t.percent >= 100).length,
+    settledTravels: totals.filter(t => t.percent >= 100).length,
   };
 });
 
@@ -79,6 +85,16 @@ const columns: TableColumn<TravelSummaryRow>[] = [
       h('span', { class: 'i-lucide-tag w-4 h-4 text-muted group-hover:text-primary' }),
       h('span', { class: 'font-medium' }, row.original.travel.label),
     ]),
+  },
+  {
+    id: 'status',
+    header: 'Estado',
+    cell: ({ row }) => h(resolveComponent('UBadge'), {
+      label: getTravelStatusLabel(row.original.travel.status),
+      color: getTravelStatusColor(row.original.travel.status),
+      variant: 'subtle',
+      size: 'sm',
+    }),
   },
   {
     id: 'viajeros',
@@ -191,10 +207,10 @@ const columns: TableColumn<TravelSummaryRow>[] = [
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-gray-500 dark:text-gray-400">
-              Viajes completados
+              Viajes liquidados
             </p>
             <p class="text-2xl font-bold text-primary mt-1">
-              {{ globalStats.completedTravels }}
+              {{ globalStats.settledTravels }}
             </p>
           </div>
           <UIcon name="i-lucide-check-circle" class="w-10 h-10 text-primary opacity-60" />
@@ -206,14 +222,14 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     <UCard>
       <template #header>
         <h2 class="font-semibold text-lg">
-          Viajes publicados
+          Viajes
         </h2>
       </template>
 
       <div v-if="travelSummaries.length === 0" class="text-center py-12">
         <UIcon name="i-lucide-inbox" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 class="text-lg font-medium mb-2">
-          No hay viajes publicados
+          No hay viajes con pagos
         </h3>
         <p class="text-muted mb-4">
           Publica un viaje para gestionar sus pagos
