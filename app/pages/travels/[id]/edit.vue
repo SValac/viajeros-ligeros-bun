@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import type { TravelFormData } from '~/types/travel';
 
+import { getGalleryStoragePath } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 
 const route = useRoute();
 const router = useRouter();
 const travelsStore = useTravelsStore();
 const toast = useToast();
-const { uploadBanner } = useTravelMediaRepository();
+const { uploadBanner, removeFile } = useTravelMediaRepository();
 
 // Obtener el ID del viaje desde la ruta
 const travelId = route.params.id as string;
@@ -30,6 +31,8 @@ onMounted(() => {
 
 // Handlers
 async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
+  const previousBannerUrl = travel.value?.imageUrl;
+
   if (bannerFile) {
     data.imageUrl = await uploadBanner(travelId, bannerFile);
   }
@@ -42,6 +45,19 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   // exclusively through travel-buses-section.vue's updateTravelBus().
   const { buses: _buses, ...updateData } = data;
   const success = await travelsStore.updateTravel(travelId, updateData);
+
+  // Remove the banner file the travel no longer points to: the previous one if it was
+  // replaced or removed, or the new upload if the update failed. A failure here is not an
+  // error for the user; it only leaves an orphan, cleaned up when the travel is deleted.
+  let unusedBannerUrl: string | undefined;
+  if (success && previousBannerUrl !== data.imageUrl)
+    unusedBannerUrl = previousBannerUrl;
+  else if (!success && bannerFile)
+    unusedBannerUrl = data.imageUrl;
+
+  const unusedBannerPath = getGalleryStoragePath(unusedBannerUrl);
+  if (unusedBannerPath)
+    await removeFile(unusedBannerPath).catch(() => {});
 
   if (success) {
     toast.add({
