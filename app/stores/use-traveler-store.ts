@@ -1,6 +1,7 @@
-import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeResult, TravelerUpdateData, TravelerWithChildren } from '~/types/traveler';
+import type { TravelAccommodation } from '~/types/travel';
+import type { Traveler, TravelerFilters, TravelerFormData, TravelerRoomAssignment, TravelerSeatChangeResult, TravelerUpdateData, TravelerWithChildren } from '~/types/traveler';
 
-import { filterTravelers, groupTravelersByRepresentative, isTravelerSeatChangeResult, toTravelerSeatChangeError } from '~/composables/travelers/use-traveler-domain';
+import { filterTravelers, groupTravelersByRepresentative, isTravelerSeatChangeResult, toRoomAssignmentErrorMessage, toTravelerSeatChangeError } from '~/composables/travelers/use-traveler-domain';
 import { useTravelerRepository } from '~/composables/travelers/use-traveler-repository';
 import { TravelerSeatChangeError } from '~/types/traveler';
 
@@ -15,6 +16,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
   // State
   const travelers = ref<Traveler[]>([]);
+  // One row per traveler and hotel (a traveler holds at most one room per hotel).
+  const roomAssignments = ref<TravelerRoomAssignment[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<TravelerFilters>({});
@@ -46,7 +49,18 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
   const getTravelersByAccommodation = computed(() => {
     return (travelAccommodationId: string): Traveler[] => {
-      return travelers.value.filter(t => t.travelAccommodationId === travelAccommodationId);
+      const travelerIds = new Set(
+        roomAssignments.value
+          .filter(a => a.travelAccommodationId === travelAccommodationId)
+          .map(a => a.travelerId),
+      );
+      return travelers.value.filter(t => travelerIds.has(t.id));
+    };
+  });
+
+  const getRoomAssignmentsByTraveler = computed(() => {
+    return (travelerId: string): TravelerRoomAssignment[] => {
+      return roomAssignments.value.filter(a => a.travelerId === travelerId);
     };
   });
 
@@ -69,7 +83,12 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      travelers.value = await repository.fetchAll();
+      const [fetchedTravelers, fetchedAssignments] = await Promise.all([
+        repository.fetchAll(),
+        repository.fetchRoomAssignments(),
+      ]);
+      travelers.value = fetchedTravelers;
+      roomAssignments.value = fetchedAssignments;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -88,13 +107,20 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const fetched = await repository.fetchByTravel(travelId);
+      const [fetched, fetchedAssignments] = await Promise.all([
+        repository.fetchByTravel(travelId),
+        repository.fetchRoomAssignmentsByTravel(travelId),
+      ]);
       // el store es un cache global — puede tener viajeros de múltiples viajes ya cargados. Si
       // haces travelers.value = fetched pierdes los viajeros de otros viajes. El merge dice:
       // "reemplaza solo los del travelId X, conserva todos los demás".
       travelers.value = [
         ...travelers.value.filter(t => t.travelId !== travelId),
         ...fetched,
+      ];
+      roomAssignments.value = [
+        ...roomAssignments.value.filter(a => a.travelId !== travelId),
+        ...fetchedAssignments,
       ];
     }
     catch (e) {
@@ -180,6 +206,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
       await repository.remove(id);
       travelers.value = travelers.value.filter(t => t.id !== id);
+      // The DB cascades the traveler's room assignments.
+      roomAssignments.value = roomAssignments.value.filter(a => a.travelerId !== id);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -244,23 +272,23 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   }
 
   /**
-   * Assigns a traveler to an accommodation and patches the cache.
+   * Assigns a traveler to a room and adds the assignment to the cache.
    * @param travelerId - UUID of the traveler to assign
-   * @param travelAccommodationId - UUID of the target accommodation
-   * @throws Re-throws repository errors so the caller can react
+   * @param accommodation - The room to assign the traveler to
+   * @throws Re-throws repository errors so the caller can react; `error` holds a user-facing message
    */
-  async function assignTravelerToRoom(travelerId: string, travelAccommodationId: string): Promise<void> {
+  async function assignTravelerToRoom(
+    travelerId: string,
+    accommodation: Pick<TravelAccommodation, 'id' | 'travelId' | 'providerId'>,
+  ): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const traveler = await repository.assignRoom(travelerId, travelAccommodationId);
-      const index = travelers.value.findIndex(t => t.id === travelerId);
-      if (index !== -1) {
-        travelers.value[index] = traveler;
-      }
+      const assignment = await repository.assignRoom(travelerId, accommodation);
+      roomAssignments.value.push(assignment);
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toRoomAssignmentErrorMessage(e);
       throw e;
     }
     finally {
@@ -269,19 +297,19 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   }
 
   /**
-   * Removes a traveler from their assigned accommodation and patches the cache.
+   * Removes a traveler from their room in one hotel and updates the cache.
    * @param travelerId - UUID of the traveler to unassign
+   * @param providerId - UUID of the hotel whose room is released
    * @throws Re-throws repository errors so the caller can react
    */
-  async function removeTravelerFromRoom(travelerId: string): Promise<void> {
+  async function removeTravelerFromRoom(travelerId: string, providerId: string): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const traveler = await repository.removeFromRoom(travelerId);
-      const index = travelers.value.findIndex(t => t.id === travelerId);
-      if (index !== -1) {
-        travelers.value[index] = traveler;
-      }
+      await repository.removeFromRoom(travelerId, providerId);
+      roomAssignments.value = roomAssignments.value.filter(
+        a => !(a.travelerId === travelerId && a.providerId === providerId),
+      );
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -307,6 +335,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   return {
     // State
     travelers,
+    roomAssignments,
     loading,
     error,
     filters,
@@ -316,6 +345,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     getTravelersByTravel,
     getTravelersByBus,
     getTravelersByAccommodation,
+    getRoomAssignmentsByTraveler,
     getGroupMembers,
     filteredTravelers,
     filteredGroupedTravelers,

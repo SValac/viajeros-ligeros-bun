@@ -28,10 +28,6 @@ const totalRooms = computed(() => accommodations.value.length);
 const occupiedRooms = computed(() =>
   accommodations.value.filter(a => travelerStore.getTravelersByAccommodation(a.id).length > 0).length,
 );
-const unassignedTravelers = computed(() =>
-  travelersOfTravel.value.filter(t => !t.travelAccommodationId).length,
-);
-
 // Grouped by provider
 type AccommodationGroup = {
   providerId: string;
@@ -54,6 +50,24 @@ const groupedAccommodations = computed((): AccommodationGroup[] => {
   }
   return Array.from(map.values());
 });
+
+// A traveler needs one room in every hotel of the travel.
+function hasRoomInHotel(travelerId: string, providerId: string): boolean {
+  return travelerStore.getRoomAssignmentsByTraveler(travelerId).some(a => a.providerId === providerId);
+}
+
+const pendingByHotel = computed(() =>
+  groupedAccommodations.value.map(group => ({
+    providerName: group.providerName,
+    count: travelersOfTravel.value.filter(t => !hasRoomInHotel(t.id, group.providerId)).length,
+  })),
+);
+
+const unassignedTravelers = computed(() =>
+  travelersOfTravel.value.filter(t =>
+    groupedAccommodations.value.some(group => !hasRoomInHotel(t.id, group.providerId)),
+  ).length,
+);
 
 function getRoomTypeName(hotelRoomTypeId?: string): string | undefined {
   if (!hotelRoomTypeId)
@@ -160,7 +174,7 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
   const travelersById = new Map(travelersOfTravel.value.map(t => [t.id, t]));
 
   return travelersOfTravel.value
-    .filter(t => !t.travelAccommodationId)
+    .filter(t => !hasRoomInHotel(t.id, accommodation.providerId))
     .map((traveler) => {
       const publicPriceId = paymentStore.getAccountConfig(traveler.id, travelId.value)?.publicPriceId;
       const precio = publicPriceId ? preciosPublicosById.value.get(publicPriceId) : undefined;
@@ -203,19 +217,19 @@ async function assignTraveler(traveler: Traveler): Promise<void> {
   if (!addingToAccommodation.value)
     return;
   try {
-    await travelerStore.assignTravelerToRoom(traveler.id, addingToAccommodation.value.id);
+    await travelerStore.assignTravelerToRoom(traveler.id, addingToAccommodation.value);
     toast.add({ title: 'Viajero asignado', color: 'success' });
     isAddModalOpen.value = false;
     addingToAccommodation.value = null;
   }
   catch {
-    toast.add({ title: 'Error al asignar viajero', color: 'error' });
+    toast.add({ title: 'Error al asignar viajero', description: travelerStore.error ?? undefined, color: 'error' });
   }
 }
 
-async function removeTraveler(travelerId: string): Promise<void> {
+async function removeTraveler(travelerId: string, providerId: string): Promise<void> {
   try {
-    await travelerStore.removeTravelerFromRoom(travelerId);
+    await travelerStore.removeTravelerFromRoom(travelerId, providerId);
     toast.add({ title: 'Viajero removido', color: 'success' });
   }
   catch {
@@ -290,6 +304,14 @@ async function updateAccommodation(
             <p class="text-sm text-muted">
               Viajeros sin habitación
             </p>
+            <p
+              v-if="pendingByHotel.length > 1"
+              class="text-xs text-dimmed mt-1"
+            >
+              <template v-for="(hotel, index) in pendingByHotel" :key="hotel.providerName">
+                <span v-if="index > 0"> · </span>{{ hotel.providerName }}: {{ hotel.count }}
+              </template>
+            </p>
           </div>
         </UCard>
       </div>
@@ -340,7 +362,7 @@ async function updateAccommodation(
                   :provider-name="item.group.providerName"
                   :room-type-name="getRoomTypeName(acc.hotelRoomTypeId)"
                   @add-traveler="openAddTravelerModal"
-                  @remove-traveler="removeTraveler"
+                  @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
                   @update="updateAccommodation"
                 />
               </div>
@@ -355,7 +377,7 @@ async function updateAccommodation(
       <template #body>
         <div class="space-y-2">
           <p v-if="availableTravelersForRoom.length === 0" class="text-sm text-muted text-center py-4">
-            No hay viajeros sin habitación disponibles.
+            Todos los viajeros ya tienen habitación en este hotel.
           </p>
           <button
             v-for="{ traveler, representativeName, precio, descriptionLines } in availableTravelersForRoom"
