@@ -10,6 +10,8 @@ type Props = {
   roomTypeDetails?: string;
   /** Room type's beds, already formatted (e.g. "1 cama king"). */
   roomTypeBeds?: string;
+  /** Companion id → their representative's full name, to show which group each occupant belongs to. */
+  representativeNames?: Record<string, string>;
 };
 
 type Emits = {
@@ -119,7 +121,18 @@ function toggleEditing() {
               name="i-lucide-user"
               class="size-3.5 text-muted shrink-0"
             />
-            <span class="text-sm truncate">{{ traveler.firstName }} {{ traveler.lastName }}</span>
+            <div class="min-w-0">
+              <p class="text-sm truncate">
+                {{ traveler.firstName }} {{ traveler.lastName }}
+              </p>
+              <p
+                v-if="representativeNames?.[traveler.id]"
+                class="flex items-center gap-1 text-xs text-muted min-w-0"
+              >
+                <UIcon name="i-lucide-user-star" class="size-3 text-primary shrink-0" />
+                <span class="truncate">{{ representativeNames[traveler.id] }}</span>
+              </p>
+            </div>
           </div>
           <UButton
             icon="i-lucide-x"

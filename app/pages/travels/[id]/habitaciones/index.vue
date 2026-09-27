@@ -51,6 +51,18 @@ const groupedAccommodations = computed((): AccommodationGroup[] => {
   return Array.from(map.values());
 });
 
+// Companion id → representative's full name, for the group shown on each room card.
+const representativeNames = computed(() => {
+  const byId = new Map(travelersOfTravel.value.map(t => [t.id, t]));
+  const names: Record<string, string> = {};
+  for (const traveler of travelersOfTravel.value) {
+    const representative = traveler.representativeId ? byId.get(traveler.representativeId) : undefined;
+    if (representative)
+      names[traveler.id] = `${representative.firstName} ${representative.lastName}`;
+  }
+  return names;
+});
+
 // A traveler needs one room in every hotel of the travel.
 function hasRoomInHotel(travelerId: string, providerId: string): boolean {
   return travelerStore.getRoomAssignmentsByTraveler(travelerId).some(a => a.providerId === providerId);
@@ -185,17 +197,15 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
 
   const hotelNames = groupedAccommodations.value.map(group => group.providerName);
   const hotelName = groupedAccommodations.value.find(group => group.providerId === accommodation.providerId)?.providerName ?? '';
-  const travelersById = new Map(travelersOfTravel.value.map(t => [t.id, t]));
 
   return travelersOfTravel.value
     .filter(t => !hasRoomInHotel(t.id, accommodation.providerId))
     .map((traveler) => {
       const publicPriceId = paymentStore.getAccountConfig(traveler.id, travelId.value)?.publicPriceId;
       const precio = publicPriceId ? preciosPublicosById.value.get(publicPriceId) : undefined;
-      const representative = traveler.representativeId ? travelersById.get(traveler.representativeId) : undefined;
       return {
         traveler,
-        representativeName: representative ? `${representative.firstName} ${representative.lastName}` : undefined,
+        representativeName: representativeNames.value[traveler.id],
         precio,
         descriptionLines: precio ? descriptionLinesForHotel(precio.description, hotelName, hotelNames) : [],
       };
@@ -376,6 +386,7 @@ async function updateAccommodation(
                   :provider-name="item.group.providerName"
                   :room-type-details="getRoomTypeInfo(acc.hotelRoomTypeId).details"
                   :room-type-beds="getRoomTypeInfo(acc.hotelRoomTypeId).beds"
+                  :representative-names="representativeNames"
                   @add-traveler="openAddTravelerModal"
                   @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
                   @update="updateAccommodation"
@@ -414,9 +425,10 @@ async function updateAccommodation(
                 {{ traveler.firstName }} {{ traveler.lastName }}
                 <span
                   v-if="representativeName"
-                  class="font-normal text-muted"
+                  class="inline-flex items-center gap-1 font-normal text-muted"
                 >
-                  · Grupo de {{ representativeName }}
+                  · <UIcon name="i-lucide-user-star" class="size-3.5 text-primary" />
+                  {{ representativeName }}
                 </span>
               </p>
               <template v-if="precio">
