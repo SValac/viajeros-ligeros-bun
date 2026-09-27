@@ -31,9 +31,13 @@ const travelerTypeOptions = [
   { label: 'Niño', value: 'child' },
 ];
 
+// Several prices share a type (e.g. three "Habitación para 2 personas"), so each option
+// also shows its description (one line per hotel) to tell them apart. The menu grows to fit
+// it from `sm` up; on phones it keeps the field's width and long lines wrap instead.
 const precioPublicoOptions = computed(() =>
   props.preciosPublicos.map(p => ({
     label: `${p.priceType} — ${formatCurrency(p.pricePerPerson)}`,
+    description: p.description,
     value: p.id,
   })),
 );
@@ -139,12 +143,15 @@ function handleSubmit() {
       <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
         Precio al público
       </label>
-      <USelect
+      <USelectMenu
         v-model="selectedPrecioPublicoId"
         :items="precioPublicoOptions"
         value-key="value"
         label-key="label"
+        :filter-fields="['label', 'description']"
         placeholder="Selecciona un precio..."
+        :ui="{ content: 'sm:min-w-fit', itemDescription: 'text-muted whitespace-pre-line' }"
+        class="w-full"
       />
       <p
         v-if="!canSave"
