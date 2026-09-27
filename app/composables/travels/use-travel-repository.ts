@@ -478,15 +478,40 @@ export function useTravelRepository() {
   }
 
   /**
-   * Deletes a travel record by ID. Related sub-entities are cascade-deleted by the DB.
-   * @param id - UUID of the travel to delete
+   * Checks whether the signed-in user owns a travel. Coordinators can read the travels
+   * they're assigned to, but only the owner may delete one.
+   * @param id - UUID of the travel
+   * @returns `true` if the travel exists and belongs to the current user
    * @throws {PostgrestError} on Supabase failure
    */
+  async function isOwnedByCurrentUser(id: string): Promise<boolean> {
+    const { data, error } = await supabase
+      .from('travels')
+      .select('id')
+      .eq('id', id)
+      .eq('owner_id', authStore.user!.id)
+      .maybeSingle();
+
+    if (error)
+      throw error;
+
+    return data !== null;
+  }
+
+  /**
+   * Deletes a travel record by ID. Related sub-entities are cascade-deleted by the DB;
+   * its Storage files are not (see `useTravelMediaRepository().removeAllForTravel`).
+   * @param id - UUID of the travel to delete
+   * @throws {PostgrestError} on Supabase failure, or if RLS filtered the row out (no row deleted)
+   */
   async function removeTravel(id: string): Promise<void> {
+    // `.select().single()` turns an RLS-blocked delete (0 rows, no error) into an error.
     const { error } = await supabase
       .from('travels')
       .delete()
-      .eq('id', id);
+      .eq('id', id)
+      .select('id')
+      .single();
 
     if (error)
       throw error;
@@ -512,6 +537,7 @@ export function useTravelRepository() {
     updateTravel,
     updateTravelAccommodation,
     updateTravelBus,
+    isOwnedByCurrentUser,
     removeTravel,
     removeTravelBus,
     insertTravel,

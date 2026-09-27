@@ -219,6 +219,12 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     loading.value = true;
     error.value = null;
     try {
+      // Coordinators can read the travels they're assigned to but not delete them.
+      if (!await repository.isOwnedByCurrentUser(id)) {
+        error.value = 'Solo el dueño del viaje puede eliminarlo';
+        return false;
+      }
+
       await repository.removeTravel(id);
     }
     catch (e) {
