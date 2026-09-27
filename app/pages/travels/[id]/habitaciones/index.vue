@@ -144,6 +144,8 @@ function descriptionLinesForHotel(description: string, hotelName: string, hotelN
 
 type AvailableTraveler = {
   traveler: Traveler;
+  /** Companions only: their representative's full name, to tell which group they belong to. */
+  representativeName?: string;
   precio?: QuotationPublicPrice;
   descriptionLines: string[];
 };
@@ -155,14 +157,17 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
 
   const hotelNames = groupedAccommodations.value.map(group => group.providerName);
   const hotelName = groupedAccommodations.value.find(group => group.providerId === accommodation.providerId)?.providerName ?? '';
+  const travelersById = new Map(travelersOfTravel.value.map(t => [t.id, t]));
 
   return travelersOfTravel.value
     .filter(t => !t.travelAccommodationId)
     .map((traveler) => {
       const publicPriceId = paymentStore.getAccountConfig(traveler.id, travelId.value)?.publicPriceId;
       const precio = publicPriceId ? preciosPublicosById.value.get(publicPriceId) : undefined;
+      const representative = traveler.representativeId ? travelersById.get(traveler.representativeId) : undefined;
       return {
         traveler,
+        representativeName: representative ? `${representative.firstName} ${representative.lastName}` : undefined,
         precio,
         descriptionLines: precio ? descriptionLinesForHotel(precio.description, hotelName, hotelNames) : [],
       };
@@ -353,7 +358,7 @@ async function updateAccommodation(
             No hay viajeros sin habitación disponibles.
           </p>
           <button
-            v-for="{ traveler, precio, descriptionLines } in availableTravelersForRoom"
+            v-for="{ traveler, representativeName, precio, descriptionLines } in availableTravelersForRoom"
             :key="traveler.id"
             class="w-full flex items-start gap-3 rounded-lg border border-default px-3 py-2 hover:bg-elevated transition text-left"
             @click="assignTraveler(traveler)"
@@ -366,6 +371,12 @@ async function updateAccommodation(
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium">
                 {{ traveler.firstName }} {{ traveler.lastName }}
+                <span
+                  v-if="representativeName"
+                  class="font-normal text-muted"
+                >
+                  · Grupo de {{ representativeName }}
+                </span>
               </p>
               <template v-if="precio">
                 <p class="text-xs text-muted">
