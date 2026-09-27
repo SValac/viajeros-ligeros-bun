@@ -9,9 +9,20 @@ export type Traveler = {
   boardingPoint: string;
   isRepresentative: boolean;
   representativeId?: string;
-  travelAccommodationId?: string;
   createdAt: string;
   updatedAt: string;
+};
+
+/**
+ * A traveler's room in one hotel. A traveler holds at most one room per hotel,
+ * so on a multi-hotel travel they have one assignment per hotel.
+ */
+export type TravelerRoomAssignment = {
+  travelerId: string;
+  travelAccommodationId: string;
+  /** Hotel of the room (the accommodation's provider). */
+  providerId: string;
+  travelId: string;
 };
 
 export type TravelerFormData = Omit<Traveler, 'id' | 'createdAt' | 'updatedAt'> & {
@@ -24,7 +35,6 @@ export type TravelerFilters = {
   travelId?: string;
   travelBusId?: string;
   representativeId?: string;
-  travelAccommodationId?: string;
 };
 
 export type TravelerWithChildren = Traveler & {

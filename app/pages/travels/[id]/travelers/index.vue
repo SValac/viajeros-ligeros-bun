@@ -169,14 +169,15 @@ const filters = computed({
   set: val => travelerStore.setFilters({ ...val, travelId: travelId.value }),
 });
 
-function getAccommodationLabel(travelAccommodationId?: string): string {
-  if (!travelAccommodationId)
-    return '—';
-  const acc = allAccommodations.value.find(a => a.id === travelAccommodationId);
-  if (!acc)
-    return '—';
-  const provider = providerStore.getProviderById(acc.providerId)?.name ?? 'Hotel';
-  return acc.roomNumber ? `${provider} — Hab. ${acc.roomNumber}` : provider;
+// A traveler holds one room per hotel, so on a multi-hotel travel they have several.
+function getAccommodationLabels(travelerId: string): string[] {
+  return travelerStore.getRoomAssignmentsByTraveler(travelerId).flatMap((assignment) => {
+    const acc = allAccommodations.value.find(a => a.id === assignment.travelAccommodationId);
+    if (!acc)
+      return [];
+    const provider = providerStore.getProviderById(acc.providerId)?.name ?? 'Hotel';
+    return [acc.roomNumber ? `${provider} — Hab. ${acc.roomNumber}` : provider];
+  });
 }
 
 function getBusLabel(travelBusId: string): string {
@@ -469,7 +470,7 @@ function getRowActions(traveler: Traveler) {
         onSelect: () => startSeatChange(traveler),
       },
       {
-        label: traveler.travelAccommodationId ? 'Quitar habitación' : 'Asignar habitación',
+        label: 'Habitaciones',
         icon: 'i-lucide-bed-double',
         onSelect: () => router.push({ name: 'travel-habitaciones', params: { id: travelId.value } }),
       },
@@ -534,13 +535,16 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    accessorKey: 'travelAccommodationId',
+    id: 'habitaciones',
     header: 'Habitación',
     cell: ({ row }) => {
+      const labels = getAccommodationLabels(row.original.id);
+      if (labels.length === 0)
+        return h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, '—');
       return h(
-        'span',
+        'div',
         { class: 'text-sm text-gray-600 dark:text-gray-300' },
-        getAccommodationLabel(row.getValue('travelAccommodationId')),
+        labels.map(label => h('p', label)),
       );
     },
   },

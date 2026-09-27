@@ -116,3 +116,23 @@ export function filterTravelers(travelers: Traveler[], filters: TravelerFilters)
     return true;
   });
 }
+
+/**
+ * Maps an error from assigning a room to a user-facing message. Translates the
+ * `room_full` exception raised by the capacity trigger and the primary-key violation
+ * of a second room in the same hotel; any other error keeps its own message.
+ * @param error - Error thrown by the repository
+ * @returns A user-facing message
+ */
+export function toRoomAssignmentErrorMessage(error: unknown): string {
+  if (error && typeof error === 'object') {
+    const { code, message } = error as { code?: string; message?: string };
+    if (message?.includes('room_full'))
+      return 'La habitación ya está llena.';
+    if (code === '23505')
+      return 'El viajero ya tiene una habitación en este hotel.';
+    if (message)
+      return message;
+  }
+  return 'Error al asignar la habitación';
+}

@@ -25,7 +25,7 @@ import type {
 } from '~/types/quotation';
 import type { MapLocation, Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
 import type { TravelAccessCode, TravelAccessCodeGenerated } from '~/types/travel-access';
-import type { Traveler, TravelerFormData } from '~/types/traveler';
+import type { Traveler, TravelerFormData, TravelerRoomAssignment } from '~/types/traveler';
 
 import { toAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 import { toHomePage } from '~/composables/agency-profile/use-home-page-domain';
@@ -321,7 +321,6 @@ export function mapTravelerRowToDomain(row: Tables<'travelers'>): Traveler {
     boardingPoint: row.boarding_point,
     isRepresentative: row.is_representative,
     representativeId: row.representative_id ?? undefined,
-    travelAccommodationId: row.travel_accommodation_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -338,7 +337,15 @@ export function mapTravelerToInsert(data: TravelerFormData): Omit<Tables<'travel
     boarding_point: data.boardingPoint,
     is_representative: data.isRepresentative,
     representative_id: data.representativeId ?? null,
-    travel_accommodation_id: data.travelAccommodationId ?? null,
+  };
+}
+
+export function mapTravelerRoomAssignmentRowToDomain(row: Tables<'traveler_room_assignments'>): TravelerRoomAssignment {
+  return {
+    travelerId: row.traveler_id,
+    travelAccommodationId: row.travel_accommodation_id,
+    providerId: row.provider_id,
+    travelId: row.travel_id,
   };
 }
 
@@ -422,8 +429,8 @@ export function mapTravelerAccountConfigToUpsert(config: TravelerAccountConfig):
     traveler_id: config.travelerId,
     traveler_type: config.travelerType,
     child_price: config.childPrice ?? null,
-    discounts: config.discounts as unknown as Json,
-    surcharges: config.surcharges as unknown as Json,
+    discounts: config.discounts as unknown as NonNullable<Json>,
+    surcharges: config.surcharges as unknown as NonNullable<Json>,
     public_price_id: config.publicPriceId ?? null,
     public_price_amount: config.publicPriceAmount ?? null,
   };
@@ -606,7 +613,7 @@ export function mapQuotationBusToInsert(data: QuotationBusFormData): Omit<Tables
     remarks: data.remarks ?? null,
     notes: data.notes ?? null,
     confirmed: data.confirmed,
-    coordinator_ids: (data.coordinatorIds ?? []) as unknown as import('~/types/database.types').Json,
+    coordinator_ids: (data.coordinatorIds ?? []) as unknown as NonNullable<import('~/types/database.types').Json>,
   };
 }
 
