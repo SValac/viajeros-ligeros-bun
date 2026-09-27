@@ -1202,7 +1202,6 @@ export type Database = {
           id: string
           included: boolean
           name: string
-          provider_id: string | null
           travel_id: string
         }
         Insert: {
@@ -1210,7 +1209,6 @@ export type Database = {
           id?: string
           included?: boolean
           name: string
-          provider_id?: string | null
           travel_id: string
         }
         Update: {
@@ -1218,17 +1216,9 @@ export type Database = {
           id?: string
           included?: boolean
           name?: string
-          provider_id?: string | null
           travel_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "travel_services_provider_id_fkey"
-            columns: ["provider_id"]
-            isOneToOne: false
-            referencedRelation: "providers"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "travel_services_travel_id_fkey"
             columns: ["travel_id"]
