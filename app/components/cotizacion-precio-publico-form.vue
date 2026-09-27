@@ -46,6 +46,13 @@ const state = reactive<Partial<FormSchema>>({
   notes: inicial?.notes ?? '',
 });
 
+// Read-only: comes from the reference price used as template and is kept when editing.
+// Hand-written prices have none. The web groups prices into tabs by it.
+const maxOccupancy = inicial?.maxOccupancy;
+const ocupacionLabel = maxOccupancy
+  ? `${maxOccupancy} persona${maxOccupancy === 1 ? '' : 's'}`
+  : 'Sin ocupación (no se creó desde un precio de referencia)';
+
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const priceTypeInput = useSanitizedModel(() => state.priceType ?? '', v => state.priceType = v, sanitizeBusinessName);
 const descriptionInput = useSanitizedModel(() => state.description ?? '', v => state.description = v, sanitizeText);
@@ -59,6 +66,7 @@ function onSubmit() {
 
   emit('submit', {
     ...result.data,
+    maxOccupancy,
     quotationId,
     ...(precio ? { id: precio.id } : {}),
   });
@@ -122,6 +130,17 @@ function onSubmit() {
         orientation="horizontal"
         class="py-1.5"
       />
+    </UFormField>
+
+    <!-- Ocupación (solo lectura) -->
+    <UFormField
+      label="Ocupación"
+      help="Se toma del precio de referencia y no se puede editar."
+      class="sm:col-span-2"
+    >
+      <p class="text-sm py-1.5">
+        {{ ocupacionLabel }}
+      </p>
     </UFormField>
 
     <!-- Descripción -->
