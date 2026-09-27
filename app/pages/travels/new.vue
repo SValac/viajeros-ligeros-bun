@@ -31,47 +31,45 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
 
   toast.add({
     title: 'Viaje creado',
-    description: `El viaje ${newTravel.label} ha sido creado exitosamente`,
+    description: 'Ahora arma su itinerario; los servicios y la galería están en sus pestañas.',
     color: 'success',
     icon: 'i-lucide-check-circle',
   });
 
-  // Navegar de vuelta al dashboard
-  router.push('/travels/dashboard');
+  // The itinerary is no longer part of the form: continue in the new travel's tab
+  router.push({ name: 'travel-itinerary', params: { id: newTravel.id } });
 }
 
 function handleCancel() {
-  router.push('/travels/dashboard');
+  router.push({ name: 'travels-dashboard' });
 }
 </script>
 
 <template>
-  <div class="container mx-auto  ">
-    <!-- Header -->
-    <div class="mb-6">
-      <div class="flex items-center gap-3 mb-2">
+  <div class="h-full overflow-auto">
+    <div class="max-w-6xl mx-auto p-6 space-y-6">
+      <div class="flex items-center gap-3">
         <UButton
           icon="i-lucide-arrow-left"
           variant="ghost"
           color="neutral"
-          size="sm"
-          to="/travels/dashboard"
+          aria-label="Volver a viajes"
+          :to="{ name: 'travels-dashboard' }"
         />
-        <h1 class="text-3xl font-bold">
-          Nuevo Viaje
-        </h1>
+        <div>
+          <h1 class="text-2xl font-bold">
+            Nuevo viaje
+          </h1>
+          <p class="text-sm text-muted">
+            Datos generales del viaje. El itinerario, los servicios y la galería se agregan después, en sus pestañas.
+          </p>
+        </div>
       </div>
-      <p class="text-muted text-sm">
-        Completa la información del viaje, itinerario y servicios incluidos
-      </p>
-    </div>
 
-    <!-- Formulario -->
-    <UCard>
       <TravelForm
         @submit="handleSubmit"
         @cancel="handleCancel"
       />
-    </UCard>
+    </div>
   </div>
 </template>

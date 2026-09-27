@@ -444,7 +444,7 @@ export function mapQuotationRowToDomain(row: Tables<'quotations'>): Quotation {
   return {
     id: row.id,
     travelId: row.travel_id,
-    busCapacity: row.bus_capacity,
+    totalSeats: row.total_seats,
     minimumSeatTarget: row.minimum_seat_target,
     seatPrice: row.seat_price,
     status: row.status,
@@ -459,7 +459,7 @@ export function mapQuotationRowToDomain(row: Tables<'quotations'>): Quotation {
 export function mapQuotationToInsert(data: QuotationFormData): Omit<Tables<'quotations'>, 'id' | 'created_at' | 'updated_at'> {
   return {
     travel_id: data.travelId,
-    bus_capacity: data.busCapacity,
+    total_seats: data.totalSeats,
     minimum_seat_target: data.minimumSeatTarget,
     seat_price: data.seatPrice,
     status: data.status,
