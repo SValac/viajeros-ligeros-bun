@@ -607,7 +607,7 @@ export function useQuotationRepository() {
     if (data.confirmed !== undefined)
       update.confirmed = data.confirmed;
     if (data.coordinatorIds !== undefined)
-      update.coordinator_ids = data.coordinatorIds as unknown as import('~/types/database.types').Json;
+      update.coordinator_ids = data.coordinatorIds as unknown as NonNullable<import('~/types/database.types').Json>;
 
     const { data: row, error: busErr } = await supabase
       .from('quotation_buses')
@@ -664,12 +664,14 @@ export function useQuotationRepository() {
   }
 
   async function getOccupiedAccommodationIds(travelId: string): Promise<Set<string>> {
-    const { data } = await supabase
-      .from('travelers')
+    const { data, error } = await supabase
+      .from('traveler_room_assignments')
       .select('travel_accommodation_id')
-      .eq('travel_id', travelId)
-      .not('travel_accommodation_id', 'is', null);
-    return new Set<string>((data ?? []).map(r => r.travel_accommodation_id!));
+      .eq('travel_id', travelId);
+    // Treating a failed read as "no occupied rooms" would let the reconcile delete occupied ones.
+    if (error)
+      throw error;
+    return new Set<string>(data.map(r => r.travel_accommodation_id));
   }
 
   async function deleteUnoccupiedAccommodations(ids: string[]): Promise<void> {

@@ -1,8 +1,9 @@
 import type { TablesUpdate } from '~/types/database.types';
-import type { Traveler, TravelerFormData, TravelerUpdateData } from '~/types/traveler';
+import type { TravelAccommodation } from '~/types/travel';
+import type { Traveler, TravelerFormData, TravelerRoomAssignment, TravelerUpdateData } from '~/types/traveler';
 
 /**
- * Data access layer for the `travelers` table.
+ * Data access layer for the `travelers` table and their room assignments.
  * Each function performs a single Supabase operation and either returns domain data
  * or throws — it never touches reactive state. Cache management is the store's responsibility.
  * @returns Object with all repository methods
@@ -94,8 +95,6 @@ export function useTravelerRepository() {
       update.is_representative = data.isRepresentative;
     if (data.representativeId !== undefined)
       update.representative_id = data.representativeId ?? null;
-    if ('travelAccommodationId' in data)
-      update.travel_accommodation_id = data.travelAccommodationId ?? null;
 
     const { data: row, error } = await supabase
       .from('travelers')
@@ -166,45 +165,99 @@ export function useTravelerRepository() {
   }
 
   /**
-   * Assigns a traveler to a travel accommodation.
-   * @param travelerId - UUID of the traveler to assign
-   * @param travelerAccommodationId - UUID of the target accommodation
-   * @returns The updated traveler with `travelAccommodationId` set
+   * Fetches every room assignment the user can see.
+   * @returns All assignments mapped to domain objects
    * @throws {PostgrestError} on Supabase failure
    */
-  async function assignRoom(travelerId: string, travelerAccommodationId: string): Promise<Traveler> {
-    const { data: row, error } = await supabase
-      .from('travelers')
-      .update({ travel_accommodation_id: travelerAccommodationId })
-      .eq('id', travelerId)
-      .select()
-      .single();
+  async function fetchRoomAssignments(): Promise<TravelerRoomAssignment[]> {
+    const { data, error } = await supabase
+      .from('traveler_room_assignments')
+      .select('*');
 
     if (error)
       throw error;
 
-    return mapTravelerRowToDomain(row);
+    return data.map(mapTravelerRoomAssignmentRowToDomain);
   }
 
   /**
-   * Removes a traveler from their assigned accommodation.
-   * @param travelerId - UUID of the traveler to unassign
-   * @returns The updated traveler with `travelAccommodationId` set to `null`
+   * Fetches the room assignments of a specific travel.
+   * @param travelId - UUID of the travel
+   * @returns Assignments belonging to the given travel
    * @throws {PostgrestError} on Supabase failure
    */
-  async function removeFromRoom(travelerId: string): Promise<Traveler> {
+  async function fetchRoomAssignmentsByTravel(travelId: string): Promise<TravelerRoomAssignment[]> {
+    const { data, error } = await supabase
+      .from('traveler_room_assignments')
+      .select('*')
+      .eq('travel_id', travelId);
+
+    if (error)
+      throw error;
+
+    return data.map(mapTravelerRoomAssignmentRowToDomain);
+  }
+
+  /**
+   * Assigns a traveler to a room. A traveler holds one room per hotel: the DB rejects a
+   * second room in the same hotel, and a room already at its `maxOccupancy` (`room_full`).
+   * @param travelerId - UUID of the traveler to assign
+   * @param accommodation - The room to assign the traveler to
+   * @returns The created assignment
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function assignRoom(
+    travelerId: string,
+    accommodation: Pick<TravelAccommodation, 'id' | 'travelId' | 'providerId'>,
+  ): Promise<TravelerRoomAssignment> {
     const { data: row, error } = await supabase
-      .from('travelers')
-      .update({ travel_accommodation_id: null })
-      .eq('id', travelerId)
+      .from('traveler_room_assignments')
+      .insert({
+        traveler_id: travelerId,
+        travel_accommodation_id: accommodation.id,
+        provider_id: accommodation.providerId,
+        travel_id: accommodation.travelId,
+      })
       .select()
       .single();
 
     if (error)
       throw error;
 
-    return mapTravelerRowToDomain(row);
+    return mapTravelerRoomAssignmentRowToDomain(row);
   }
 
-  return { fetchAll, fetchByTravel, insert, update, unlinkCompanions, remove, changeSeat, assignRoom, removeFromRoom };
+  /**
+   * Removes a traveler from their room in one hotel.
+   * @param travelerId - UUID of the traveler to unassign
+   * @param providerId - UUID of the hotel whose room is released
+   * @throws {PostgrestError} on Supabase failure, or if RLS filtered the row out (nothing removed)
+   */
+  async function removeFromRoom(travelerId: string, providerId: string): Promise<void> {
+    // `.select().single()` turns an RLS-blocked delete (0 rows, no error) into an error.
+    const { error } = await supabase
+      .from('traveler_room_assignments')
+      .delete()
+      .eq('traveler_id', travelerId)
+      .eq('provider_id', providerId)
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+  }
+
+  return {
+    fetchAll,
+    fetchByTravel,
+    insert,
+    update,
+    unlinkCompanions,
+    remove,
+    changeSeat,
+    fetchRoomAssignments,
+    fetchRoomAssignmentsByTravel,
+    assignRoom,
+    removeFromRoom,
+  };
 }
