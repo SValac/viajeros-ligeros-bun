@@ -315,7 +315,7 @@ export type Database = {
       hotel_room_types: {
         Row: {
           additional_details: string | null
-          beds: Json
+          beds: NonNullable<Json>
           cost_per_person: number
           created_at: string
           hotel_room_id: string
@@ -327,7 +327,7 @@ export type Database = {
         }
         Insert: {
           additional_details?: string | null
-          beds?: Json
+          beds?: NonNullable<Json>
           cost_per_person: number
           created_at?: string
           hotel_room_id: string
@@ -339,7 +339,7 @@ export type Database = {
         }
         Update: {
           additional_details?: string | null
-          beds?: Json
+          beds?: NonNullable<Json>
           cost_per_person?: number
           created_at?: string
           hotel_room_id?: string
@@ -637,7 +637,7 @@ export type Database = {
         Row: {
           capacity: number
           confirmed: boolean
-          coordinator_ids: Json
+          coordinator_ids: NonNullable<Json>
           created_at: string
           id: string
           notes: string | null
@@ -654,7 +654,7 @@ export type Database = {
         Insert: {
           capacity: number
           confirmed?: boolean
-          coordinator_ids?: Json
+          coordinator_ids?: NonNullable<Json>
           created_at?: string
           id?: string
           notes?: string | null
@@ -671,7 +671,7 @@ export type Database = {
         Update: {
           capacity?: number
           confirmed?: boolean
-          coordinator_ids?: Json
+          coordinator_ids?: NonNullable<Json>
           created_at?: string
           id?: string
           notes?: string | null
@@ -1241,30 +1241,30 @@ export type Database = {
       traveler_account_configs: {
         Row: {
           child_price: number | null
-          discounts: Json
+          discounts: NonNullable<Json>
           public_price_amount: number | null
           public_price_id: string | null
-          surcharges: Json
+          surcharges: NonNullable<Json>
           travel_id: string
           traveler_id: string
           traveler_type: Database["public"]["Enums"]["traveler_type"]
         }
         Insert: {
           child_price?: number | null
-          discounts?: Json
+          discounts?: NonNullable<Json>
           public_price_amount?: number | null
           public_price_id?: string | null
-          surcharges?: Json
+          surcharges?: NonNullable<Json>
           travel_id: string
           traveler_id: string
           traveler_type?: Database["public"]["Enums"]["traveler_type"]
         }
         Update: {
           child_price?: number | null
-          discounts?: Json
+          discounts?: NonNullable<Json>
           public_price_amount?: number | null
           public_price_id?: string | null
-          surcharges?: Json
+          surcharges?: NonNullable<Json>
           travel_id?: string
           traveler_id?: string
           traveler_type?: Database["public"]["Enums"]["traveler_type"]
@@ -1293,6 +1293,45 @@ export type Database = {
           },
         ]
       }
+      traveler_room_assignments: {
+        Row: {
+          created_at: string
+          provider_id: string
+          travel_accommodation_id: string
+          travel_id: string
+          traveler_id: string
+        }
+        Insert: {
+          created_at?: string
+          provider_id: string
+          travel_accommodation_id: string
+          travel_id: string
+          traveler_id: string
+        }
+        Update: {
+          created_at?: string
+          provider_id?: string
+          travel_accommodation_id?: string
+          travel_id?: string
+          traveler_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traveler_room_assignments_room_fkey"
+            columns: ["travel_accommodation_id", "travel_id", "provider_id"]
+            isOneToOne: false
+            referencedRelation: "travel_accommodations"
+            referencedColumns: ["id", "travel_id", "provider_id"]
+          },
+          {
+            foreignKeyName: "traveler_room_assignments_traveler_fkey"
+            columns: ["traveler_id", "travel_id"]
+            isOneToOne: false
+            referencedRelation: "travelers"
+            referencedColumns: ["id", "travel_id"]
+          },
+        ]
+      }
       travelers: {
         Row: {
           boarding_point: string
@@ -1304,7 +1343,6 @@ export type Database = {
           phone: string
           representative_id: string | null
           seat: number
-          travel_accommodation_id: string | null
           travel_bus_id: string | null
           travel_id: string
           updated_at: string
@@ -1319,7 +1357,6 @@ export type Database = {
           phone: string
           representative_id?: string | null
           seat: number
-          travel_accommodation_id?: string | null
           travel_bus_id?: string | null
           travel_id: string
           updated_at?: string
@@ -1334,7 +1371,6 @@ export type Database = {
           phone?: string
           representative_id?: string | null
           seat?: number
-          travel_accommodation_id?: string | null
           travel_bus_id?: string | null
           travel_id?: string
           updated_at?: string
@@ -1345,13 +1381,6 @@ export type Database = {
             columns: ["representative_id"]
             isOneToOne: false
             referencedRelation: "travelers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "travelers_travel_accommodation_id_fkey"
-            columns: ["travel_accommodation_id"]
-            isOneToOne: false
-            referencedRelation: "travel_accommodations"
             referencedColumns: ["id"]
           },
           {
@@ -1379,7 +1408,6 @@ export type Database = {
           destination: string | null
           end_date: string
           featured: boolean
-          from_price: number | null
           highlights: string[]
           id: string
           image_url: string | null
@@ -1391,6 +1419,7 @@ export type Database = {
           status: Database["public"]["Enums"]["travel_status"]
           summary: string | null
           updated_at: string
+          from_price: number | null
         }
         Insert: {
           accumulated_travelers?: number | null
@@ -1682,4 +1711,3 @@ export const Constants = {
     },
   },
 } as const
-
