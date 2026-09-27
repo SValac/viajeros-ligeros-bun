@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { QuotationPublicPrice } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler } from '~/types/traveler';
 
@@ -13,6 +14,8 @@ const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
+const paymentStore = usePaymentStore();
+const cotizacionStore = useCotizacionStore();
 
 const travelId = computed(() => route.params.id as string);
 const travel = computed(() => travelStore.getTravelById(travelId.value));
@@ -114,11 +117,71 @@ watch(tabs, (availableTabs) => {
 const addingToAccommodation = shallowRef<TravelAccommodation | null>(null);
 const isAddModalOpen = shallowRef(false);
 
-const availableTravelersForRoom = computed((): Traveler[] => {
-  if (!addingToAccommodation.value)
-    return [];
-  return travelersOfTravel.value.filter(t => !t.travelAccommodationId);
+// The public price each traveler paid says which room type (and hotels) they belong in.
+const preciosPublicosById = computed(() => {
+  const cotizacion = cotizacionStore.getCotizacionByTravel(travelId.value);
+  const precios = cotizacion ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.id) : [];
+  return new Map(precios.map(precio => [precio.id, precio]));
 });
+
+/**
+ * Keeps only the given hotel's lines of a public price description. Descriptions built from a
+ * reference price hold one `"{hotel} - {details}"` line per hotel; those lines are filtered and
+ * returned without the hotel prefix. A description with no hotel prefixes (single hotel, or typed
+ * by hand) can't be split, so it's returned whole.
+ */
+function descriptionLinesForHotel(description: string, hotelName: string, hotelNames: string[]): string[] {
+  const lines = description.split('\n').map(line => line.trim()).filter(Boolean);
+  const isFromHotel = (line: string, name: string) => line.startsWith(`${name} - `);
+
+  if (!lines.some(line => hotelNames.some(name => isFromHotel(line, name))))
+    return lines;
+
+  return lines
+    .filter(line => isFromHotel(line, hotelName))
+    .map(line => line.slice(`${hotelName} - `.length));
+}
+
+type AvailableTraveler = {
+  traveler: Traveler;
+  /** Companions only: their representative's full name, to tell which group they belong to. */
+  representativeName?: string;
+  precio?: QuotationPublicPrice;
+  descriptionLines: string[];
+};
+
+const availableTravelersForRoom = computed((): AvailableTraveler[] => {
+  const accommodation = addingToAccommodation.value;
+  if (!accommodation)
+    return [];
+
+  const hotelNames = groupedAccommodations.value.map(group => group.providerName);
+  const hotelName = groupedAccommodations.value.find(group => group.providerId === accommodation.providerId)?.providerName ?? '';
+  const travelersById = new Map(travelersOfTravel.value.map(t => [t.id, t]));
+
+  return travelersOfTravel.value
+    .filter(t => !t.travelAccommodationId)
+    .map((traveler) => {
+      const publicPriceId = paymentStore.getAccountConfig(traveler.id, travelId.value)?.publicPriceId;
+      const precio = publicPriceId ? preciosPublicosById.value.get(publicPriceId) : undefined;
+      const representative = traveler.representativeId ? travelersById.get(traveler.representativeId) : undefined;
+      return {
+        traveler,
+        representativeName: representative ? `${representative.firstName} ${representative.lastName}` : undefined,
+        precio,
+        descriptionLines: precio ? descriptionLinesForHotel(precio.description, hotelName, hotelNames) : [],
+      };
+    });
+});
+
+watch(travelId, async (id) => {
+  if (!id)
+    return;
+  await Promise.all([
+    paymentStore.fetchByTravel(id),
+    cotizacionStore.fetchByTravel(id),
+  ]);
+}, { immediate: true });
 
 function openAddTravelerModal(accommodationId: string): void {
   const acc = accommodations.value.find(a => a.id === accommodationId);
@@ -295,17 +358,42 @@ async function updateAccommodation(
             No hay viajeros sin habitación disponibles.
           </p>
           <button
-            v-for="traveler in availableTravelersForRoom"
+            v-for="{ traveler, representativeName, precio, descriptionLines } in availableTravelersForRoom"
             :key="traveler.id"
-            class="w-full flex items-center gap-3 rounded-lg border border-default px-3 py-2 hover:bg-elevated transition text-left"
+            class="w-full flex items-start gap-3 rounded-lg border border-default px-3 py-2 hover:bg-elevated transition text-left"
             @click="assignTraveler(traveler)"
           >
             <UIcon
               :name="traveler.isRepresentative ? 'i-lucide-user-star' : 'i-lucide-user'"
-              class="size-4 shrink-0"
+              class="size-4 shrink-0 mt-0.5"
               :class="traveler.isRepresentative ? 'text-primary' : 'text-muted'"
             />
-            <span class="text-sm font-medium">{{ traveler.firstName }} {{ traveler.lastName }}</span>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-medium">
+                {{ traveler.firstName }} {{ traveler.lastName }}
+                <span
+                  v-if="representativeName"
+                  class="font-normal text-muted"
+                >
+                  · Grupo de {{ representativeName }}
+                </span>
+              </p>
+              <template v-if="precio">
+                <p class="text-xs text-muted">
+                  {{ precio.priceType }}
+                </p>
+                <p
+                  v-for="(line, index) in descriptionLines"
+                  :key="index"
+                  class="text-xs text-dimmed truncate"
+                >
+                  {{ line }}
+                </p>
+              </template>
+              <p v-else class="text-xs text-warning">
+                Sin precio configurado
+              </p>
+            </div>
           </button>
         </div>
       </template>

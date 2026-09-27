@@ -106,6 +106,7 @@ function handleSubmit() {
         value-key="value"
         label-key="label"
         placeholder="Selecciona tipo"
+        :ui="{ content: 'min-w-fit' }"
       />
     </div>
 
