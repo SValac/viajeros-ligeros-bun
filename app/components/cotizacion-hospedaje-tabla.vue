@@ -123,20 +123,26 @@ const estadoPagoBadge: Record<AccommodationPaymentStatus, { label: string; color
 // Acciones por fila
 function getRowActions(accommodation: QuotationAccommodation) {
   const saldo = cotizacionStore.getSaldoPendienteHospedaje(accommodation.id);
+  // Payments go on after the quotation is confirmed; only its structure is locked.
+  const paymentActions = [
+    {
+      label: 'Ver historial de pagos',
+      icon: 'i-lucide-receipt',
+      onSelect: () => abrirHistorial(accommodation),
+    },
+    {
+      label: 'Registrar pago',
+      icon: 'i-lucide-banknote',
+      disabled: saldo <= 0,
+      onSelect: () => abrirHistorial(accommodation),
+    },
+  ];
+
+  if (props.readonly)
+    return [paymentActions];
+
   return [
-    [
-      {
-        label: 'Ver historial de pagos',
-        icon: 'i-lucide-receipt',
-        onSelect: () => abrirHistorial(accommodation),
-      },
-      {
-        label: 'Registrar pago',
-        icon: 'i-lucide-banknote',
-        disabled: saldo <= 0,
-        onSelect: () => abrirHistorial(accommodation),
-      },
-    ],
+    paymentActions,
     [
       {
         label: 'Editar',
@@ -216,21 +222,19 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
     },
   ];
 
-  if (!props.readonly) {
-    cols.push({
-      id: 'actions',
-      header: 'Acciones',
-      cell: ({ row }) =>
-        h(resolveComponent('UDropdownMenu'), {
-          items: getRowActions(row.original),
-        }, () => h(resolveComponent('UButton'), {
-          color: 'neutral',
-          variant: 'ghost',
-          icon: 'i-lucide-more-vertical',
-          size: 'xs',
-        })),
-    });
-  }
+  cols.push({
+    id: 'actions',
+    header: 'Acciones',
+    cell: ({ row }) =>
+      h(resolveComponent('UDropdownMenu'), {
+        items: getRowActions(row.original),
+      }, () => h(resolveComponent('UButton'), {
+        color: 'neutral',
+        variant: 'ghost',
+        icon: 'i-lucide-more-vertical',
+        size: 'xs',
+      })),
+  });
 
   return cols;
 });
@@ -467,7 +471,6 @@ async function eliminarHospedaje(id: string) {
           v-if="historialHospedaje"
           :quotation-accommodation-id="historialHospedaje.id"
           :hotel-name="getNombreHotel(historialHospedaje.providerId)"
-          :readonly="props.readonly"
         />
       </template>
     </USlideover>

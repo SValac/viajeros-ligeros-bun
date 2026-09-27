@@ -158,24 +158,25 @@ async function confirmDeleteProveedor() {
 }
 
 function getProveedorActions(proveedor: QuotationProvider) {
-  const readActions = [
+  // Payments go on after the quotation is confirmed; only its structure is locked.
+  const paymentActions = [
     {
       label: 'Ver historial de pagos',
       icon: 'i-lucide-receipt',
       onSelect: () => openHistorial(proveedor),
     },
-  ];
-
-  if (readonly)
-    return readActions;
-
-  const writeActions = [
     {
       label: 'Registrar pago',
       icon: 'i-lucide-banknote',
       disabled: cotizacionStore.getSaldoPendienteProveedor(proveedor.id) <= 0,
       onSelect: () => openRegistrarPago(proveedor),
     },
+  ];
+
+  if (readonly)
+    return [paymentActions];
+
+  const writeActions = [
     {
       label: 'Editar',
       icon: 'i-lucide-pencil',
@@ -197,7 +198,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
     },
   ];
 
-  return [readActions, writeActions, destructiveActions];
+  return [paymentActions, writeActions, destructiveActions];
 }
 </script>
 
@@ -429,7 +430,6 @@ function getProveedorActions(proveedor: QuotationProvider) {
       <div class="p-4">
         <PagoProveedorHistorial
           :quotation-provider-id="historialProveedorId"
-          :readonly="readonly"
           :proveedor-name="historialProveedorNombre"
         />
       </div>
