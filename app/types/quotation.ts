@@ -11,6 +11,10 @@ export type Quotation = {
   seatPrice: number;
   status: QuotationStatus;
   notes?: string;
+  /** Whether the public web shows each public price's room type (beds). */
+  showPublicRoomType: boolean;
+  /** Whether the public web shows each public price's description. */
+  showPublicDescription: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -40,7 +44,13 @@ export type ProviderPayment = {
   createdAt: string;
 };
 
-export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt'> & { id?: string };
+export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt' | 'showPublicRoomType' | 'showPublicDescription'> & {
+  id?: string;
+  /** Defaults to `true` (shown) when a quotation is created. */
+  showPublicRoomType?: boolean;
+  /** Defaults to `true` (shown) when a quotation is created. */
+  showPublicDescription?: boolean;
+};
 export type QuotationProviderFormData = Omit<QuotationProvider, 'id'> & { id?: string };
 export type ProviderPaymentFormData = Omit<ProviderPayment, 'id' | 'createdAt'> & { id?: string };
 

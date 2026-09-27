@@ -449,6 +449,8 @@ export function mapQuotationRowToDomain(row: Tables<'quotations'>): Quotation {
     seatPrice: row.seat_price,
     status: row.status,
     notes: row.notes ?? undefined,
+    showPublicRoomType: row.show_public_room_type,
+    showPublicDescription: row.show_public_description,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -462,6 +464,8 @@ export function mapQuotationToInsert(data: QuotationFormData): Omit<Tables<'quot
     seat_price: data.seatPrice,
     status: data.status,
     notes: data.notes ?? null,
+    show_public_room_type: data.showPublicRoomType ?? true,
+    show_public_description: data.showPublicDescription ?? true,
   };
 }
 
