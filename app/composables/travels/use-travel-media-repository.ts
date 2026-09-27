@@ -108,6 +108,20 @@ export function useTravelMediaRepository() {
   }
 
   /**
+   * Removes a single file from the bucket without touching `travel_media` (e.g. a banner).
+   * @param storagePath - Object path inside the bucket (`{travelId}/banner/123.png`)
+   * @throws {StorageError} on Supabase failure
+   */
+  async function removeFile(storagePath: string): Promise<void> {
+    const { error } = await supabase.storage
+      .from('travel-gallery')
+      .remove([storagePath]);
+
+    if (error)
+      throw error;
+  }
+
+  /**
    * Deletes every Storage object under a travel's folder (`{travelId}/`): gallery media,
    * the current banner and any replaced banners no row points to anymore.
    * Must run while the travel row still exists — the bucket's RLS policies resolve access
@@ -147,5 +161,5 @@ export function useTravelMediaRepository() {
     } while (cursor);
   }
 
-  return { fetchByTravel, upload, remove, getThumbnailUrl, uploadBanner, removeAllForTravel };
+  return { fetchByTravel, upload, remove, getThumbnailUrl, uploadBanner, removeFile, removeAllForTravel };
 }
