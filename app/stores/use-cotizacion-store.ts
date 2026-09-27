@@ -726,6 +726,26 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
   }
 
+  /**
+   * Sends a confirmed quotation back to draft so its providers, lodging and buses can be
+   * edited again. The travel's services generated at confirmation stay as they are; confirming
+   * again regenerates them. Payments are unaffected (they're allowed in both states).
+   * @param id - UUID of the quotation to reopen
+   * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
+   */
+  async function reabrirQuotation(id: string): Promise<{ success: boolean; error?: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === id);
+    if (!cotizacion)
+      return { success: false, error: 'Cotización no encontrada' };
+    if (cotizacion.status !== 'confirmed')
+      return { success: true };
+
+    const updated = await updateQuotation(id, { status: 'draft' });
+    if (!updated)
+      return { success: false, error: error.value ?? 'No se pudo reabrir la cotización' };
+    return { success: true };
+  }
+
   async function addProveedorQuotation(data: QuotationProviderFormData): Promise<QuotationProvider | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
@@ -1439,6 +1459,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     createQuotation,
     updateQuotation,
     confirmarQuotation,
+    reabrirQuotation,
     addProveedorQuotation,
     updateProveedorQuotation,
     deleteProveedorQuotation,
