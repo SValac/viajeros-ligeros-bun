@@ -42,6 +42,9 @@ const selectedPrecio = computed(() =>
   props.preciosPublicos.find(p => p.id === selectedPrecioPublicoId.value),
 );
 
+// Without a public price the traveler would cost $0 and any payment would mark them as paid.
+const canSave = computed(() => selectedPrecio.value !== undefined);
+
 const ajusteTypeOptions = [
   { label: 'Monto fijo', value: 'fixed' },
   { label: 'Porcentaje (%)', value: 'percentage' },
@@ -81,6 +84,9 @@ function removeSurcharge(index: number) {
 }
 
 function handleSubmit() {
+  if (!canSave.value)
+    return;
+
   const config: TravelerAccountConfig = {
     travelId: props.travelId,
     travelerId: props.travelerId,
@@ -125,6 +131,7 @@ function handleSubmit() {
       <UAlert
         color="warning"
         title="No hay precios al público configurados en la cotización de este viaje."
+        description="Agrega al menos un precio al público en la cotización para poder configurar la cuenta."
       />
     </div>
 
@@ -139,6 +146,12 @@ function handleSubmit() {
         label-key="label"
         placeholder="Selecciona un precio..."
       />
+      <p
+        v-if="!canSave"
+        class="mt-1 text-xs text-muted"
+      >
+        Selecciona un precio al público para guardar la configuración.
+      </p>
     </div>
 
     <div class="p-3 bg-elevated rounded-lg text-sm">
@@ -259,7 +272,10 @@ function handleSubmit() {
       >
         Cancelar
       </UButton>
-      <UButton @click="handleSubmit">
+      <UButton
+        :disabled="!canSave"
+        @click="handleSubmit"
+      >
         Guardar configuración
       </UButton>
     </div>
