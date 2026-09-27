@@ -3,6 +3,7 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { computed, h, reactive, ref, shallowRef } from 'vue';
 
+import type { PrecioPublicoAvisoAccion, ViajeroConPrecio } from '~/components/cotizacion-precio-publico-aviso-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
@@ -208,24 +209,103 @@ function abrirEdicion(price: QuotationPublicPrice) {
 }
 
 // Guardar (crear o actualizar). El formulario ya validó los datos.
+// ============================================================================
+// Viajeros que tienen cada precio (para avisar antes de editarlo o eliminarlo)
+// ============================================================================
+
+const paymentStore = usePaymentStore();
+const travelerStore = useTravelerStore();
+
+// Account configs aren't loaded on the quotation pages otherwise.
+watch(() => cotizacion.value?.travelId, (travelId) => {
+  if (travelId)
+    paymentStore.fetchByTravel(travelId);
+}, { immediate: true });
+
+const viajerosPorPrecio = computed(() => {
+  const map = new Map<string, ViajeroConPrecio[]>();
+  const travelId = cotizacion.value?.travelId;
+  for (const config of paymentStore.accountConfigs) {
+    if (config.travelId !== travelId || !config.publicPriceId)
+      continue;
+    const traveler = travelerStore.getTravelerById(config.travelerId);
+    const viajero: ViajeroConPrecio = {
+      id: config.travelerId,
+      name: traveler ? `${traveler.firstName} ${traveler.lastName}` : 'Viajero',
+      amount: config.publicPriceAmount,
+    };
+    map.set(config.publicPriceId, [...(map.get(config.publicPriceId) ?? []), viajero]);
+  }
+  return map;
+});
+
+const isAvisoOpen = shallowRef(false);
+const isAvisoLoading = shallowRef(false);
+const avisoAccion = shallowRef<PrecioPublicoAvisoAccion>('edit');
+const avisoPrecio = shallowRef<QuotationPublicPrice | null>(null);
+// Edit waiting for the user's confirmation in the warning modal
+const edicionPendiente = shallowRef<QuotationPublicPriceFormData | null>(null);
+
+const avisoViajeros = computed(() =>
+  avisoPrecio.value ? viajerosPorPrecio.value.get(avisoPrecio.value.id) ?? [] : [],
+);
+
+function abrirAviso(accion: PrecioPublicoAvisoAccion, precio: QuotationPublicPrice) {
+  avisoAccion.value = accion;
+  avisoPrecio.value = precio;
+  isAvisoOpen.value = true;
+}
+
+async function confirmarAviso() {
+  const precio = avisoPrecio.value;
+  if (!precio)
+    return;
+
+  isAvisoLoading.value = true;
+  if (avisoAccion.value === 'edit' && edicionPendiente.value) {
+    const ok = await actualizarPrecio(precio.id, edicionPendiente.value);
+    if (ok)
+      isFormModalOpen.value = false;
+  }
+  else if (avisoAccion.value === 'delete') {
+    await cotizacionStore.deletePrecioPublico(precio.id);
+    toast.add({ title: 'Precio eliminado', color: 'success' });
+  }
+  isAvisoLoading.value = false;
+  isAvisoOpen.value = false;
+  edicionPendiente.value = null;
+}
+
+async function actualizarPrecio(id: string, data: QuotationPublicPriceFormData): Promise<boolean> {
+  const updated = await cotizacionStore.updatePrecioPublico(id, data);
+
+  if (!updated) {
+    toast.add({
+      title: 'Error',
+      description: 'No se pudo actualizar el precio',
+      color: 'error',
+    });
+    return false;
+  }
+
+  toast.add({
+    title: 'Precio actualizado',
+    color: 'success',
+  });
+  return true;
+}
+
 async function guardarPrecio(data: QuotationPublicPriceFormData) {
   if (editingPrecio.value) {
-    // Actualizar
-    const updated = await cotizacionStore.updatePrecioPublico(editingPrecio.value.id, data);
-
-    if (!updated) {
-      toast.add({
-        title: 'Error',
-        description: 'No se pudo actualizar el precio',
-        color: 'error',
-      });
+    // Travelers already have this price: warn before saving, they keep their stored amount
+    if (viajerosPorPrecio.value.has(editingPrecio.value.id)) {
+      edicionPendiente.value = data;
+      abrirAviso('edit', editingPrecio.value);
       return;
     }
 
-    toast.add({
-      title: 'Precio actualizado',
-      color: 'success',
-    });
+    if (!await actualizarPrecio(editingPrecio.value.id, data))
+      return;
   }
   else {
     // Crear
@@ -249,13 +329,9 @@ async function guardarPrecio(data: QuotationPublicPriceFormData) {
   isFormModalOpen.value = false;
 }
 
-// Eliminar precio
-async function eliminarPrecio(id: string) {
-  await cotizacionStore.deletePrecioPublico(id);
-  toast.add({
-    title: 'Precio eliminado',
-    color: 'success',
-  });
+// Eliminar precio: always asks first (listing the travelers that have it, if any)
+function eliminarPrecio(precio: QuotationPublicPrice) {
+  abrirAviso('delete', precio);
 }
 
 // Acciones por fila
@@ -273,7 +349,7 @@ function getRowActions(price: QuotationPublicPrice) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => eliminarPrecio(price.id),
+        onSelect: () => eliminarPrecio(price),
       },
     ],
   ];
@@ -534,5 +610,14 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
         />
       </template>
     </UModal>
+
+    <CotizacionPrecioPublicoAvisoModal
+      v-model:open="isAvisoOpen"
+      :accion="avisoAccion"
+      :precio="avisoPrecio"
+      :viajeros="avisoViajeros"
+      :loading="isAvisoLoading"
+      @confirm="confirmarAviso"
+    />
   </UCard>
 </template>
