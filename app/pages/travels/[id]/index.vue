@@ -1,423 +1,158 @@
 <script setup lang="ts">
-const route = useRoute();
-const router = useRouter();
-const toast = useToast();
-const travelsStore = useTravelsStore();
-const coordinatorStore = useCoordinatorStore();
+import { useTravelRoute } from '~/composables/travels/use-travel-route';
 
-// Get travel ID from route params
-const travelId = computed(() => route.params.id as string);
-
-// Get travel data from store
-const travel = computed(() => travelsStore.getTravelById(travelId.value));
-
-const coordinadoresDelViaje = computed(() => {
-  const ids = travel.value?.coordinatorIds ?? [];
-  return ids.map(id => coordinatorStore.getCoordinatorById(id)).filter(Boolean);
-});
-
-const isDeleting = ref(false);
-
-// Redirect to dashboard if travel not found.
-// `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
-// y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
-watch(travel, (value) => {
-  if (!value && travelId.value && !isDeleting.value) {
-    toast.add({
-      title: 'Viaje no encontrado',
-      description: 'El viaje que buscas no existe',
-      color: 'error',
-    });
-    router.push('/travels/dashboard');
-  }
-}, { immediate: true });
-
-// Helper functions
-function getStatusColor(status: string): 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral' {
-  const colors: Record<string, 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error' | 'neutral'> = {
-    pending: 'warning',
-    published: 'info',
-    in_progress: 'primary',
-    completed: 'success',
-    cancelled: 'error',
-  };
-  return colors[status] || 'neutral';
-}
-
-function getStatusLabel(status: string) {
-  const labels: Record<string, string> = {
-    pending: 'Pendiente',
-    published: 'Publicado',
-    in_progress: 'En Curso',
-    completed: 'Completado',
-    cancelled: 'Cancelado',
-  };
-  return labels[status] || status;
-}
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('es-ES', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
-
-function calculateDuration(inicio: string, fin: string) {
-  const start = new Date(inicio);
-  const end = new Date(fin);
-  const diff = end.getTime() - start.getTime();
-  const days = Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1;
-  return days;
-}
-
-// Actions
-function goBack() {
-  router.push('/travels/dashboard');
-}
-
-function editTravel() {
-  if (travel.value) {
-    router.push(`/travels/${travel.value.id}/edit`);
-  }
-}
-
-function goToTravelers() {
-  if (travel.value) {
-    router.push({ name: 'travel-travelers', params: { id: travel.value.id } });
-  }
-}
-
-function goToHabitaciones() {
-  if (travel.value) {
-    router.push({ name: 'travel-habitaciones', params: { id: travel.value.id } });
-  }
-}
-
-function goToPayments() {
-  if (travel.value) {
-    router.push({ name: 'payments-travel', params: { id: travel.value.id } });
-  }
-}
-
-async function deleteTravel() {
-  if (!travel.value)
-    return;
-
-  // eslint-disable-next-line no-alert
-  const confirmed = confirm(`¿Eliminar el viaje ${travel.value.label}? Esta acción no se puede deshacer.`);
-
-  if (confirmed) {
-    isDeleting.value = true;
-    const deleted = await travelsStore.deleteTravel(travel.value.id);
-
-    if (deleted) {
-      toast.add({
-        title: 'Viaje eliminado',
-        description: 'El viaje se ha eliminado correctamente',
-        color: 'success',
-      });
-      router.push('/travels/dashboard');
-      return;
-    }
-
-    isDeleting.value = false;
-    toast.add({
-      title: 'No se pudo eliminar el viaje',
-      description: travelsStore.error ?? 'Intentá de nuevo',
-      color: 'error',
-    });
-  }
-}
-
-// Set page meta
 definePageMeta({
   name: 'travel-detail',
-  layout: 'default',
+});
+
+const coordinatorStore = useCoordinatorStore();
+const cotizacionStore = useCotizacionStore();
+
+const { travelId, travel } = useTravelRoute();
+
+// The seat figures live in the quotation (they drive its seat price)
+watch(travelId, id => cotizacionStore.fetchByTravel(id), { immediate: true });
+const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
+
+const coordinadores = computed(() =>
+  (travel.value?.coordinatorIds ?? [])
+    .map(id => coordinatorStore.getCoordinatorById(id))
+    .filter(coordinator => coordinator !== undefined),
+);
+
+type Detail = { icon: string; label: string; value: string };
+
+// From the quotation; "—" when there's no quotation yet or the value is 0 (not set)
+function seats(n: number | undefined): string {
+  return n ? `${n} asiento${n === 1 ? '' : 's'}` : '—';
+}
+
+const details = computed<Detail[]>(() => {
+  const t = travel.value;
+  if (!t)
+    return [];
+  const start = parseDisplayDate(t.startDate);
+  const end = parseDisplayDate(t.endDate);
+  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
+
+  return [
+    { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(t.startDate) },
+    { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(t.endDate) },
+    { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
+    { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
+    { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(cotizacion.value?.minimumSeatTarget) },
+    { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(cotizacion.value?.totalSeats) },
+    { icon: 'i-lucide-star', label: 'Destacado en la web', value: t.featured ? 'Sí' : 'No' },
+  ];
 });
 </script>
 
 <template>
-  <div v-if="travel" class="h-full overflow-auto">
-    <div class=" mx-auto p-6 space-y-6">
-      <!-- Header Actions -->
-      <div class="flex items-center justify-between">
-        <UButton
-          icon="i-lucide-arrow-left"
-          label="Volver"
-          variant="ghost"
-          color="neutral"
-          @click="goBack"
-        />
+  <div v-if="travel" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+    <!-- Contenido público -->
+    <div class="space-y-6 lg:col-span-2">
+      <img
+        v-if="travel.imageUrl"
+        :src="travel.imageUrl"
+        :alt="travel.label"
+        class="aspect-[21/9] w-full rounded-lg object-cover"
+      >
 
-        <div class="flex gap-2">
-          <UButton
-            icon="i-lucide-users"
-            label="Viajeros"
-            variant="outline"
-            color="neutral"
-            @click="goToTravelers"
-          />
-          <UButton
-            icon="i-lucide-bed-double"
-            label="Habitaciones"
-            variant="outline"
-            color="neutral"
-            @click="goToHabitaciones"
-          />
-          <UButton
-            icon="i-lucide-credit-card"
-            label="Ver Pagos"
-            variant="outline"
-            color="neutral"
-            @click="goToPayments"
-          />
-          <UButton
-            icon="i-lucide-pencil"
-            label="Editar"
-            variant="outline"
-            @click="editTravel"
-          />
-          <UButton
-            icon="i-lucide-trash-2"
-            label="Eliminar"
-            color="error"
-            variant="outline"
-            @click="deleteTravel"
-          />
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Descripción
+          </h2>
+        </template>
+
+        <div class="space-y-4">
+          <p v-if="travel.summary" class="text-toned">
+            {{ travel.summary }}
+          </p>
+
+          <ul v-if="travel.highlights.length > 0" class="grid gap-2 sm:grid-cols-2">
+            <li
+              v-for="highlight in travel.highlights"
+              :key="highlight"
+              class="flex items-start gap-2 text-sm"
+            >
+              <UIcon name="i-lucide-check" class="mt-0.5 size-4 shrink-0 text-primary" />
+              {{ highlight }}
+            </li>
+          </ul>
+
+          <USeparator v-if="travel.summary || travel.highlights.length > 0" />
+
+          <RichContent :html="travel.description" />
         </div>
-      </div>
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <UCard class="col-span-1">
-          <template #header>
-            <!-- Hero Section with Image -->
-            <div class="space-y-4">
-              <!-- Image -->
-              <div
-                v-if="travel.imageUrl"
-                class="w-full h-64 rounded-lg overflow-hidden bg-muted"
-              >
-                <img
-                  :src="travel.imageUrl"
-                  :alt="travel.label"
-                  class="w-full h-full object-cover"
-                >
-              </div>
+      </UCard>
+    </div>
 
-              <!-- Title and Status -->
-              <div class="flex items-center justify-between gap-4">
-                <div class="">
-                  <div class="flex items-center gap-2 mb-2">
-                    <UIcon
-                      name="i-lucide-map-pin"
-                      class="w-6 h-6 text-primary"
-                    />
-                    <h1 class="text-3xl font-bold">
-                      {{ travel.label }}
-                    </h1>
-                  </div>
-                  <!-- Footer Metadata -->
-                  <div class="flex flex-col items-start justify-between text-xs text-muted">
-                    <div class="flex items-center gap-1">
-                      <span class="i-lucide-calendar-plus w-3 h-3" />
-                      Creado: {{ formatDate(travel.createdAt) }}
-                    </div>
-                    <div class="flex items-center gap-1">
-                      <span class="i-lucide-calendar-clock w-3 h-3" />
-                      Actualizado: {{ formatDate(travel.updatedAt) }}
-                    </div>
-                  </div>
-                </div>
-                <!-- ------------------------------------- -->
+    <!-- Datos del viaje -->
+    <div class="space-y-6">
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Detalles
+          </h2>
+        </template>
 
-                <div>
-                  <div class="text-sm text-muted mb-1">
-                    Coordinadores
-                  </div>
-                  <div class="flex flex-col gap-1">
-                    <div
-                      v-for="c in coordinadoresDelViaje"
-                      :key="c!.id"
-                      class="flex items-center gap-2"
-                    >
-                      <UIcon name="i-lucide-user-star" class=" w-4 h-4 text-muted shrink-0" />
-                      <span class="font-medium">{{ c!.name }}</span>
-                    </div>
-                    <span
-                      v-if="coordinadoresDelViaje.length === 0"
-                      class="text-sm text-muted"
-                    >Sin coordinador</span>
-                  </div>
-                </div>
-
-                <div>
-                  <div class="text-sm text-muted mb-1">
-                    Duración
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <UIcon name="i-lucide-calendar" class="w-4 h-4 text-muted" />
-                    <span class="font-medium">
-                      {{ calculateDuration(travel.startDate, travel.endDate) }} días
-                    </span>
-                  </div>
-                </div>
-
-                <div>
-                  <div class="text-sm text-muted mb-1">
-                    Estado
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <UBadge
-                      :color="getStatusColor(travel.status)"
-                      variant="subtle"
-                      size="lg"
-                    >
-                      {{ getStatusLabel(travel.status) }}
-                    </UBadge>
-                  </div>
-                </div>
-
-                <!-- -----------------------------------  -->
-              </div>
-            </div>
-          </template>
-          <template #default>
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-2">
-                  <RichContent
-                    :html="travel.description"
-                    class="text-muted"
-                  />
-                </div>
-              </div>
-            </div>
-          </template>
-          <template #footer>
-            <!-- Key Info Grid -->
-            <div class="grid grid-cols-3 gap-4 pt-4" />
-          </template>
-        </UCard>
-
-        <UCard class="col-span-1">
-          <!-- Dates Section -->
-          <section id="dates" class="mb-6">
-            <TheSeparator
-              size="lg"
-              text="Fechas del Viaje"
-              icon="i-lucide-calendar-days"
-            />
-            <div class="grid grid-cols-2 gap-4">
-              <div class="p-4 bg-elevated rounded-lg">
-                <div class="text-sm text-muted mb-1">
-                  Fecha de Inicio
-                </div>
-                <div class="text-lg font-medium">
-                  {{ formatDate(travel.startDate) }}
-                </div>
-              </div>
-              <div class="p-4 bg-elevated rounded-lg">
-                <div class="text-sm text-muted mb-1">
-                  Fecha de Fin
-                </div>
-                <div class="text-lg font-medium">
-                  {{ formatDate(travel.endDate) }}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <!-- Internal Notes Section -->
-          <section
-            v-if="travel.internalNotes"
-            id="notas"
+        <dl class="space-y-3 text-sm">
+          <div
+            v-for="detail in details"
+            :key="detail.label"
+            class="flex items-center justify-between gap-3"
           >
-            <TheSeparator
-              size="xl"
-              text="Notas Internas"
-              icon="i-lucide-sticky-note"
-            />
-            <div class="p-4 bg-elevated rounded-lg">
-              <p class="text-sm whitespace-pre-wrap">
-                {{ travel.internalNotes }}
-              </p>
-            </div>
-          </section>
-        </UCard>
-      </div>
+            <dt class="flex items-center gap-2 text-muted">
+              <UIcon :name="detail.icon" class="size-4 shrink-0" />
+              {{ detail.label }}
+            </dt>
+            <dd class="text-right font-medium">
+              {{ detail.value }}
+            </dd>
+          </div>
+        </dl>
+      </UCard>
 
-      <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <!-- Itinerary Section -->
-        <section id="itinerary">
-          <UCard class="col-span-1">
-            <TheSeparator
-              size="xl"
-              text="Itinerario"
-              icon="i-lucide-route"
-            />
-            <div v-if="travel.itinerary.length > 0" class="mb-6">
-              <div class="space-y-4">
-                <div
-                  v-for="(activity, index) in travel.itinerary"
-                  :key="activity.id"
-                  class="relative pl-8"
-                >
-                  <!-- Timeline dot and line -->
-                  <div class="absolute left-0 top-0 flex flex-col items-center">
-                    <div class="w-4 h-4 rounded-full bg-primary border-2 border-background" />
-                    <div
-                      v-if="index < travel.itinerary.length - 1"
-                      class="w-0.5 h-full bg-default mt-1"
-                    />
-                  </div>
+      <UCard>
+        <template #header>
+          <h2 class="font-semibold">
+            Coordinadores
+          </h2>
+        </template>
 
-                  <TravelActivityCard :activity="activity" class="mb-2" />
-                </div>
-              </div>
-            </div>
-            <div v-else class="mb-6">
-              <div class="p-8 text-center bg-elevated rounded-lg">
-                <span class="i-lucide-calendar-x w-12 h-12 text-muted mx-auto mb-2" />
-                <p class="text-muted">
-                  No hay actividades programadas en el itinerario
-                </p>
-              </div>
-            </div>
-          </UCard>
-        </section>
-        <!-- Services Section -->
-        <section id="servicies">
-          <UCard class="col-span-1">
-            <TheSeparator
-              size="xl"
-              text="Servicios"
-              icon="i-lucide-briefcase"
-            />
+        <ul v-if="coordinadores.length > 0" class="space-y-2">
+          <li
+            v-for="coordinador in coordinadores"
+            :key="coordinador.id"
+            class="flex items-center gap-2 text-sm"
+          >
+            <UIcon name="i-lucide-user-star" class="size-4 shrink-0 text-muted" />
+            {{ coordinador.name }}
+          </li>
+        </ul>
+        <p v-else class="text-sm text-muted">
+          Sin coordinadores asignados
+        </p>
+      </UCard>
 
-            <TravelServiceList
-              :model-value="travel.services"
-              :editable="false"
-            />
-          </UCard>
-        </section>
-      </div>
+      <UCard v-if="travel.internalNotes">
+        <template #header>
+          <h2 class="flex items-center gap-2 font-semibold">
+            <UIcon name="i-lucide-lock" class="size-4 text-muted" />
+            Notas internas
+          </h2>
+        </template>
+        <p class="whitespace-pre-line text-sm text-toned">
+          {{ travel.internalNotes }}
+        </p>
+      </UCard>
+
       <TravelAccessCodeCard
-        :travel-id="travel.id"
+        :travel-id="travelId"
         :travel-label="travel.label"
         :travel-status="travel.status"
       />
-      <!-- Gallery Section -->
-      <UCard>
-        <TheSeparator
-          size="xl"
-          text="Galería"
-          icon="i-lucide-images"
-        />
-        <TravelGallerySection :travel-id="travelId" />
-      </UCard>
     </div>
-  </div>
-  <div v-else class="h-full flex items-center justify-center">
-    <UIcon name="i-lucide-loader-circle" class="w-8 h-8 animate-spin text-muted" />
   </div>
 </template>

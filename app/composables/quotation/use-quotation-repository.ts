@@ -130,8 +130,8 @@ export function useQuotationRepository() {
 
   async function updateQuotation(id: string, data: Partial<QuotationFormData>): Promise<Quotation> {
     const update: TablesUpdate<'quotations'> = {};
-    if (data.busCapacity !== undefined)
-      update.bus_capacity = data.busCapacity;
+    if (data.totalSeats !== undefined)
+      update.total_seats = data.totalSeats;
     if (data.minimumSeatTarget !== undefined)
       update.minimum_seat_target = data.minimumSeatTarget;
     if (data.seatPrice !== undefined)

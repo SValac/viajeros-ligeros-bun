@@ -6,7 +6,7 @@ export type ProviderPaymentStatus = 'pending' | 'partial' | 'paid';
 export type Quotation = {
   id: string;
   travelId: string;
-  busCapacity: number;
+  totalSeats: number;
   minimumSeatTarget: number;
   seatPrice: number;
   status: QuotationStatus;

@@ -29,7 +29,7 @@ export function calculatePaymentStatus(paid: number, total: number): ProviderPay
 /**
  * Calculates the price per seat for a quotation based on provider and bus costs.
  * Costs split by `'minimum'` are divided by `minimumSeatTarget`; costs split by `'total'`
- * are divided by `busCapacity`. The two parts are summed and rounded up.
+ * are divided by `totalSeats`. The two parts are summed and rounded up.
  * Returns 0 if both parts are zero (no costs entered yet).
  * @param quotation - Quotation with seat targets needed for the formula
  * @param providers - Providers belonging to this quotation (pre-filtered by caller)
@@ -37,7 +37,7 @@ export function calculatePaymentStatus(paid: number, total: number): ProviderPay
  * @returns Price per seat in whole units (ceiling), or 0 if no costs are defined
  */
 export function calculateSeatPrice(
-  quotation: Pick<Quotation, 'minimumSeatTarget' | 'busCapacity'>,
+  quotation: Pick<Quotation, 'minimumSeatTarget' | 'totalSeats'>,
   providers: Pick<QuotationProvider, 'totalCost' | 'splitType'>[],
   buses: Pick<QuotationBus, 'totalCost' | 'splitType'>[],
 ): number {
@@ -47,7 +47,7 @@ export function calculateSeatPrice(
   const busesTotalCost = buses.filter(b => (b.splitType ?? 'minimum') === 'total').reduce((acc, b) => acc + (b.totalCost ?? 0), 0);
 
   const minPart = quotation.minimumSeatTarget > 0 ? (minCost + minBusesCost) / quotation.minimumSeatTarget : 0;
-  const occupiedPart = quotation.busCapacity > 0 ? (occupiedCost + busesTotalCost) / quotation.busCapacity : 0;
+  const occupiedPart = quotation.totalSeats > 0 ? (occupiedCost + busesTotalCost) / quotation.totalSeats : 0;
 
   if (minPart === 0 && occupiedPart === 0) {
     return 0;

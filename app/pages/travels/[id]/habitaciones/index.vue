@@ -8,7 +8,6 @@ definePageMeta({
 });
 
 const route = useRoute();
-const router = useRouter();
 const toast = useToast();
 const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
@@ -18,7 +17,6 @@ const paymentStore = usePaymentStore();
 const cotizacionStore = useCotizacionStore();
 
 const travelId = computed(() => route.params.id as string);
-const travel = computed(() => travelStore.getTravelById(travelId.value));
 
 const accommodations = computed(() => travelStore.getAccommodationsByTravel(travelId.value));
 const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
@@ -233,10 +231,6 @@ function closeAddTravelerModal(): void {
   isAddModalOpen.value = false;
 }
 
-function goToTravelDetail(): void {
-  router.push({ name: 'travel-detail', params: { id: travelId.value } });
-}
-
 async function assignTraveler(traveler: Traveler): Promise<void> {
   if (!addingToAccommodation.value)
     return;
@@ -276,28 +270,9 @@ async function updateAccommodation(
 </script>
 
 <template>
-  <div class="h-full overflow-auto">
-    <div class="mx-auto p-6 space-y-6">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <UButton
-          icon="i-lucide-arrow-left"
-          label="Volver"
-          variant="ghost"
-          color="neutral"
-          @click="goToTravelDetail"
-        />
-        <div>
-          <h1 class="text-xl font-bold">
-            Habitaciones
-          </h1>
-          <p v-if="travel?.label" class="text-sm text-muted">
-            {{ travel.label }}
-          </p>
-        </div>
-        <div />
-      </div>
-
+  <div>
+    <!-- El encabezado y la navegación los pone app/pages/travels/[id].vue -->
+    <div class="space-y-6">
       <!-- Stats -->
       <div class="grid grid-cols-3 gap-4">
         <UCard>

@@ -17,6 +17,8 @@ const items = computed<NavigationMenuItem[][]>(() => [[{
   label: 'Viajes',
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
+  // `/travels/[id]/*` y `/travels/new` son rutas hermanas de `/travels/dashboard`: forzar el activo
+  active: route.path.startsWith('/travels'),
 }, {
   label: 'Cotizaciones',
   icon: 'i-lucide-calculator',

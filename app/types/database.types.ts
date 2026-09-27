@@ -805,7 +805,6 @@ export type Database = {
       }
       quotations: {
         Row: {
-          bus_capacity: number
           created_at: string
           id: string
           minimum_seat_target: number
@@ -814,11 +813,11 @@ export type Database = {
           show_public_description: boolean
           show_public_room_type: boolean
           status: Database["public"]["Enums"]["quotation_status"]
+          total_seats: number
           travel_id: string
           updated_at: string
         }
         Insert: {
-          bus_capacity: number
           created_at?: string
           id?: string
           minimum_seat_target: number
@@ -827,11 +826,11 @@ export type Database = {
           show_public_description?: boolean
           show_public_room_type?: boolean
           status?: Database["public"]["Enums"]["quotation_status"]
+          total_seats: number
           travel_id: string
           updated_at?: string
         }
         Update: {
-          bus_capacity?: number
           created_at?: string
           id?: string
           minimum_seat_target?: number
@@ -840,6 +839,7 @@ export type Database = {
           show_public_description?: boolean
           show_public_room_type?: boolean
           status?: Database["public"]["Enums"]["quotation_status"]
+          total_seats?: number
           travel_id?: string
           updated_at?: string
         }
