@@ -686,10 +686,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
   }
 
-  async function confirmarQuotation(
-    id: string,
-    travelStore: ReturnType<typeof useTravelsStore>,
-  ): Promise<{ success: boolean; error?: string }> {
+  /**
+   * Confirms a quotation, locking its providers, lodging and buses (payments stay open).
+   * It doesn't touch the travel's services: those are the public list shown on the web,
+   * edited on their own, while the quotation's providers are internal costs.
+   * @param id - UUID of the quotation to confirm
+   * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
+   */
+  async function confirmarQuotation(id: string): Promise<{ success: boolean; error?: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === id);
     if (!cotizacion)
       return { success: false, error: 'Cotización no encontrada' };
@@ -698,38 +702,15 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { success: false, error: 'Todos los proveedores deben estar confirmados' };
     }
 
-    loading.value = true;
-    error.value = null;
-    try {
-      const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === id);
-      const services = proveedores.map(p => ({
-        id: `serv-cotizacion-${p.id}`,
-        name: p.serviceDescription,
-        description: p.remarks,
-        included: true,
-        providerId: p.providerId,
-      }));
-
-      const updated = await travelStore.updateTravel(cotizacion.travelId, { services });
-      if (!updated)
-        return { success: false, error: 'No se pudo actualizar el viaje' };
-
-      await updateQuotation(id, { status: 'confirmed' });
-      return { success: true };
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { success: false, error: error.value };
-    }
-    finally {
-      loading.value = false;
-    }
+    const updated = await updateQuotation(id, { status: 'confirmed' });
+    if (!updated)
+      return { success: false, error: error.value ?? 'No se pudo confirmar la cotización' };
+    return { success: true };
   }
 
   /**
    * Sends a confirmed quotation back to draft so its providers, lodging and buses can be
-   * edited again. The travel's services generated at confirmation stay as they are; confirming
-   * again regenerates them. Payments are unaffected (they're allowed in both states).
+   * edited again. Payments are unaffected (they're allowed in both states).
    * @param id - UUID of the quotation to reopen
    * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
    */

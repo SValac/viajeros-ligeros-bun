@@ -11,7 +11,6 @@ const emit = defineEmits<{
 }>();
 
 const cotizacionStore = useCotizacionStore();
-const travelStore = useTravelsStore();
 const toast = useToast();
 
 const cotizacion = computed(() =>
@@ -63,7 +62,7 @@ async function reabrirQuotation() {
 
 async function confirmarQuotation() {
   isConfirmando.value = true;
-  const result = await cotizacionStore.confirmarQuotation(quotationId, travelStore);
+  const result = await cotizacionStore.confirmarQuotation(quotationId);
   isConfirmando.value = false;
   isConfirmarModalOpen.value = false;
 
@@ -127,7 +126,7 @@ async function confirmarQuotation() {
   <UModal
     v-model:open="isConfirmarModalOpen"
     title="Confirmar Cotización"
-    description="Al confirmar, se generarán los servicios del viaje a partir de los proveedores registrados y ya no se podrán editar proveedores, hospedaje ni autobuses. Los pagos a proveedores se siguen registrando normalmente, y puedes reabrirla si necesitas corregir algo."
+    description="Al confirmar ya no se podrán editar proveedores, hospedaje ni autobuses. Los pagos a proveedores se siguen registrando normalmente, y puedes reabrirla si necesitas corregir algo."
   >
     <template #footer>
       <div class="flex justify-end gap-3">
@@ -151,7 +150,7 @@ async function confirmarQuotation() {
   <UModal
     v-model:open="isReabrirModalOpen"
     title="Reabrir Cotización"
-    description="La cotización vuelve a borrador para poder editar proveedores, hospedaje y autobuses. Los pagos registrados no cambian, y los servicios del viaje se regeneran al volver a confirmarla."
+    description="La cotización vuelve a borrador para poder editar proveedores, hospedaje y autobuses. Los pagos registrados no cambian."
   >
     <template #footer>
       <div class="flex justify-end gap-3">
