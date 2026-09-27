@@ -143,6 +143,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         accommodation: Array<{
           hotelName: string;
           roomType: string;
+          nightCount: number;
           costPerPerson: number;
           additionalDetails?: string;
         }>;
@@ -162,6 +163,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const porOcupacion: Map<number, Array<{
         hotelName: string;
         roomType: string;
+        nightCount: number;
         costPerPerson: number;
         additionalDetails?: string;
       }>> = new Map();
@@ -173,7 +175,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
         for (const detalle of hospedaje.details) {
           const ocupacion = detalle.maxOccupancy;
-          const costPerPerson = detalle.pricePerNight / detalle.maxOccupancy;
+          // Cost of the whole stay at this hotel, not a single night: the seat price covers the whole trip too.
+          const costPerPerson = (detalle.pricePerNight * hospedaje.nightCount) / detalle.maxOccupancy;
 
           const roomTypeRecord = roomData?.roomTypes.find(rt => rt.id === detalle.roomTypeId);
           const roomType = roomTypeRecord
@@ -186,6 +189,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           porOcupacion.get(ocupacion)!.push({
             hotelName,
             roomType,
+            nightCount: hospedaje.nightCount,
             costPerPerson,
             additionalDetails: roomTypeRecord?.additionalDetails,
           });
