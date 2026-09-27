@@ -245,7 +245,13 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
     {
       accessorKey: 'description',
       header: 'Descripción',
-      cell: ({ row }) => h('span', { class: 'text-sm' }, row.original.description),
+      // One row per line (the template writes one per hotel), each cut with an ellipsis
+      // instead of wrapping; the full text shows on hover.
+      cell: ({ row }) => h(
+        'div',
+        { class: 'max-w-xs text-sm', title: row.original.description },
+        row.original.description.split('\n').map(line => h('p', { class: 'truncate' }, line)),
+      ),
     },
     {
       accessorKey: 'precioPorPersona',
