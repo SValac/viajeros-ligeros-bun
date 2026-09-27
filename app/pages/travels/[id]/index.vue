@@ -6,8 +6,13 @@ definePageMeta({
 });
 
 const coordinatorStore = useCoordinatorStore();
+const cotizacionStore = useCotizacionStore();
 
 const { travelId, travel } = useTravelRoute();
+
+// The seat figures live in the quotation (they drive its seat price)
+watch(travelId, id => cotizacionStore.fetchByTravel(id), { immediate: true });
+const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 
 const coordinadores = computed(() =>
   (travel.value?.coordinatorIds ?? [])
@@ -16,6 +21,11 @@ const coordinadores = computed(() =>
 );
 
 type Detail = { icon: string; label: string; value: string };
+
+// From the quotation; "—" when there's no quotation yet or the value is 0 (not set)
+function seats(n: number | undefined): string {
+  return n ? `${n} asiento${n === 1 ? '' : 's'}` : '—';
+}
 
 const details = computed<Detail[]>(() => {
   const t = travel.value;
@@ -30,7 +40,8 @@ const details = computed<Detail[]>(() => {
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(t.endDate) },
     { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
-    { icon: 'i-lucide-armchair', label: 'Asientos mínimos', value: t.minimumSeats ? String(t.minimumSeats) : '—' },
+    { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(cotizacion.value?.minimumSeatTarget) },
+    { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(cotizacion.value?.totalSeats) },
     { icon: 'i-lucide-star', label: 'Destacado en la web', value: t.featured ? 'Sí' : 'No' },
   ];
 });
