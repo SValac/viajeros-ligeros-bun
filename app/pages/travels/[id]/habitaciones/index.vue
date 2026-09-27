@@ -51,6 +51,18 @@ const groupedAccommodations = computed((): AccommodationGroup[] => {
   return Array.from(map.values());
 });
 
+// Companion id → representative's full name, for the group shown on each room card.
+const representativeNames = computed(() => {
+  const byId = new Map(travelersOfTravel.value.map(t => [t.id, t]));
+  const names: Record<string, string> = {};
+  for (const traveler of travelersOfTravel.value) {
+    const representative = traveler.representativeId ? byId.get(traveler.representativeId) : undefined;
+    if (representative)
+      names[traveler.id] = `${representative.firstName} ${representative.lastName}`;
+  }
+  return names;
+});
+
 // A traveler needs one room in every hotel of the travel.
 function hasRoomInHotel(travelerId: string, providerId: string): boolean {
   return travelerStore.getRoomAssignmentsByTraveler(travelerId).some(a => a.providerId === providerId);
@@ -69,17 +81,25 @@ const unassignedTravelers = computed(() =>
   ).length,
 );
 
-function getRoomTypeName(hotelRoomTypeId?: string): string | undefined {
-  if (!hotelRoomTypeId)
-    return undefined;
+type RoomTypeInfo = { details?: string; beds?: string };
+
+// Rooms of the same size can be different types (e.g. "doble estándar" vs "suite junior"),
+// so each card and the add-traveler modal show the type's own description, not just beds.
+const roomTypeInfoById = computed(() => {
+  const map = new Map<string, RoomTypeInfo>();
   for (const data of hotelRoomStore.hotelRoomsData) {
-    const rt = data.roomTypes.find(r => r.id === hotelRoomTypeId);
-    if (rt) {
-      const bedsDesc = rt.beds.map(b => `${b.count} ${b.size}`).join(', ');
-      return bedsDesc || undefined;
+    for (const rt of data.roomTypes) {
+      map.set(rt.id, {
+        details: rt.additionalDetails?.trim() || undefined,
+        beds: formatBedConfiguration(rt.beds) || undefined,
+      });
     }
   }
-  return undefined;
+  return map;
+});
+
+function getRoomTypeInfo(hotelRoomTypeId?: string): RoomTypeInfo {
+  return (hotelRoomTypeId && roomTypeInfoById.value.get(hotelRoomTypeId)) || {};
 }
 
 type OccupancyGroup = {
@@ -129,6 +149,12 @@ watch(tabs, (availableTabs) => {
 
 // Modal for adding traveler to a room
 const addingToAccommodation = shallowRef<TravelAccommodation | null>(null);
+
+// Shown in the modal header, to compare with each traveler's paid room below.
+const addingRoomTypeLabel = computed(() => {
+  const { details, beds } = getRoomTypeInfo(addingToAccommodation.value?.hotelRoomTypeId);
+  return [details, beds].filter(Boolean).join(' · ') || undefined;
+});
 const isAddModalOpen = shallowRef(false);
 
 // The public price each traveler paid says which room type (and hotels) they belong in.
@@ -171,17 +197,15 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
 
   const hotelNames = groupedAccommodations.value.map(group => group.providerName);
   const hotelName = groupedAccommodations.value.find(group => group.providerId === accommodation.providerId)?.providerName ?? '';
-  const travelersById = new Map(travelersOfTravel.value.map(t => [t.id, t]));
 
   return travelersOfTravel.value
     .filter(t => !hasRoomInHotel(t.id, accommodation.providerId))
     .map((traveler) => {
       const publicPriceId = paymentStore.getAccountConfig(traveler.id, travelId.value)?.publicPriceId;
       const precio = publicPriceId ? preciosPublicosById.value.get(publicPriceId) : undefined;
-      const representative = traveler.representativeId ? travelersById.get(traveler.representativeId) : undefined;
       return {
         traveler,
-        representativeName: representative ? `${representative.firstName} ${representative.lastName}` : undefined,
+        representativeName: representativeNames.value[traveler.id],
         precio,
         descriptionLines: precio ? descriptionLinesForHotel(precio.description, hotelName, hotelNames) : [],
       };
@@ -360,7 +384,9 @@ async function updateAccommodation(
                   :accommodation="acc"
                   :occupants="travelerStore.getTravelersByAccommodation(acc.id)"
                   :provider-name="item.group.providerName"
-                  :room-type-name="getRoomTypeName(acc.hotelRoomTypeId)"
+                  :room-type-details="getRoomTypeInfo(acc.hotelRoomTypeId).details"
+                  :room-type-beds="getRoomTypeInfo(acc.hotelRoomTypeId).beds"
+                  :representative-names="representativeNames"
                   @add-traveler="openAddTravelerModal"
                   @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
                   @update="updateAccommodation"
@@ -373,7 +399,11 @@ async function updateAccommodation(
     </div>
 
     <!-- Add Traveler Modal -->
-    <UModal v-model:open="isAddModalOpen" title="Agregar viajero a la habitación">
+    <UModal
+      v-model:open="isAddModalOpen"
+      title="Agregar viajero a la habitación"
+      :description="addingRoomTypeLabel"
+    >
       <template #body>
         <div class="space-y-2">
           <p v-if="availableTravelersForRoom.length === 0" class="text-sm text-muted text-center py-4">
@@ -395,9 +425,10 @@ async function updateAccommodation(
                 {{ traveler.firstName }} {{ traveler.lastName }}
                 <span
                   v-if="representativeName"
-                  class="font-normal text-muted"
+                  class="inline-flex items-center gap-1 font-normal text-muted"
                 >
-                  · Grupo de {{ representativeName }}
+                  · <UIcon name="i-lucide-user-star" class="size-3.5 text-primary" />
+                  {{ representativeName }}
                 </span>
               </p>
               <template v-if="precio">
