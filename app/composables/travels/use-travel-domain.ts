@@ -62,3 +62,17 @@ export function toTravelSaveErrorMessage(error: unknown, fallback: string): stri
     return 'Para publicar el viaje, completa el nombre de empresa y el estado en tu perfil de agencia.';
   return error.message || fallback;
 }
+
+/**
+ * Extracts the storage path (`{travelId}/banner/123.png`) from a `travel-gallery` public URL,
+ * so a replaced or removed banner's file can be deleted.
+ * @param publicUrl - Public URL stored in `travels.image_url`
+ * @returns The object path inside the bucket, or `null` if the URL is not from it
+ */
+export function getGalleryStoragePath(publicUrl: string | null | undefined): string | null {
+  if (!publicUrl)
+    return null;
+  const marker = '/travel-gallery/';
+  const index = publicUrl.indexOf(marker);
+  return index === -1 ? null : decodeURIComponent(publicUrl.slice(index + marker.length));
+}
