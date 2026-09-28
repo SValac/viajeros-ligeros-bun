@@ -489,7 +489,23 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   // Helper interno — recalcula seatPrice de la cotización.
+  // quotations.total_seats is kept by a DB trigger as the sum of the quotation's bus
+  // capacities; mirror it in the cache so the seat price, profit and break-even use it.
+  function _refreshTotalSeats(quotationId: string): void {
+    const index = cotizaciones.value.findIndex(c => c.id === quotationId);
+    const cotizacion = cotizaciones.value[index];
+    if (!cotizacion)
+      return;
+    const totalSeats = busesApartados.value
+      .filter(b => b.quotationId === quotationId)
+      .reduce((sum, b) => sum + b.capacity, 0);
+    if (totalSeats !== cotizacion.totalSeats)
+      cotizaciones.value[index] = { ...cotizacion, totalSeats };
+  }
+
   async function _syncSeatPrice(quotationId: string): Promise<void> {
+    _refreshTotalSeats(quotationId);
+
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
     if (!cotizacion || cotizacion.status === 'confirmed')
       return;
