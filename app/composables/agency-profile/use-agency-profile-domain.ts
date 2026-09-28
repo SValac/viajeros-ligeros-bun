@@ -1,14 +1,87 @@
-import type { AgencyProfile, AgencyProfileFormData, AgencyProfileUpdateData } from '~/types/agency-profile';
+import type { AgencyProfile, AgencyProfileFormData, AgencyProfileUpdateData, AgencySiteImageField } from '~/types/agency-profile';
 
+// Holds every profile image (logo, favicon, share image), not only logos.
 export const AGENCY_LOGOS_BUCKET = 'agency-logos';
 
-// Must match the bucket limits in 20260924043319_agency_logos_storage.sql.
-export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
-export const LOGO_MIME_EXTENSIONS: Record<string, string> = {
-  'image/png': 'png',
-  'image/jpeg': 'jpg',
-  'image/webp': 'webp',
+type SiteImageRule = {
+  // File name prefix inside the user's folder: `{uid}/{prefix}-{timestamp}.{ext}`.
+  prefix: string;
+  // Subject of the error messages ("El logo no puede pesar…").
+  noun: string;
+  mimeExtensions: Record<string, string>;
+  formatsLabel: string;
+  maxBytes: number;
+  maxSizeLabel: string;
+  // Recommended dimensions shown in the hint, when the field has any.
+  dimensionsLabel?: string;
+  // Checks the decoded dimensions; returns a user-facing error or `null`.
+  validateDimensions?: (width: number, height: number) => string | null;
 };
+
+export const FAVICON_MIN_SIZE = 192;
+export const FAVICON_MAX_SIZE = 1024;
+export const SHARE_IMAGE_WIDTH = 1200;
+export const SHARE_IMAGE_HEIGHT = 630;
+
+// Every limit must fit the bucket (20260924043319_agency_logos_storage.sql: png/jpeg/webp,
+// 2 MB). Favicon and share image limits come from the public site's contract (see
+// 20260928001627_agency_profile_seo.sql): PNG only for the favicon, since iOS needs it and
+// an SVG in a public bucket can carry scripts; no WebP for the share image, because not
+// every link-preview crawler renders it.
+export const SITE_IMAGE_RULES: Record<AgencySiteImageField, SiteImageRule> = {
+  logoUrl: {
+    prefix: 'logo',
+    noun: 'El logo',
+    mimeExtensions: { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' },
+    formatsLabel: 'PNG, JPG o WebP',
+    maxBytes: 2 * 1024 * 1024,
+    maxSizeLabel: '2 MB',
+  },
+  faviconUrl: {
+    prefix: 'favicon',
+    noun: 'El favicon',
+    mimeExtensions: { 'image/png': 'png' },
+    formatsLabel: 'PNG',
+    maxBytes: 512 * 1024,
+    maxSizeLabel: '512 KB',
+    dimensionsLabel: 'cuadrado, 512×512 px recomendado',
+    validateDimensions: (width, height) => {
+      if (width !== height)
+        return `El favicon debe ser cuadrado (la imagen mide ${width}×${height} px)`;
+      if (width < FAVICON_MIN_SIZE || width > FAVICON_MAX_SIZE)
+        return `El favicon debe medir entre ${FAVICON_MIN_SIZE} y ${FAVICON_MAX_SIZE} px por lado (mide ${width} px)`;
+      return null;
+    },
+  },
+  shareImageUrl: {
+    prefix: 'share',
+    noun: 'La imagen para compartir',
+    mimeExtensions: { 'image/png': 'png', 'image/jpeg': 'jpg' },
+    formatsLabel: 'JPG o PNG',
+    maxBytes: 1024 * 1024,
+    maxSizeLabel: '1 MB',
+    dimensionsLabel: `${SHARE_IMAGE_WIDTH}×${SHARE_IMAGE_HEIGHT} px`,
+  },
+};
+
+/**
+ * Builds the `accept` attribute of a file input from an image field's allowed formats.
+ * @param field - Profile image field
+ * @returns Comma-separated MIME types
+ */
+export function siteImageAccept(field: AgencySiteImageField): string {
+  return Object.keys(SITE_IMAGE_RULES[field].mimeExtensions).join(',');
+}
+
+/**
+ * Formats, size limit and recommended dimensions of an image field, for the upload hint.
+ * @param field - Profile image field
+ * @returns E.g. `'PNG · cuadrado, 512×512 px recomendado · máximo 512 KB'`
+ */
+export function siteImageHint(field: AgencySiteImageField): string {
+  const rule = SITE_IMAGE_RULES[field];
+  return [rule.formatsLabel, rule.dimensionsLabel, `máximo ${rule.maxSizeLabel}`].filter(Boolean).join(' · ');
+}
 
 // Must match the CHECK constraints in 20260924173904_agency_profile_site_content.sql.
 export const TAGLINE_MAX_LENGTH = 120;
@@ -115,26 +188,57 @@ export function mapFormToUpdate(form: AgencyProfileFormData): AgencyProfileUpdat
 }
 
 /**
- * Validates a logo file before upload, so the user gets a clear message
- * instead of a generic bucket rejection.
+ * Validates a profile image before upload, so the user gets a clear message instead of
+ * a generic bucket rejection. Decodes the file only when the field has dimension rules.
+ * @param field - Profile image field the file is for
  * @param file - File picked by the user
  * @returns A user-facing error message, or `null` when the file is valid
  */
-export function validateLogoFile(file: File): string | null {
-  if (!LOGO_MIME_EXTENSIONS[file.type])
-    return 'El logo debe ser PNG, JPG o WebP';
-  if (file.size > LOGO_MAX_BYTES)
-    return 'El logo no puede pesar más de 2 MB';
+export async function validateSiteImageFile(field: AgencySiteImageField, file: File): Promise<string | null> {
+  const rule = SITE_IMAGE_RULES[field];
+  if (!rule.mimeExtensions[file.type])
+    return `${rule.noun} debe ser ${rule.formatsLabel}`;
+  if (file.size > rule.maxBytes)
+    return `${rule.noun} no puede pesar más de ${rule.maxSizeLabel}`;
+  if (!rule.validateDimensions)
+    return null;
+
+  let bitmap: ImageBitmap;
+  try {
+    bitmap = await createImageBitmap(file);
+  }
+  catch {
+    return `No se pudo leer la imagen. Prueba con otro archivo ${rule.formatsLabel}`;
+  }
+  const { width, height } = bitmap;
+  bitmap.close();
+  return rule.validateDimensions(width, height);
+}
+
+/**
+ * Non-blocking advice for the share image: link previews crop anything far from
+ * 1200×630 (1.91:1), and smaller images look blurry.
+ * @param width - Image width in px
+ * @param height - Image height in px
+ * @returns A user-facing warning, or `null` when the image fits
+ */
+export function shareImageWarning(width: number, height: number): string | null {
+  const ratio = width / height;
+  const targetRatio = SHARE_IMAGE_WIDTH / SHARE_IMAGE_HEIGHT;
+  if (Math.abs(ratio - targetRatio) / targetRatio > 0.05)
+    return `La imagen mide ${width}×${height} px. Al compartir se recortará: usa una proporción de ${SHARE_IMAGE_WIDTH}×${SHARE_IMAGE_HEIGHT} px.`;
+  if (width < SHARE_IMAGE_WIDTH)
+    return `La imagen mide ${width}×${height} px y puede verse borrosa. Se recomiendan ${SHARE_IMAGE_WIDTH}×${SHARE_IMAGE_HEIGHT} px.`;
   return null;
 }
 
 /**
- * Extracts the storage path (`{uid}/logo-123.png`) from a logo's public URL,
- * so the previous file can be removed when the logo changes.
- * @param publicUrl - Public URL stored in `agency_profiles.logo_url`
+ * Extracts the storage path (`{uid}/logo-123.png`) from a profile image's public URL,
+ * so the previous file can be removed when the image changes.
+ * @param publicUrl - Public URL stored in `agency_profiles` (logo, favicon or share image)
  * @returns The object path inside the bucket, or `null` if the URL is not from it
  */
-export function getLogoStoragePath(publicUrl: string | null): string | null {
+export function getSiteImageStoragePath(publicUrl: string | null): string | null {
   if (!publicUrl)
     return null;
   const marker = `/${AGENCY_LOGOS_BUCKET}/`;

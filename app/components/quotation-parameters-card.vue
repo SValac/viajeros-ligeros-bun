@@ -14,26 +14,21 @@ const toast = useToast();
 
 const editandoParametros = shallowRef(false);
 
-// Reference for the manual total: the physical seats of the quotation's buses. The total can be
-// lower (e.g. seats kept for coordinators), so it isn't filled automatically.
-const asientosAutobuses = computed(() =>
-  cotizacionStore.getBusesByQuotation(quotation.id).reduce((sum, bus) => sum + bus.capacity, 0),
-);
-const referenciaAutobuses = computed(() => {
+// The total seats are the sum of the quotation's bus capacities (a DB trigger keeps them),
+// so they're shown read-only with where they come from.
+const origenCapacidad = computed(() => {
   const n = cotizacionStore.getBusesByQuotation(quotation.id).length;
   if (n === 0)
-    return 'Aún no hay autobuses en la cotización';
-  return `Autobuses: ${asientosAutobuses.value} asientos (${n} unidad${n === 1 ? '' : 'es'})`;
+    return 'Agrega autobuses a la cotización para calcularla';
+  return `Suma de ${n} autobús${n === 1 ? '' : 'es'}`;
 });
 
 const paramsState = reactive({
-  totalSeats: quotation.totalSeats,
   minimumSeatTarget: quotation.minimumSeatTarget,
   notes: quotation.notes ?? '',
 });
 
 function openEditarParametros() {
-  paramsState.totalSeats = quotation.totalSeats;
   paramsState.minimumSeatTarget = quotation.minimumSeatTarget;
   paramsState.notes = quotation.notes ?? '';
   editandoParametros.value = true;
@@ -48,7 +43,6 @@ const paramsNotesInput = useSanitizedModel(() => paramsState.notes ?? '', v => p
 
 async function guardarParametros() {
   await cotizacionStore.updateQuotation(quotation.id, {
-    totalSeats: paramsState.totalSeats,
     minimumSeatTarget: paramsState.minimumSeatTarget,
     notes: paramsState.notes,
   });
@@ -86,7 +80,7 @@ async function guardarParametros() {
           {{ quotation.totalSeats }}
         </p>
         <p class="text-xs text-muted">
-          {{ referenciaAutobuses }}
+          {{ origenCapacidad }}
         </p>
       </div>
       <div>
@@ -111,13 +105,11 @@ async function guardarParametros() {
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <UFormField
           label="Capacidad total de asientos"
-          :help="`Asientos a la venta entre todos los autobuses. ${referenciaAutobuses}.`"
+          help="Se calcula sola con los autobuses de la cotización."
         >
-          <UInput
-            v-model.number="paramsState.totalSeats"
-            type="number"
-            class="w-full"
-          />
+          <p class="py-1.5 font-medium">
+            {{ quotation.totalSeats }} · {{ origenCapacidad }}
+          </p>
         </UFormField>
         <UFormField label="Meta mínima de asientos">
           <UInput

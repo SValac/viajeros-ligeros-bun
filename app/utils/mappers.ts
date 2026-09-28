@@ -126,6 +126,10 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     facebookUrl: row.facebook_url,
     aboutPage: toAboutPage(row.about_page),
     homePage: toHomePage(row.home_page),
+    faviconUrl: row.favicon_url,
+    seoTitle: row.seo_title,
+    seoDescription: row.seo_description,
+    shareImageUrl: row.share_image_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
