@@ -83,6 +83,7 @@ export type Database = {
           country_code: string
           created_at: string
           facebook_url: string | null
+          favicon_url: string | null
           home_page: Json | null
           id: string
           instagram_url: string | null
@@ -90,6 +91,9 @@ export type Database = {
           phone: string | null
           primary_color: string | null
           secondary_color: string | null
+          seo_description: string | null
+          seo_title: string | null
+          share_image_url: string | null
           state_code: string | null
           tagline: string | null
           updated_at: string
@@ -101,6 +105,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           facebook_url?: string | null
+          favicon_url?: string | null
           home_page?: Json | null
           id: string
           instagram_url?: string | null
@@ -108,6 +113,9 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          share_image_url?: string | null
           state_code?: string | null
           tagline?: string | null
           updated_at?: string
@@ -119,6 +127,7 @@ export type Database = {
           country_code?: string
           created_at?: string
           facebook_url?: string | null
+          favicon_url?: string | null
           home_page?: Json | null
           id?: string
           instagram_url?: string | null
@@ -126,6 +135,9 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           secondary_color?: string | null
+          seo_description?: string | null
+          seo_title?: string | null
+          share_image_url?: string | null
           state_code?: string | null
           tagline?: string | null
           updated_at?: string
@@ -1491,12 +1503,16 @@ export type Database = {
           contact_email: string
           country_code: string
           facebook_url: string
+          favicon_url: string
           home_page: Json
           instagram_url: string
           logo_url: string
           phone: string
           primary_color: string
           secondary_color: string
+          seo_description: string
+          seo_title: string
+          share_image_url: string
           state_code: string
           state_name: string
           tagline: string
