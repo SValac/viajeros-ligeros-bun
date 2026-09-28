@@ -12,6 +12,7 @@ const tabs: NavigationMenuItem[] = [
   { label: 'Datos generales', icon: 'i-lucide-building-2', to: { name: 'profile' }, exact: true },
   { label: 'Página principal', icon: 'i-lucide-house', to: { name: 'profile-home' } },
   { label: 'Nosotros', icon: 'i-lucide-users', to: { name: 'profile-about' } },
+  { label: 'SEO y redes', icon: 'i-lucide-search', to: { name: 'profile-seo' } },
 ];
 </script>
 

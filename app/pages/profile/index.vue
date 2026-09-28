@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { AgencyProfileFormData } from '~/types/agency-profile';
 
+import { siteImageAccept, siteImageHint } from '~/composables/agency-profile/use-agency-profile-domain';
+
 definePageMeta({
   name: 'profile',
 });
@@ -26,14 +28,14 @@ async function handleSubmit(data: AgencyProfileFormData) {
 }
 
 async function handleLogoSelect(file: File) {
-  const success = await agencyProfileStore.changeLogo(file);
+  const success = await agencyProfileStore.changeSiteImage('logoUrl', file);
   toast.add(success
     ? { title: 'Logo actualizado', color: 'success', icon: 'i-lucide-check-circle' }
     : { title: 'No se pudo subir el logo', description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
 }
 
 async function handleLogoRemove() {
-  const success = await agencyProfileStore.removeLogo();
+  const success = await agencyProfileStore.removeSiteImage('logoUrl');
   toast.add(success
     ? { title: 'Logo eliminado', color: 'warning', icon: 'i-lucide-trash-2' }
     : { title: 'No se pudo quitar el logo', description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
@@ -47,9 +49,12 @@ async function handleLogoRemove() {
       description="Se muestra en las tarjetas y el detalle de tus viajes."
       variant="subtle"
     >
-      <AgencyLogoUpload
-        :logo-url="profile.logoUrl"
-        :uploading="agencyProfileStore.uploadingLogo"
+      <AgencyImageUpload
+        :image-url="profile.logoUrl"
+        label="logo"
+        :accept="siteImageAccept('logoUrl')"
+        :hint="siteImageHint('logoUrl')"
+        :uploading="agencyProfileStore.uploadingImage === 'logoUrl'"
         @select="handleLogoSelect"
         @remove="handleLogoRemove"
       />

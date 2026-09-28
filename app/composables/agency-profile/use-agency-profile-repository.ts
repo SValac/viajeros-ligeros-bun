@@ -1,11 +1,11 @@
-import type { AgencyProfile, AgencyProfileUpdateData, CountryState } from '~/types/agency-profile';
+import type { AgencyProfile, AgencyProfileUpdateData, AgencySiteImageField, CountryState } from '~/types/agency-profile';
 import type { TablesUpdate } from '~/types/database.types';
 
-import { AGENCY_LOGOS_BUCKET, LOGO_MIME_EXTENSIONS } from '~/composables/agency-profile/use-agency-profile-domain';
+import { AGENCY_LOGOS_BUCKET, SITE_IMAGE_RULES } from '~/composables/agency-profile/use-agency-profile-domain';
 
 /**
  * Data access layer for `agency_profiles`, the `country_states` catalog and the
- * `agency-logos` bucket. Each function performs a single Supabase operation and either
+ * `agency-logos` bucket (logo, favicon and share image). Each function performs a single Supabase operation and either
  * returns domain data or throws — it never touches reactive state.
  */
 export function useAgencyProfileRepository() {
@@ -84,6 +84,14 @@ export function useAgencyProfileRepository() {
       update.about_page = data.aboutPage;
     if (data.homePage !== undefined)
       update.home_page = data.homePage;
+    if (data.faviconUrl !== undefined)
+      update.favicon_url = data.faviconUrl;
+    if (data.seoTitle !== undefined)
+      update.seo_title = data.seoTitle;
+    if (data.seoDescription !== undefined)
+      update.seo_description = data.seoDescription;
+    if (data.shareImageUrl !== undefined)
+      update.share_image_url = data.shareImageUrl;
 
     const { data: row, error } = await supabase
       .from('agency_profiles')
@@ -116,18 +124,20 @@ export function useAgencyProfileRepository() {
   }
 
   /**
-   * Uploads a logo under the user's folder with a timestamped name, so the CDN never
-   * serves a stale logo after a change. Does NOT touch `agency_profiles`: the store
+   * Uploads a profile image under the user's folder with a timestamped name, so the CDN
+   * never serves a stale image after a change. Does NOT touch `agency_profiles`: the store
    * orchestrates upload → update → remove old, and needs to roll back the upload
    * if the update fails.
-   * @param file - Validated logo file (png/jpeg/webp, ≤ 2 MB)
+   * @param field - Profile image field, which sets the file name prefix and extension
+   * @param file - File already validated against the field's rules
    * @returns The object path and its public URL
    * @throws {StorageError} on upload failure
    */
-  async function uploadLogo(file: File): Promise<{ path: string; publicUrl: string }> {
+  async function uploadImage(field: AgencySiteImageField, file: File): Promise<{ path: string; publicUrl: string }> {
     const userId = await requireUserId();
-    const extension = LOGO_MIME_EXTENSIONS[file.type] ?? 'png';
-    const path = `${userId}/logo-${Date.now()}.${extension}`;
+    const rule = SITE_IMAGE_RULES[field];
+    const extension = rule.mimeExtensions[file.type] ?? 'png';
+    const path = `${userId}/${rule.prefix}-${Date.now()}.${extension}`;
 
     const { error } = await supabase.storage
       .from(AGENCY_LOGOS_BUCKET)
@@ -143,11 +153,11 @@ export function useAgencyProfileRepository() {
   }
 
   /**
-   * Removes a logo file from the bucket.
+   * Removes a profile image file from the bucket.
    * @param path - Object path inside the bucket (`{uid}/logo-123.png`)
    * @throws {StorageError} on Supabase failure
    */
-  async function removeLogo(path: string): Promise<void> {
+  async function removeImage(path: string): Promise<void> {
     const { error } = await supabase.storage
       .from(AGENCY_LOGOS_BUCKET)
       .remove([path]);
@@ -155,5 +165,5 @@ export function useAgencyProfileRepository() {
       throw error;
   }
 
-  return { fetchMine, update, fetchStates, uploadLogo, removeLogo };
+  return { fetchMine, update, fetchStates, uploadImage, removeImage };
 }

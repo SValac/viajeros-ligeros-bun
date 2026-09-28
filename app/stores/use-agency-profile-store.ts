@@ -1,13 +1,23 @@
-import type { AboutPage, AgencyProfile, AgencyProfileFormData, CountryState, HomePage } from '~/types/agency-profile';
+import type {
+  AboutPage,
+  AgencyProfile,
+  AgencyProfileFormData,
+  AgencySeoFormData,
+  AgencySiteImageField,
+  CountryState,
+  HomePage,
+} from '~/types/agency-profile';
 
 import { serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 import {
-  getLogoStoragePath,
+  getSiteImageStoragePath,
   isProfileComplete,
   mapFormToUpdate,
-  validateLogoFile,
+  SITE_IMAGE_RULES,
+  validateSiteImageFile,
 } from '~/composables/agency-profile/use-agency-profile-domain';
 import { useAgencyProfileRepository } from '~/composables/agency-profile/use-agency-profile-repository';
+import { mapSeoFormToUpdate } from '~/composables/agency-profile/use-agency-seo-domain';
 import { serializeHomePage } from '~/composables/agency-profile/use-home-page-domain';
 
 /**
@@ -25,7 +35,8 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   const states = ref<CountryState[]>([]);
   const loading = shallowRef(false);
   const saving = shallowRef(false);
-  const uploadingLogo = shallowRef(false);
+  // Image field being uploaded or removed, so only that card shows a spinner.
+  const uploadingImage = shallowRef<AgencySiteImageField | null>(null);
   const error = shallowRef<string | null>(null);
 
   // Getters
@@ -130,63 +141,89 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   }
 
   /**
-   * Replaces the logo: upload the new file → point the profile at it → remove the old file.
-   * If the profile update fails, the new file is removed so the bucket keeps no orphan
-   * and the profile keeps its previous logo. A failure removing the OLD file is not an
-   * error for the user (the new logo is already live); it only leaves an orphan behind.
-   * @param file - Logo picked by the user
+   * Saves the texts of the "SEO y redes" tab. Empty texts are saved as `null`, so the
+   * site falls back to its defaults.
+   * @param form - Validated form data
    * @returns `true` on success; on failure the message is stored in `error`
    */
-  async function changeLogo(file: File): Promise<boolean> {
-    const validationError = validateLogoFile(file);
+  async function saveSeo(form: AgencySeoFormData): Promise<boolean> {
+    saving.value = true;
+    error.value = null;
+    try {
+      profile.value = await repository.update(mapSeoFormToUpdate(form));
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al guardar el SEO';
+      return false;
+    }
+    finally {
+      saving.value = false;
+    }
+  }
+
+  /**
+   * Replaces a profile image (logo, favicon or share image): upload the new file → point
+   * the profile at it → remove the old file. If the profile update fails, the new file is
+   * removed so the bucket keeps no orphan and the profile keeps its previous image.
+   * A failure removing the OLD file is not an error for the user (the new image is
+   * already live); it only leaves an orphan behind.
+   * @param field - Profile image field to replace
+   * @param file - Image picked by the user
+   * @returns `true` on success; on failure the message is stored in `error`
+   */
+  async function changeSiteImage(field: AgencySiteImageField, file: File): Promise<boolean> {
+    uploadingImage.value = field;
+    error.value = null;
+    const validationError = await validateSiteImageFile(field, file);
     if (validationError) {
       error.value = validationError;
+      uploadingImage.value = null;
       return false;
     }
 
-    uploadingLogo.value = true;
-    error.value = null;
-    const previousPath = getLogoStoragePath(profile.value?.logoUrl ?? null);
+    const previousPath = getSiteImageStoragePath(profile.value?.[field] ?? null);
     let uploadedPath: string | null = null;
     try {
-      const uploaded = await repository.uploadLogo(file);
+      const uploaded = await repository.uploadImage(field, file);
       uploadedPath = uploaded.path;
-      profile.value = await repository.update({ logoUrl: uploaded.publicUrl });
+      profile.value = await repository.update({ [field]: uploaded.publicUrl });
     }
     catch (e) {
       if (uploadedPath)
-        await repository.removeLogo(uploadedPath).catch(() => {});
-      error.value = e instanceof Error ? e.message : 'Error al subir el logo';
-      uploadingLogo.value = false;
+        await repository.removeImage(uploadedPath).catch(() => {});
+      error.value = e instanceof Error ? e.message : `Error al subir ${SITE_IMAGE_RULES[field].noun.toLowerCase()}`;
+      uploadingImage.value = null;
       return false;
     }
 
     if (previousPath)
-      await repository.removeLogo(previousPath).catch(() => {});
-    uploadingLogo.value = false;
+      await repository.removeImage(previousPath).catch(() => {});
+    uploadingImage.value = null;
     return true;
   }
 
   /**
-   * Clears the logo from the profile, then removes its file.
+   * Clears a profile image from the profile, then removes its file.
+   * @param field - Profile image field to clear
    * @returns `true` on success; on failure the message is stored in `error`
    */
-  async function removeLogo(): Promise<boolean> {
-    uploadingLogo.value = true;
+  async function removeSiteImage(field: AgencySiteImageField): Promise<boolean> {
+    uploadingImage.value = field;
     error.value = null;
-    const previousPath = getLogoStoragePath(profile.value?.logoUrl ?? null);
+    const previousPath = getSiteImageStoragePath(profile.value?.[field] ?? null);
     try {
-      profile.value = await repository.update({ logoUrl: null });
+      profile.value = await repository.update({ [field]: null });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al quitar el logo';
-      uploadingLogo.value = false;
+      error.value = e instanceof Error ? e.message : `Error al quitar ${SITE_IMAGE_RULES[field].noun.toLowerCase()}`;
+      uploadingImage.value = null;
       return false;
     }
 
     if (previousPath)
-      await repository.removeLogo(previousPath).catch(() => {});
-    uploadingLogo.value = false;
+      await repository.removeImage(previousPath).catch(() => {});
+    uploadingImage.value = null;
     return true;
   }
 
@@ -196,7 +233,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
     states,
     loading,
     saving,
-    uploadingLogo,
+    uploadingImage,
     error,
     // Getters
     isComplete,
@@ -206,7 +243,8 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
     saveProfile,
     saveAboutPage,
     saveHomePage,
-    changeLogo,
-    removeLogo,
+    saveSeo,
+    changeSiteImage,
+    removeSiteImage,
   };
 });
