@@ -78,6 +78,7 @@ export type Database = {
       agency_profiles: {
         Row: {
           about_page: Json | null
+          banner_image_url: string | null
           company_name: string | null
           contact_email: string | null
           country_code: string
@@ -100,6 +101,7 @@ export type Database = {
         }
         Insert: {
           about_page?: Json | null
+          banner_image_url?: string | null
           company_name?: string | null
           contact_email?: string | null
           country_code?: string
@@ -122,6 +124,7 @@ export type Database = {
         }
         Update: {
           about_page?: Json | null
+          banner_image_url?: string | null
           company_name?: string | null
           contact_email?: string | null
           country_code?: string
@@ -1499,6 +1502,7 @@ export type Database = {
         Args: { p_agency_id: string }
         Returns: {
           about_page: Json
+          banner_image_url: string
           company_name: string
           contact_email: string
           country_code: string
