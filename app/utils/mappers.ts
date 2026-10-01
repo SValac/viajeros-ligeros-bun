@@ -130,6 +130,7 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     seoTitle: row.seo_title,
     seoDescription: row.seo_description,
     shareImageUrl: row.share_image_url,
+    bannerImageUrl: row.banner_image_url,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

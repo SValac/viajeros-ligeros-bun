@@ -1,6 +1,6 @@
 import type { AgencyProfile, AgencyProfileFormData, AgencyProfileUpdateData, AgencySiteImageField } from '~/types/agency-profile';
 
-// Holds every profile image (logo, favicon, share image), not only logos.
+// Holds every profile image (logo, favicon, share image, home banner), not only logos.
 export const AGENCY_LOGOS_BUCKET = 'agency-logos';
 
 type SiteImageRule = {
@@ -22,12 +22,15 @@ export const FAVICON_MIN_SIZE = 192;
 export const FAVICON_MAX_SIZE = 1024;
 export const SHARE_IMAGE_WIDTH = 1200;
 export const SHARE_IMAGE_HEIGHT = 630;
+export const BANNER_IMAGE_WIDTH = 1920;
+export const BANNER_IMAGE_HEIGHT = 800;
 
 // Every limit must fit the bucket (20260924043319_agency_logos_storage.sql: png/jpeg/webp,
 // 2 MB). Favicon and share image limits come from the public site's contract (see
 // 20260928001627_agency_profile_seo.sql): PNG only for the favicon, since iOS needs it and
 // an SVG in a public bucket can carry scripts; no WebP for the share image, because not
-// every link-preview crawler renders it.
+// every link-preview crawler renders it. Banner limits come from
+// 20261001045458_agency_profile_banner_image.sql.
 export const SITE_IMAGE_RULES: Record<AgencySiteImageField, SiteImageRule> = {
   logoUrl: {
     prefix: 'logo',
@@ -61,6 +64,15 @@ export const SITE_IMAGE_RULES: Record<AgencySiteImageField, SiteImageRule> = {
     maxBytes: 1024 * 1024,
     maxSizeLabel: '1 MB',
     dimensionsLabel: `${SHARE_IMAGE_WIDTH}×${SHARE_IMAGE_HEIGHT} px`,
+  },
+  bannerImageUrl: {
+    prefix: 'banner',
+    noun: 'El banner',
+    mimeExtensions: { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' },
+    formatsLabel: 'JPG, PNG o WebP',
+    maxBytes: 2 * 1024 * 1024,
+    maxSizeLabel: '2 MB',
+    dimensionsLabel: `horizontal, ${BANNER_IMAGE_WIDTH}×${BANNER_IMAGE_HEIGHT} px recomendado`,
   },
 };
 
@@ -233,9 +245,25 @@ export function shareImageWarning(width: number, height: number): string | null 
 }
 
 /**
+ * Non-blocking advice for the home banner: the site center-crops it to a wide strip
+ * (about 4:1 on desktop, 16:9 on mobile), so tall images lose most of their content and
+ * narrow ones look blurry at full width.
+ * @param width - Image width in px
+ * @param height - Image height in px
+ * @returns A user-facing warning, or `null` when the image fits
+ */
+export function bannerImageWarning(width: number, height: number): string | null {
+  if (width / height < 16 / 9)
+    return `La imagen mide ${width}×${height} px. El banner es una franja horizontal, así que se recortará gran parte de arriba y abajo: usa una imagen horizontal de ${BANNER_IMAGE_WIDTH}×${BANNER_IMAGE_HEIGHT} px.`;
+  if (width < BANNER_IMAGE_WIDTH)
+    return `La imagen mide ${width}×${height} px y puede verse borrosa a todo lo ancho. Se recomiendan ${BANNER_IMAGE_WIDTH}×${BANNER_IMAGE_HEIGHT} px.`;
+  return null;
+}
+
+/**
  * Extracts the storage path (`{uid}/logo-123.png`) from a profile image's public URL,
  * so the previous file can be removed when the image changes.
- * @param publicUrl - Public URL stored in `agency_profiles` (logo, favicon or share image)
+ * @param publicUrl - Public URL stored in `agency_profiles` (logo, favicon, share image or banner)
  * @returns The object path inside the bucket, or `null` if the URL is not from it
  */
 export function getSiteImageStoragePath(publicUrl: string | null): string | null {
