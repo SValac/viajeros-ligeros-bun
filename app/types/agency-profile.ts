@@ -19,6 +19,7 @@ export type AgencyProfile = {
   seoTitle: string | null;
   seoDescription: string | null;
   shareImageUrl: string | null;
+  bannerImageUrl: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -48,6 +49,7 @@ export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagli
   seoTitle?: string | null;
   seoDescription?: string | null;
   shareImageUrl?: string | null;
+  bannerImageUrl?: string | null;
 };
 
 // Texts of the "SEO y redes" tab. `''` means "not set" (saved as NULL).
@@ -57,7 +59,7 @@ export type AgencySeoFormData = {
 };
 
 // Profile images stored in the agency-logos bucket, keyed by their profile field.
-export type AgencySiteImageField = 'logoUrl' | 'faviconUrl' | 'shareImageUrl';
+export type AgencySiteImageField = 'logoUrl' | 'faviconUrl' | 'shareImageUrl' | 'bannerImageUrl';
 
 export type CountryState = {
   countryCode: string;

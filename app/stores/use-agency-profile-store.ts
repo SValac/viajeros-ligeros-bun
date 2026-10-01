@@ -163,7 +163,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   }
 
   /**
-   * Replaces a profile image (logo, favicon or share image): upload the new file → point
+   * Replaces a profile image (logo, favicon, share image or banner): upload the new file → point
    * the profile at it → remove the old file. If the profile update fails, the new file is
    * removed so the bucket keeps no orphan and the profile keeps its previous image.
    * A failure removing the OLD file is not an error for the user (the new image is

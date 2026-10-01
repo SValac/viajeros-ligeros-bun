@@ -5,7 +5,7 @@ import { AGENCY_LOGOS_BUCKET, SITE_IMAGE_RULES } from '~/composables/agency-prof
 
 /**
  * Data access layer for `agency_profiles`, the `country_states` catalog and the
- * `agency-logos` bucket (logo, favicon and share image). Each function performs a single Supabase operation and either
+ * `agency-logos` bucket (logo, favicon, share image and home banner). Each function performs a single Supabase operation and either
  * returns domain data or throws — it never touches reactive state.
  */
 export function useAgencyProfileRepository() {
@@ -92,6 +92,8 @@ export function useAgencyProfileRepository() {
       update.seo_description = data.seoDescription;
     if (data.shareImageUrl !== undefined)
       update.share_image_url = data.shareImageUrl;
+    if (data.bannerImageUrl !== undefined)
+      update.banner_image_url = data.bannerImageUrl;
 
     const { data: row, error } = await supabase
       .from('agency_profiles')
