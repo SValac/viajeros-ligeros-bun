@@ -83,7 +83,7 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
   if (isDuplicate) {
     toast.add({
       title: 'Error',
-      description: 'Ya existe un tipo de habitación con esta configuración',
+      description: 'Ya existe un tipo de habitación idéntico (misma ocupación, camas, precio y detalles). Cambia el precio o los detalles, o edita el existente.',
       color: 'error',
     });
     return;

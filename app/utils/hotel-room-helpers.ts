@@ -81,8 +81,19 @@ export function formatBedConfiguration(beds: unknown): string {
     .join(' + ');
 }
 
+// Same occupancy and beds can still be different types (e.g. sea view at a higher price),
+// so a duplicate must also match price and details. Room count is not part of the identity.
 export function areRoomTypesIdentical(a: HotelRoomTypeFormData, b: HotelRoomType): boolean {
   if (a.maxOccupancy !== b.maxOccupancy) {
+    return false;
+  }
+
+  if (Number(a.pricePerNight) !== Number(b.pricePerNight)) {
+    return false;
+  }
+
+  const normalizeDetails = (details?: string | null) => (details ?? '').trim().toLowerCase();
+  if (normalizeDetails(a.additionalDetails) !== normalizeDetails(b.additionalDetails)) {
     return false;
   }
 
