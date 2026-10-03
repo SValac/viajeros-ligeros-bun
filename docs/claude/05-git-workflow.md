@@ -82,6 +82,30 @@ Flow for a new migration:
 
 > **Note**: after switching the linked project, `supabase projects list` shows which one is currently `linked: true`. Check it before any `db push` if picking up work in a new session, to avoid pushing to the wrong database.
 
+### Production data safety
+
+**Since 2026-10-02 Production holds real agency data. No change may lose it.** Every migration, script and delete flow must preserve existing rows and files.
+
+Migrations:
+
+- **No destructive one-step changes.** Don't use plain `DROP COLUMN` / `DROP TABLE`, type changes that can truncate or reject values, `NOT NULL` without a default or backfill, or renames the deployed app still reads.
+- **Expand → backfill → contract.** Add the new column or table, copy the data, ship the code that uses it, and drop the old one only in a later PR, once it is confirmed unused.
+- **Stay backward compatible.** Migrations reach the database before the merge (step 4 above), so the currently deployed CRM and public web site must keep working against the new schema.
+- **Guard every drop.** Use a `DO` block that raises if the column or table still has data. Pattern: `supabase/migrations/20260924183111_agency_about_page.sql`.
+- **Check first.** Before a destructive change, count the affected rows in Production read-only, report the count, and take a backup (`supabase db dump --linked --data-only -f prod-backup.sql`, kept out of git) before `db:push:prod`.
+
+Commands that must **never** run against Production:
+
+- `supabase db reset --linked`: it wipes the database. Use it only to rebuild Stage/QA.
+- Bulk deletes of rows or `storage.objects` (logos, banners, travel images).
+
+App code:
+
+- Deletes that cascade (travels, providers, quotations, travelers) must ask for confirmation and say what else is removed.
+- Deleting a row must not orphan or silently wipe related rows or storage files.
+
+PRs: when a change touches the schema or deletes data, add a **«Riesgo de datos»** section to the description. It says what existing data is affected, how it is preserved, and how to roll back.
+
 ---
 
 [← Code Style](./04-code-style.md) | [Volver al índice](../../CLAUDE.md) | [Siguiente: TypeScript →](./06-typescript.md)

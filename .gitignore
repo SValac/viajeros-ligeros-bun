@@ -24,3 +24,6 @@ logs
 !.env.example
 .vercel
 .env*
+
+# Database backups (may contain production data)
+*-backup*.sql
