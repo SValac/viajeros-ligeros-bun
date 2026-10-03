@@ -52,9 +52,7 @@ type Travel = {
   buses: TravelBus[];
   internalNotes?: string;
   totalOperationCost?: number;
-  minimumSeats?: number;
   projectedProfit?: number;
-  accumulatedTravelers?: number;
   createdAt: string; updatedAt: string;
 };
 ```

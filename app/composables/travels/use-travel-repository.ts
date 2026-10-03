@@ -327,10 +327,6 @@ export function useTravelRepository() {
       update.image_url = data.imageUrl ?? null;
     if (data.status !== undefined)
       update.status = data.status;
-    if ('minimumSeats' in data)
-      update.minimum_seats = data.minimumSeats ?? null;
-    if ('accumulatedTravelers' in data)
-      update.accumulated_travelers = data.accumulatedTravelers ?? null;
     if ('departureFrom' in data)
       update.departure_from = data.departureFrom ?? null;
     if ('summary' in data)

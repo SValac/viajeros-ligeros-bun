@@ -137,8 +137,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         'description',
         'imageUrl',
         'status',
-        'minimumSeats',
-        'accumulatedTravelers',
         'departureFrom',
         'summary',
         'highlights',
