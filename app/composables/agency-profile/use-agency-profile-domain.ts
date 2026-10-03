@@ -101,6 +101,11 @@ export const CONTACT_EMAIL_MAX_LENGTH = 254;
 export const SOCIAL_URL_MAX_LENGTH = 200;
 export const INSTAGRAM_URL_REGEX = /^https:\/\/(?:www\.)?instagram\.com\/\S+$/;
 export const FACEBOOK_URL_REGEX = /^https:\/\/(?:www\.)?facebook\.com\/\S+$/;
+// Must match the CHECK constraints in 20261003144513_agency_profile_youtube_x_links.sql
+// and 20261003151937_agency_profile_tiktok_link.sql.
+export const YOUTUBE_URL_REGEX = /^https:\/\/(?:www\.|m\.)?youtube\.com\/\S+$/;
+export const X_URL_REGEX = /^https:\/\/(?:www\.)?(?:x|twitter)\.com\/\S+$/;
+export const TIKTOK_URL_REGEX = /^https:\/\/(?:www\.|m\.)?tiktok\.com\/\S+$/;
 
 // Only MX is seeded in the location catalog for now, so every phone is Mexican.
 const MX_DIAL_CODE = '52';
@@ -174,6 +179,9 @@ export function mapProfileToForm(profile: AgencyProfile | null): AgencyProfileFo
     contactEmail: profile?.contactEmail ?? '',
     instagramUrl: profile?.instagramUrl ?? '',
     facebookUrl: profile?.facebookUrl ?? '',
+    youtubeUrl: profile?.youtubeUrl ?? '',
+    xUrl: profile?.xUrl ?? '',
+    tiktokUrl: profile?.tiktokUrl ?? '',
   };
 }
 
@@ -196,6 +204,9 @@ export function mapFormToUpdate(form: AgencyProfileFormData): AgencyProfileUpdat
     contactEmail: trimToNull(form.contactEmail)?.toLowerCase() ?? null,
     instagramUrl: trimToNull(form.instagramUrl),
     facebookUrl: trimToNull(form.facebookUrl),
+    youtubeUrl: trimToNull(form.youtubeUrl),
+    xUrl: trimToNull(form.xUrl),
+    tiktokUrl: trimToNull(form.tiktokUrl),
   };
 }
 

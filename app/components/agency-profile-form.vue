@@ -14,6 +14,9 @@ import {
   mapProfileToForm,
   SOCIAL_URL_MAX_LENGTH,
   TAGLINE_MAX_LENGTH,
+  TIKTOK_URL_REGEX,
+  X_URL_REGEX,
+  YOUTUBE_URL_REGEX,
 } from '~/composables/agency-profile/use-agency-profile-domain';
 import { businessNameSchema, sanitizeBusinessName, sanitizePhone, sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -54,6 +57,9 @@ const schema = z.object({
     .refine(value => value === '' || z.email().safeParse(value).success, 'Email inválido'),
   instagramUrl: optionalMatching(INSTAGRAM_URL_REGEX, 'Debe ser un enlace https://instagram.com/tu-cuenta'),
   facebookUrl: optionalMatching(FACEBOOK_URL_REGEX, 'Debe ser un enlace https://facebook.com/tu-pagina'),
+  youtubeUrl: optionalMatching(YOUTUBE_URL_REGEX, 'Debe ser un enlace https://youtube.com/@tu-canal'),
+  xUrl: optionalMatching(X_URL_REGEX, 'Debe ser un enlace https://x.com/tu-cuenta o https://twitter.com/tu-cuenta'),
+  tiktokUrl: optionalMatching(TIKTOK_URL_REGEX, 'Debe ser un enlace https://tiktok.com/@tu-cuenta'),
 });
 
 type Schema = z.output<typeof schema>;
@@ -222,6 +228,48 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
             type="url"
             placeholder="https://facebook.com/tuagencia"
             icon="i-simple-icons-facebook"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="YouTube"
+          name="youtubeUrl"
+          description="Opcional. Ícono en el pie de página."
+        >
+          <UInput
+            v-model="state.youtubeUrl"
+            type="url"
+            placeholder="https://youtube.com/@tuagencia"
+            icon="i-simple-icons-youtube"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="X (Twitter)"
+          name="xUrl"
+          description="Opcional. Ícono en el pie de página."
+        >
+          <UInput
+            v-model="state.xUrl"
+            type="url"
+            placeholder="https://x.com/tuagencia"
+            icon="i-simple-icons-x"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="TikTok"
+          name="tiktokUrl"
+          description="Opcional. Ícono en el pie de página."
+        >
+          <UInput
+            v-model="state.tiktokUrl"
+            type="url"
+            placeholder="https://tiktok.com/@tuagencia"
+            icon="i-simple-icons-tiktok"
             class="w-full"
           />
         </UFormField>
