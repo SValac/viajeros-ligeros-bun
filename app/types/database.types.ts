@@ -98,6 +98,8 @@ export type Database = {
           state_code: string | null
           tagline: string | null
           updated_at: string
+          x_url: string | null
+          youtube_url: string | null
         }
         Insert: {
           about_page?: Json | null
@@ -121,6 +123,8 @@ export type Database = {
           state_code?: string | null
           tagline?: string | null
           updated_at?: string
+          x_url?: string | null
+          youtube_url?: string | null
         }
         Update: {
           about_page?: Json | null
@@ -144,6 +148,8 @@ export type Database = {
           state_code?: string | null
           tagline?: string | null
           updated_at?: string
+          x_url?: string | null
+          youtube_url?: string | null
         }
         Relationships: [
           {
@@ -1514,6 +1520,8 @@ export type Database = {
           state_code: string
           state_name: string
           tagline: string
+          x_url: string
+          youtube_url: string
         }[]
       }
       get_travel_public_prices: {
