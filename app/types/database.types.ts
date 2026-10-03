@@ -1415,7 +1415,6 @@ export type Database = {
       }
       travels: {
         Row: {
-          accumulated_travelers: number | null
           created_at: string
           departure_from: string | null
           description: string
@@ -1426,7 +1425,6 @@ export type Database = {
           id: string
           image_url: string | null
           label: string
-          minimum_seats: number | null
           owner_id: string
           slug: string | null
           start_date: string
@@ -1436,7 +1434,6 @@ export type Database = {
           from_price: number | null
         }
         Insert: {
-          accumulated_travelers?: number | null
           created_at?: string
           departure_from?: string | null
           description: string
@@ -1447,7 +1444,6 @@ export type Database = {
           id?: string
           image_url?: string | null
           label: string
-          minimum_seats?: number | null
           owner_id: string
           slug?: string | null
           start_date: string
@@ -1456,7 +1452,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          accumulated_travelers?: number | null
           created_at?: string
           departure_from?: string | null
           description?: string
@@ -1467,7 +1462,6 @@ export type Database = {
           id?: string
           image_url?: string | null
           label?: string
-          minimum_seats?: number | null
           owner_id?: string
           slug?: string | null
           start_date?: string
