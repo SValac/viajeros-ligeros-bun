@@ -124,6 +124,8 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     contactEmail: row.contact_email,
     instagramUrl: row.instagram_url,
     facebookUrl: row.facebook_url,
+    youtubeUrl: row.youtube_url,
+    xUrl: row.x_url,
     aboutPage: toAboutPage(row.about_page),
     homePage: toHomePage(row.home_page),
     faviconUrl: row.favicon_url,

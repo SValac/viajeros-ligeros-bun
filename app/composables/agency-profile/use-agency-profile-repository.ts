@@ -80,6 +80,10 @@ export function useAgencyProfileRepository() {
       update.instagram_url = data.instagramUrl;
     if (data.facebookUrl !== undefined)
       update.facebook_url = data.facebookUrl;
+    if (data.youtubeUrl !== undefined)
+      update.youtube_url = data.youtubeUrl;
+    if (data.xUrl !== undefined)
+      update.x_url = data.xUrl;
     if (data.aboutPage !== undefined)
       update.about_page = data.aboutPage;
     if (data.homePage !== undefined)
