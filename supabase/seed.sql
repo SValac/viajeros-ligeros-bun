@@ -474,7 +474,7 @@ on conflict (id) do nothing;
 -- ============================================================
 insert into public.travels (
   id, owner_id, label, destination, start_date, end_date, description,
-  status, minimum_seats
+  status
 ) values
 (
   'ff000000-0000-0000-0000-000000000001',
@@ -484,8 +484,7 @@ insert into public.travels (
   '2026-07-10',
   '2026-07-14',
   'Aventura de 4 días por el cañón más profundo de América del Norte.',
-  'pending',
-  20
+  'pending'
 ),
 (
   'ff000000-0000-0000-0000-000000000002',
@@ -495,8 +494,7 @@ insert into public.travels (
   '2026-11-20',
   '2026-11-24',
   'Viaje a los bosques donde hibernan las mariposas monarca.',
-  'published',
-  25
+  'published'
 )
 on conflict (id) do update set
   label       = excluded.label,
