@@ -97,62 +97,71 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
   <UForm
     :schema="schema"
     :state="state"
-    class="space-y-4"
+    class="space-y-5"
     @submit="onSubmit"
   >
-    <UFormField
-      label="Ocupación máxima"
-      name="ocupacionMaxima"
-      required
-    >
-      <UInput
-        v-model.number="state.maxOccupancy"
-        type="number"
-        :min="1"
-        :max="20"
-        placeholder="Número de personas"
-      />
-    </UFormField>
-
-    <UFormField
-      label="Cantidad de habitaciones"
-      name="cantidadHabitaciones"
-      :hint="`Disponibles: ${availableRooms}`"
-      required
-    >
-      <UInput
-        v-model.number="state.roomCount"
-        type="number"
-        :min="1"
-        :max="availableRooms"
-        placeholder="Número de habitaciones"
-      />
-    </UFormField>
-
-    <USeparator label="Configuración de beds" />
-
-    <div class="space-y-2">
-      <HotelBedConfigurationInput
-        v-for="(cama, i) in state.beds"
-        :key="i"
-        :model-value="cama"
-        @update:model-value="(val) => state.beds[i] = val"
-        @remove="removeCama(i)"
-      />
-      <UButton
-        type="button"
-        variant="ghost"
-        icon="i-lucide-plus"
-        size="sm"
-        @click="addCama"
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <UFormField
+        label="Ocupación máxima"
+        name="maxOccupancy"
+        required
       >
-        Agregar cama
-      </UButton>
+        <UInput
+          v-model.number="state.maxOccupancy"
+          type="number"
+          :min="1"
+          :max="20"
+          placeholder="Número de personas"
+          class="w-full"
+        />
+      </UFormField>
+
+      <UFormField
+        label="Cantidad de habitaciones"
+        name="roomCount"
+        :help="`Disponibles: ${availableRooms}`"
+        required
+      >
+        <UInput
+          v-model.number="state.roomCount"
+          type="number"
+          :min="1"
+          :max="availableRooms"
+          placeholder="Número de habitaciones"
+          class="w-full"
+        />
+      </UFormField>
     </div>
 
     <UFormField
+      label="Camas"
+      name="beds"
+      required
+    >
+      <div class="space-y-2">
+        <HotelBedConfigurationInput
+          v-for="(cama, i) in state.beds"
+          :key="i"
+          :model-value="cama"
+          :removable="state.beds.length > 1"
+          @update:model-value="(val) => state.beds[i] = val"
+          @remove="removeCama(i)"
+        />
+        <UButton
+          type="button"
+          variant="ghost"
+          icon="i-lucide-plus"
+          size="sm"
+          @click="addCama"
+        >
+          Agregar cama
+        </UButton>
+      </div>
+    </UFormField>
+
+    <UFormField
       label="Precio por noche"
-      name="precioPorNoche"
+      name="pricePerNight"
       required
     >
       <UInput
@@ -161,26 +170,35 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
         step="0.01"
         :min="0"
         placeholder="0.00"
+        icon="i-lucide-dollar-sign"
+        class="w-full"
       />
     </UFormField>
 
-    <UFormField label="Detalles adicionales" name="detallesAdicionales">
+    <UFormField label="Detalles adicionales" name="additionalDetails">
       <UTextarea
         v-model="additionalDetailsInput"
-        :rows="2"
+        :rows="3"
+        autoresize
         placeholder="Vista al mar, balcón, etc."
+        class="w-full"
       />
     </UFormField>
 
-    <div class="flex justify-end gap-3 pt-2">
+    <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 sm:gap-3 pt-2">
       <UButton
         type="button"
         variant="ghost"
+        class="justify-center"
         @click="emit('cancel')"
       >
         Cancelar
       </UButton>
-      <UButton type="submit" color="primary">
+      <UButton
+        type="submit"
+        color="primary"
+        class="justify-center"
+      >
         {{ isEditing ? 'Actualizar' : 'Agregar' }}
       </UButton>
     </div>
