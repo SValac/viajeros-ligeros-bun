@@ -208,9 +208,7 @@ export function mapTravelRowToDomain(
     featured: row.featured,
     internalNotes: internals?.internal_notes ?? undefined,
     totalOperationCost: internals?.total_operation_cost ?? undefined,
-    minimumSeats: row.minimum_seats ?? undefined,
     projectedProfit: internals?.projected_profit ?? undefined,
-    accumulatedTravelers: row.accumulated_travelers ?? undefined,
     coordinatorIds: extras?.coordinatorIds ?? [],
     itinerary: extras?.itinerary ?? [],
     services: extras?.services ?? [],
@@ -282,7 +280,8 @@ export function mapTravelAccommodationRowToDomain(row: Tables<'travel_accommodat
 }
 
 // slug is omitted: the database assigns it on first publish (see travels_assign_slug trigger).
-export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at' | 'owner_id' | 'slug' | 'from_price'> {
+// minimum_seats and accumulated_travelers are unused and about to be dropped.
+export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>, 'id' | 'created_at' | 'updated_at' | 'owner_id' | 'slug' | 'from_price' | 'minimum_seats' | 'accumulated_travelers'> {
   return {
     label: data.label,
     destination: data.destination ?? null,
@@ -291,8 +290,6 @@ export function mapTravelToInsert(data: TravelFormData): Omit<Tables<'travels'>,
     description: data.description,
     image_url: data.imageUrl ?? null,
     status: data.status,
-    minimum_seats: data.minimumSeats ?? null,
-    accumulated_travelers: data.accumulatedTravelers ?? null,
     departure_from: data.departureFrom ?? null,
     summary: data.summary ?? null,
     highlights: data.highlights ?? [],
