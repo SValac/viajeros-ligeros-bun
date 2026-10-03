@@ -397,6 +397,9 @@ async function eliminarHospedaje(id: string) {
                     <p class="text-xs text-muted">
                       ${{ tipo.pricePerNight.toFixed(2) }}/noche
                     </p>
+                    <p v-if="tipo.additionalDetails" class="text-xs text-muted">
+                      {{ tipo.additionalDetails }}
+                    </p>
                   </div>
                 </div>
 
