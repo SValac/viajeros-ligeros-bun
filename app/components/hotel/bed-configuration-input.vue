@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import type { BedConfiguration, BedSize } from '~/types/hotel-room';
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   modelValue: BedConfiguration;
-}>();
+  removable?: boolean;
+}>(), {
+  removable: true,
+});
 
 const emit = defineEmits<{
   'update:modelValue': [value: BedConfiguration];
@@ -33,7 +36,7 @@ function updateTamaño(val: string) {
       type="number"
       :min="1"
       :max="10"
-      class="w-20"
+      class="w-20 shrink-0"
       @update:model-value="updateCantidad"
     />
     <USelect
@@ -41,7 +44,7 @@ function updateTamaño(val: string) {
       :items="bedSizeOptions"
       value-key="value"
       label-key="label"
-      class="w-40"
+      class="flex-1 min-w-0"
       @update:model-value="updateTamaño"
     />
     <UButton
@@ -49,6 +52,8 @@ function updateTamaño(val: string) {
       variant="ghost"
       color="error"
       size="sm"
+      aria-label="Quitar cama"
+      :disabled="!removable"
       @click="emit('remove')"
     />
   </div>
