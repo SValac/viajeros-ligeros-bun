@@ -126,6 +126,7 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     facebookUrl: row.facebook_url,
     youtubeUrl: row.youtube_url,
     xUrl: row.x_url,
+    tiktokUrl: row.tiktok_url,
     aboutPage: toAboutPage(row.about_page),
     homePage: toHomePage(row.home_page),
     faviconUrl: row.favicon_url,

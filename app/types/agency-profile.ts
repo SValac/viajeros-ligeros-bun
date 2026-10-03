@@ -15,6 +15,7 @@ export type AgencyProfile = {
   facebookUrl: string | null;
   youtubeUrl: string | null;
   xUrl: string | null;
+  tiktokUrl: string | null;
   aboutPage: AboutPage | null;
   homePage: HomePage | null;
   faviconUrl: string | null;
@@ -39,9 +40,10 @@ export type AgencyProfileFormData = {
   facebookUrl: string;
   youtubeUrl: string;
   xUrl: string;
+  tiktokUrl: string;
 };
 
-export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagline' | 'contactEmail' | 'instagramUrl' | 'facebookUrl' | 'youtubeUrl' | 'xUrl'>> & {
+export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagline' | 'contactEmail' | 'instagramUrl' | 'facebookUrl' | 'youtubeUrl' | 'xUrl' | 'tiktokUrl'>> & {
   logoUrl?: string | null;
   tagline?: string | null;
   aboutPage?: Json | null;
@@ -51,6 +53,7 @@ export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagli
   facebookUrl?: string | null;
   youtubeUrl?: string | null;
   xUrl?: string | null;
+  tiktokUrl?: string | null;
   faviconUrl?: string | null;
   seoTitle?: string | null;
   seoDescription?: string | null;

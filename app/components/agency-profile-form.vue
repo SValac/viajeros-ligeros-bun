@@ -14,6 +14,7 @@ import {
   mapProfileToForm,
   SOCIAL_URL_MAX_LENGTH,
   TAGLINE_MAX_LENGTH,
+  TIKTOK_URL_REGEX,
   X_URL_REGEX,
   YOUTUBE_URL_REGEX,
 } from '~/composables/agency-profile/use-agency-profile-domain';
@@ -58,6 +59,7 @@ const schema = z.object({
   facebookUrl: optionalMatching(FACEBOOK_URL_REGEX, 'Debe ser un enlace https://facebook.com/tu-pagina'),
   youtubeUrl: optionalMatching(YOUTUBE_URL_REGEX, 'Debe ser un enlace https://youtube.com/@tu-canal'),
   xUrl: optionalMatching(X_URL_REGEX, 'Debe ser un enlace https://x.com/tu-cuenta o https://twitter.com/tu-cuenta'),
+  tiktokUrl: optionalMatching(TIKTOK_URL_REGEX, 'Debe ser un enlace https://tiktok.com/@tu-cuenta'),
 });
 
 type Schema = z.output<typeof schema>;
@@ -254,6 +256,20 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
             type="url"
             placeholder="https://x.com/tuagencia"
             icon="i-simple-icons-x"
+            class="w-full"
+          />
+        </UFormField>
+
+        <UFormField
+          label="TikTok"
+          name="tiktokUrl"
+          description="Opcional. Ícono en el pie de página."
+        >
+          <UInput
+            v-model="state.tiktokUrl"
+            type="url"
+            placeholder="https://tiktok.com/@tuagencia"
+            icon="i-simple-icons-tiktok"
             class="w-full"
           />
         </UFormField>

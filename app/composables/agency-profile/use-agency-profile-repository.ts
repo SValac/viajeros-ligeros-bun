@@ -84,6 +84,8 @@ export function useAgencyProfileRepository() {
       update.youtube_url = data.youtubeUrl;
     if (data.xUrl !== undefined)
       update.x_url = data.xUrl;
+    if (data.tiktokUrl !== undefined)
+      update.tiktok_url = data.tiktokUrl;
     if (data.aboutPage !== undefined)
       update.about_page = data.aboutPage;
     if (data.homePage !== undefined)
