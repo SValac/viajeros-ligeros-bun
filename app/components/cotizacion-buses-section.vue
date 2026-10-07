@@ -223,7 +223,6 @@ function getBusActions(bus: QuotationBus) {
                 :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Cap. bus'"
                 :color="(bus.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -255,7 +254,6 @@ function getBusActions(bus: QuotationBus) {
                 :label="bus.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
                 :color="bus.paymentMethod === 'cash' ? 'success' : 'info'"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -265,7 +263,6 @@ function getBusActions(bus: QuotationBus) {
                 :label="getEstadoPagoLabel(cotizacionStore.getBusPaymentStatus(bus.id))"
                 :color="getEstadoPagoColor(cotizacionStore.getBusPaymentStatus(bus.id))"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -275,7 +272,6 @@ function getBusActions(bus: QuotationBus) {
                 :label="bus.confirmed ? 'Sí' : 'No'"
                 :color="bus.confirmed ? 'success' : 'neutral'"
                 variant="subtle"
-                size="xs"
               />
             </td>
 

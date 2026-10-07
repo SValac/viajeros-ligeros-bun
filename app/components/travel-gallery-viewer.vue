@@ -68,7 +68,6 @@ async function confirmDelete(item: TravelMedia) {
             :icon="item.mediaType === 'video' ? 'i-lucide-video' : 'i-lucide-image'"
             color="neutral"
             variant="solid"
-            size="xs"
           />
           <UButton
             v-if="editable"

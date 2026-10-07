@@ -147,7 +147,6 @@ async function confirmDelete() {
                   :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
                   :color="pago.paymentType === 'cash' ? 'success' : 'info'"
                   variant="subtle"
-                  size="xs"
                 />
               </td>
               <td class="py-2 pr-4 font-medium">
