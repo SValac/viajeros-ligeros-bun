@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Travel, TravelStatus } from '~/types/travel';
 
+import { parseDisplayDate } from '~/utils/format-date';
+
 definePageMeta({
   name: 'travels-dashboard',
 });
@@ -21,8 +23,8 @@ const stats = computed(() => travelsStore.stats);
 
 // Funciones auxiliares
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('es-MX', {
+  // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
+  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',

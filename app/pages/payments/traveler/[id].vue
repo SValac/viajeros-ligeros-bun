@@ -6,6 +6,7 @@ import { h } from 'vue';
 import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
 
 import { formatCurrency } from '~/utils/currency';
+import { parseDisplayDate } from '~/utils/format-date';
 
 definePageMeta({
   name: 'payments-traveler',
@@ -118,7 +119,8 @@ async function handleDelete(payment: Payment) {
 }
 
 function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString('es-MX', {
+  // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
+  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
     day: 'numeric',
     month: 'short',
     year: 'numeric',
