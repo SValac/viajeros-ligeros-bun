@@ -2,6 +2,7 @@
 import type { ProviderPayment, ProviderPaymentFormData } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
+import { parseDisplayDate } from '~/utils/format-date';
 
 type Props = {
   quotationProviderId: string;
@@ -24,7 +25,8 @@ const isDeleteModalOpen = shallowRef(false);
 const pagoToDelete = shallowRef<ProviderPayment | null>(null);
 
 function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('es-MX', {
+  // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
+  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
