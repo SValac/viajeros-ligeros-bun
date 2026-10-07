@@ -20,7 +20,7 @@ const emit = defineEmits<{
 const DOT_CLASSES = {
   primary: 'bg-primary',
   info: 'bg-info',
-  success: 'bg-success',
+  neutral: 'bg-inverted/40',
   warning: 'bg-warning',
   error: 'bg-error',
 } as const;

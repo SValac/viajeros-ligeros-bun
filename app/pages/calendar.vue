@@ -2,11 +2,13 @@
 import type { DateValue } from '@internationalized/date';
 import type { TabsItem } from '@nuxt/ui';
 
-import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
+import { getLocalTimeZone, isSameMonth, parseDate, today } from '@internationalized/date';
 
 import type { Travel, TravelStatus } from '~/types/travel';
+import type { MexicanHoliday } from '~/utils/mexican-holidays';
 
 import { useTravelCalendar } from '~/composables/travels/use-travel-calendar';
+import { getMexicanHolidaysByDay, HOLIDAY_KIND_LABELS, HOLIDAY_KIND_TEXT_CLASSES } from '~/utils/mexican-holidays';
 import { CALENDAR_DEFAULT_STATUSES, CALENDAR_LOCALE } from '~/utils/travel-calendar';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
@@ -26,6 +28,7 @@ const selectedDay = shallowRef<DateValue>();
 // Filtros: estatus visibles (sin cancelados) y cancelados aparte, como en el popover
 const selectedStatuses = ref<TravelStatus[]>([...CALENDAR_DEFAULT_STATUSES]);
 const showCancelled = shallowRef(false);
+const showHolidays = shallowRef(true);
 // Pestaña de la lista del panel derecho; elegir un día cambia a "Del día"
 const listTab = shallowRef<'day' | 'month'>('month');
 
@@ -45,6 +48,24 @@ const selectedTravelId = computed({
     router.replace({ query: { ...route.query, viaje: id } });
   },
 });
+
+// Festivos del año visible y de los vecinos: las 6 semanas del mes pueden tocar otro año.
+// Se recalcula solo al cambiar de año.
+const visibleYear = computed(() => placeholder.value.year);
+const holidaysByDay = computed(() =>
+  getMexicanHolidaysByDay([visibleYear.value - 1, visibleYear.value, visibleYear.value + 1]),
+);
+
+function getHolidayOnDay(day: DateValue): MexicanHoliday | undefined {
+  return showHolidays.value ? holidaysByDay.value.get(day.toString()) : undefined;
+}
+
+const selectedDayHoliday = computed(() => (selectedDay.value ? getHolidayOnDay(selectedDay.value) : undefined));
+const monthHolidays = computed(() =>
+  showHolidays.value
+    ? [...holidaysByDay.value.values()].filter(holiday => isSameMonth(holiday.date, placeholder.value))
+    : [],
+);
 
 const selectedTravel = computed(() => visibleTravels.value.find(travel => travel.id === selectedTravelId.value));
 const dayTravels = computed(() => (selectedDay.value ? getTravelsOnDay(selectedDay.value) : []));
@@ -123,7 +144,7 @@ watch(loaded, (isLoaded) => {
           <h1 class="text-2xl font-bold text-highlighted">
             Calendario de viajes
           </h1>
-          <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Estados de los viajes">
+          <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Leyenda: estatus de los viajes y días festivos">
             <li v-for="status in visibleStatuses" :key="status">
               <UBadge
                 :label="getTravelStatusLabel(status)"
@@ -132,6 +153,27 @@ watch(loaded, (isLoaded) => {
                 size="sm"
               />
             </li>
+            <template v-if="showHolidays">
+              <!-- Separados de los estatus: los festivos no son viajes -->
+              <li class="ml-1 border-l border-default pl-2.5">
+                <UBadge
+                  :label="HOLIDAY_KIND_LABELS.official"
+                  icon="i-lucide-party-popper"
+                  color="error"
+                  variant="subtle"
+                  size="sm"
+                />
+              </li>
+              <li>
+                <UBadge
+                  :label="HOLIDAY_KIND_LABELS.traditional"
+                  icon="i-lucide-party-popper"
+                  color="neutral"
+                  variant="subtle"
+                  size="sm"
+                />
+              </li>
+            </template>
           </ul>
         </div>
 
@@ -139,6 +181,7 @@ watch(loaded, (isLoaded) => {
           <TravelCalendarFilters
             v-model:statuses="selectedStatuses"
             v-model:show-cancelled="showCancelled"
+            v-model:show-holidays="showHolidays"
           />
           <UButton
             label="Hoy"
@@ -163,6 +206,7 @@ watch(loaded, (isLoaded) => {
             :get-travels-on-day="getTravelsOnDay"
             :travel-lanes="travelLanes"
             :selected-travel-id="selectedTravel?.id"
+            :get-holiday-on-day="getHolidayOnDay"
             @update:model-value="selectDay"
           />
         </UCard>
@@ -184,9 +228,25 @@ watch(loaded, (isLoaded) => {
 
             <template v-if="listTab === 'day'">
               <template v-if="selectedDay">
-                <h2 class="mb-2 text-sm font-semibold text-highlighted">
-                  Viajes del {{ dayLabel }}
-                </h2>
+                <!-- El festivo va en la fila del título: no agrega alto ni empuja el resumen -->
+                <div class="mb-2 flex items-center justify-between gap-2">
+                  <h2 class="truncate text-sm font-semibold text-highlighted">
+                    Viajes del {{ dayLabel }}
+                  </h2>
+                  <UTooltip
+                    v-if="selectedDayHoliday"
+                    :text="`${selectedDayHoliday.name} · ${HOLIDAY_KIND_LABELS[selectedDayHoliday.kind]}`"
+                  >
+                    <UBadge
+                      :label="selectedDayHoliday.shortName"
+                      icon="i-lucide-party-popper"
+                      :color="selectedDayHoliday.kind === 'official' ? 'error' : 'neutral'"
+                      variant="subtle"
+                      size="sm"
+                      class="shrink-0"
+                    />
+                  </UTooltip>
+                </div>
                 <TravelCalendarList
                   v-if="dayTravels.length > 0"
                   :travels="dayTravels"
@@ -203,9 +263,39 @@ watch(loaded, (isLoaded) => {
             </template>
 
             <template v-else>
-              <h2 class="mb-2 text-sm font-semibold text-highlighted">
-                Viajes de {{ monthLabel }}
-              </h2>
+              <!-- Festivos del mes en la fila del título (detalle en el popover): no empujan el resumen -->
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <h2 class="truncate text-sm font-semibold text-highlighted">
+                  Viajes de {{ monthLabel }}
+                </h2>
+                <!-- Botón (no hover): en tablet se abre con un toque -->
+                <UPopover
+                  v-if="monthHolidays.length > 0"
+                  :content="{ align: 'end' }"
+                >
+                  <UButton
+                    :label="`${monthHolidays.length} festivo${monthHolidays.length === 1 ? '' : 's'}`"
+                    icon="i-lucide-party-popper"
+                    color="neutral"
+                    variant="soft"
+                    size="xs"
+                    class="shrink-0"
+                  />
+                  <template #content>
+                    <ul class="space-y-1 p-3 text-xs font-medium" aria-label="Días festivos del mes">
+                      <li
+                        v-for="holiday in monthHolidays"
+                        :key="holiday.date.toString()"
+                        class="flex items-center gap-1.5"
+                        :class="HOLIDAY_KIND_TEXT_CLASSES[holiday.kind]"
+                      >
+                        <UIcon name="i-lucide-party-popper" class="size-3.5 shrink-0" />
+                        {{ holiday.date.day }} · {{ holiday.name }}
+                      </li>
+                    </ul>
+                  </template>
+                </UPopover>
+              </div>
               <TravelCalendarList
                 v-if="monthTravels.length > 0"
                 :travels="monthTravels"

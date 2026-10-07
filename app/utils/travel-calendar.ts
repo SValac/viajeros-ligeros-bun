@@ -1,6 +1,6 @@
 import type { CalendarDate, DateValue } from '@internationalized/date';
 
-import { endOfWeek, getDayOfWeek, isSameDay, minDate, parseDate } from '@internationalized/date';
+import { isSameDay, parseDate } from '@internationalized/date';
 
 import type { Travel, TravelStatus } from '~/types/travel';
 
@@ -18,7 +18,7 @@ export type TravelBarShape = 'single' | 'start' | 'middle' | 'end';
 export const TRAVEL_STATUS_BAR_CLASSES: Record<TravelStatusColor, string> = {
   primary: 'bg-primary/15 text-primary',
   info: 'bg-info/15 text-info',
-  success: 'bg-success/15 text-success',
+  neutral: 'bg-inverted/10 text-toned',
   warning: 'bg-warning/15 text-warning',
   error: 'bg-error/15 text-error',
 };
@@ -27,7 +27,7 @@ export const TRAVEL_STATUS_BAR_CLASSES: Record<TravelStatusColor, string> = {
 export const TRAVEL_STATUS_BAR_SELECTED_CLASSES: Record<TravelStatusColor, string> = {
   primary: 'bg-primary text-inverted',
   info: 'bg-info text-inverted',
-  success: 'bg-success text-inverted',
+  neutral: 'bg-inverted text-inverted',
   warning: 'bg-warning text-inverted',
   error: 'bg-error text-inverted',
 };
@@ -99,34 +99,6 @@ export function getTravelBarShape(travel: Pick<Travel, 'startDate' | 'endDate'>,
   if (isEnd)
     return 'end';
   return 'middle';
-}
-
-/**
- * El nombre va el día de salida y al inicio de cada semana, para que un viaje que
- * cruza de fila se siga identificando.
- * @param travel - Viaje
- * @param day - Día del calendario (dentro del viaje)
- * @returns Si la barra de ese día lleva el nombre del viaje
- */
-export function shouldShowTravelLabel(travel: Pick<Travel, 'startDate' | 'endDate'>, day: DateValue): boolean {
-  return isSameDay(getTravelDateRange(travel).start, day) || getDayOfWeek(day, CALENDAR_LOCALE) === 0;
-}
-
-/**
- * Días que el nombre puede ocupar desde este día: hasta el regreso o el fin de la semana,
- * lo que llegue primero (el nombre no salta de fila).
- * @param travel - Viaje
- * @param day - Día del calendario (dentro del viaje)
- * @returns Número de días, mínimo 1
- */
-export function getTravelLabelSpanDays(travel: Pick<Travel, 'startDate' | 'endDate'>, day: DateValue): number {
-  const { end } = getTravelDateRange(travel);
-  const segmentEnd = minDate(end, endOfWeek(day, CALENDAR_LOCALE)) ?? day;
-  // A lo más 7 vueltas
-  let days = 1;
-  for (let next = day.add({ days: 1 }); next.compare(segmentEnd) <= 0; next = next.add({ days: 1 }))
-    days++;
-  return days;
 }
 
 /**
