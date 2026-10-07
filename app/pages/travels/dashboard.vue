@@ -158,7 +158,7 @@ const columns: TableColumn<Travel>[] = [
 <template>
   <div class="space-y-6">
     <!-- Header -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-wrap justify-between items-center gap-4">
       <div>
         <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
           Gestión de Viajes

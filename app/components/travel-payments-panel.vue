@@ -245,7 +245,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       if (s.totalDiscountAmount <= 0)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalDiscountAmount));
+      return h('span', { class: 'text-sm' }, formatCurrency(s.totalDiscountAmount));
     },
   },
   {
@@ -258,7 +258,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
       if (s.totalSurchargeAmount <= 0)
         return h('span', { class: 'text-sm text-muted' }, '—');
-      return h('span', { class: 'text-sm text-warning' }, formatCurrency(s.totalSurchargeAmount));
+      return h('span', { class: 'text-sm' }, formatCurrency(s.totalSurchargeAmount));
     },
   },
   {
@@ -269,7 +269,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
-      return h('span', { class: 'text-sm text-success' }, formatCurrency(s.totalPaid));
+      return h('span', { class: 'text-sm' }, formatCurrency(s.totalPaid));
     },
   },
   {
@@ -280,7 +280,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       if (!config?.publicPriceId)
         return h('span', { class: 'text-sm text-muted' }, '—');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
-      return h('span', { class: s.balance > 0 ? 'text-sm text-error' : 'text-sm text-success' }, formatCurrency(s.balance));
+      return h('span', { class: s.balance > 0 ? 'text-sm text-warning' : 'text-sm text-success' }, formatCurrency(s.balance));
     },
   },
   {
@@ -371,11 +371,11 @@ watch(travelId, async (id) => {
             <p class="text-sm text-muted">
               Total recaudado
             </p>
-            <p class="text-xl font-bold text-success mt-1">
+            <p class="text-xl font-bold mt-1">
               {{ formatCurrency(cashSummary.totalCollected) }}
             </p>
           </div>
-          <UIcon name="i-lucide-trending-up" class="w-9 h-9 text-success opacity-60" />
+          <UIcon name="i-lucide-trending-up" class="w-9 h-9 text-muted" />
         </div>
       </UCard>
       <UCard>
@@ -384,11 +384,18 @@ watch(travelId, async (id) => {
             <p class="text-sm text-muted">
               Saldo por cobrar
             </p>
-            <p class="text-xl font-bold text-error mt-1">
+            <p
+              class="text-xl font-bold mt-1"
+              :class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
+            >
               {{ formatCurrency(cashSummary.balance) }}
             </p>
           </div>
-          <UIcon name="i-lucide-clock" class="w-9 h-9 text-error opacity-60" />
+          <UIcon
+            name="i-lucide-clock"
+            class="w-9 h-9 opacity-60"
+            :class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
+          />
         </div>
       </UCard>
     </div>

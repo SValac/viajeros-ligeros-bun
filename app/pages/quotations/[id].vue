@@ -174,7 +174,8 @@ function handleCotizacionConfirmada() {
         <UNavigationMenu
           :items="tabs"
           highlight
-          class="border-b border-default"
+          class="border-b border-default overflow-x-auto"
+          :ui="{ root: '[&>div]:min-w-max' }"
         />
 
         <NuxtPage />

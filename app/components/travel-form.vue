@@ -235,6 +235,7 @@ function onCancel() {
               v-model="labelInput"
               placeholder="Aventura en París"
               icon="i-lucide-tag"
+              class="w-full"
             />
           </UFormField>
 
@@ -246,6 +247,7 @@ function onCancel() {
               v-model="destinationInput"
               placeholder="París, Francia"
               icon="i-lucide-map-pin"
+              class="w-full"
             />
           </UFormField>
 
@@ -258,6 +260,7 @@ function onCancel() {
               v-model="departureFromInput"
               placeholder="Ciudad de México"
               icon="i-lucide-map-pinned"
+              class="w-full"
             />
           </UFormField>
 
@@ -294,6 +297,7 @@ function onCancel() {
                 multiple
                 placeholder="Seleccionar coordinadores"
                 value-key="value"
+                class="w-full"
               />
               <div
                 v-if="selectedCoordinators.length > 0"
@@ -316,7 +320,7 @@ function onCancel() {
                         <p class="font-medium text-sm truncate">
                           {{ c.name }}
                         </p>
-                        <div class="flex items-center gap-3 mt-0.5">
+                        <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                           <UBadge
                             :label="c.phone"
                             icon="i-lucide-phone"
@@ -358,7 +362,6 @@ function onCancel() {
               v-model="dateRange"
               separator-icon="i-lucide-arrow-right"
               range
-              class=""
             >
               <template #trailing>
                 <UPopover :reference="inputDate?.inputsRef[0]?.$el">
@@ -393,6 +396,7 @@ function onCancel() {
               v-model="state.status"
               :items="estadoOptions"
               icon="i-lucide-circle-dot"
+              class="w-full"
             />
             <template
               v-if="!canPublish && !agencyProfileStore.loading"
@@ -447,6 +451,7 @@ function onCancel() {
                 :max="6"
                 placeholder="Escribe y presiona Enter"
                 icon="i-lucide-sparkles"
+                class="w-full"
               />
             </UFormField>
 

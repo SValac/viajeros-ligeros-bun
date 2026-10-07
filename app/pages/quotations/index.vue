@@ -138,7 +138,7 @@ const columns: TableColumn<QuotationRow>[] = [
     </div>
 
     <!-- Stats cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <UCard>
         <div class="flex items-center justify-between">
           <div>
