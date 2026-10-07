@@ -36,9 +36,10 @@ ALTER TABLE public.travelers
 
 CREATE INDEX travelers_coordinator_id_idx ON public.travelers (coordinator_id);
 
--- A coordinator row takes its name and phone from the coordinator, and nobody can
--- turn a traveler into a coordinator (or back) afterwards: coordinators may UPDATE
--- travelers, and relabeling a paying traveler would hide them from payments.
+-- A coordinator row takes its name and phone from the coordinator and is never part
+-- of a group (is_representative defaults to true). Nobody can turn a traveler into a
+-- coordinator (or back) afterwards: coordinators may UPDATE travelers, and relabeling
+-- a paying traveler would hide them from payments.
 CREATE FUNCTION private.prepare_coordinator_traveler()
 RETURNS trigger
 LANGUAGE plpgsql
@@ -57,6 +58,9 @@ BEGIN
   END IF;
 
   IF NEW.kind = 'coordinator' THEN
+    NEW.is_representative := false;
+    NEW.representative_id := NULL;
+
     SELECT c.name, c.phone INTO v_name, v_phone
     FROM public.coordinators c
     WHERE c.id = NEW.coordinator_id;

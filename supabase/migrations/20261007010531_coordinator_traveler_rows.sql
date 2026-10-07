@@ -14,8 +14,8 @@ SET search_path = ''
 AS $$
 BEGIN
   INSERT INTO public.travelers
-    (travel_id, kind, coordinator_id, first_name, last_name, phone, boarding_point)
-  SELECT NEW.travel_id, 'coordinator', c.id, c.name, '', c.phone, ''
+    (travel_id, kind, coordinator_id, first_name, last_name, phone, boarding_point, is_representative)
+  SELECT NEW.travel_id, 'coordinator', c.id, c.name, '', c.phone, '', false
   FROM public.coordinators c
   WHERE c.id = NEW.coordinator_id
   ON CONFLICT (travel_id, coordinator_id) DO NOTHING;
@@ -32,8 +32,8 @@ CREATE TRIGGER travel_coordinators_create_traveler
 
 -- Coordinators already linked to a travel.
 INSERT INTO public.travelers
-  (travel_id, kind, coordinator_id, first_name, last_name, phone, boarding_point)
-SELECT tc.travel_id, 'coordinator', c.id, c.name, '', c.phone, ''
+  (travel_id, kind, coordinator_id, first_name, last_name, phone, boarding_point, is_representative)
+SELECT tc.travel_id, 'coordinator', c.id, c.name, '', c.phone, '', false
 FROM public.travel_coordinators tc
 JOIN public.coordinators c ON c.id = tc.coordinator_id
 ON CONFLICT (travel_id, coordinator_id) DO NOTHING;
