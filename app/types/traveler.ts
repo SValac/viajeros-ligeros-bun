@@ -1,11 +1,21 @@
+/**
+ * `'coordinator'` rows belong to the travel's coordinators: they can take a seat and a
+ * room like anyone else, but never pay, so payments only look at `'traveler'` rows.
+ */
+export type TravelerKind = 'traveler' | 'coordinator';
+
 export type Traveler = {
   id: string;
+  kind: TravelerKind;
+  /** Set only on `'coordinator'` rows. */
+  coordinatorId?: string;
   firstName: string;
   lastName: string;
   phone: string;
   travelId: string;
   travelBusId: string;
-  seat: number;
+  /** `null` only for a coordinator without a seat. */
+  seat: number | null;
   boardingPoint: string;
   isRepresentative: boolean;
   representativeId?: string;
@@ -25,8 +35,9 @@ export type TravelerRoomAssignment = {
   travelId: string;
 };
 
-export type TravelerFormData = Omit<Traveler, 'id' | 'createdAt' | 'updatedAt'> & {
+export type TravelerFormData = Omit<Traveler, 'id' | 'kind' | 'coordinatorId' | 'seat' | 'createdAt' | 'updatedAt'> & {
   id?: string;
+  seat: number;
 };
 
 export type TravelerUpdateData = Partial<TravelerFormData>;
