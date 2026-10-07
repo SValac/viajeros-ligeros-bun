@@ -2,9 +2,12 @@ import type { CalendarDate, DateValue } from '@internationalized/date';
 
 import { endOfWeek, getDayOfWeek, isSameDay, minDate, parseDate } from '@internationalized/date';
 
-import type { Travel } from '~/types/travel';
+import type { Travel, TravelStatus } from '~/types/travel';
 
 import type { TravelStatusColor } from './travel-status';
+
+// Estatus que el calendario muestra de inicio; los cancelados se agregan con su propio switch
+export const CALENDAR_DEFAULT_STATUSES: TravelStatus[] = ['pending', 'published', 'in_progress', 'completed'];
 
 // Mismo locale que UApp (app/app.vue): la semana empieza en domingo
 export const CALENDAR_LOCALE = 'es-MX';

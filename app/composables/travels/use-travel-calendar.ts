@@ -4,18 +4,18 @@ import type { MaybeRefOrGetter } from 'vue';
 import { endOfMonth, startOfMonth } from '@internationalized/date';
 import { storeToRefs } from 'pinia';
 
-import type { Travel } from '~/types/travel';
+import type { Travel, TravelStatus } from '~/types/travel';
 
 import { assignTravelLanes, getTravelDateRange, isTravelInRange } from '~/utils/travel-calendar';
 
 // Datos derivados para app/pages/calendar.vue. El store de viajes es la fuente de verdad;
 // lo que solo le importa al calendario (filtro, carriles, índice por día) se calcula aquí.
-export function useTravelCalendar(showCancelled: MaybeRefOrGetter<boolean>) {
+export function useTravelCalendar(visibleStatuses: MaybeRefOrGetter<TravelStatus[]>) {
   const { travels, loaded } = storeToRefs(useTravelsStore());
 
   const visibleTravels = computed((): Travel[] =>
     travels.value
-      .filter(travel => toValue(showCancelled) || travel.status !== 'cancelled')
+      .filter(travel => toValue(visibleStatuses).includes(travel.status))
       .sort((a, b) => a.startDate.localeCompare(b.startDate) || a.endDate.localeCompare(b.endDate)),
   );
 

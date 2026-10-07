@@ -7,7 +7,7 @@ import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
 import type { Travel, TravelStatus } from '~/types/travel';
 
 import { useTravelCalendar } from '~/composables/travels/use-travel-calendar';
-import { CALENDAR_LOCALE } from '~/utils/travel-calendar';
+import { CALENDAR_DEFAULT_STATUSES, CALENDAR_LOCALE } from '~/utils/travel-calendar';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
 definePageMeta({
@@ -23,11 +23,19 @@ const timeZone = getLocalTimeZone();
 // Estado de la vista: es solo de esta página, no va al store
 const placeholder = shallowRef<DateValue>(today(timeZone));
 const selectedDay = shallowRef<DateValue>();
+// Filtros: estatus visibles (sin cancelados) y cancelados aparte, como en el popover
+const selectedStatuses = ref<TravelStatus[]>([...CALENDAR_DEFAULT_STATUSES]);
 const showCancelled = shallowRef(false);
 // Pestaña de la lista del panel derecho; elegir un día cambia a "Del día"
 const listTab = shallowRef<'day' | 'month'>('month');
 
-const { loaded, visibleTravels, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(showCancelled);
+// En el orden de la leyenda, no en el que se marcaron
+const visibleStatuses = computed<TravelStatus[]>(() => [
+  ...CALENDAR_DEFAULT_STATUSES.filter(status => selectedStatuses.value.includes(status)),
+  ...(showCancelled.value ? ['cancelled' as const] : []),
+]);
+
+const { loaded, visibleTravels, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses);
 
 // El viaje elegido vive en `?viaje=`: recargar o compartir el link conserva la selección.
 // `replace`: elegir viajes no llena el historial del navegador.
@@ -54,11 +62,6 @@ const listTabs = computed<TabsItem[]>(() => [
   { label: 'Del mes', value: 'month', icon: 'i-lucide-calendar-days', badge: monthTravels.value.length },
 ]);
 
-const legendStatuses = computed<TravelStatus[]>(() => {
-  const statuses: TravelStatus[] = ['pending', 'published', 'in_progress', 'completed'];
-  return showCancelled.value ? [...statuses, 'cancelled'] : statuses;
-});
-
 // Un viaje ese día → se abre directo; varios → se elige de la lista; ninguno → nada
 function selectDay(day: DateValue | undefined) {
   selectedDay.value = day;
@@ -83,12 +86,12 @@ function goToToday() {
   selectDay(date);
 }
 
-function setShowCancelled(value: boolean) {
-  showCancelled.value = value;
+// Si un filtro oculta el viaje elegido, se deselecciona (y sale del query)
+watch(visibleStatuses, (statuses) => {
   const selected = selectedTravelId.value ? travelsStore.getTravelById(selectedTravelId.value) : undefined;
-  if (!value && selected?.status === 'cancelled')
+  if (selected && !statuses.includes(selected.status))
     selectedTravelId.value = undefined;
-}
+});
 
 // Link directo con `?viaje=`: al terminar de cargar los viajes, abrir el mes de ese viaje.
 // `loaded` solo pasa de false a true una vez, así que esto corre una sola vez.
@@ -102,8 +105,11 @@ watch(loaded, (isLoaded) => {
     selectedTravelId.value = undefined;
     return;
   }
+  // Que los filtros no oculten el viaje del link
   if (travel.status === 'cancelled')
     showCancelled.value = true;
+  else if (!selectedStatuses.value.includes(travel.status))
+    selectedStatuses.value = [...selectedStatuses.value, travel.status];
   placeholder.value = parseDate(travel.startDate);
 }, { immediate: true });
 </script>
@@ -118,7 +124,7 @@ watch(loaded, (isLoaded) => {
             Calendario de viajes
           </h1>
           <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Estados de los viajes">
-            <li v-for="status in legendStatuses" :key="status">
+            <li v-for="status in visibleStatuses" :key="status">
               <UBadge
                 :label="getTravelStatusLabel(status)"
                 :color="getTravelStatusColor(status)"
@@ -129,11 +135,10 @@ watch(loaded, (isLoaded) => {
           </ul>
         </div>
 
-        <div class="flex items-center gap-4">
-          <USwitch
-            :model-value="showCancelled"
-            label="Mostrar cancelados"
-            @update:model-value="setShowCancelled"
+        <div class="flex items-center gap-2">
+          <TravelCalendarFilters
+            v-model:statuses="selectedStatuses"
+            v-model:show-cancelled="showCancelled"
           />
           <UButton
             label="Hoy"
@@ -205,7 +210,6 @@ watch(loaded, (isLoaded) => {
                 v-if="monthTravels.length > 0"
                 :travels="monthTravels"
                 :selected-travel-id="selectedTravel?.id"
-                class="max-h-72 overflow-y-auto"
                 @select="selectTravelFromMonth"
               />
               <p v-else class="text-sm text-muted">
