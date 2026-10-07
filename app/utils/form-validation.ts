@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
+import { parsePhone } from '~/utils/phone';
+
 // Letras (con acentos/ñ), espacios, apóstrofes, puntos y guiones — sin dígitos ni símbolos.
 const NAME_REGEX = /^[\p{L}\s'.-]+$/u;
-// Dígitos, espacios y los símbolos típicos de un teléfono: +, guiones y paréntesis.
-const PHONE_REGEX = /^\+?[\d\s()-]+$/;
 // Letras, números y puntuación típica de un nombre de negocio — sin < > { } ; ni otros símbolos de inyección.
 const BUSINESS_NAME_REGEX = /^[\p{L}\p{N}\s'&.,/()°#-]+$/u;
 
@@ -16,10 +16,6 @@ const CONTROL_CHARS_REGEX = new RegExp(`[${CONTROL_CHAR_CODES.map(code => String
 
 export function sanitizeName(value: string): string {
   return value.replace(/[^\p{L}\s'.-]/gu, '');
-}
-
-export function sanitizePhone(value: string): string {
-  return value.replace(/[^\d+()\s-]/g, '');
 }
 
 export function sanitizeBusinessName(value: string): string {
@@ -45,17 +41,25 @@ export function nameSchema({ min = 2, max = 100 }: NameSchemaOptions = {}) {
 }
 
 type PhoneSchemaOptions = {
-  min?: number;
-  max?: number;
+  required?: boolean;
 };
 
-export function phoneSchema({ min = 0, max = 20 }: PhoneSchemaOptions = {}) {
+// Valida el teléfono que entrega <PhoneInput> (E.164) con la longitud de su país.
+export function phoneSchema({ required = false }: PhoneSchemaOptions = {}) {
   return z.string()
     .trim()
-    .min(min, min > 0 ? `Mínimo ${min} caracteres` : 'El teléfono es requerido')
-    .max(max, `Máximo ${max} caracteres`)
-    .regex(PHONE_REGEX, 'Solo se permiten números, espacios, +, - y paréntesis')
-    .refine(value => (value.match(/\d/g)?.length ?? 0) >= 7, 'El teléfono debe tener al menos 7 dígitos');
+    .superRefine((value, ctx) => {
+      if (!value) {
+        if (required)
+          ctx.addIssue({ code: 'custom', message: 'El teléfono es requerido' });
+        return;
+      }
+      const { country, digits } = parsePhone(value);
+      if (!country)
+        ctx.addIssue({ code: 'custom', message: 'Código de país no soportado' });
+      else if (digits.length !== country.nationalLength)
+        ctx.addIssue({ code: 'custom', message: `El teléfono debe tener ${country.nationalLength} dígitos` });
+    });
 }
 
 type BusinessNameSchemaOptions = {

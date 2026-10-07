@@ -171,7 +171,7 @@ onMounted(async () => {
               >
                 <UUser
                   :name="`${traveler.firstName} ${traveler.lastName}`"
-                  :description="traveler.phone"
+                  :description="formatPhone(traveler.phone)"
                   :avatar="{}"
                   size="sm"
                 />

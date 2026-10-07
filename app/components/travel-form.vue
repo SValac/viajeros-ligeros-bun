@@ -30,7 +30,7 @@ const hasCoordinators = computed(() => allCoordinators.value.length > 0);
 const coordinatorItems = computed(() =>
   allCoordinators.value.map((c: Coordinator) => ({
     value: c.id,
-    label: `${c.name} — ${c.phone}`,
+    label: `${c.name} — ${formatPhone(c.phone)}`,
   })),
 );
 
@@ -322,7 +322,7 @@ function onCancel() {
                         </p>
                         <div class="flex flex-wrap items-center gap-x-3 gap-y-1 mt-0.5">
                           <UBadge
-                            :label="c.phone"
+                            :label="formatPhone(c.phone)"
                             icon="i-lucide-phone"
                             color="neutral"
                             variant="subtle"

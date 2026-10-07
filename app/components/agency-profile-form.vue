@@ -9,7 +9,6 @@ import {
   CONTACT_EMAIL_MAX_LENGTH,
   FACEBOOK_URL_REGEX,
   INSTAGRAM_URL_REGEX,
-  isValidLocalPhone,
   mapFormToUpdate,
   mapProfileToForm,
   SOCIAL_URL_MAX_LENGTH,
@@ -18,7 +17,7 @@ import {
   X_URL_REGEX,
   YOUTUBE_URL_REGEX,
 } from '~/composables/agency-profile/use-agency-profile-domain';
-import { businessNameSchema, sanitizeBusinessName, sanitizePhone, sanitizeText, textSchema } from '~/utils/form-validation';
+import { businessNameSchema, phoneSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   profile: AgencyProfile | null;
@@ -46,8 +45,7 @@ const schema = z.object({
   companyName: businessNameSchema({ min: 2, max: 100 }),
   countryCode: z.string().length(2),
   stateCode: z.string().nullable(),
-  phone: z.string()
-    .refine(isValidLocalPhone, 'El teléfono debe tener 10 dígitos'),
+  phone: phoneSchema(),
   primaryColor: z.string().nullable(),
   secondaryColor: z.string().nullable(),
   tagline: textSchema({ max: TAGLINE_MAX_LENGTH }),
@@ -77,7 +75,6 @@ const isDirty = computed(() =>
 useUnsavedChangesGuard(isDirty);
 
 const companyNameInput = useSanitizedModel(() => state.value.companyName, v => state.value.companyName = v, sanitizeBusinessName);
-const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
 const taglineInput = useSanitizedModel(() => state.value.tagline, v => state.value.tagline = v, sanitizeText);
 
 const taglineCounter = computed(() => `${state.value.tagline.length}/${TAGLINE_MAX_LENGTH}`);
@@ -178,15 +175,9 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
       <UFormField
         label="Teléfono"
         name="phone"
-        description="Botón de WhatsApp en tus viajes. 10 dígitos, sin lada internacional (+52 se agrega sola)."
+        description="Botón de WhatsApp en tus viajes."
       >
-        <UInput
-          v-model="phoneInput"
-          type="tel"
-          placeholder="33 1234 5678"
-          icon="i-lucide-phone"
-          class="w-full"
-        />
+        <PhoneInput v-model="state.phone" />
       </UFormField>
 
       <UFormField

@@ -1,5 +1,7 @@
 import type { AgencyProfile, AgencyProfileFormData, AgencyProfileUpdateData, AgencySiteImageField } from '~/types/agency-profile';
 
+import { normalizePhone } from '~/utils/phone';
+
 // Holds every profile image (logo, favicon, share image, home banner), not only logos.
 export const AGENCY_LOGOS_BUCKET = 'agency-logos';
 
@@ -107,10 +109,6 @@ export const YOUTUBE_URL_REGEX = /^https:\/\/(?:www\.|m\.)?youtube\.com\/\S+$/;
 export const X_URL_REGEX = /^https:\/\/(?:www\.)?(?:x|twitter)\.com\/\S+$/;
 export const TIKTOK_URL_REGEX = /^https:\/\/(?:www\.|m\.)?tiktok\.com\/\S+$/;
 
-// Only MX is seeded in the location catalog for now, so every phone is Mexican.
-const MX_DIAL_CODE = '52';
-const MX_LOCAL_DIGITS = 10;
-
 /**
  * An agency profile is complete when the public site can identify and filter it:
  * it needs a company name and a state. Publishing a travel requires this (Fase 5 gate).
@@ -119,39 +117,6 @@ const MX_LOCAL_DIGITS = 10;
  */
 export function isProfileComplete(profile: AgencyProfile | null): boolean {
   return !!profile?.companyName?.trim() && !!profile.stateCode;
-}
-
-/**
- * Converts a stored E.164 phone (`+523312345678`) to the local digits shown in the form.
- * @param phone - Stored phone or `null`
- * @returns Local 10-digit phone, or `''` when there is none
- */
-export function toLocalPhone(phone: string | null): string {
-  if (!phone)
-    return '';
-  return phone.startsWith(`+${MX_DIAL_CODE}`) ? phone.slice(MX_DIAL_CODE.length + 1) : phone;
-}
-
-/**
- * Converts what the user typed (`33 1234 5678`) to E.164 (`+523312345678`).
- * @param value - Phone as typed in the form
- * @returns E.164 phone, or `null` when the field is empty
- */
-export function toE164Phone(value: string | null): string | null {
-  const digits = (value ?? '').replace(/\D/g, '');
-  if (!digits)
-    return null;
-  return `+${MX_DIAL_CODE}${digits.slice(-MX_LOCAL_DIGITS)}`;
-}
-
-/**
- * Checks that a typed phone has exactly 10 digits once spaces and symbols are removed.
- * @param value - Phone as typed in the form
- * @returns `true` when empty (the phone is optional) or when it has 10 digits
- */
-export function isValidLocalPhone(value: string): boolean {
-  const digits = value.replace(/\D/g, '');
-  return digits.length === 0 || digits.length === MX_LOCAL_DIGITS;
 }
 
 function normalizeHexColor(value: string | null): string | null {
@@ -172,7 +137,7 @@ export function mapProfileToForm(profile: AgencyProfile | null): AgencyProfileFo
     companyName: profile?.companyName ?? '',
     countryCode: profile?.countryCode ?? 'MX',
     stateCode: profile?.stateCode ?? null,
-    phone: toLocalPhone(profile?.phone ?? null),
+    phone: profile?.phone ?? '',
     primaryColor: profile?.primaryColor ?? null,
     secondaryColor: profile?.secondaryColor ?? null,
     tagline: profile?.tagline ?? '',
@@ -197,7 +162,7 @@ export function mapFormToUpdate(form: AgencyProfileFormData): AgencyProfileUpdat
     companyName: form.companyName.trim(),
     countryCode: form.countryCode,
     stateCode: form.stateCode || null,
-    phone: toE164Phone(form.phone),
+    phone: normalizePhone(form.phone) || null,
     primaryColor: normalizeHexColor(form.primaryColor),
     secondaryColor: normalizeHexColor(form.secondaryColor),
     tagline: trimToNull(form.tagline),

@@ -20,11 +20,13 @@ const coordinators = computed(() => {
   const term = searchTerm.value.toLowerCase();
   if (!term)
     return coordinatorStore.allCoordinators;
+  // El teléfono se compara por dígitos: se guarda en E.164 y se escribe como se ve, "(312) 127…"
+  const termDigits = term.replace(/\D/g, '');
   return coordinatorStore.allCoordinators.filter(
     c =>
       c.name.toLowerCase().includes(term)
       || c.email.toLowerCase().includes(term)
-      || c.phone.includes(term),
+      || (!!termDigits && c.phone.replace(/\D/g, '').includes(termDigits)),
   );
 });
 
@@ -111,7 +113,7 @@ const columns: TableColumn<Coordinator>[] = [
     accessorKey: 'phone',
     header: 'Teléfono',
     cell: ({ row }) =>
-      h('span', { class: 'text-sm' }, row.getValue('phone')),
+      h('span', { class: 'text-sm' }, formatPhone(row.original.phone)),
   },
   {
     accessorKey: 'email',
