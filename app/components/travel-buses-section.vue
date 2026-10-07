@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { QuotationBus } from '~/types/quotation';
+import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
 import { sanitizeName } from '~/utils/form-validation';
 
@@ -133,7 +133,7 @@ function getProviderName(proveedorId: string): string {
   return providerStore.getProviderById(proveedorId)?.name ?? 'Proveedor desconocido';
 }
 
-function getEstadoColor(status: string): 'success' | 'warning' | 'neutral' {
+function getEstadoColor(status: QuotationBusStatus): 'success' | 'warning' | 'neutral' {
   if (status === 'confirmed')
     return 'success';
   if (status === 'reserved')
@@ -141,13 +141,13 @@ function getEstadoColor(status: string): 'success' | 'warning' | 'neutral' {
   return 'neutral';
 }
 
-function getEstadoLabel(status: string): string {
-  const labels: Record<string, string> = {
+function getEstadoLabel(status: QuotationBusStatus): string {
+  const labels: Record<QuotationBusStatus, string> = {
     confirmed: 'Confirmado',
-    apartado: 'Apartado',
-    pendiente: 'Pendiente',
+    reserved: 'Apartado',
+    pending: 'Pendiente',
   };
-  return labels[status] ?? status;
+  return labels[status];
 }
 
 function getBusCoordinadorIds(busId: string): string[] {
