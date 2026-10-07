@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DateValue } from '@internationalized/date';
+import type { TabsItem } from '@nuxt/ui';
 
 import { getLocalTimeZone, parseDate, today } from '@internationalized/date';
 
@@ -23,6 +24,8 @@ const timeZone = getLocalTimeZone();
 const placeholder = shallowRef<DateValue>(today(timeZone));
 const selectedDay = shallowRef<DateValue>();
 const showCancelled = shallowRef(false);
+// Pestaña de la lista del panel derecho; elegir un día cambia a "Del día"
+const listTab = shallowRef<'day' | 'month'>('month');
 
 const { loaded, visibleTravels, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(showCancelled);
 
@@ -46,6 +49,11 @@ const dayLabel = computed(() =>
   selectedDay.value?.toDate(timeZone).toLocaleDateString(CALENDAR_LOCALE, { day: 'numeric', month: 'long' }) ?? '',
 );
 
+const listTabs = computed<TabsItem[]>(() => [
+  { label: 'Del día', value: 'day', icon: 'i-lucide-calendar-check', badge: selectedDay.value ? dayTravels.value.length : undefined },
+  { label: 'Del mes', value: 'month', icon: 'i-lucide-calendar-days', badge: monthTravels.value.length },
+]);
+
 const legendStatuses = computed<TravelStatus[]>(() => {
   const statuses: TravelStatus[] = ['pending', 'published', 'in_progress', 'completed'];
   return showCancelled.value ? [...statuses, 'cancelled'] : statuses;
@@ -54,6 +62,7 @@ const legendStatuses = computed<TravelStatus[]>(() => {
 // Un viaje ese día → se abre directo; varios → se elige de la lista; ninguno → nada
 function selectDay(day: DateValue | undefined) {
   selectedDay.value = day;
+  listTab.value = 'day';
   const travels = day ? getTravelsOnDay(day) : [];
   selectedTravelId.value = travels.length === 1 ? travels[0]?.id : undefined;
 }
@@ -108,9 +117,16 @@ watch(loaded, (isLoaded) => {
           <h1 class="text-2xl font-bold text-highlighted">
             Calendario de viajes
           </h1>
-          <p class="mt-1 text-sm text-muted">
-            Elige un día o un viaje para ver su resumen
-          </p>
+          <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Estados de los viajes">
+            <li v-for="status in legendStatuses" :key="status">
+              <UBadge
+                :label="getTravelStatusLabel(status)"
+                :color="getTravelStatusColor(status)"
+                variant="subtle"
+                size="sm"
+              />
+            </li>
+          </ul>
         </div>
 
         <div class="flex items-center gap-4">
@@ -135,77 +151,76 @@ watch(loaded, (isLoaded) => {
 
       <div v-else class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <!-- Calendario -->
-        <div class="space-y-6 lg:col-span-2">
-          <UCard>
-            <TravelCalendar
-              v-model:placeholder="placeholder"
-              :model-value="selectedDay"
-              :get-travels-on-day="getTravelsOnDay"
-              :travel-lanes="travelLanes"
-              :selected-travel-id="selectedTravel?.id"
-              @update:model-value="selectDay"
-            />
-
-            <template #footer>
-              <ul class="flex flex-wrap gap-2" aria-label="Estados de los viajes">
-                <li v-for="status in legendStatuses" :key="status">
-                  <UBadge
-                    :label="getTravelStatusLabel(status)"
-                    :color="getTravelStatusColor(status)"
-                    variant="subtle"
-                  />
-                </li>
-              </ul>
-            </template>
-          </UCard>
-
-          <UCard>
-            <template #header>
-              <h2 class="font-semibold">
-                Viajes de {{ monthLabel }}
-              </h2>
-            </template>
-
-            <TravelCalendarList
-              v-if="monthTravels.length > 0"
-              :travels="monthTravels"
-              :selected-travel-id="selectedTravel?.id"
-              @select="selectTravelFromMonth"
-            />
-            <p v-else class="text-sm text-muted">
-              No hay viajes este mes
-            </p>
-          </UCard>
-        </div>
+        <UCard class="lg:col-span-2">
+          <TravelCalendar
+            v-model:placeholder="placeholder"
+            :model-value="selectedDay"
+            :get-travels-on-day="getTravelsOnDay"
+            :travel-lanes="travelLanes"
+            :selected-travel-id="selectedTravel?.id"
+            @update:model-value="selectDay"
+          />
+        </UCard>
 
         <!-- Panel derecho -->
         <div class="space-y-6 lg:sticky lg:top-6">
-          <UCard v-if="dayTravels.length > 1">
+          <!-- Viajes del día / del mes en una sola card: sin scroll para ver ambas listas -->
+          <UCard :ui="{ header: 'px-4 pt-2 pb-0 sm:px-4', body: 'p-4 sm:p-4' }">
             <template #header>
-              <h2 class="font-semibold">
-                Viajes del {{ dayLabel }}
-              </h2>
+              <UTabs
+                v-model="listTab"
+                :items="listTabs"
+                :content="false"
+                variant="link"
+                size="sm"
+                class="w-full"
+              />
             </template>
 
-            <TravelCalendarList
-              :travels="dayTravels"
-              :selected-travel-id="selectedTravel?.id"
-              @select="selectTravelFromDay"
-            />
+            <template v-if="listTab === 'day'">
+              <template v-if="selectedDay">
+                <h2 class="mb-2 text-sm font-semibold text-highlighted">
+                  Viajes del {{ dayLabel }}
+                </h2>
+                <TravelCalendarList
+                  v-if="dayTravels.length > 0"
+                  :travels="dayTravels"
+                  :selected-travel-id="selectedTravel?.id"
+                  @select="selectTravelFromDay"
+                />
+                <p v-else class="text-sm text-muted">
+                  Sin viajes este día
+                </p>
+              </template>
+              <p v-else class="text-sm text-muted">
+                Elige un día en el calendario
+              </p>
+            </template>
+
+            <template v-else>
+              <h2 class="mb-2 text-sm font-semibold text-highlighted">
+                Viajes de {{ monthLabel }}
+              </h2>
+              <TravelCalendarList
+                v-if="monthTravels.length > 0"
+                :travels="monthTravels"
+                :selected-travel-id="selectedTravel?.id"
+                class="max-h-72 overflow-y-auto"
+                @select="selectTravelFromMonth"
+              />
+              <p v-else class="text-sm text-muted">
+                No hay viajes este mes
+              </p>
+            </template>
           </UCard>
 
           <TravelCalendarSummary v-if="selectedTravel" :travel="selectedTravel" />
 
-          <UCard v-else-if="dayTravels.length <= 1">
-            <div class="flex flex-col items-center gap-3 py-8 text-center">
+          <UCard v-else>
+            <div class="flex flex-col items-center gap-3 py-6 text-center">
               <UIcon name="i-lucide-calendar-search" class="size-10 text-dimmed" />
               <p class="text-sm text-muted">
-                <template v-if="selectedDay">
-                  Sin viajes el {{ dayLabel }}
-                </template>
-                <template v-else>
-                  Selecciona un día o un viaje para ver su resumen
-                </template>
+                Elige un viaje para ver su resumen
               </p>
             </div>
           </UCard>
