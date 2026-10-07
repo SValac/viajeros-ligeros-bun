@@ -48,6 +48,7 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `quotations-menu.md` — Menú de Cotizaciones (`/quotations`) con detalle en pestañas; la cotización sale de las páginas de viajes
 - `coordinator-seats.md` — Coordinadores con asiento de autobús y habitación (filas de `travelers` con `kind = 'coordinator'`)
 - `provider-cost-per-person.md` — Costo de servicio total o por persona en la cotización; la app calcula el total
+- `travel-calendar.md` — Calendario de viajes (`/calendar`): mes sobre `UCalendar` con barras por viaje y resumen al elegir uno
 
 ---
 

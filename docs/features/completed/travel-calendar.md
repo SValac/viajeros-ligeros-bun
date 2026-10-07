@@ -1,6 +1,6 @@
 # Feature: Calendario de viajes
 
-**Estado:** 🚧 En desarrollo (rama `feature/travel-calendar`). Sin migraciones.
+**Estado:** ✅ COMPLETADA. PR #112 (rama `feature/travel-calendar`). Sin migraciones.
 
 ---
 
