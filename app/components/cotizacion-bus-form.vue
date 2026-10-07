@@ -2,18 +2,21 @@
 import { z } from 'zod';
 
 import type { Bus } from '~/types/bus';
-import type { CostSplitType, QuotationBusStatus } from '~/types/quotation';
+import type { CostSplitType, QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   quotationId: string;
   open: boolean;
+  /** Bus a editar; sin él, el modal agrega uno nuevo */
+  bus?: QuotationBus | null;
 };
 
 type Emits = {
   (e: 'update:open', value: boolean): void;
   (e: 'busAgregado'): void;
+  (e: 'busActualizado'): void;
 };
 
 const props = defineProps<Props>();
@@ -22,7 +25,11 @@ const emit = defineEmits<Emits>();
 const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const busStore = useBusStore();
+const travelsStore = useTravelsStore();
+const travelerStore = useTravelerStore();
 const toast = useToast();
+
+const isEditing = computed(() => !!props.bus);
 
 // Agencias de autobús disponibles
 const agenciasDisponibles = computed(() =>
@@ -82,6 +89,9 @@ const unitNumberInput = useSanitizedModel(() => formState.unitNumber ?? '', v =>
 const remarksInput = useSanitizedModel(() => formState.remarks ?? '', v => formState.remarks = v, sanitizeText);
 
 const busSeleccionado = ref<Bus | null>(null);
+// Al editar, la unidad guardada no viene del catálogo: se conserva hasta que el usuario elija otra
+const conservaUnidadActual = shallowRef(false);
+const tieneUnidad = computed(() => !!busSeleccionado.value || conservaUnidadActual.value);
 
 // Unidades del catálogo para la agencia seleccionada
 const unidadesAgencia = computed<Bus[]>(() => {
@@ -90,15 +100,52 @@ const unidadesAgencia = computed<Bus[]>(() => {
   return busStore.getBusesByProvider(formState.providerId);
 });
 
-// Al cambiar agencia, limpiar selección de unidad
-watch(() => formState.providerId, () => {
-  busSeleccionado.value = null;
-  formState.unitNumber = '';
-  formState.capacity = undefined;
+// Asiento más alto ocupado en el bus del viaje: al editar, no se puede cambiar a una unidad más chica
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId)?.travelId);
+const asientoMaximoOcupado = computed(() => {
+  if (!props.bus || !travelId.value)
+    return 0;
+  const travelBus = travelsStore.getTravelById(travelId.value)?.buses?.find(b => b.quotationBusId === props.bus!.id);
+  if (!travelBus)
+    return 0;
+  return travelerStore.getOccupantsByTravel(travelId.value)
+    .filter(t => t.travelBusId === travelBus.id)
+    .reduce((max, t) => Math.max(max, t.seat ?? 0), 0);
 });
+
+// Llenar el formulario al abrir (agregar: vacío; editar: datos del bus)
+watch(() => props.open, (open) => {
+  if (!open)
+    return;
+  resetForm();
+  if (props.bus) {
+    formState.providerId = props.bus.providerId;
+    formState.unitNumber = props.bus.unitNumber;
+    formState.capacity = props.bus.capacity;
+    formState.status = props.bus.status;
+    formState.totalCost = props.bus.totalCost;
+    formState.splitType = props.bus.splitType ?? 'minimum';
+    formState.paymentMethod = props.bus.paymentMethod ?? 'cash';
+    formState.remarks = props.bus.remarks ?? '';
+    formState.confirmed = props.bus.confirmed ?? false;
+    formState.notes = props.bus.notes ?? '';
+    conservaUnidadActual.value = true;
+    if (travelId.value)
+      travelerStore.fetchByTravel(travelId.value);
+  }
+}, { immediate: true });
+
+// Al cambiar agencia (solo por el usuario), limpiar selección de unidad
+function onAgenciaChange(providerId: string) {
+  if (providerId === formState.providerId)
+    return;
+  formState.providerId = providerId;
+  deseleccionarUnidad();
+}
 
 function seleccionarUnidad(bus: Bus) {
   busSeleccionado.value = bus;
+  conservaUnidadActual.value = false;
   const partes = [bus.brand, bus.model, bus.year ? `(${bus.year})` : null].filter(Boolean);
   formState.unitNumber = partes.length > 0 ? partes.join(' ') : `Unidad ${bus.id.slice(-6)}`;
   formState.capacity = bus.seatCount;
@@ -106,6 +153,7 @@ function seleccionarUnidad(bus: Bus) {
 
 function deseleccionarUnidad() {
   busSeleccionado.value = null;
+  conservaUnidadActual.value = false;
   formState.unitNumber = '';
   formState.capacity = undefined;
 }
@@ -127,6 +175,7 @@ function resetForm() {
   formState.confirmed = false;
   formState.notes = '';
   busSeleccionado.value = null;
+  conservaUnidadActual.value = false;
 }
 
 async function handleSubmit() {
@@ -140,11 +189,20 @@ async function handleSubmit() {
     return;
   }
 
-  const response = await cotizacionStore.addBusQuotation({
-    quotationId: props.quotationId,
+  const data = {
     ...result.data,
     notes: result.data.notes || undefined,
     remarks: result.data.remarks || undefined,
+  };
+
+  if (props.bus) {
+    await submitEdit(props.bus, data);
+    return;
+  }
+
+  const response = await cotizacionStore.addBusQuotation({
+    quotationId: props.quotationId,
+    ...data,
   });
 
   if ('error' in response) {
@@ -158,6 +216,35 @@ async function handleSubmit() {
   emit('update:open', false);
 }
 
+async function submitEdit(bus: QuotationBus, data: BusSchema) {
+  const duplicado = cotizacionStore.getBusesByQuotation(props.quotationId).some(
+    b => b.id !== bus.id && b.providerId === data.providerId && b.unitNumber === data.unitNumber,
+  );
+  if (duplicado) {
+    toast.add({ title: 'Error', description: 'Este número de unidad ya existe para este proveedor en la cotización', color: 'error' });
+    return;
+  }
+
+  if (data.capacity < asientoMaximoOcupado.value) {
+    toast.add({
+      title: 'Unidad muy pequeña',
+      description: `Hay un viajero en el asiento ${asientoMaximoOcupado.value} y la unidad tiene ${data.capacity}. Muévelo o elige otra unidad.`,
+      color: 'error',
+    });
+    return;
+  }
+
+  const updated = await cotizacionStore.updateBusQuotation(bus.id, data);
+  if (!updated) {
+    toast.add({ title: 'No se pudo actualizar el autobús', description: cotizacionStore.error ?? 'Intenta de nuevo', color: 'error' });
+    return;
+  }
+
+  toast.add({ title: 'Autobús actualizado', color: 'success' });
+  emit('busActualizado');
+  emit('update:open', false);
+}
+
 function handleCancel() {
   resetForm();
   emit('update:open', false);
@@ -167,8 +254,8 @@ function handleCancel() {
 <template>
   <UModal
     :open="props.open"
-    title="Agregar Autobús"
-    description="Registra un autobús apartado para esta cotización"
+    :title="isEditing ? 'Editar Autobús' : 'Agregar Autobús'"
+    :description="isEditing ? 'Actualiza los datos del autobús apartado' : 'Registra un autobús apartado para esta cotización'"
     class="sm:max-w-lg"
     @update:open="(v) => emit('update:open', v)"
   >
@@ -185,9 +272,10 @@ function handleCancel() {
           />
           <USelect
             v-else
-            v-model="formState.providerId"
+            :model-value="formState.providerId"
             :items="agenciasSelectItems"
             placeholder="Selecciona una agencia"
+            @update:model-value="onAgenciaChange"
           />
         </UFormField>
 
@@ -196,9 +284,34 @@ function handleCancel() {
           <div class="space-y-3">
             <label class="text-sm font-medium">Unidad <span class="text-error">*</span></label>
 
+            <!-- Unidad seleccionada (del catálogo o la guardada al editar) -->
+            <div
+              v-if="tieneUnidad"
+              class="border border-primary rounded-lg p-4 bg-primary/5"
+            >
+              <div class="flex items-start justify-between gap-2">
+                <div>
+                  <p class="font-medium">
+                    {{ busSeleccionado ? getBusLabel(busSeleccionado) : formState.unitNumber }}
+                  </p>
+                  <p class="text-sm text-muted">
+                    {{ busSeleccionado ? busSeleccionado.seatCount : formState.capacity }} asientos
+                  </p>
+                </div>
+                <UButton
+                  size="xs"
+                  variant="ghost"
+                  color="neutral"
+                  icon="i-lucide-x"
+                  :aria-label="isEditing ? 'Cambiar unidad' : 'Quitar unidad'"
+                  @click="deseleccionarUnidad"
+                />
+              </div>
+            </div>
+
             <!-- Sin unidades -->
             <UAlert
-              v-if="unidadesAgencia.length === 0"
+              v-else-if="unidadesAgencia.length === 0"
               icon="i-lucide-bus-front"
               color="warning"
               variant="subtle"
@@ -220,76 +333,45 @@ function handleCancel() {
               </template>
             </UAlert>
 
-            <!-- Lista de unidades -->
-            <template v-else>
-              <!-- Unidad seleccionada -->
-              <div
-                v-if="busSeleccionado"
-                class="border border-primary rounded-lg p-4 bg-primary/5"
+            <!-- Selector de unidades -->
+            <div v-else class="border rounded-lg divide-y max-h-52 overflow-y-auto">
+              <button
+                v-for="unidad in unidadesAgencia"
+                :key="unidad.id"
+                type="button"
+                class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-elevated transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                :disabled="unidad.seatCount < asientoMaximoOcupado"
+                @click="seleccionarUnidad(unidad)"
               >
-                <div class="flex items-start justify-between gap-2">
-                  <div>
-                    <p class="font-medium">
-                      {{ getBusLabel(busSeleccionado) }}
-                    </p>
-                    <p class="text-sm text-muted">
-                      {{ busSeleccionado.seatCount }} asientos
-                    </p>
-                  </div>
-                  <UButton
-                    size="xs"
-                    variant="ghost"
-                    color="neutral"
-                    icon="i-lucide-x"
-                    @click="deseleccionarUnidad"
-                  />
+                <div>
+                  <p class="font-medium text-sm">
+                    {{ getBusLabel(unidad) }}
+                  </p>
+                  <p class="text-xs text-muted">
+                    {{ unidad.seatCount }} asientos
+                    <template v-if="unidad.seatCount < asientoMaximoOcupado">
+                      · hay viajeros hasta el asiento {{ asientoMaximoOcupado }}
+                    </template>
+                  </p>
                 </div>
-              </div>
-
-              <!-- Selector de unidades -->
-              <div v-else class="border rounded-lg divide-y max-h-52 overflow-y-auto">
-                <button
-                  v-for="bus in unidadesAgencia"
-                  :key="bus.id"
-                  type="button"
-                  class="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-elevated transition-colors"
-                  @click="seleccionarUnidad(bus)"
-                >
-                  <div>
-                    <p class="font-medium text-sm">
-                      {{ getBusLabel(bus) }}
-                    </p>
-                    <p class="text-xs text-muted">
-                      {{ bus.seatCount }} asientos
-                    </p>
-                  </div>
-                  <UIcon name="i-lucide-chevron-right" class="w-4 h-4 text-muted" />
-                </button>
-              </div>
-            </template>
+                <UIcon name="i-lucide-chevron-right" class="w-4 h-4 text-muted" />
+              </button>
+            </div>
           </div>
         </template>
 
         <!-- Campos visibles después de seleccionar unidad -->
-        <template v-if="busSeleccionado">
+        <template v-if="tieneUnidad">
           <USeparator label="Identificación" />
 
           <UFormField label="Identificador de la Unidad" required>
             <UInput v-model="unitNumberInput" placeholder="Ej. BUS-001 o Marca Modelo" />
           </UFormField>
 
-          <div class="grid grid-cols-2 gap-4">
-            <UFormField label="Capacidad (asientos)" required>
-              <UInput
-                v-model.number="formState.capacity"
-                type="number"
-                min="1"
-              />
-            </UFormField>
-            <UFormField label="Estado">
-              <USelect v-model="formState.status" :items="estadoOptions" />
-            </UFormField>
-          </div>
+          <!-- La capacidad no se edita: viene de la unidad del catálogo (se ve en la tarjeta de arriba) -->
+          <UFormField label="Estado">
+            <USelect v-model="formState.status" :items="estadoOptions" />
+          </UFormField>
 
           <USeparator label="Cotización" />
 
@@ -329,8 +411,8 @@ function handleCancel() {
           />
           <UButton
             type="submit"
-            label="Agregar Autobús"
-            :disabled="!busSeleccionado"
+            :label="isEditing ? 'Guardar cambios' : 'Agregar Autobús'"
+            :disabled="!tieneUnidad"
           />
         </div>
       </form>
