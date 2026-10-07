@@ -27,8 +27,9 @@ const travel = computed(() => travelStore.getTravelById(travelId.value));
 // Redirect if travel not found.
 // `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
 // y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
-watch(travel, (value) => {
-  if (!value && travelId.value) {
+// Espera a `loaded`: al abrir el link directo los viajes todavía se están cargando.
+watch([travel, () => travelStore.loaded], ([value, loaded]) => {
+  if (loaded && !value && travelId.value) {
     toast.add({
       title: 'Viaje no encontrado',
       description: 'El viaje que buscas no existe',
@@ -228,5 +229,9 @@ function handleCotizacionConfirmada() {
         </UForm>
       </template>
     </UModal>
+  </div>
+
+  <div v-else class="flex h-full items-center justify-center">
+    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
   </div>
 </template>

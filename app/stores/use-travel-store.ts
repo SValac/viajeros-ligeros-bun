@@ -22,6 +22,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   const travels = ref<Travel[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  // True once the first fetchAll() succeeds; until then an empty list means "not loaded yet", not "no travels".
+  const loaded = ref(false);
 
   // Getters (computed)
   const allTravels = computed((): Travel[] => {
@@ -65,6 +67,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     error.value = null;
     try {
       travels.value = await repository.fetchAll();
+      loaded.value = true;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al cargar viajes';
@@ -400,6 +403,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     travels,
     loading,
     error,
+    loaded,
     // Getters
     allTravels,
     getTravelById,
