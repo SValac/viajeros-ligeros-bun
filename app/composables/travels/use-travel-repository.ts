@@ -410,17 +410,31 @@ export function useTravelRepository() {
   }
 
   /**
-   * Replaces all coordinator links for a travel (delete then insert).
-   * If `coordinatorIds` is empty, only the delete runs.
+   * Makes a travel's coordinator links match `coordinatorIds`: removes only the links
+   * that are gone and inserts only the new ones. Links that stay are never touched, so
+   * whatever cascades from them (the coordinator's seat and rooms) survives a travel edit.
    * @param travelId - UUID of the parent travel
-   * @param coordinatorIds - New coordinator UUIDs to link after deletion
+   * @param coordinatorIds - Coordinator UUIDs the travel should end up with
    * @throws {PostgrestError} on Supabase failure
    */
   async function replaceCoordinators(travelId: string, coordinatorIds: string[]): Promise<void> {
-    await removeCoordinators(travelId);
-    if (coordinatorIds.length === 0)
-      return;
-    await insertCoordinators(travelId, coordinatorIds);
+    const { data, error } = await supabase
+      .from('travel_coordinators')
+      .select('coordinator_id')
+      .eq('travel_id', travelId);
+
+    if (error)
+      throw error;
+
+    const current = new Set(data.map(row => row.coordinator_id));
+    const wanted = new Set(coordinatorIds);
+    const removed = [...current].filter(id => !wanted.has(id));
+    const added = [...wanted].filter(id => !current.has(id));
+
+    if (removed.length > 0)
+      await removeCoordinators(travelId, removed);
+    if (added.length > 0)
+      await insertCoordinators(travelId, added);
   }
 
   async function removeActivities(travelId: string): Promise<void> {
@@ -463,11 +477,12 @@ export function useTravelRepository() {
       throw error;
   }
 
-  async function removeCoordinators(travelId: string): Promise<void> {
+  async function removeCoordinators(travelId: string, coordinatorIds: string[]): Promise<void> {
     const { error } = await supabase
       .from('travel_coordinators')
       .delete()
-      .eq('travel_id', travelId);
+      .eq('travel_id', travelId)
+      .in('coordinator_id', coordinatorIds);
 
     if (error)
       throw error;

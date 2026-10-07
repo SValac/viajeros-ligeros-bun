@@ -112,7 +112,12 @@ function toggleEditing() {
         >
           <div class="flex items-center gap-2 min-w-0">
             <UIcon
-              v-if="traveler.isRepresentative"
+              v-if="traveler.kind === 'coordinator'"
+              name="i-lucide-user-cog"
+              class="size-3.5 text-info shrink-0"
+            />
+            <UIcon
+              v-else-if="traveler.isRepresentative"
               name="i-lucide-user-star"
               class="size-3.5 text-primary shrink-0"
             />
@@ -124,6 +129,9 @@ function toggleEditing() {
             <div class="min-w-0">
               <p class="text-sm truncate">
                 {{ traveler.firstName }} {{ traveler.lastName }}
+              </p>
+              <p v-if="traveler.kind === 'coordinator'" class="text-xs text-info">
+                Coordinador
               </p>
               <p
                 v-if="representativeNames?.[traveler.id]"

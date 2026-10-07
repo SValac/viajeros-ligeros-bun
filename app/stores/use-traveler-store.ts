@@ -22,9 +22,16 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   const error = shallowRef<string | null>(null);
   const filters = ref<TravelerFilters>({});
 
+  // `travelers` holds every row, coordinators included. Getters named "Travelers" only
+  // return paying travelers (payments, groups, counts); "Occupants" ones include the
+  // coordinators for seats and rooms.
+  const payingTravelers = computed((): Traveler[] => {
+    return travelers.value.filter(t => t.kind !== 'coordinator');
+  });
+
   // Getters (computed)
   const allTravelers = computed((): Traveler[] => {
-    return [...travelers.value].sort((a, b) =>
+    return [...payingTravelers.value].sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
   });
@@ -37,17 +44,29 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
   const getTravelersByTravel = computed(() => {
     return (travelId: string): Traveler[] => {
+      return payingTravelers.value.filter(t => t.travelId === travelId);
+    };
+  });
+
+  const getCoordinatorsByTravel = computed(() => {
+    return (travelId: string): Traveler[] => {
+      return travelers.value.filter(t => t.travelId === travelId && t.kind === 'coordinator');
+    };
+  });
+
+  const getOccupantsByTravel = computed(() => {
+    return (travelId: string): Traveler[] => {
       return travelers.value.filter(t => t.travelId === travelId);
     };
   });
 
-  const getTravelersByBus = computed(() => {
+  const getOccupantsByBus = computed(() => {
     return (travelBusId: string): Traveler[] => {
       return travelers.value.filter(t => t.travelBusId === travelBusId);
     };
   });
 
-  const getTravelersByAccommodation = computed(() => {
+  const getOccupantsByAccommodation = computed(() => {
     return (travelAccommodationId: string): Traveler[] => {
       const travelerIds = new Set(
         roomAssignments.value
@@ -66,12 +85,12 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
   const getGroupMembers = computed(() => {
     return (representativeId: string): Traveler[] => {
-      return travelers.value.filter(t => t.representativeId === representativeId);
+      return payingTravelers.value.filter(t => t.representativeId === representativeId);
     };
   });
 
   const filteredTravelers = computed((): Traveler[] => {
-    return filterTravelers(travelers.value, filters.value);
+    return filterTravelers(payingTravelers.value, filters.value);
   });
 
   const filteredGroupedTravelers = computed((): TravelerWithChildren[] => {
@@ -272,6 +291,59 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
   }
 
   /**
+   * Seats a coordinator, or takes their seat away (`null`).
+   * @param travelerId - UUID of the coordinator's travelers row
+   * @param seat - Bus and seat to take, or `null` to leave them without a seat
+   * @throws Re-throws repository errors so the caller can react
+   */
+  async function setCoordinatorSeat(
+    travelerId: string,
+    seat: { travelBusId: string; seat: number } | null,
+  ): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const traveler = await repository.setCoordinatorSeat(travelerId, seat);
+      const index = travelers.value.findIndex(t => t.id === travelerId);
+      if (index !== -1)
+        travelers.value[index] = traveler;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Takes every coordinator of a travel off their seat (their rooms stay). Used when the
+   * quotation stops counting coordinators as passengers.
+   * @param travelId - UUID of the travel
+   * @throws Re-throws repository errors so the caller can react
+   */
+  async function clearCoordinatorSeats(travelId: string): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.clearCoordinatorSeats(travelId);
+      travelers.value = travelers.value.map(t =>
+        t.travelId === travelId && t.kind === 'coordinator'
+          ? { ...t, travelBusId: '', seat: null }
+          : t,
+      );
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      throw e;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  /**
    * Assigns a traveler to a room and adds the assignment to the cache.
    * @param travelerId - UUID of the traveler to assign
    * @param accommodation - The room to assign the traveler to
@@ -343,8 +415,10 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     allTravelers,
     getTravelerById,
     getTravelersByTravel,
-    getTravelersByBus,
-    getTravelersByAccommodation,
+    getCoordinatorsByTravel,
+    getOccupantsByTravel,
+    getOccupantsByBus,
+    getOccupantsByAccommodation,
     getRoomAssignmentsByTraveler,
     getGroupMembers,
     filteredTravelers,
@@ -356,6 +430,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     updateTraveler,
     deleteTraveler,
     changeTravelerSeat,
+    setCoordinatorSeat,
+    clearCoordinatorSeats,
     assignTravelerToRoom,
     removeTravelerFromRoom,
     setFilters,

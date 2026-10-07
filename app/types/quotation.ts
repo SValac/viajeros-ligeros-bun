@@ -15,6 +15,11 @@ export type Quotation = {
   showPublicRoomType: boolean;
   /** Whether the public web shows each public price's description. */
   showPublicDescription: boolean;
+  /**
+   * Whether the travel's coordinators take passenger seats. If so they're subtracted from
+   * the sellable seats; if not they get no seat (rooms only).
+   */
+  coordinatorsTakeSeats: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -44,8 +49,10 @@ export type ProviderPayment = {
   createdAt: string;
 };
 
-export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt' | 'showPublicRoomType' | 'showPublicDescription'> & {
+export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt' | 'showPublicRoomType' | 'showPublicDescription' | 'coordinatorsTakeSeats'> & {
   id?: string;
+  /** Defaults to `false` (every seat is sellable) when a quotation is created. */
+  coordinatorsTakeSeats?: boolean;
   /** Defaults to `true` (shown) when a quotation is created. */
   showPublicRoomType?: boolean;
   /** Defaults to `true` (shown) when a quotation is created. */

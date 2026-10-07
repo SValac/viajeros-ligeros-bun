@@ -165,6 +165,47 @@ export function useTravelerRepository() {
   }
 
   /**
+   * Seats a coordinator, or clears their bus and seat together (`null`).
+   * @param travelerId - UUID of the coordinator's travelers row
+   * @param seat - Bus and seat to take, or `null` to leave them without a seat
+   * @returns The updated row mapped to a domain object
+   * @throws {PostgrestError} on Supabase failure (e.g. the seat is taken)
+   */
+  async function setCoordinatorSeat(
+    travelerId: string,
+    seat: { travelBusId: string; seat: number } | null,
+  ): Promise<Traveler> {
+    const { data: row, error } = await supabase
+      .from('travelers')
+      .update({ travel_bus_id: seat?.travelBusId ?? null, seat: seat?.seat ?? null })
+      .eq('id', travelerId)
+      .eq('kind', 'coordinator')
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return mapTravelerRowToDomain(row);
+  }
+
+  /**
+   * Clears the bus and seat of every coordinator of a travel. Their rooms stay.
+   * @param travelId - UUID of the travel
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function clearCoordinatorSeats(travelId: string): Promise<void> {
+    const { error } = await supabase
+      .from('travelers')
+      .update({ travel_bus_id: null, seat: null })
+      .eq('travel_id', travelId)
+      .eq('kind', 'coordinator');
+
+    if (error)
+      throw error;
+  }
+
+  /**
    * Fetches every room assignment the user can see.
    * @returns All assignments mapped to domain objects
    * @throws {PostgrestError} on Supabase failure
@@ -255,6 +296,8 @@ export function useTravelerRepository() {
     unlinkCompanions,
     remove,
     changeSeat,
+    setCoordinatorSeat,
+    clearCoordinatorSeats,
     fetchRoomAssignments,
     fetchRoomAssignmentsByTravel,
     assignRoom,
