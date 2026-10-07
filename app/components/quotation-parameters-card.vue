@@ -108,7 +108,7 @@ async function guardarParametros() {
     <template #header>
       <div class="flex items-center justify-between">
         <h2 class="font-semibold flex items-center gap-2">
-          <span class="i-lucide-settings w-5 h-5 text-muted" />
+          <UIcon name="i-lucide-settings" class="w-5 h-5 text-muted" />
           Parámetros de la Cotización
         </h2>
         <UButton

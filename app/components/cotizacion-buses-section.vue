@@ -145,7 +145,7 @@ function getBusActions(bus: QuotationBus) {
     <template #header>
       <div class="flex items-center justify-between w-full">
         <h2 class="font-semibold flex items-center gap-2">
-          <span class="i-lucide-bus w-5 h-5 text-muted" />
+          <UIcon name="i-lucide-bus" class="w-5 h-5 text-muted" />
           Autobuses Apartados
         </h2>
         <UButton
@@ -297,7 +297,7 @@ function getBusActions(bus: QuotationBus) {
 
     <!-- Empty state -->
     <div v-else class="py-10 text-center bg-elevated/50 rounded-lg">
-      <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-2 block" />
+      <UIcon name="i-lucide-bus" class="w-12 h-12 text-muted mx-auto mb-2 block" />
       <p class="text-muted">
         No hay autobuses apartados en esta cotización
       </p>

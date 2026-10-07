@@ -263,7 +263,7 @@ function handleCancel() {
                       {{ bus.seatCount }} asientos
                     </p>
                   </div>
-                  <span class="i-lucide-chevron-right w-4 h-4 text-muted" />
+                  <UIcon name="i-lucide-chevron-right" class="w-4 h-4 text-muted" />
                 </button>
               </div>
             </template>

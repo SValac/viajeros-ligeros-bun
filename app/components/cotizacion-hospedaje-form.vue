@@ -245,7 +245,7 @@ function handleCancel() {
         <!-- Tipos de Habitación -->
         <div v-if="formState.providerId" class="space-y-4">
           <h3 class="font-semibold flex items-center gap-2">
-            <span class="i-lucide-door-open w-4 h-4" />
+            <UIcon name="i-lucide-door-open" class="w-4 h-4" />
             Tipos de Habitación
           </h3>
 

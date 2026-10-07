@@ -147,7 +147,7 @@ function handleCotizacionConfirmada() {
       <!-- Sin cotización -->
       <div v-if="!cotizacion">
         <UCard class="text-center py-12">
-          <span class="i-lucide-file-plus w-16 h-16 text-muted mx-auto mb-4 block" />
+          <UIcon name="i-lucide-file-plus" class="w-16 h-16 text-muted mx-auto mb-4 block" />
           <h2 class="text-xl font-semibold mb-2">
             Sin cotización
           </h2>
