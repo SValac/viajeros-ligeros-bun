@@ -9,11 +9,7 @@ const route = useRoute();
 const agencyProfileStore = useAgencyProfileStore();
 onMounted(() => agencyProfileStore.fetchProfile());
 
-const items = computed<NavigationMenuItem[][]>(() => [[{
-  label: 'Inicio',
-  icon: 'i-lucide-house',
-  to: '/',
-}, {
+const items = computed<NavigationMenuItem[]>(() => [{
   label: 'Viajes',
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
@@ -66,17 +62,7 @@ const items = computed<NavigationMenuItem[][]>(() => [[{
     icon: 'i-lucide-package',
     to: '/providers/other',
   }],
-}], [{
-  label: 'Feedback',
-  icon: 'i-lucide-message-circle',
-  to: 'https://github.com/nuxt-ui-templates/dashboard',
-  target: '_blank',
-}, {
-  label: 'Help & Support',
-  icon: 'i-lucide-info',
-  to: 'https://github.com/nuxt/ui',
-  target: '_blank',
-}]]);
+}]);
 </script>
 
 <template>
@@ -91,27 +77,21 @@ const items = computed<NavigationMenuItem[][]>(() => [[{
         :alt="agencyProfileStore.profile?.companyName || 'Logo'"
         class="w-auto shrink-0 mx-auto"
       />
-      <h1
+      <!-- No es <h1>: el <h1> de cada pantalla es el título de la página -->
+      <p
         v-if="!collapsed"
-        class="text-center text-lg font-semibold"
+        class="text-center text-lg font-semibold text-highlighted"
       >
         {{ agencyProfileStore.profile?.companyName || 'Viajeros Ligeros' }}
-      </h1>
+      </p>
     </template>
 
     <template #default="{ collapsed }">
       <UNavigationMenu
         :collapsed="collapsed"
-        :items="items[0]"
+        :items="items"
         orientation="vertical"
         :popover="collapsed"
-      />
-
-      <UNavigationMenu
-        :collapsed="collapsed"
-        :items="items[1]"
-        orientation="vertical"
-        class="mt-auto"
       />
     </template>
 

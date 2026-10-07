@@ -303,9 +303,10 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <!-- Proveedor -->
             <td class="py-3 pr-4">
               <div class="flex items-center gap-1.5">
-                <span
+                <UIcon
                   v-if="isProviderInactive(proveedor.providerId)"
-                  class="i-lucide-alert-triangle w-4 h-4 text-warning shrink-0"
+                  name="i-lucide-triangle-alert"
+                  class="w-4 h-4 text-warning shrink-0"
                   title="Proveedor inactivo en el catálogo"
                 />
                 <span class="font-medium">{{ getProviderName(proveedor.providerId) }}</span>
@@ -411,7 +412,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
 
     <!-- Estado vacío -->
     <div v-else class="py-10 text-center bg-elevated/50 rounded-lg">
-      <span class="i-lucide-package-x w-12 h-12 text-muted mx-auto mb-2 block" />
+      <UIcon name="i-lucide-package-x" class="w-12 h-12 text-muted mx-auto mb-2 block" />
       <p class="text-muted">
         No hay proveedores en esta cotización
       </p>

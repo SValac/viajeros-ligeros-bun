@@ -330,7 +330,7 @@ async function eliminarHospedaje(id: string) {
 
     <!-- Sin hospedajes -->
     <div v-else class="text-center py-8 text-muted">
-      <span class="i-lucide-inbox w-8 h-8 mx-auto mb-2 block opacity-50" />
+      <UIcon name="i-lucide-inbox" class="w-8 h-8 mx-auto mb-2 block opacity-50" />
       <p class="text-sm">
         No hay hospedajes agregados
       </p>
@@ -367,7 +367,7 @@ async function eliminarHospedaje(id: string) {
           <!-- Tipos de habitación con checkboxes -->
           <div class="space-y-3">
             <h4 class="text-sm font-semibold flex items-center gap-2">
-              <span class="i-lucide-door-open w-4 h-4" />
+              <UIcon name="i-lucide-door-open" class="w-4 h-4" />
               Tipos de Habitación
             </h4>
 

@@ -64,7 +64,7 @@ function onSubmit() {
   >
     <!-- Info de la unidad (readonly) -->
     <div class="bg-elevated/50 rounded-lg px-4 py-3 flex items-center gap-3">
-      <span class="i-lucide-bus w-5 h-5 text-muted" />
+      <UIcon name="i-lucide-bus" class="w-5 h-5 text-muted" />
       <div>
         <p class="font-medium text-sm">
           {{ bus.unitNumber }}

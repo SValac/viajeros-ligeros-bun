@@ -44,7 +44,7 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span class="i-lucide-wallet w-4 h-4 text-error" />
+          <UIcon name="i-lucide-wallet" class="w-4 h-4 text-error" />
           Costo Total
         </p>
         <p class="text-2xl font-bold text-error">
@@ -68,7 +68,7 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span class="i-lucide-bus w-4 h-4 text-purple-500" />
+          <UIcon name="i-lucide-bus" class="w-4 h-4 text-purple-500" />
           Total Autobuses
         </p>
         <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
@@ -84,7 +84,7 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span class="i-lucide-door-open w-4 h-4 text-amber-500" />
+          <UIcon name="i-lucide-door-open" class="w-4 h-4 text-amber-500" />
           Total Hospedaje
         </p>
         <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">
@@ -100,7 +100,7 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span class="i-lucide-armchair w-4 h-4 text-blue-500" />
+          <UIcon name="i-lucide-armchair" class="w-4 h-4 text-blue-500" />
           Precio por Asiento
         </p>
         <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
@@ -126,7 +126,7 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span class="i-lucide-target w-4 h-4 text-warning" />
+          <UIcon name="i-lucide-target" class="w-4 h-4 text-warning" />
           Meta mínima de asientos
         </p>
         <p class="text-2xl font-bold text-warning">
@@ -148,7 +148,7 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span class="i-lucide-trending-up w-4 h-4 text-success" />
+          <UIcon name="i-lucide-trending-up" class="w-4 h-4 text-success" />
           Ganancia Proyectada
         </p>
         <p class="text-2xl font-bold text-success">
@@ -165,7 +165,7 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span class="i-lucide-users w-4 h-4 text-indigo-500" />
+          <UIcon name="i-lucide-users" class="w-4 h-4 text-indigo-500" />
           Acumulado Viajeros
         </p>
         <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
@@ -178,8 +178,9 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span
-            class="i-lucide-clock w-4 h-4"
+          <UIcon
+            name="i-lucide-clock"
+            class="w-4 h-4"
             :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'"
           />
           Saldo Pendiente Proveedores
@@ -197,8 +198,9 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span
-            class="i-lucide-hotel w-4 h-4"
+          <UIcon
+            name="i-lucide-hotel"
+            class="w-4 h-4"
             :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
           />
           Saldo Pendiente Hospedaje
@@ -216,8 +218,9 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <span
-            class="i-lucide-bus w-4 h-4"
+          <UIcon
+            name="i-lucide-bus"
+            class="w-4 h-4"
             :class="saldoPendienteBuses > 0 ? 'text-warning' : 'text-success'"
           />
           Saldo Pendiente Autobuses
