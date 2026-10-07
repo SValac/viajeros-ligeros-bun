@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { TravelStatus } from '~/types/travel';
 
+import { formatCurrency } from '~/utils/currency';
+
 definePageMeta({
   name: 'payments-index',
 });
@@ -63,10 +65,6 @@ const globalStats = computed(() => {
     settledTravels: totals.filter(t => t.percent >= 100).length,
   };
 });
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-}
 
 function goToTravelsDashboard() {
   router.push({ name: 'travels-dashboard' });

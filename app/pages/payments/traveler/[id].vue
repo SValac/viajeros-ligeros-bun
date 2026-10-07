@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
 
+import { formatCurrency } from '~/utils/currency';
+
 definePageMeta({
   name: 'payments-traveler',
 });
@@ -113,10 +115,6 @@ async function handleDelete(payment: Payment) {
     await paymentStore.deletePayment(payment.id);
     toast.add({ title: 'Pago eliminado', color: 'warning' });
   }
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
 }
 
 function formatDate(dateString: string) {

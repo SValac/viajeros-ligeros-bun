@@ -294,11 +294,7 @@ function handleCancel() {
           <USeparator label="Cotización" />
 
           <UFormField label="Costo Total" required>
-            <UInput
-              v-model.number="formState.totalCost"
-              type="number"
-              placeholder="0.00"
-            />
+            <MoneyInput v-model="formState.totalCost" />
           </UFormField>
 
           <UFormField label="Dividir entre" required>

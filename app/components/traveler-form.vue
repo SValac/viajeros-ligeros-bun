@@ -6,7 +6,7 @@ import { z } from 'zod';
 import type { Travel, TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
-import { businessNameSchema, nameSchema, phoneSchema, sanitizeBusinessName, sanitizeName, sanitizePhone } from '~/utils/form-validation';
+import { businessNameSchema, nameSchema, phoneSchema, sanitizeBusinessName, sanitizeName } from '~/utils/form-validation';
 
 type Props = {
   traveler?: Traveler | null;
@@ -48,7 +48,6 @@ const state = ref({
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const firstNameInput = useSanitizedModel(() => state.value.firstName, v => state.value.firstName = v, sanitizeName);
 const lastNameInput = useSanitizedModel(() => state.value.lastName, v => state.value.lastName = v, sanitizeName);
-const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
 const boardingPointInput = useSanitizedModel(() => state.value.boardingPoint, v => state.value.boardingPoint = v, sanitizeBusinessName);
 
 // Camión seleccionado — fuente de verdad para el máximo de asientos
@@ -64,7 +63,7 @@ const schema = computed(() =>
 
     lastName: nameSchema({ min: 2, max: 100 }),
 
-    phone: phoneSchema({ min: 7, max: 20 }),
+    phone: phoneSchema({ required: true }),
 
     travelId: z.string().min(1, 'El viaje es requerido'),
 
@@ -219,11 +218,7 @@ function onCancel() {
       name="phone"
       required
     >
-      <UInput
-        v-model="phoneInput"
-        type="tel"
-        placeholder="+52 55 1234 5678"
-      />
+      <PhoneInput v-model="state.phone" />
     </UFormField>
 
     <!-- Viaje y Camión -->

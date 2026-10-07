@@ -99,14 +99,7 @@ function onSubmit() {
       name="pricePerPerson"
       required
     >
-      <UInput
-        v-model.number="state.pricePerPerson"
-        type="number"
-        step="0.01"
-        min="0"
-        placeholder="Ej: 2550"
-        class="w-full"
-      />
+      <MoneyInput v-model="state.pricePerPerson" />
     </UFormField>
 
     <!-- Tipo Habitación (opcional) -->

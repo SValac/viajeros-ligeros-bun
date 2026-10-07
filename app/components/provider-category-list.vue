@@ -89,7 +89,7 @@ const phoneColumn: TableColumn<Provider> = {
     const telefono = row.original.contact.phone;
     if (!telefono)
       return h('span', { class: 'text-sm text-gray-400' }, '-');
-    return h('span', { class: 'text-sm' }, telefono);
+    return h('span', { class: 'text-sm' }, formatPhone(telefono));
   },
 };
 

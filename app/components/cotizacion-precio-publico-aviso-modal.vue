@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { QuotationPublicPrice } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 export type PrecioPublicoAvisoAccion = 'edit' | 'delete';
 
 export type ViajeroConPrecio = {
@@ -50,10 +52,6 @@ const confirmLabel = computed(() => {
     return 'Eliminar';
   return 'Guardar de todos modos';
 });
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-}
 
 function close() {
   open.value = false;
