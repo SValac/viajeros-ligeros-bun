@@ -1,6 +1,6 @@
 import type { TravelStatus } from '~/types/travel';
 
-type TravelStatusColor = 'primary' | 'info' | 'success' | 'warning' | 'error';
+export type TravelStatusColor = 'primary' | 'info' | 'success' | 'warning' | 'error';
 
 const TRAVEL_STATUS_COLORS: Record<TravelStatus, TravelStatusColor> = {
   pending: 'warning',
