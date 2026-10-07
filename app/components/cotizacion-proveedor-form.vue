@@ -68,7 +68,7 @@ const metodoPagoOptions = [
 
 const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
   { label: 'Asientos mínimos objetivo', value: 'minimum' },
-  { label: 'Capacidad total del bus', value: 'total' },
+  { label: 'Asientos vendibles', value: 'total' },
 ];
 
 const tipoCostoOptions: { label: string; value: ProviderCostType }[] = [
@@ -267,6 +267,7 @@ function onSubmit() {
     <UFormField
       label="Dividir entre"
       name="splitType"
+      :help="`Entre ${divisorPersonas} personas`"
       required
     >
       <USelect

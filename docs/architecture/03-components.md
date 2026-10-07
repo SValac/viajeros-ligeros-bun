@@ -89,9 +89,8 @@
 
 | Archivo | Propósito |
 |---------|-----------|
-| `cotizacion-bus-form.vue` | Agregar bus a cotización |
+| `cotizacion-bus-form.vue` | Agregar o editar (prop `bus`) un bus de la cotización |
 | `cotizacion-buses-section.vue` | Sección completa de buses cotizados |
-| `cotizacion-bus-cotizacion-form.vue` | Detalle de cotización de bus |
 
 ---
 
