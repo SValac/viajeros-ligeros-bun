@@ -10,10 +10,6 @@ const agencyProfileStore = useAgencyProfileStore();
 onMounted(() => agencyProfileStore.fetchProfile());
 
 const items = computed<NavigationMenuItem[][]>(() => [[{
-  label: 'Inicio',
-  icon: 'i-lucide-house',
-  to: '/',
-}, {
   label: 'Viajes',
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
