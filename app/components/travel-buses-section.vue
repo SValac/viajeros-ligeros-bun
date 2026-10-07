@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { QuotationBus } from '~/types/quotation';
+import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
 import { sanitizeName } from '~/utils/form-validation';
 
@@ -34,8 +34,12 @@ const buses = computed(() => {
   return cotizacionStore.getBusesByQuotation(cotizacion.value.id);
 });
 
+// El vínculo real es quotation_bus_id; el texto (proveedor + unidad) solo sirve para filas sin vínculo,
+// porque el modelo se puede editar del lado del viaje y dos buses pueden compartir proveedor y unidad
 function getTravelBusForQuotationBus(bus: QuotationBus) {
-  return travel.value?.buses?.find(b => b.providerId === bus.providerId && b.model === bus.unitNumber);
+  const travelBuses = travel.value?.buses ?? [];
+  return travelBuses.find(b => b.quotationBusId === bus.id)
+    ?? travelBuses.find(b => !b.quotationBusId && b.providerId === bus.providerId && b.model === bus.unitNumber);
 }
 
 function getOperadores(bus: QuotationBus) {
@@ -48,17 +52,19 @@ function getOperadores(bus: QuotationBus) {
   return ops;
 }
 
+// Espera también a los buses del viaje: al abrir el link directo la cotización puede cargar
+// antes que el viaje, y el borrador quedaría vacío aunque el bus ya tenga operadores
 watch(
-  () => buses.value,
-  (newBuses) => {
+  [buses, () => travel.value?.buses],
+  ([newBuses]) => {
     newBuses.forEach((bus) => {
-      if (!operatorDraft[bus.id]) {
-        const travelBus = getTravelBusForQuotationBus(bus);
+      const travelBus = getTravelBusForQuotationBus(bus);
+      if (travelBus && !operatorDraft[bus.id]) {
         operatorDraft[bus.id] = {
-          operator1Name: travelBus?.operator1Name ?? '',
-          operator1Phone: travelBus?.operator1Phone ?? '',
-          operator2Name: travelBus?.operator2Name ?? '',
-          operator2Phone: travelBus?.operator2Phone ?? '',
+          operator1Name: travelBus.operator1Name,
+          operator1Phone: travelBus.operator1Phone,
+          operator2Name: travelBus.operator2Name ?? '',
+          operator2Phone: travelBus.operator2Phone ?? '',
         };
       }
     });
@@ -81,8 +87,10 @@ watch(operatorDraft, (drafts) => {
 
 async function saveOperators(bus: QuotationBus) {
   const travelBus = getTravelBusForQuotationBus(bus);
-  if (!travelBus)
+  if (!travelBus) {
+    toast.add({ title: 'No se encontró el bus del viaje', description: 'Recarga la página e inténtalo de nuevo.', color: 'error', icon: 'i-lucide-alert-circle' });
     return;
+  }
   const draft = operatorDraft[bus.id];
   if (!draft)
     return;
@@ -125,7 +133,7 @@ function getProviderName(proveedorId: string): string {
   return providerStore.getProviderById(proveedorId)?.name ?? 'Proveedor desconocido';
 }
 
-function getEstadoColor(status: string): 'success' | 'warning' | 'neutral' {
+function getEstadoColor(status: QuotationBusStatus): 'success' | 'warning' | 'neutral' {
   if (status === 'confirmed')
     return 'success';
   if (status === 'reserved')
@@ -133,13 +141,13 @@ function getEstadoColor(status: string): 'success' | 'warning' | 'neutral' {
   return 'neutral';
 }
 
-function getEstadoLabel(status: string): string {
-  const labels: Record<string, string> = {
+function getEstadoLabel(status: QuotationBusStatus): string {
+  const labels: Record<QuotationBusStatus, string> = {
     confirmed: 'Confirmado',
-    apartado: 'Apartado',
-    pendiente: 'Pendiente',
+    reserved: 'Apartado',
+    pending: 'Pendiente',
   };
-  return labels[status] ?? status;
+  return labels[status];
 }
 
 function getBusCoordinadorIds(busId: string): string[] {
@@ -151,9 +159,17 @@ function getCoordinadorName(id: string): string {
   return coordinatorStore.getCoordinatorById(id)?.name ?? 'Desconocido';
 }
 
-function onCoordinadoresChange(busId: string, selected: string[]) {
+async function onCoordinadoresChange(busId: string, selected: string[]) {
   const capped = selected.slice(0, 2) as [] | [string] | [string, string];
-  cotizacionStore.updateBusQuotation(busId, { coordinatorIds: capped });
+  const updated = await cotizacionStore.updateBusQuotation(busId, { coordinatorIds: capped });
+  if (!updated) {
+    toast.add({
+      title: 'No se pudieron guardar los coordinadores',
+      description: cotizacionStore.error ?? 'Intenta de nuevo',
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
+  }
 }
 </script>
 
@@ -306,9 +322,17 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
       <p class="text-muted font-medium mb-1">
         Sin autobuses apartados
       </p>
-      <p class="text-sm text-muted">
-        Agrégalos en la sección de arriba.
+      <p class="text-sm text-muted mb-3">
+        Los autobuses se apartan en la cotización del viaje.
       </p>
+      <UButton
+        variant="outline"
+        size="sm"
+        label="Ir a la cotización"
+        icon="i-lucide-arrow-right"
+        trailing
+        :to="{ name: 'quotation-buses', params: { id: travelId } }"
+      />
     </div>
   </div>
 </template>
