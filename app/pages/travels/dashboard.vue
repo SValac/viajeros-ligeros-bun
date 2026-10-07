@@ -20,28 +20,6 @@ const travels = computed(() => travelsStore.allTravels);
 const stats = computed(() => travelsStore.stats);
 
 // Funciones auxiliares
-function getStatusColor(status: TravelStatus): string {
-  const colors: Record<TravelStatus, string> = {
-    pending: 'amber',
-    published: 'blue',
-    in_progress: 'purple',
-    completed: 'green',
-    cancelled: 'red',
-  };
-  return colors[status] || 'gray';
-}
-
-function getStatusLabel(status: TravelStatus): string {
-  const labels: Record<TravelStatus, string> = {
-    pending: 'Pendiente',
-    published: 'Publicado',
-    in_progress: 'En Curso',
-    completed: 'Completado',
-    cancelled: 'Cancelado',
-  };
-  return labels[status] || status;
-}
-
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString('es-MX', {
@@ -155,9 +133,9 @@ const columns: TableColumn<Travel>[] = [
     cell: ({ row }) => {
       const status = row.getValue('status') as TravelStatus;
       return h(resolveComponent('UBadge'), {
-        color: getStatusColor(status),
+        color: getTravelStatusColor(status),
         variant: 'subtle',
-      }, () => getStatusLabel(status));
+      }, () => getTravelStatusLabel(status));
     },
   },
   {
