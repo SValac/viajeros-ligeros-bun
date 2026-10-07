@@ -27,6 +27,17 @@ export function calculatePaymentStatus(paid: number, total: number): ProviderPay
 }
 
 /**
+ * Total cost of a service quoted per person, rounded to cents so float artifacts of the
+ * multiplication never reach the database.
+ * @param unitCost - Price per person given by the provider
+ * @param personCount - Number of people the service is paid for
+ * @returns `unitCost × personCount` rounded to 2 decimals
+ */
+export function calculateProviderTotalCost(unitCost: number, personCount: number): number {
+  return Math.round(unitCost * personCount * 100) / 100;
+}
+
+/**
  * Seats that can be sold: the total minus the coordinators when the quotation says they
  * take passenger seats. Never negative.
  * @param quotation - Quotation with its total seats and the coordinators option
