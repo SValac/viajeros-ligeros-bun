@@ -1,6 +1,6 @@
 # Feature: Costo de servicio total o por persona
 
-**Estado:** 🚧 EN DESARROLLO. Rama `feature/provider-cost-per-person`.
+**Estado:** ✅ COMPLETADA. PR #102 mergeado a `main` (2026-10-06); migración en todos los entornos.
 
 ---
 
