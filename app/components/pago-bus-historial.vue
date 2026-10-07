@@ -191,7 +191,7 @@ async function confirmDelete() {
     <div class="pt-2 border-t border-default space-y-1">
       <div class="flex items-center justify-between text-sm">
         <span class="text-muted">Total pagado</span>
-        <span class="font-semibold text-success">{{ formatCurrency(anticipado) }}</span>
+        <span class="font-semibold">{{ formatCurrency(anticipado) }}</span>
       </div>
       <div class="flex items-center justify-between text-sm">
         <span class="text-muted">Saldo pendiente</span>

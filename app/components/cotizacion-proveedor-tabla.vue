@@ -352,7 +352,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
             </td>
 
             <!-- Pagado -->
-            <td class="py-3 pr-4 text-success">
+            <td class="py-3 pr-4">
               {{ formatCurrency(cotizacionStore.getAnticipadoProveedor(proveedor.id)) }}
             </td>
 
@@ -367,7 +367,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <td class="py-3 pr-4">
               <UBadge
                 :label="proveedor.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="proveedor.paymentMethod === 'cash' ? 'success' : 'info'"
+                color="neutral"
                 variant="subtle"
               />
             </td>
