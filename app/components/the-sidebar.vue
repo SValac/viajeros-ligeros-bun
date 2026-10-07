@@ -9,7 +9,7 @@ const route = useRoute();
 const agencyProfileStore = useAgencyProfileStore();
 onMounted(() => agencyProfileStore.fetchProfile());
 
-const items = computed<NavigationMenuItem[][]>(() => [[{
+const items = computed<NavigationMenuItem[]>(() => [{
   label: 'Viajes',
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
@@ -62,17 +62,7 @@ const items = computed<NavigationMenuItem[][]>(() => [[{
     icon: 'i-lucide-package',
     to: '/providers/other',
   }],
-}], [{
-  label: 'Feedback',
-  icon: 'i-lucide-message-circle',
-  to: 'https://github.com/nuxt-ui-templates/dashboard',
-  target: '_blank',
-}, {
-  label: 'Help & Support',
-  icon: 'i-lucide-info',
-  to: 'https://github.com/nuxt/ui',
-  target: '_blank',
-}]]);
+}]);
 </script>
 
 <template>
@@ -98,16 +88,9 @@ const items = computed<NavigationMenuItem[][]>(() => [[{
     <template #default="{ collapsed }">
       <UNavigationMenu
         :collapsed="collapsed"
-        :items="items[0]"
+        :items="items"
         orientation="vertical"
         :popover="collapsed"
-      />
-
-      <UNavigationMenu
-        :collapsed="collapsed"
-        :items="items[1]"
-        orientation="vertical"
-        class="mt-auto"
       />
     </template>
 
