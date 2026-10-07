@@ -1,12 +1,13 @@
 import type { TravelStatus } from '~/types/travel';
 
-export type TravelStatusColor = 'primary' | 'info' | 'success' | 'warning' | 'error';
+export type TravelStatusColor = 'primary' | 'info' | 'neutral' | 'warning' | 'error';
 
 const TRAVEL_STATUS_COLORS: Record<TravelStatus, TravelStatusColor> = {
   pending: 'warning',
   published: 'info',
   in_progress: 'primary',
-  completed: 'success',
+  // Gris, no verde: con el tema por defecto `success` es el mismo verde que `primary` (En Curso)
+  completed: 'neutral',
   cancelled: 'error',
 };
 
