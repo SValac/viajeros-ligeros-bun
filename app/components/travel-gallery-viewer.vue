@@ -86,7 +86,7 @@ async function confirmDelete(item: TravelMedia) {
       v-else
       class="p-8 text-center bg-elevated rounded-lg"
     >
-      <span class="i-lucide-images w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
+      <UIcon name="i-lucide-images" class="w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
       <p class="text-muted">
         No hay fotos ni videos en la galería
       </p>

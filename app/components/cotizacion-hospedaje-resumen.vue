@@ -148,7 +148,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
     <!-- Desglose por Hotel (Accordion) -->
     <div>
       <h4 class="text-sm font-semibold flex items-center gap-2 mb-2">
-        <span class="i-lucide-building w-4 h-4" />
+        <UIcon name="i-lucide-building" class="w-4 h-4" />
         Desglose por Hotel
       </h4>
 
@@ -184,7 +184,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
 
   <!-- Sin hospedajes -->
   <div v-else class="text-center py-8 text-muted">
-    <span class="i-lucide-inbox w-8 h-8 mx-auto mb-2 block opacity-50" />
+    <UIcon name="i-lucide-inbox" class="w-8 h-8 mx-auto mb-2 block opacity-50" />
     <p class="text-sm">
       No hay hospedajes agregados aún
     </p>

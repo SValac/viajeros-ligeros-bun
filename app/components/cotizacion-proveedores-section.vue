@@ -11,7 +11,7 @@ defineProps<Props>();
   <UCard>
     <template #header>
       <h2 class="font-semibold flex items-center gap-2">
-        <span class="i-lucide-building w-5 h-5 text-muted" />
+        <UIcon name="i-lucide-building" class="w-5 h-5 text-muted" />
         Servicios
       </h2>
     </template>

@@ -17,7 +17,7 @@ defineEmits<Emits>();
     <template #header>
       <div class="flex items-center justify-between w-full">
         <h2 class="font-semibold flex items-center gap-2">
-          <span class="i-lucide-door-open w-5 h-5 text-muted" />
+          <UIcon name="i-lucide-door-open" class="w-5 h-5 text-muted" />
           Hospedaje
         </h2>
         <UButton
