@@ -167,6 +167,7 @@ async function deleteTravel() {
         :items="tabs"
         highlight
         class="border-b border-default -mx-1 overflow-x-auto"
+        :ui="{ root: '[&>div]:min-w-max' }"
       />
 
       <NuxtPage />
