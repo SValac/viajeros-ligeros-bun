@@ -10,9 +10,24 @@ type Props = {
 const { quotation } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
+const travelStore = useTravelsStore();
+const travelerStore = useTravelerStore();
 const toast = useToast();
 
 const editandoParametros = shallowRef(false);
+const confirmarQuitarAsientos = shallowRef(false);
+const guardando = shallowRef(false);
+
+const numCoordinadores = computed(() =>
+  travelStore.getTravelById(quotation.travelId)?.coordinatorIds.length ?? 0,
+);
+const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotation.id));
+const origenVendibles = computed(() => {
+  if (!quotation.coordinatorsTakeSeats || numCoordinadores.value === 0)
+    return 'Todos los asientos se venden';
+  const n = numCoordinadores.value;
+  return `${quotation.totalSeats} − ${n} coordinador${n === 1 ? '' : 'es'}`;
+});
 
 // The total seats are the sum of the quotation's bus capacities (a DB trigger keeps them),
 // so they're shown read-only with where they come from.
@@ -25,11 +40,13 @@ const origenCapacidad = computed(() => {
 
 const paramsState = reactive({
   minimumSeatTarget: quotation.minimumSeatTarget,
+  coordinatorsTakeSeats: quotation.coordinatorsTakeSeats,
   notes: quotation.notes ?? '',
 });
 
 function openEditarParametros() {
   paramsState.minimumSeatTarget = quotation.minimumSeatTarget;
+  paramsState.coordinatorsTakeSeats = quotation.coordinatorsTakeSeats;
   paramsState.notes = quotation.notes ?? '';
   editandoParametros.value = true;
 }
@@ -41,13 +58,48 @@ function cerrarEditarParametros() {
 // Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe (sin schema Zod para este form de edición rápida)
 const paramsNotesInput = useSanitizedModel(() => paramsState.notes ?? '', v => paramsState.notes = v, sanitizeText);
 
+function cancelarQuitarAsientos() {
+  confirmarQuitarAsientos.value = false;
+}
+
+// When coordinators stop taking passenger seats, the ones already seated lose their seat
+// (their rooms stay). Asks first if anyone would be affected.
 async function guardarParametros() {
-  await cotizacionStore.updateQuotation(quotation.id, {
-    minimumSeatTarget: paramsState.minimumSeatTarget,
-    notes: paramsState.notes,
-  });
-  editandoParametros.value = false;
-  toast.add({ title: 'Parámetros actualizados', color: 'success' });
+  const quitaAsientos = quotation.coordinatorsTakeSeats && !paramsState.coordinatorsTakeSeats;
+  if (quitaAsientos && !confirmarQuitarAsientos.value) {
+    await travelerStore.fetchByTravel(quotation.travelId);
+    const sentados = travelerStore.getCoordinatorsByTravel(quotation.travelId).filter(c => c.seat !== null);
+    if (sentados.length > 0) {
+      confirmarQuitarAsientos.value = true;
+      return;
+    }
+  }
+  confirmarQuitarAsientos.value = false;
+
+  guardando.value = true;
+  try {
+    if (quitaAsientos)
+      await travelerStore.clearCoordinatorSeats(quotation.travelId);
+    const updated = await cotizacionStore.updateQuotation(quotation.id, {
+      minimumSeatTarget: paramsState.minimumSeatTarget,
+      coordinatorsTakeSeats: paramsState.coordinatorsTakeSeats,
+      notes: paramsState.notes,
+    });
+    if (!updated)
+      throw new Error(cotizacionStore.error ?? 'No se pudieron guardar los parámetros');
+    editandoParametros.value = false;
+    toast.add({ title: 'Parámetros actualizados', color: 'success' });
+  }
+  catch (e) {
+    toast.add({
+      title: 'Error al guardar',
+      description: e instanceof Error ? e.message : undefined,
+      color: 'error',
+    });
+  }
+  finally {
+    guardando.value = false;
+  }
 }
 </script>
 
@@ -85,10 +137,29 @@ async function guardarParametros() {
       </div>
       <div>
         <p class="text-xs text-muted mb-1">
+          Asientos vendibles
+        </p>
+        <p class="font-medium">
+          {{ asientosVendibles }}
+        </p>
+        <p class="text-xs text-muted">
+          {{ origenVendibles }}
+        </p>
+      </div>
+      <div>
+        <p class="text-xs text-muted mb-1">
           Meta mínima de asientos
         </p>
         <p class="font-medium">
           {{ quotation.minimumSeatTarget }}
+        </p>
+      </div>
+      <div>
+        <p class="text-xs text-muted mb-1">
+          Coordinadores
+        </p>
+        <p class="text-sm">
+          {{ quotation.coordinatorsTakeSeats ? 'Ocupan asiento' : 'No ocupan asiento' }}
         </p>
       </div>
       <div>
@@ -119,6 +190,11 @@ async function guardarParametros() {
           />
         </UFormField>
       </div>
+      <USwitch
+        v-model="paramsState.coordinatorsTakeSeats"
+        label="Los coordinadores ocupan asiento"
+        :description="`Resta ${numCoordinadores} coordinador${numCoordinadores === 1 ? '' : 'es'} de los asientos vendibles y permite asignarles asiento. Si no, viajan sin asiento de pasajero (solo habitación).`"
+      />
       <UFormField label="Notas">
         <UTextarea
           v-model="paramsNotesInput"
@@ -135,9 +211,33 @@ async function guardarParametros() {
         />
         <UButton
           label="Guardar"
+          :loading="guardando"
           @click="guardarParametros"
         />
       </div>
     </div>
+
+    <UModal
+      v-model:open="confirmarQuitarAsientos"
+      title="Quitar asientos a los coordinadores"
+      description="Los coordinadores que ya tienen asiento lo van a perder. Sus habitaciones se conservan."
+    >
+      <template #footer>
+        <div class="flex justify-end gap-3 w-full">
+          <UButton
+            variant="ghost"
+            color="neutral"
+            label="Cancelar"
+            @click="cancelarQuitarAsientos"
+          />
+          <UButton
+            color="warning"
+            label="Quitar asientos y guardar"
+            :loading="guardando"
+            @click="guardarParametros"
+          />
+        </div>
+      </template>
+    </UModal>
   </UCard>
 </template>

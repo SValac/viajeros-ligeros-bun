@@ -144,6 +144,8 @@ export function useQuotationRepository() {
       update.show_public_room_type = data.showPublicRoomType;
     if (data.showPublicDescription !== undefined)
       update.show_public_description = data.showPublicDescription;
+    if (data.coordinatorsTakeSeats !== undefined)
+      update.coordinators_take_seats = data.coordinatorsTakeSeats;
 
     const { data: row, error: err } = await supabase
       .from('quotations')

@@ -27,17 +27,34 @@ export function calculatePaymentStatus(paid: number, total: number): ProviderPay
 }
 
 /**
+ * Seats that can be sold: the total minus the coordinators when the quotation says they
+ * take passenger seats. Never negative.
+ * @param quotation - Quotation with its total seats and the coordinators option
+ * @param coordinatorCount - Number of coordinators of the quotation's travel
+ * @returns Seats left for paying travelers
+ */
+export function calculateSellableSeats(
+  quotation: Pick<Quotation, 'totalSeats' | 'coordinatorsTakeSeats'>,
+  coordinatorCount: number,
+): number {
+  const coordinatorSeats = quotation.coordinatorsTakeSeats ? coordinatorCount : 0;
+  return Math.max(quotation.totalSeats - coordinatorSeats, 0);
+}
+
+/**
  * Calculates the price per seat for a quotation based on provider and bus costs.
  * Costs split by `'minimum'` are divided by `minimumSeatTarget`; costs split by `'total'`
- * are divided by `totalSeats`. The two parts are summed and rounded up.
+ * are divided by `sellableSeats`. The two parts are summed and rounded up.
  * Returns 0 if both parts are zero (no costs entered yet).
- * @param quotation - Quotation with seat targets needed for the formula
+ * @param seats - The quotation's seat target and its sellable seats (see `calculateSellableSeats`)
+ * @param seats.minimumSeatTarget - Divisor for costs split by `'minimum'`
+ * @param seats.sellableSeats - Divisor for costs split by `'total'`
  * @param providers - Providers belonging to this quotation (pre-filtered by caller)
  * @param buses - Buses belonging to this quotation (pre-filtered by caller)
  * @returns Price per seat in whole units (ceiling), or 0 if no costs are defined
  */
 export function calculateSeatPrice(
-  quotation: Pick<Quotation, 'minimumSeatTarget' | 'totalSeats'>,
+  seats: { minimumSeatTarget: number; sellableSeats: number },
   providers: Pick<QuotationProvider, 'totalCost' | 'splitType'>[],
   buses: Pick<QuotationBus, 'totalCost' | 'splitType'>[],
 ): number {
@@ -46,8 +63,8 @@ export function calculateSeatPrice(
   const minBusesCost = buses.filter(b => (b.splitType ?? 'minimum') === 'minimum').reduce((acc, b) => acc + (b.totalCost ?? 0), 0);
   const busesTotalCost = buses.filter(b => (b.splitType ?? 'minimum') === 'total').reduce((acc, b) => acc + (b.totalCost ?? 0), 0);
 
-  const minPart = quotation.minimumSeatTarget > 0 ? (minCost + minBusesCost) / quotation.minimumSeatTarget : 0;
-  const occupiedPart = quotation.totalSeats > 0 ? (occupiedCost + busesTotalCost) / quotation.totalSeats : 0;
+  const minPart = seats.minimumSeatTarget > 0 ? (minCost + minBusesCost) / seats.minimumSeatTarget : 0;
+  const occupiedPart = seats.sellableSeats > 0 ? (occupiedCost + busesTotalCost) / seats.sellableSeats : 0;
 
   if (minPart === 0 && occupiedPart === 0) {
     return 0;
