@@ -13,12 +13,16 @@ días del mes están ocupados y abrir el resumen de un viaje desde ahí.
 
 - Página **`/calendar`** (`name: 'calendar'`), en el menú lateral después de **Viajes**.
 - **Mes grande sobre `UCalendar`**: celdas altas y cada día muestra los viajes como barras de
-  color por estado (mismos colores que los badges de la app), con leyenda.
+  color por estado (mismos colores que los badges de la app). La leyenda va bajo el título de la
+  página, visible sin scroll.
 - **Cancelados ocultos** por defecto; el switch **Mostrar cancelados** los agrega. Si el viaje
   elegido es cancelado y se apaga el switch, se deselecciona.
-- **Clic en un día**: con un viaje se abre su resumen; con varios aparece la lista
-  "Viajes del {día}" para elegir; sin viajes, un estado vacío.
-- Debajo del calendario, **"Viajes de {mes}"** permite elegir un viaje sin buscar el día.
+- Panel derecho: una card con pestañas **Del día** / **Del mes** (con conteo) y, debajo, el
+  resumen del viaje elegido. Todo cabe sin scroll en desktop.
+- **Clic en un día**: cambia a la pestaña "Del día"; con un viaje se abre su resumen, con varios
+  se elige de la lista, sin viajes muestra "Sin viajes este día".
+- La pestaña **Del mes** (la de inicio) lista los viajes del mes visible para elegir uno sin
+  buscar el día.
 - El viaje elegido vive en **`?viaje=<id>`** (`router.replace`): recargar o compartir el link
   conserva la selección y abre el mes del viaje. Un id que no existe se quita del query.
 - **Hoy** vuelve al mes actual y selecciona el día de hoy.
@@ -41,7 +45,7 @@ días del mes están ocupados y abrir el resumen de un viaje desde ahí.
 
 | Archivo | Qué hace |
 | --- | --- |
-| `app/pages/calendar.vue` | Página: estado de la vista (mes, día, `?viaje=`, switch) y panel derecho |
+| `app/pages/calendar.vue` | Página: estado de la vista (mes, día, pestaña, `?viaje=`, switch) y panel derecho |
 | `app/components/travel-calendar.vue` | `UCalendar` con overrides de `ui` y slot `#day` con las barras |
 | `app/components/travel-calendar-summary.vue` | Resumen del viaje: fechas, duración, coordinadores, viajeros vs. lugares, links |
 | `app/components/travel-calendar-list.vue` | Lista de viajes para elegir (del mes o del día) |
