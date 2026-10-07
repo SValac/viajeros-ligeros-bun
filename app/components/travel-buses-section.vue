@@ -159,9 +159,17 @@ function getCoordinadorName(id: string): string {
   return coordinatorStore.getCoordinatorById(id)?.name ?? 'Desconocido';
 }
 
-function onCoordinadoresChange(busId: string, selected: string[]) {
+async function onCoordinadoresChange(busId: string, selected: string[]) {
   const capped = selected.slice(0, 2) as [] | [string] | [string, string];
-  cotizacionStore.updateBusQuotation(busId, { coordinatorIds: capped });
+  const updated = await cotizacionStore.updateBusQuotation(busId, { coordinatorIds: capped });
+  if (!updated) {
+    toast.add({
+      title: 'No se pudieron guardar los coordinadores',
+      description: cotizacionStore.error ?? 'Intenta de nuevo',
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
+  }
 }
 </script>
 

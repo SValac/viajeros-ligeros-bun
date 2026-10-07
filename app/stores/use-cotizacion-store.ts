@@ -1281,9 +1281,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!existing)
       return undefined;
 
+    // Confirmed quotations lock the bus structure and costs, but coordinators are assigned
+    // on the travel side at any time, so a coordinator-only change still goes through.
     const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
-    if (cotizacion?.status === 'confirmed')
+    const onlyCoordinators = Object.keys(data).every(key => key === 'coordinatorIds');
+    if (cotizacion?.status === 'confirmed' && !onlyCoordinators) {
+      error.value = 'No se puede modificar una cotización confirmada';
       return undefined;
+    }
 
     loading.value = true;
     error.value = null;
