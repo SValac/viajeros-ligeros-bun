@@ -1,6 +1,6 @@
 # Feature: Coordinadores con asiento y habitación
 
-**Estado:** 🚧 EN DESARROLLO. Rama `feature/coordinator-seats`.
+**Estado:** ✅ COMPLETADA. PR #101 mergeado a `main`; migraciones en todos los entornos.
 
 ---
 
