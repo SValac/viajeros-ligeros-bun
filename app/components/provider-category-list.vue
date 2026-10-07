@@ -76,7 +76,7 @@ const locationColumn: TableColumn<Provider> = {
   cell: ({ row }) => {
     const location = row.getValue('location') as ProviderLocation;
     return h('div', { class: 'flex items-center gap-2' }, [
-      h('span', { class: 'i-lucide-map-pin w-3 h-3 text-gray-400' }),
+      h(resolveComponent('UIcon'), { name: 'i-lucide-map-pin', class: 'w-3 h-3 text-muted' }),
       h('span', { class: 'text-sm text-gray-600 dark:text-gray-300' }, formatProviderLocation(location)),
     ]);
   },

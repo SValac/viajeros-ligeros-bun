@@ -60,7 +60,7 @@ const columns: TableColumn<QuotationRow>[] = [
       to: { name: 'quotation-detail', params: { id: row.original.travel.id } },
       class: 'flex items-center gap-2 hover:text-primary transition-colors group',
     }, () => [
-      h('span', { class: 'i-lucide-tag w-4 h-4 text-muted group-hover:text-primary' }),
+      h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
       h('span', { class: 'font-medium' }, row.original.travel.label),
     ]),
   },

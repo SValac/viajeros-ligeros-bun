@@ -356,7 +356,6 @@ async function updateAccommodation(
                 </h3>
                 <UBadge
                   :label="`${og.accommodations.length} hab.`"
-                  size="xs"
                   variant="subtle"
                   color="neutral"
                 />

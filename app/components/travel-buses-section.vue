@@ -184,7 +184,6 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
                   :label="getEstadoLabel(bus.status)"
                   :color="getEstadoColor(bus.status)"
                   variant="subtle"
-                  size="xs"
                 />
               </div>
             </div>

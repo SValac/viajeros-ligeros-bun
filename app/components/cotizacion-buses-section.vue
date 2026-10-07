@@ -223,7 +223,6 @@ function getBusActions(bus: QuotationBus) {
                 :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Cap. bus'"
                 :color="(bus.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -238,7 +237,7 @@ function getBusActions(bus: QuotationBus) {
             </td>
 
             <!-- Pagado -->
-            <td class="py-3 pr-4 text-success">
+            <td class="py-3 pr-4">
               {{ formatCurrency(cotizacionStore.getAnticipadoBus(bus.id)) }}
             </td>
 
@@ -253,9 +252,8 @@ function getBusActions(bus: QuotationBus) {
             <td class="py-3 pr-4">
               <UBadge
                 :label="bus.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="bus.paymentMethod === 'cash' ? 'success' : 'info'"
+                color="neutral"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -265,7 +263,6 @@ function getBusActions(bus: QuotationBus) {
                 :label="getEstadoPagoLabel(cotizacionStore.getBusPaymentStatus(bus.id))"
                 :color="getEstadoPagoColor(cotizacionStore.getBusPaymentStatus(bus.id))"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -275,7 +272,6 @@ function getBusActions(bus: QuotationBus) {
                 :label="bus.confirmed ? 'Sí' : 'No'"
                 :color="bus.confirmed ? 'success' : 'neutral'"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
