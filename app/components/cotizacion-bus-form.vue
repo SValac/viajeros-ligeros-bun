@@ -53,7 +53,7 @@ const metodoPagoOptions = [
 
 const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
   { label: 'Asientos mínimos objetivo', value: 'minimum' },
-  { label: 'Capacidad total del bus', value: 'total' },
+  { label: 'Asientos vendibles', value: 'total' },
 ];
 
 const busSchema = z.object({
@@ -112,6 +112,9 @@ const asientoMaximoOcupado = computed(() => {
     .filter(t => t.travelBusId === travelBus.id)
     .reduce((max, t) => Math.max(max, t.seat ?? 0), 0);
 });
+
+// Entre cuántas personas se reparte el costo: asientos mínimos objetivo o asientos vendibles
+const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(props.quotationId, formState.splitType ?? 'minimum'));
 
 // Llenar el formulario al abrir (agregar: vacío; editar: datos del bus)
 watch(() => props.open, (open) => {
@@ -379,7 +382,11 @@ function handleCancel() {
             <MoneyInput v-model="formState.totalCost" />
           </UFormField>
 
-          <UFormField label="Dividir entre" required>
+          <UFormField
+            label="Dividir entre"
+            :help="`Entre ${divisorPersonas} personas`"
+            required
+          >
             <USelect v-model="formState.splitType" :items="tipoDivisionOptions" />
           </UFormField>
 

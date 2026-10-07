@@ -207,7 +207,7 @@ function getBusActions(bus: QuotationBus) {
             <!-- División -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Cap. bus'"
+                :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
                 :color="(bus.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
               />
