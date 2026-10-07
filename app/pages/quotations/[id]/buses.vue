@@ -28,7 +28,7 @@ const isAgregarBusModalOpen = shallowRef(false);
     <UCard v-if="hasBuses">
       <template #header>
         <h2 class="font-semibold flex items-center gap-2">
-          <span class="i-lucide-users w-5 h-5 text-muted" />
+          <UIcon name="i-lucide-users" class="w-5 h-5 text-muted" />
           Asignación de Autobuses
         </h2>
       </template>

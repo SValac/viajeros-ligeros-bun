@@ -179,7 +179,7 @@ const columns: TableColumn<Bus>[] = [
         v-if="buses.length === 0"
         class="text-center py-8 bg-elevated rounded-lg"
       >
-        <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-3 block" />
+        <UIcon name="i-lucide-bus" class="w-12 h-12 text-muted mx-auto mb-3 block" />
         <h4 class="font-medium mb-1">
           No hay unidades registradas
         </h4>

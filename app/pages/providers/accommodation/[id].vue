@@ -29,7 +29,7 @@ watchEffect(() => {
       <NuxtLink to="/providers/accommodation" class="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
         Hospedajes
       </NuxtLink>
-      <span class="i-lucide-chevron-right w-4 h-4" />
+      <UIcon name="i-lucide-chevron-right" class="w-4 h-4" />
       <span class="text-gray-900 dark:text-white font-medium">{{ provider.name }}</span>
     </div>
 

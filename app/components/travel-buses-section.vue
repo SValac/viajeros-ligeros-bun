@@ -171,13 +171,13 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
           <template #header>
             <div class="flex justify-between items-center gap-4">
               <div class="flex items-center gap-2">
-                <span class="i-lucide-bus w-4 h-4 text-muted" />
+                <UIcon name="i-lucide-bus" class="w-4 h-4 text-muted" />
                 <span class="font-medium">{{ getProviderName(bus.providerId) }}</span>
                 <span v-if="bus.unitNumber" class="text-sm text-muted">· Unidad {{ bus.unitNumber }}</span>
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <div class="flex items-center gap-1 text-sm text-muted">
-                  <span class="i-lucide-users w-3.5 h-3.5" />
+                  <UIcon name="i-lucide-users" class="w-3.5 h-3.5" />
                   <span>{{ bus.capacity }}</span>
                 </div>
                 <UBadge
@@ -292,9 +292,9 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
                   :key="op.nombre"
                   class="flex items-center gap-3 text-sm"
                 >
-                  <span class="i-lucide-user w-3.5 h-3.5 text-muted shrink-0" />
+                  <UIcon name="i-lucide-user" class="w-3.5 h-3.5 text-muted shrink-0" />
                   <span class="font-medium">{{ op.nombre }}</span>
-                  <span class="i-lucide-phone w-3.5 h-3.5 text-muted shrink-0" />
+                  <UIcon name="i-lucide-phone" class="w-3.5 h-3.5 text-muted shrink-0" />
                   <span class="text-muted">{{ op.telefono }}</span>
                 </div>
                 <p v-if="getOperadores(bus).length === 0" class="text-sm text-muted italic">
@@ -312,7 +312,7 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
     </template>
 
     <div v-else class="p-8 text-center bg-elevated rounded-lg">
-      <span class="i-lucide-bus w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
+      <UIcon name="i-lucide-bus" class="w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
       <p class="text-muted font-medium mb-1">
         Sin autobuses apartados
       </p>

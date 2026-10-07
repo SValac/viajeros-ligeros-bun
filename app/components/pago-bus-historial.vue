@@ -86,7 +86,7 @@ async function confirmDelete() {
     <!-- Header -->
     <div class="flex items-center justify-between">
       <h3 class="font-semibold text-lg flex items-center gap-2">
-        <span class="i-lucide-receipt w-5 h-5 text-muted" />
+        <UIcon name="i-lucide-receipt" class="w-5 h-5 text-muted" />
         Historial de Pagos
         <span v-if="busLabel" class="text-muted font-normal">— {{ busLabel }}</span>
       </h3>
@@ -175,7 +175,7 @@ async function confirmDelete() {
 
     <!-- Estado vacío -->
     <div v-else class="py-8 text-center bg-elevated/50 rounded-lg">
-      <span class="i-lucide-receipt-x w-10 h-10 text-muted mx-auto mb-2 block" />
+      <UIcon name="i-lucide-receipt" class="w-10 h-10 text-muted mx-auto mb-2 block" />
       <p class="text-muted text-sm">
         No hay pagos registrados
       </p>
