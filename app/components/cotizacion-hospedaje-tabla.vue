@@ -7,6 +7,8 @@ import { z } from 'zod';
 import type { BedConfiguration, HotelRoomType } from '~/types/hotel-room';
 import type { AccommodationPaymentStatus, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 type Props = {
   quotationId: string;
   readonly?: boolean;
@@ -110,10 +112,6 @@ function abrirHistorial(accommodation: QuotationAccommodation) {
 }
 
 // Helpers de pago para columnas
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-}
-
 const estadoPagoBadge: Record<AccommodationPaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
   pending: { label: 'Pendiente', color: 'warning' },
   partial: { label: 'Anticipo', color: 'neutral' },
@@ -189,7 +187,7 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       header: 'Pagado',
       cell: ({ row }) => {
         const pagado = cotizacionStore.getAnticipadoHospedaje(row.original.id);
-        return h('span', { class: 'text-success font-medium' }, formatCurrency(pagado));
+        return h('span', { class: 'font-medium' }, formatCurrency(pagado));
       },
     },
     {
@@ -394,7 +392,7 @@ async function eliminarHospedaje(id: string) {
                       {{ formatBedConfiguration(getCamasDetalle(editingHospedaje.providerId, tipo.id)) }}
                     </p>
                     <p class="text-xs text-muted">
-                      ${{ tipo.pricePerNight.toFixed(2) }}/noche
+                      {{ formatCurrency(tipo.pricePerNight) }}/noche
                     </p>
                     <p v-if="tipo.additionalDetails" class="text-xs text-muted">
                       {{ tipo.additionalDetails }}
@@ -419,14 +417,14 @@ async function eliminarHospedaje(id: string) {
                     <div>
                       <label class="text-xs text-muted">Costo/Persona</label>
                       <div class="text-sm font-medium py-2">
-                        ${{ (tipo.pricePerNight / tipo.maxOccupancy).toFixed(2) }}
+                        {{ formatCurrency(tipo.pricePerNight / tipo.maxOccupancy) }}
                       </div>
                     </div>
                   </div>
 
                   <div class="text-xs bg-muted/20 rounded px-2 py-1">
-                    ${{ tipo.pricePerNight.toFixed(2) }} × {{ editFormState.nightCount }} noches × {{ editDetallesMap.get(tipo.id)?.quantity ?? 1 }} hab =
-                    <span class="font-semibold">${{ (tipo.pricePerNight * editFormState.nightCount * (editDetallesMap.get(tipo.id)?.quantity ?? 1)).toFixed(2) }}</span>
+                    {{ formatCurrency(tipo.pricePerNight) }} × {{ editFormState.nightCount }} noches × {{ editDetallesMap.get(tipo.id)?.quantity ?? 1 }} hab =
+                    <span class="font-semibold">{{ formatCurrency(tipo.pricePerNight * editFormState.nightCount * (editDetallesMap.get(tipo.id)?.quantity ?? 1)) }}</span>
                   </div>
                 </div>
               </div>
@@ -438,7 +436,7 @@ async function eliminarHospedaje(id: string) {
             <div class="flex justify-between items-center">
               <span class="font-semibold">Costo Total</span>
               <span class="text-lg font-bold">
-                ${{ editFormState.details.reduce((sum, d) => sum + (d.pricePerNight * editFormState.nightCount * d.quantity), 0).toFixed(2) }}
+                {{ formatCurrency(editFormState.details.reduce((sum, d) => sum + (d.pricePerNight * editFormState.nightCount * d.quantity), 0)) }}
               </span>
             </div>
           </div>

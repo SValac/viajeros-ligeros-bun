@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import type { AccommodationPayment, AccommodationPaymentFormData } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
@@ -28,7 +29,7 @@ const schema = computed(() =>
     amount: z
       .number({ message: 'Ingresa un monto válido' })
       .positive('El monto debe ser mayor a 0')
-      .max(maxMonto, `El monto no puede superar $${maxMonto.toFixed(2)}`),
+      .max(maxMonto, `El monto no puede superar ${formatCurrency(maxMonto)}`),
     paymentDate: z.string().min(1, 'Selecciona una fecha'),
     paymentType: z.enum(['cash', 'transfer']),
     concept: textSchema({ max: 200 }).optional(),
@@ -55,13 +56,6 @@ const state = reactive<FormSchema>({
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const conceptInput = useSanitizedModel(() => state.concept ?? '', v => state.concept = v, sanitizeText);
 const notesInput = useSanitizedModel(() => state.notes ?? '', v => state.notes = v, sanitizeText);
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
 
 function onSubmit() {
   const result = schema.value.safeParse(state);

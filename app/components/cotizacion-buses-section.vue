@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { BusPaymentStatus, QuotationBus } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 type Props = {
   quotationId: string;
   readonly?: boolean;
@@ -25,10 +27,6 @@ const isDetallesFormOpen = shallowRef(false);
 const isHistorialOpen = shallowRef(false);
 const isDeleteModalOpen = shallowRef(false);
 const selectedBus = shallowRef<QuotationBus | null>(null);
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-}
 
 function getNombreAgencia(proveedorId: string): string {
   return providerStore.getProviderById(proveedorId)?.name ?? 'Desconocido';

@@ -33,6 +33,7 @@ import {
 } from '~/composables/quotation/use-quotation-domain';
 import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
 import { useTravelsStore } from '~/stores/use-travel-store';
+import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 import {
   mapTravelBusRowToDomain,
@@ -899,7 +900,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
     const saldoPendiente = getSaldoPendienteProveedor.value(data.quotationProviderId);
     if (data.amount > saldoPendiente) {
-      return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
+      return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(saldoPendiente)})` };
     }
 
     loading.value = true;
@@ -1100,7 +1101,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
     const saldoPendiente = getSaldoPendienteHospedaje.value(data.quotationAccommodationId);
     if (data.amount > saldoPendiente)
-      return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
+      return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(saldoPendiente)})` };
 
     loading.value = true;
     error.value = null;
@@ -1375,7 +1376,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
     const saldoPendiente = getSaldoPendienteBus.value(data.quotationBusId);
     if (data.amount > saldoPendiente)
-      return { error: `El monto no puede superar el saldo pendiente ($${saldoPendiente.toFixed(2)})` };
+      return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(saldoPendiente)})` };
 
     loading.value = true;
     error.value = null;

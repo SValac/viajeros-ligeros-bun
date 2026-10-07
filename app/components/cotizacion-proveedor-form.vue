@@ -5,6 +5,7 @@ import type { PaymentType } from '~/types/payment';
 import type { CostSplitType, ProviderCostType, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { calculateProviderTotalCost } from '~/composables/quotation/use-quotation-domain';
+import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
@@ -128,13 +129,6 @@ watch(() => state.costType, (costType) => {
 
 function isValidAmount(value: unknown): value is number {
   return typeof value === 'number' && value > 0;
-}
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
 }
 
 function onSubmit() {

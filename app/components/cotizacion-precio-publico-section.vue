@@ -6,6 +6,7 @@ import { computed, h, reactive, ref, shallowRef } from 'vue';
 import type { PrecioPublicoAvisoAccion, ViajeroConPrecio } from '~/components/cotizacion-precio-publico-aviso-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 
 type Props = {
@@ -73,10 +74,6 @@ async function setPublicVisibility(field: PublicVisibilityField, value: boolean)
 }
 
 // Helper para formatear moneda
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-}
-
 // Determinar si hay datos
 const hayDatos = computed(() => {
   return matrizPreciosReferencia.value.length > 0;

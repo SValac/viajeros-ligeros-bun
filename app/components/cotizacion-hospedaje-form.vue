@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { HotelRoomType } from '~/types/hotel-room';
 import type { QuotationAccommodationDetailFormData, QuotationAccommodationFormData } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 type Props = {
@@ -267,7 +268,7 @@ function handleCancel() {
                 />
                 <div class="flex-1">
                   <p class="font-medium">
-                    {{ tipo.maxOccupancy }} personas - ${{ tipo.pricePerNight.toFixed(2) }}/noche
+                    {{ tipo.maxOccupancy }} personas - {{ formatCurrency(tipo.pricePerNight) }}/noche
                   </p>
                   <p class="text-xs text-muted">
                     Cama(s): {{ formatBedConfiguration(tipo.beds) }}
@@ -295,7 +296,7 @@ function handleCancel() {
                   <div>
                     <label class="text-xs text-muted">Costo por Persona</label>
                     <div class="text-sm font-medium py-2">
-                      ${{ calcularCostoPorPersona(detallesMap.get(tipo.id)!).toFixed(2) }}
+                      {{ formatCurrency(calcularCostoPorPersona(detallesMap.get(tipo.id)!)) }}
                     </div>
                   </div>
                 </div>
@@ -303,7 +304,7 @@ function handleCancel() {
                 <!-- Desglose: costo total por tipo -->
                 <div class="text-xs bg-muted/20 rounded px-2 py-1">
                   <p>
-                    {{ tipo.pricePerNight.toFixed(2) }} × {{ formState.nightCount }} noches × {{ detallesMap.get(tipo.id)?.quantity ?? 1 }} hab = <span class="font-medium">${{ calcularCostoTotal(detallesMap.get(tipo.id)!).toFixed(2) }}</span>
+                    {{ formatCurrency(tipo.pricePerNight) }} × {{ formState.nightCount }} noches × {{ detallesMap.get(tipo.id)?.quantity ?? 1 }} hab = <span class="font-medium">{{ formatCurrency(calcularCostoTotal(detallesMap.get(tipo.id)!)) }}</span>
                   </p>
                 </div>
               </div>
@@ -315,7 +316,7 @@ function handleCancel() {
         <div v-if="(formState.details?.length ?? 0) > 0" class="bg-primary/10 rounded-lg p-4">
           <div class="flex justify-between items-center">
             <span class="font-semibold">Costo Total del Hospedaje</span>
-            <span class="text-lg font-bold">${{ costoTotalHospedaje.toFixed(2) }}</span>
+            <span class="text-lg font-bold">{{ formatCurrency(costoTotalHospedaje) }}</span>
           </div>
         </div>
 

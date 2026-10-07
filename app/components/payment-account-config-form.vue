@@ -2,6 +2,8 @@
 import type { AdjustmentItem, DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
 import type { QuotationPublicPrice } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 const props = defineProps<{
   travelerId: string;
   travelId: string;
@@ -66,10 +68,6 @@ const finalCost = computed(() => {
   }, 0);
   return Math.max(0, base - totalDiscount + totalSurcharge);
 });
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-}
 
 function addDiscount() {
   discounts.value.push({ amount: 0, type: 'fixed' as DiscountType, description: '' });

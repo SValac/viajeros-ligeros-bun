@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { QuotationStatus } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 definePageMeta({
   name: 'quotations-index',
 });
@@ -29,10 +31,6 @@ const stats = computed(() => {
     confirmed: rows.filter(r => r.quotation?.status === 'confirmed').length,
   };
 });
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-}
 
 function getQuotationStatusColor(status: QuotationStatus): 'warning' | 'success' {
   return status === 'confirmed' ? 'success' : 'warning';

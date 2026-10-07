@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { PaymentFormData, PaymentType } from '~/types/payment';
 
+import { formatCurrency } from '~/utils/currency';
+
 const props = defineProps<{
   payment?: { id: string; amount: number; paymentDate: string; paymentType: PaymentType; notes?: string } | null;
   travelerId: string;
@@ -40,10 +42,6 @@ const isValid = computed(() =>
   && (paymentDate.value?.length ?? 0) > 0
   && paymentType.value !== undefined,
 );
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-}
 
 function handleSubmit() {
   if (!isValid.value || amount.value === null)
