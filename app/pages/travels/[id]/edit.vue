@@ -14,6 +14,8 @@ definePageMeta({
 
 const router = useRouter();
 const travelsStore = useTravelsStore();
+const travelerStore = useTravelerStore();
+const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 const { uploadBanner, removeFile } = useTravelMediaRepository();
 
@@ -23,8 +25,13 @@ function goToSummary() {
   router.push({ name: 'travel-detail', params: { id: travelId.value } });
 }
 
+function sameIds(a: string[], b: string[]): boolean {
+  return a.length === b.length && a.every(id => b.includes(id));
+}
+
 async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   const previousBannerUrl = travel.value?.imageUrl;
+  const previousCoordinatorIds = [...(travel.value?.coordinatorIds ?? [])];
 
   if (bannerFile) {
     data.imageUrl = await uploadBanner(travelId.value, bannerFile);
@@ -49,6 +56,15 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   const unusedBannerPath = getGalleryStoragePath(unusedBannerUrl);
   if (unusedBannerPath)
     await removeFile(unusedBannerPath).catch(() => {});
+
+  // Linking or unlinking a coordinator adds or drops their travelers row in the DB, and when
+  // the quotation counts coordinators as passengers it changes the sellable seats too.
+  if (success && !sameIds(previousCoordinatorIds, data.coordinatorIds)) {
+    await Promise.all([
+      travelerStore.fetchByTravel(travelId.value),
+      cotizacionStore.syncSeatPriceForTravel(travelId.value),
+    ]);
+  }
 
   if (success) {
     toast.add({

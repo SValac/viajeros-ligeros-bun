@@ -5,6 +5,7 @@ type OccupiedSeat = {
   passengerName: string;
   boardingPoint?: string;
   isRepresentative: boolean;
+  isCoordinator?: boolean;
   representativeName?: string;
   menuItems: {
     label: string;
@@ -21,6 +22,7 @@ type SeatCell = {
   passengerName?: string;
   boardingPoint?: string;
   isRepresentative?: boolean;
+  isCoordinator?: boolean;
   representativeName?: string;
   menuItems?: OccupiedSeat['menuItems'];
 };
@@ -71,6 +73,7 @@ const allSeats = computed((): SeatCell[] => {
           passengerName: occ.passengerName,
           boardingPoint: occ.boardingPoint,
           isRepresentative: occ.isRepresentative,
+          isCoordinator: occ.isCoordinator,
           representativeName: occ.representativeName,
           menuItems: occ.menuItems,
         }
@@ -173,6 +176,7 @@ function isDestinationSeat(seat: SeatCell): boolean {
                 :passenger-name="seat.passengerName"
                 :boarding-point="seat.boardingPoint"
                 :is-representative="seat.isRepresentative"
+                :is-coordinator="seat.isCoordinator"
                 :representative-name="seat.representativeName"
                 :is-source-seat="isSourceSeat(seat)"
                 :is-destination-seat="isDestinationSeat(seat)"
@@ -193,6 +197,7 @@ function isDestinationSeat(seat: SeatCell): boolean {
               :passenger-name="seat.passengerName"
               :boarding-point="seat.boardingPoint"
               :is-representative="seat.isRepresentative"
+              :is-coordinator="seat.isCoordinator"
               :representative-name="seat.representativeName"
               :is-source-seat="isSourceSeat(seat)"
               :is-destination-seat="isDestinationSeat(seat)"

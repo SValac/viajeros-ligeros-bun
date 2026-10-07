@@ -42,6 +42,7 @@ const details = computed<Detail[]>(() => {
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
     { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(cotizacion.value?.minimumSeatTarget) },
     { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(cotizacion.value?.totalSeats) },
+    { icon: 'i-lucide-ticket', label: 'Asientos vendibles', value: seats(cotizacion.value && cotizacionStore.getAsientosVendibles(cotizacion.value.id)) },
     { icon: 'i-lucide-star', label: 'Destacado en la web', value: t.featured ? 'Sí' : 'No' },
   ];
 });

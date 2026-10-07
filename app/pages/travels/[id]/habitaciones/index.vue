@@ -20,11 +20,13 @@ const travelId = computed(() => route.params.id as string);
 
 const accommodations = computed(() => travelStore.getAccommodationsByTravel(travelId.value));
 const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
+// Coordinators need a room too, so room counts and the add modal include them.
+const occupantsOfTravel = computed(() => travelerStore.getOccupantsByTravel(travelId.value));
 
 // Stats
 const totalRooms = computed(() => accommodations.value.length);
 const occupiedRooms = computed(() =>
-  accommodations.value.filter(a => travelerStore.getTravelersByAccommodation(a.id).length > 0).length,
+  accommodations.value.filter(a => travelerStore.getOccupantsByAccommodation(a.id).length > 0).length,
 );
 // Grouped by provider
 type AccommodationGroup = {
@@ -69,12 +71,12 @@ function hasRoomInHotel(travelerId: string, providerId: string): boolean {
 const pendingByHotel = computed(() =>
   groupedAccommodations.value.map(group => ({
     providerName: group.providerName,
-    count: travelersOfTravel.value.filter(t => !hasRoomInHotel(t.id, group.providerId)).length,
+    count: occupantsOfTravel.value.filter(t => !hasRoomInHotel(t.id, group.providerId)).length,
   })),
 );
 
 const unassignedTravelers = computed(() =>
-  travelersOfTravel.value.filter(t =>
+  occupantsOfTravel.value.filter(t =>
     groupedAccommodations.value.some(group => !hasRoomInHotel(t.id, group.providerId)),
   ).length,
 );
@@ -196,7 +198,7 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
   const hotelNames = groupedAccommodations.value.map(group => group.providerName);
   const hotelName = groupedAccommodations.value.find(group => group.providerId === accommodation.providerId)?.providerName ?? '';
 
-  return travelersOfTravel.value
+  return occupantsOfTravel.value
     .filter(t => !hasRoomInHotel(t.id, accommodation.providerId))
     .map((traveler) => {
       const publicPriceId = paymentStore.getAccountConfig(traveler.id, travelId.value)?.publicPriceId;
@@ -218,6 +220,14 @@ watch(travelId, async (id) => {
     cotizacionStore.fetchByTravel(id),
   ]);
 }, { immediate: true });
+
+function getTravelerIcon(traveler: Traveler): { name: string; class: string } {
+  if (traveler.kind === 'coordinator')
+    return { name: 'i-lucide-user-cog', class: 'text-info' };
+  if (traveler.isRepresentative)
+    return { name: 'i-lucide-user-star', class: 'text-primary' };
+  return { name: 'i-lucide-user', class: 'text-muted' };
+}
 
 function openAddTravelerModal(accommodationId: string): void {
   const acc = accommodations.value.find(a => a.id === accommodationId);
@@ -301,7 +311,7 @@ async function updateAccommodation(
               {{ unassignedTravelers }}
             </p>
             <p class="text-sm text-muted">
-              Viajeros sin habitación
+              Personas sin habitación
             </p>
             <p
               v-if="pendingByHotel.length > 1"
@@ -357,7 +367,7 @@ async function updateAccommodation(
                   v-for="acc in og.accommodations"
                   :key="acc.id"
                   :accommodation="acc"
-                  :occupants="travelerStore.getTravelersByAccommodation(acc.id)"
+                  :occupants="travelerStore.getOccupantsByAccommodation(acc.id)"
                   :provider-name="item.group.providerName"
                   :room-type-details="getRoomTypeInfo(acc.hotelRoomTypeId).details"
                   :room-type-beds="getRoomTypeInfo(acc.hotelRoomTypeId).beds"
@@ -391,9 +401,9 @@ async function updateAccommodation(
             @click="assignTraveler(traveler)"
           >
             <UIcon
-              :name="traveler.isRepresentative ? 'i-lucide-user-star' : 'i-lucide-user'"
+              :name="getTravelerIcon(traveler).name"
               class="size-4 shrink-0 mt-0.5"
-              :class="traveler.isRepresentative ? 'text-primary' : 'text-muted'"
+              :class="getTravelerIcon(traveler).class"
             />
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium">
@@ -406,7 +416,10 @@ async function updateAccommodation(
                   {{ representativeName }}
                 </span>
               </p>
-              <template v-if="precio">
+              <p v-if="traveler.kind === 'coordinator'" class="text-xs text-info">
+                Coordinador
+              </p>
+              <template v-else-if="precio">
                 <p class="text-xs text-muted">
                   {{ precio.priceType }}
                 </p>
