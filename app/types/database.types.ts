@@ -829,6 +829,7 @@ export type Database = {
       }
       quotations: {
         Row: {
+          coordinators_take_seats: boolean
           created_at: string
           id: string
           minimum_seat_target: number
@@ -842,6 +843,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          coordinators_take_seats?: boolean
           created_at?: string
           id?: string
           minimum_seat_target: number
@@ -855,6 +857,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          coordinators_take_seats?: boolean
           created_at?: string
           id?: string
           minimum_seat_target?: number
@@ -1358,42 +1361,48 @@ export type Database = {
       travelers: {
         Row: {
           boarding_point: string
+          coordinator_id: string | null
           created_at: string
           first_name: string
           id: string
           is_representative: boolean
+          kind: Database["public"]["Enums"]["traveler_kind"]
           last_name: string
           phone: string
           representative_id: string | null
-          seat: number
+          seat: number | null
           travel_bus_id: string | null
           travel_id: string
           updated_at: string
         }
         Insert: {
           boarding_point: string
+          coordinator_id?: string | null
           created_at?: string
           first_name: string
           id?: string
           is_representative?: boolean
+          kind?: Database["public"]["Enums"]["traveler_kind"]
           last_name: string
           phone: string
           representative_id?: string | null
-          seat: number
+          seat?: number | null
           travel_bus_id?: string | null
           travel_id: string
           updated_at?: string
         }
         Update: {
           boarding_point?: string
+          coordinator_id?: string | null
           created_at?: string
           first_name?: string
           id?: string
           is_representative?: boolean
+          kind?: Database["public"]["Enums"]["traveler_kind"]
           last_name?: string
           phone?: string
           representative_id?: string | null
-          seat?: number
+          seat?: number | null
           travel_bus_id?: string | null
           travel_id?: string
           updated_at?: string
@@ -1412,6 +1421,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "travel_buses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "travelers_travel_coordinator_fkey"
+            columns: ["travel_id", "coordinator_id"]
+            isOneToOne: true
+            referencedRelation: "travel_coordinators"
+            referencedColumns: ["travel_id", "coordinator_id"]
           },
           {
             foreignKeyName: "travelers_travel_id_fkey"
@@ -1583,6 +1599,7 @@ export type Database = {
         | "in_progress"
         | "completed"
         | "cancelled"
+      traveler_kind: "traveler" | "coordinator"
       traveler_type: "adult" | "child"
     }
     CompositeTypes: {
@@ -1733,6 +1750,7 @@ export const Constants = {
         "completed",
         "cancelled",
       ],
+      traveler_kind: ["traveler", "coordinator"],
       traveler_type: ["adult", "child"],
     },
   },
