@@ -17,6 +17,7 @@ const router = useRouter();
 const travelerStore = useTravelerStore();
 const travelStore = useTravelsStore();
 const providerStore = useProviderStore();
+const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 
 type TravelerActionItem = {
@@ -32,6 +33,7 @@ type OccupiedSeat = {
   passengerName: string;
   boardingPoint?: string;
   isRepresentative: boolean;
+  isCoordinator: boolean;
   representativeName?: string;
   menuItems: TravelerActionItem[][];
 };
@@ -68,6 +70,7 @@ const activeTabValue = shallowRef<string | number>('travelers');
 const seatChangeContext = shallowRef<SeatChangeContext | null>(null);
 const selectedDestinationSeat = shallowRef<number | null>(null);
 const seatChangeLoading = shallowRef(false);
+const seatingCoordinator = shallowRef<Traveler | null>(null);
 
 // Datos derivados de stores
 const travelers = computed(() => travelerStore.filteredGroupedTravelers);
@@ -76,6 +79,30 @@ const totalTravelers = computed(() => travelersOfTravel.value.length);
 const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
 const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
 const isSeatChangeModeActive = computed(() => seatChangeContext.value !== null);
+
+// Coordinators travel in their own travelers rows: no payments or groups, but a seat (when
+// the quotation counts them as passengers) and rooms like anyone else.
+const occupantsOfTravel = computed(() => travelerStore.getOccupantsByTravel(travelId.value));
+const coordinatorsOfTravel = computed(() => travelerStore.getCoordinatorsByTravel(travelId.value));
+const coordinatorsTakeSeats = computed(() =>
+  cotizacionStore.getCotizacionByTravel(travelId.value)?.coordinatorsTakeSeats ?? false,
+);
+const coordinatorRows = computed(() =>
+  coordinatorsOfTravel.value.map(coordinator => ({
+    coordinator,
+    seatLabel: coordinator.travelBusId && coordinator.seat
+      ? `${getBusLabel(coordinator.travelBusId)} — asiento ${coordinator.seat}`
+      : undefined,
+    roomLabels: getAccommodationLabels(coordinator.id),
+  })),
+);
+const isCoordinatorSeatModalOpen = computed({
+  get: () => seatingCoordinator.value !== null,
+  set: (open) => {
+    if (!open)
+      seatingCoordinator.value = null;
+  },
+});
 
 const allBuses = computed(() => travel.value?.buses ?? []);
 const allAccommodations = computed(() => travelStore.getAccommodationsByTravel(travelId.value));
@@ -109,7 +136,10 @@ const seatChangeAlertDescription = computed(() => {
 watch(travelId, async (id) => {
   travelerStore.setFilters({ travelId: id });
   clearSeatChangeState();
-  await travelerStore.fetchByTravel(id);
+  await Promise.all([
+    travelerStore.fetchByTravel(id),
+    cotizacionStore.fetchByTravel(id),
+  ]);
 }, { immediate: true });
 
 watch(tabs, (availableTabs) => {
@@ -130,7 +160,7 @@ watchEffect(() => {
 });
 
 function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
-  const travelersByBus = travelerStore.getTravelersByBus(busId);
+  const travelersByBus = travelerStore.getOccupantsByBus(busId);
   const representativeById = new Map(
     travelersByBus
       .filter(t => t.isRepresentative)
@@ -146,10 +176,11 @@ function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
         passengerName: `${t.firstName} ${t.lastName}`,
         boardingPoint: t.boardingPoint,
         isRepresentative: t.isRepresentative,
+        isCoordinator: t.kind === 'coordinator',
         representativeName: t.representativeId
           ? representativeById.get(t.representativeId)
           : undefined,
-        menuItems: getRowActions(t),
+        menuItems: t.kind === 'coordinator' ? getCoordinatorSeatActions(t) : getRowActions(t),
       };
     })
     .filter(seat => Number.isFinite(seat.seatNumber) && seat.seatNumber > 0)
@@ -375,7 +406,7 @@ async function handleSeatDestinationSelected(payload: SeatSelectionPayload) {
 }
 
 function findTravelerBySeat(data: TravelerFormData, excludeTravelerId?: string): Traveler | undefined {
-  return travelersOfTravel.value.find((traveler) => {
+  return occupantsOfTravel.value.find((traveler) => {
     return traveler.id !== excludeTravelerId
       && traveler.travelBusId === data.travelBusId
       && traveler.seat === data.seat;
@@ -450,6 +481,76 @@ async function handleDelete(traveler: Traveler) {
       color: 'warning',
     });
   }
+}
+
+// Buses for the coordinator seat modal; the bus the quotation put them in comes first.
+const coordinatorSeatBuses = computed(() => {
+  const coordinator = seatingCoordinator.value;
+  return allBuses.value.map(bus => ({
+    value: bus.id,
+    label: getBusLabel(bus.id),
+    seatCount: bus.seatCount,
+    takenSeats: travelerStore.getOccupantsByBus(bus.id)
+      .filter(t => t.id !== coordinator?.id && t.seat !== null)
+      .map(t => t.seat as number),
+  }));
+});
+
+const coordinatorInitialBusId = computed(() => {
+  const coordinatorId = seatingCoordinator.value?.coordinatorId;
+  const cotizacion = cotizacionStore.getCotizacionByTravel(travelId.value);
+  if (!coordinatorId || !cotizacion)
+    return undefined;
+  const quotationBus = cotizacionStore.getBusesByQuotation(cotizacion.id)
+    .find(bus => (bus.coordinatorIds as string[] | undefined)?.includes(coordinatorId));
+  return allBuses.value.find(bus => quotationBus && bus.quotationBusId === quotationBus.id)?.id;
+});
+
+function openCoordinatorSeatModal(coordinator: Traveler) {
+  seatingCoordinator.value = coordinator;
+}
+
+async function assignCoordinatorSeat(seat: { travelBusId: string; seat: number }) {
+  const coordinator = seatingCoordinator.value;
+  if (!coordinator)
+    return;
+  try {
+    await travelerStore.setCoordinatorSeat(coordinator.id, seat);
+    toast.add({
+      title: 'Asiento asignado',
+      description: `${coordinator.firstName} ocupa el asiento ${seat.seat}.`,
+      color: 'success',
+    });
+    seatingCoordinator.value = null;
+  }
+  catch (error) {
+    toast.add({
+      title: isSeatAlreadyTakenError(error) ? 'Asiento ocupado' : 'Error al asignar asiento',
+      description: isSeatAlreadyTakenError(error)
+        ? `El asiento ${seat.seat} ya está asignado a otra persona`
+        : undefined,
+      color: isSeatAlreadyTakenError(error) ? 'warning' : 'error',
+    });
+  }
+}
+
+async function clearCoordinatorSeat(coordinator: Traveler) {
+  try {
+    await travelerStore.setCoordinatorSeat(coordinator.id, null);
+    if (seatChangeContext.value?.travelerId === coordinator.id)
+      clearSeatChangeState();
+    toast.add({ title: 'Asiento liberado', description: `${coordinator.firstName} ya no tiene asiento.`, color: 'success' });
+  }
+  catch {
+    toast.add({ title: 'Error al quitar el asiento', color: 'error' });
+  }
+}
+
+function getCoordinatorSeatActions(coordinator: Traveler): TravelerActionItem[][] {
+  return [[
+    { label: 'Cambiar asiento', icon: 'i-lucide-arrow-left-right', onSelect: () => startSeatChange(coordinator) },
+    { label: 'Quitar asiento', icon: 'i-lucide-x', onSelect: () => clearCoordinatorSeat(coordinator) },
+  ]];
 }
 
 function getRowActions(traveler: Traveler) {
@@ -688,6 +789,15 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       </div>
     </div>
 
+    <TravelCoordinatorsCard
+      v-if="coordinatorRows.length > 0"
+      :rows="coordinatorRows"
+      :takes-seats="coordinatorsTakeSeats"
+      @assign-seat="openCoordinatorSeatModal"
+      @change-seat="startSeatChange"
+      @clear-seat="clearCoordinatorSeat"
+    />
+
     <UTabs
       v-model="activeTabValue"
       :items="tabs"
@@ -807,10 +917,26 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           :initial-values="createTravelerInitialValues"
           :available-travels="[]"
           :available-buses="allBuses"
-          :available-travelers="travelerStore.travelers"
+          :available-travelers="travelersOfTravel"
           :locked-travel-id="travelId"
           @submit="handleFormSubmit"
           @cancel="closeModal"
+        />
+      </template>
+    </UModal>
+
+    <UModal
+      v-model:open="isCoordinatorSeatModalOpen"
+      title="Asignar asiento"
+      :description="seatingCoordinator ? `Asiento de pasajero para ${seatingCoordinator.firstName} (coordinador).` : undefined"
+    >
+      <template #body>
+        <CoordinatorSeatForm
+          v-if="seatingCoordinator"
+          :buses="coordinatorSeatBuses"
+          :initial-bus-id="coordinatorInitialBusId"
+          @submit="assignCoordinatorSeat"
+          @cancel="seatingCoordinator = null"
         />
       </template>
     </UModal>
