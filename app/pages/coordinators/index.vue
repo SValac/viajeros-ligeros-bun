@@ -97,7 +97,7 @@ const columns: TableColumn<Coordinator>[] = [
     header: 'Nombre',
     cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-user-star w-4 h-4 text-gray-400' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-user-star', class: 'w-4 h-4 text-muted' }),
         h('span', { class: 'font-medium' }, row.getValue('name')),
       ]),
   },

@@ -30,6 +30,16 @@ const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(quo
 const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(quotationId));
 const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(quotationId));
 
+// El color solo marca estado: ganancia/pérdida aquí y saldo pendiente/liquidado abajo.
+// Costos, precios y totales van en texto normal.
+const gananciaColor = computed(() => {
+  if (gananciaProyectada.value > 0)
+    return 'text-success';
+  if (gananciaProyectada.value < 0)
+    return 'text-error';
+  return 'text-highlighted';
+});
+
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat('es-MX', {
     style: 'currency',
@@ -44,10 +54,10 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-wallet" class="w-4 h-4 text-error" />
+          <UIcon name="i-lucide-wallet" class="w-4 h-4" />
           Costo Total
         </p>
-        <p class="text-2xl font-bold text-error">
+        <p class="text-2xl font-bold text-highlighted">
           {{ formatCurrency(costoTotal) }}
         </p>
         <div class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
@@ -68,10 +78,10 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-bus" class="w-4 h-4 text-purple-500" />
+          <UIcon name="i-lucide-bus" class="w-4 h-4" />
           Total Autobuses
         </p>
-        <p class="text-2xl font-bold text-purple-600 dark:text-purple-400">
+        <p class="text-2xl font-bold text-highlighted">
           {{ formatCurrency(costoBuses) }}
         </p>
         <!-- <p class="text-xs text-muted pt-1">
@@ -84,10 +94,10 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-door-open" class="w-4 h-4 text-amber-500" />
+          <UIcon name="i-lucide-door-open" class="w-4 h-4" />
           Total Hospedaje
         </p>
-        <p class="text-2xl font-bold text-amber-600 dark:text-amber-400">
+        <p class="text-2xl font-bold text-highlighted">
           {{ formatCurrency(costoHospedajes) }}
         </p>
         <!-- <p class="text-xs text-muted pt-1">
@@ -100,10 +110,10 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-armchair" class="w-4 h-4 text-blue-500" />
+          <UIcon name="i-lucide-armchair" class="w-4 h-4" />
           Precio por Asiento
         </p>
-        <p class="text-2xl font-bold text-blue-600 dark:text-blue-400">
+        <p class="text-2xl font-bold text-highlighted">
           {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}
         </p>
         <div class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
@@ -126,10 +136,10 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-target" class="w-4 h-4 text-warning" />
+          <UIcon name="i-lucide-target" class="w-4 h-4" />
           Meta mínima de asientos
         </p>
-        <p class="text-2xl font-bold text-warning">
+        <p class="text-2xl font-bold text-highlighted">
           {{ cotizacion?.minimumSeatTarget ?? 0 }}
         </p>
         <p v-if="asientoConGanancia === 0" class="text-xs text-muted">
@@ -148,10 +158,14 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-trending-up" class="w-4 h-4 text-success" />
+          <UIcon
+            :name="gananciaProyectada < 0 ? 'i-lucide-trending-down' : 'i-lucide-trending-up'"
+            class="w-4 h-4"
+            :class="gananciaColor"
+          />
           Ganancia Proyectada
         </p>
-        <p class="text-2xl font-bold text-success">
+        <p class="text-2xl font-bold" :class="gananciaColor">
           {{ formatCurrency(gananciaProyectada) }}
         </p>
         <p class="text-xs text-muted pt-1">
@@ -165,10 +179,10 @@ function formatCurrency(amount: number): string {
     <UCard>
       <div class="space-y-1">
         <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-users" class="w-4 h-4 text-indigo-500" />
+          <UIcon name="i-lucide-users" class="w-4 h-4" />
           Acumulado Viajeros
         </p>
-        <p class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
+        <p class="text-2xl font-bold text-highlighted">
           {{ formatCurrency(acumuladoViajeros) }}
         </p>
       </div>

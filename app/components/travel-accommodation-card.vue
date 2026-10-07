@@ -60,7 +60,6 @@ function toggleEditing() {
           <UBadge
             v-if="floorLabel"
             :label="floorLabel"
-            size="xs"
             variant="subtle"
             color="neutral"
           />
@@ -68,7 +67,6 @@ function toggleEditing() {
         <div class="flex items-center gap-2">
           <UBadge
             :label="`${occupants.length}/${accommodation.maxOccupancy}`"
-            size="xs"
             :color="isFull ? 'warning' : 'success'"
             variant="subtle"
           />

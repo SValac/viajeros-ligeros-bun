@@ -131,7 +131,7 @@ const columns: TableColumn<Bus>[] = [
     cell: ({ row }) => {
       const val = row.getValue('seatCount') as number;
       return h('div', { class: 'flex items-center gap-1' }, [
-        h('span', { class: 'i-lucide-users w-3 h-3 text-muted' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-users', class: 'w-3 h-3 text-muted' }),
         h('span', { class: 'text-sm' }, String(val)),
       ]);
     },
