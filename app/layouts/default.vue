@@ -4,6 +4,7 @@ const route = useRoute();
 // Título del navbar: la sección del menú lateral según el primer segmento de la ruta.
 const SECTION_TITLES: Record<string, string> = {
   travels: 'Viajes',
+  calendar: 'Calendario',
   quotations: 'Cotizaciones',
   payments: 'Pagos',
   coordinators: 'Coordinadores',
