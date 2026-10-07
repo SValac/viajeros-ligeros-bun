@@ -26,6 +26,7 @@ import {
   buildDesiredRoomsMap,
   calculatePaymentStatus,
   calculateSeatPrice,
+  calculateSellableSeats,
   reconcileAccommodations,
 
 } from '~/composables/quotation/use-quotation-domain';
@@ -238,6 +239,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  // Asientos que se pueden vender: el total menos los coordinadores del viaje cuando la
+  // cotización dice que ocupan asiento. Es el divisor de los costos repartidos entre el
+  // total y la base de la ganancia proyectada.
+  const getAsientosVendibles = computed(() => {
+    return (quotationId: string): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion)
+        return 0;
+      const travelStore = useTravelsStore();
+      const coordinadores = travelStore.getTravelById(cotizacion.travelId)?.coordinatorIds.length ?? 0;
+      return calculateSellableSeats(cotizacion, coordinadores);
+    };
+  });
+
   // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses.
   // El hospedaje queda fuera: cada viajero lo paga aparte según su habitación.
   // Devuelve 0 si aún no hay precio por asiento.
@@ -260,22 +275,23 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         return 0;
 
       return calculateSeatPrice(
-        cotizacion,
+        { minimumSeatTarget: cotizacion.minimumSeatTarget, sellableSeats: getAsientosVendibles.value(quotationId) },
         proveedoresQuotation.value.filter(p => p.quotationId === quotationId),
         busesApartados.value.filter(b => b.quotationId === quotationId),
       );
     };
   });
 
-  // Ganancia con el autobús lleno: capacidad × precio por asiento − (servicios + autobuses).
+  // Ganancia con el autobús lleno: asientos vendibles × precio por asiento − (servicios + autobuses).
   // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
   const getGananciaProyectada = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-      if (!cotizacion || cotizacion.totalSeats === 0)
+      const asientosVendibles = getAsientosVendibles.value(quotationId);
+      if (!cotizacion || asientosVendibles === 0)
         return 0;
       const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
-      return (cotizacion.totalSeats * cotizacion.seatPrice) - costoTotal;
+      return (asientosVendibles * cotizacion.seatPrice) - costoTotal;
     };
   });
 
@@ -299,7 +315,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       const splitType = proveedor.splitType ?? 'minimum';
       const divisor = splitType === 'total'
-        ? cotizacion.totalSeats
+        ? getAsientosVendibles.value(cotizacion.id)
         : cotizacion.minimumSeatTarget;
 
       if (divisor === 0)
@@ -480,7 +496,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!cotizacion)
         return 0;
       const divisor = bus.splitType === 'total'
-        ? cotizacion.totalSeats
+        ? getAsientosVendibles.value(cotizacion.id)
         : cotizacion.minimumSeatTarget;
       if (divisor === 0)
         return 0;
@@ -648,6 +664,18 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     travelFetchInFlight.delete(travelId);
   }
 
+  /**
+   * Recalculates the seat price of a travel's quotation. Call it after the travel's
+   * coordinators change: when they take seats, the sellable seats change with them.
+   * @param travelId - UUID of the travel
+   */
+  async function syncSeatPriceForTravel(travelId: string): Promise<void> {
+    await fetchByTravel(travelId);
+    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    if (cotizacion?.coordinatorsTakeSeats)
+      await _syncSeatPrice(cotizacion.id);
+  }
+
   async function createQuotation(data: QuotationFormData): Promise<Quotation> {
     const existing = cotizaciones.value.find(c => c.travelId === data.travelId);
     if (existing)
@@ -687,7 +715,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const updated = await repository.updateQuotation(id, data);
       cotizaciones.value[index] = updated;
 
-      if ('minimumSeatTarget' in data) {
+      if ('minimumSeatTarget' in data || 'coordinatorsTakeSeats' in data) {
         await _syncSeatPrice(id);
       }
 
@@ -1418,6 +1446,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getCostoTotal,
     getCostoTipoMinimo,
     getCostoTipoTotal,
+    getAsientosVendibles,
     getAsientoConGanancia,
     getPrecioAsientoCalculado,
     getGananciaProyectada,
@@ -1454,6 +1483,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     fetchAll,
     fetchByTravel,
     createQuotation,
+    syncSeatPriceForTravel,
     updateQuotation,
     confirmarQuotation,
     reabrirQuotation,

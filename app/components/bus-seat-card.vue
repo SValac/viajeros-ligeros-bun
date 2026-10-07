@@ -7,6 +7,7 @@ type Props = {
   passengerName?: string;
   boardingPoint?: string;
   isRepresentative?: boolean;
+  isCoordinator?: boolean;
   representativeName?: string;
 };
 
@@ -25,6 +26,10 @@ const cardClass = computed(() => {
 
   if (props.status === 'available') {
     return 'border-default bg-elevated text-default hover:bg-muted';
+  }
+
+  if (props.isCoordinator) {
+    return 'border-2 border-info bg-info/10 text-default';
   }
 
   if (props.isRepresentative) {
@@ -67,14 +72,25 @@ const cardClass = computed(() => {
     <div v-if="status === 'occupied'" class="space-y-0.5">
       <div class="flex items-center gap-1 text-xs font-semibold truncate">
         <UIcon
-          v-if="isRepresentative"
+          v-if="isCoordinator"
+          name="i-lucide-user-cog"
+          class="size-5 shrink-0 text-info"
+        />
+        <UIcon
+          v-else-if="isRepresentative"
           name="i-lucide-user-star"
           class="size-5 shrink-0 text-primary-600"
         />
         <span class="truncate">{{ passengerName }}</span>
       </div>
       <p
-        v-if="boardingPoint"
+        v-if="isCoordinator"
+        class="text-[10px] opacity-90 truncate"
+      >
+        Coordinador
+      </p>
+      <p
+        v-else-if="boardingPoint"
         class="text-[10px] opacity-90 truncate"
       >
         {{ boardingPoint }}

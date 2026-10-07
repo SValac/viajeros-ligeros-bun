@@ -316,6 +316,9 @@ export function mapTravelInternalsToInsert(
 export function mapTravelerRowToDomain(row: Tables<'travelers'>): Traveler {
   return {
     id: row.id,
+    // Falls back for a DB without the column yet (the app ships before the migration).
+    kind: row.kind ?? 'traveler',
+    coordinatorId: row.coordinator_id ?? undefined,
     firstName: row.first_name,
     lastName: row.last_name,
     phone: row.phone,
@@ -330,7 +333,7 @@ export function mapTravelerRowToDomain(row: Tables<'travelers'>): Traveler {
   };
 }
 
-export function mapTravelerToInsert(data: TravelerFormData): Omit<Tables<'travelers'>, 'id' | 'created_at' | 'updated_at'> {
+export function mapTravelerToInsert(data: TravelerFormData): TablesInsert<'travelers'> {
   return {
     first_name: data.firstName,
     last_name: data.lastName,
@@ -455,12 +458,14 @@ export function mapQuotationRowToDomain(row: Tables<'quotations'>): Quotation {
     notes: row.notes ?? undefined,
     showPublicRoomType: row.show_public_room_type,
     showPublicDescription: row.show_public_description,
+    // Falls back for a DB without the column yet (the app ships before the migration).
+    coordinatorsTakeSeats: row.coordinators_take_seats ?? false,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
-export function mapQuotationToInsert(data: QuotationFormData): Omit<Tables<'quotations'>, 'id' | 'created_at' | 'updated_at'> {
+export function mapQuotationToInsert(data: QuotationFormData): TablesInsert<'quotations'> {
   return {
     travel_id: data.travelId,
     total_seats: data.totalSeats,
@@ -470,6 +475,8 @@ export function mapQuotationToInsert(data: QuotationFormData): Omit<Tables<'quot
     notes: data.notes ?? null,
     show_public_room_type: data.showPublicRoomType ?? true,
     show_public_description: data.showPublicDescription ?? true,
+    // Sent only when set, so creating a quotation still works before the column exists.
+    ...(data.coordinatorsTakeSeats !== undefined && { coordinators_take_seats: data.coordinatorsTakeSeats }),
   };
 }
 

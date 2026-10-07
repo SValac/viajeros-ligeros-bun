@@ -24,6 +24,8 @@ const costoMinimoConBuses = computed(() => costoTipoMinimo.value + costoBusesTip
 const costoCapacidadConBuses = computed(() => costoTipoTotal.value + costoBusesTipoTotal.value);
 const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(quotationId));
 const asientoConGanancia = computed(() => cotizacionStore.getAsientoConGanancia(quotationId));
+// Total seats minus the coordinators when they take passenger seats.
+const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId));
 const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(quotationId));
 const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(quotationId));
 const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(quotationId));
@@ -111,7 +113,7 @@ function formatCurrency(amount: number): string {
           </span>
           <span class="text-xs text-muted">
             Reparto total: <span class="font-medium">{{ formatCurrency(costoCapacidadConBuses) }}</span>
-            ÷ {{ cotizacion?.totalSeats ?? 0 }} asientos
+            ÷ {{ asientosVendibles }} asientos vendibles
           </span>
           <span class="text-xs text-muted italic">
             Hospedaje no incluido
@@ -133,7 +135,7 @@ function formatCurrency(amount: number): string {
         <p v-if="asientoConGanancia === 0" class="text-xs text-muted">
           Sin precio por asiento todavía
         </p>
-        <p v-else-if="asientoConGanancia > (cotizacion?.totalSeats ?? 0)" class="text-xs text-error">
+        <p v-else-if="asientoConGanancia > asientosVendibles" class="text-xs text-error">
           Sin ganancia aun con el autobús lleno
         </p>
         <p v-else class="text-xs text-muted">
@@ -153,7 +155,7 @@ function formatCurrency(amount: number): string {
           {{ formatCurrency(gananciaProyectada) }}
         </p>
         <p class="text-xs text-muted pt-1">
-          ({{ cotizacion?.totalSeats ?? 0 }} asientos × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}) − costo total
+          ({{ asientosVendibles }} asientos vendibles × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}) − costo total
           <span class="block italic">Hospedaje no incluido</span>
         </p>
       </div>
