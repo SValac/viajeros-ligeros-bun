@@ -492,6 +492,9 @@ export function mapQuotationProviderRowToDomain(row: Tables<'quotation_providers
     serviceDescription: row.service_description,
     remarks: row.remarks ?? undefined,
     totalCost: row.total_cost,
+    costType: row.cost_type,
+    unitCost: row.unit_cost ?? undefined,
+    personCount: row.person_count ?? undefined,
     paymentMethod: row.payment_method,
     splitType: row.split_type,
     confirmed: row.confirmed,
@@ -505,9 +508,20 @@ export function mapQuotationProviderToInsert(data: QuotationProviderFormData): O
     service_description: data.serviceDescription,
     remarks: data.remarks ?? null,
     total_cost: data.totalCost,
+    ...mapProviderCostFields(data),
     payment_method: data.paymentMethod,
     split_type: data.splitType,
     confirmed: data.confirmed,
+  };
+}
+
+// Las columnas de costo por persona van juntas: un costo total no lleva ninguna.
+export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'personCount'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'person_count'> {
+  const perPerson = data.costType === 'per_person';
+  return {
+    cost_type: data.costType,
+    unit_cost: perPerson ? data.unitCost ?? null : null,
+    person_count: perPerson ? data.personCount ?? null : null,
   };
 }
 

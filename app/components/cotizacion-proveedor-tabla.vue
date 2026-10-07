@@ -91,6 +91,16 @@ function isProviderInactive(providerId: string): boolean {
   return provider ? !provider.active : false;
 }
 
+function getDivisor(proveedor: QuotationProvider): number {
+  return cotizacionStore.getDivisorCosto(proveedor.quotationId, proveedor.splitType ?? 'minimum');
+}
+
+// Un costo por persona no se recalcula solo: avisa cuando sus personas no coinciden con
+// el divisor actual (las editó el usuario o cambiaron los asientos), sin mover saldos.
+function hasPersonCountDrift(proveedor: QuotationProvider): boolean {
+  return proveedor.costType === 'per_person' && proveedor.personCount !== getDivisor(proveedor);
+}
+
 function openNewProveedor() {
   selectedProveedor.value = null;
   isProveedorFormOpen.value = true;
@@ -318,8 +328,22 @@ function getProveedorActions(proveedor: QuotationProvider) {
             </td>
 
             <!-- Costo Total -->
-            <td class="py-3 pr-4 font-medium">
-              {{ formatCurrency(proveedor.totalCost) }}
+            <td class="py-3 pr-4">
+              <p class="font-medium">
+                {{ formatCurrency(proveedor.totalCost) }}
+              </p>
+              <p
+                v-if="proveedor.costType === 'per_person'"
+                class="text-xs text-muted flex items-center gap-1 whitespace-nowrap"
+              >
+                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ proveedor.personCount }} pers.
+                <UIcon
+                  v-if="hasPersonCountDrift(proveedor)"
+                  name="i-lucide-alert-triangle"
+                  class="size-3.5 text-warning shrink-0"
+                  :title="`Calculado para ${proveedor.personCount} personas, pero el costo se reparte entre ${getDivisor(proveedor)}. Edita el servicio si debe recalcularse.`"
+                />
+              </p>
             </td>
 
             <!-- Costo/persona -->
