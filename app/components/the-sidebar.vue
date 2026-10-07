@@ -77,12 +77,13 @@ const items = computed<NavigationMenuItem[]>(() => [{
         :alt="agencyProfileStore.profile?.companyName || 'Logo'"
         class="w-auto shrink-0 mx-auto"
       />
-      <h1
+      <!-- No es <h1>: el <h1> de cada pantalla es el título de la página -->
+      <p
         v-if="!collapsed"
-        class="text-center text-lg font-semibold"
+        class="text-center text-lg font-semibold text-highlighted"
       >
         {{ agencyProfileStore.profile?.companyName || 'Viajeros Ligeros' }}
-      </h1>
+      </p>
     </template>
 
     <template #default="{ collapsed }">
