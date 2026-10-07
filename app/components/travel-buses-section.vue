@@ -52,17 +52,19 @@ function getOperadores(bus: QuotationBus) {
   return ops;
 }
 
+// Espera también a los buses del viaje: al abrir el link directo la cotización puede cargar
+// antes que el viaje, y el borrador quedaría vacío aunque el bus ya tenga operadores
 watch(
-  () => buses.value,
-  (newBuses) => {
+  [buses, () => travel.value?.buses],
+  ([newBuses]) => {
     newBuses.forEach((bus) => {
-      if (!operatorDraft[bus.id]) {
-        const travelBus = getTravelBusForQuotationBus(bus);
+      const travelBus = getTravelBusForQuotationBus(bus);
+      if (travelBus && !operatorDraft[bus.id]) {
         operatorDraft[bus.id] = {
-          operator1Name: travelBus?.operator1Name ?? '',
-          operator1Phone: travelBus?.operator1Phone ?? '',
-          operator2Name: travelBus?.operator2Name ?? '',
-          operator2Phone: travelBus?.operator2Phone ?? '',
+          operator1Name: travelBus.operator1Name,
+          operator1Phone: travelBus.operator1Phone,
+          operator2Name: travelBus.operator2Name ?? '',
+          operator2Phone: travelBus.operator2Phone ?? '',
         };
       }
     });
@@ -312,9 +314,17 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
       <p class="text-muted font-medium mb-1">
         Sin autobuses apartados
       </p>
-      <p class="text-sm text-muted">
-        Agrégalos en la sección de arriba.
+      <p class="text-sm text-muted mb-3">
+        Los autobuses se apartan en la cotización del viaje.
       </p>
+      <UButton
+        variant="outline"
+        size="sm"
+        label="Ir a la cotización"
+        icon="i-lucide-arrow-right"
+        trailing
+        :to="{ name: 'quotation-buses', params: { id: travelId } }"
+      />
     </div>
   </div>
 </template>
