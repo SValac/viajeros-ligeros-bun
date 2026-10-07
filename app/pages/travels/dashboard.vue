@@ -182,16 +182,16 @@ const columns: TableColumn<Travel>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Total Viajes
             </p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ stats.total }}
             </p>
           </div>
           <UIcon
             name="i-lucide-globe"
-            class="w-10 h-10 text-gray-400"
+            class="w-10 h-10 text-muted"
           />
         </div>
       </UCard>
@@ -200,16 +200,16 @@ const columns: TableColumn<Travel>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Publicados
             </p>
-            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ stats.published }}
             </p>
           </div>
           <UIcon
             name="i-lucide-check-circle"
-            class="w-10 h-10 text-blue-400"
+            class="w-10 h-10 text-muted"
           />
         </div>
       </UCard>
@@ -218,16 +218,16 @@ const columns: TableColumn<Travel>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               En Curso
             </p>
-            <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ stats.inProgress }}
             </p>
           </div>
           <UIcon
             name="i-lucide-plane"
-            class="w-10 h-10 text-purple-400"
+            class="w-10 h-10 text-muted"
           />
         </div>
       </UCard>
