@@ -25,7 +25,8 @@ con el viaje y la página tiene que funcionar antes de que exista (estado «Crea
 cotización»).
 
 - **Lista:** todos los viajes con el estado de su cotización (sin cotización, borrador o
-  confirmada), el precio por asiento y un acceso para verla o crearla.
+  confirmada) y un acceso para verla o crearla. (La columna «Precio por asiento» se quitó el
+  2026-10-07.)
 - **Detalle:** la página anterior `travels/[id]/cotizacion.vue`, movida con `git mv` y
   dividida en pestañas (ver abajo).
 
