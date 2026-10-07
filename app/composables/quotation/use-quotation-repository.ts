@@ -5,6 +5,7 @@ import type { TravelAccommodation } from '~/types/travel';
 import {
   mapAccommodationPaymentRowToDomain,
   mapBusPaymentRowToDomain,
+  mapProviderCostFields,
   mapProviderPaymentRowToDomain,
   mapQuotationAccommodationDetailRowToDomain,
   mapQuotationAccommodationRowToDomain,
@@ -183,6 +184,8 @@ export function useQuotationRepository() {
       update.remarks = data.remarks ?? null;
     if (data.totalCost !== undefined)
       update.total_cost = data.totalCost;
+    if (data.costType !== undefined)
+      Object.assign(update, mapProviderCostFields({ costType: data.costType, unitCost: data.unitCost, personCount: data.personCount }));
     if (data.paymentMethod !== undefined)
       update.payment_method = data.paymentMethod;
     if (data.splitType !== undefined)
