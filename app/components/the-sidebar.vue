@@ -16,6 +16,10 @@ const items = computed<NavigationMenuItem[]>(() => [{
   // `/travels/[id]/*` y `/travels/new` son rutas hermanas de `/travels/dashboard`: forzar el activo
   active: route.path.startsWith('/travels'),
 }, {
+  label: 'Calendario',
+  icon: 'i-lucide-calendar-days',
+  to: { name: 'calendar' },
+}, {
   label: 'Cotizaciones',
   icon: 'i-lucide-calculator',
   to: { name: 'quotations-index' },
