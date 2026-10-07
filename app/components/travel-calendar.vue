@@ -4,12 +4,12 @@ import type { DateValue } from '@internationalized/date';
 import { getLocalTimeZone, isSameMonth, isToday, startOfMonth, startOfWeek } from '@internationalized/date';
 
 import type { Travel } from '~/types/travel';
+import type { MexicanHoliday } from '~/utils/mexican-holidays';
 
+import { HOLIDAY_KIND_TEXT_CLASSES } from '~/utils/mexican-holidays';
 import {
   CALENDAR_LOCALE,
   getTravelBarShape,
-  getTravelLabelSpanDays,
-  shouldShowTravelLabel,
   TRAVEL_BAR_SHAPE_CLASSES,
   TRAVEL_STATUS_BAR_CLASSES,
   TRAVEL_STATUS_BAR_SELECTED_CLASSES,
@@ -23,6 +23,7 @@ const props = defineProps<{
   getTravelsOnDay: (day: DateValue) => Travel[];
   travelLanes: Map<string, number>;
   selectedTravelId?: string;
+  getHolidayOnDay?: (day: DateValue) => MexicanHoliday | undefined;
 }>();
 
 const selectedDay = defineModel<DateValue | undefined>();
@@ -35,7 +36,10 @@ const GRID_DAYS = 42;
 
 type DayBars = {
   bars: (Travel | null)[];
+  // Por carril: cuántos días ocupa el nombre desde aquí (0 = sin nombre, lo lleva un día anterior)
+  labelSpans: number[];
   hiddenCount: number;
+  holiday?: MexicanHoliday;
 };
 
 // Cada viaje va en su carril (misma altura todos sus días). Un hueco libre se deja vacío para
@@ -66,20 +70,47 @@ function getDayBars(day: DateValue): DayBars {
   while (bars.length > 0 && bars.at(-1) === null)
     bars.pop();
 
-  return { bars, hiddenCount };
+  return {
+    bars,
+    labelSpans: bars.map(travel => (travel ? 1 : 0)),
+    hiddenCount,
+    holiday: props.getHolidayOnDay?.(day),
+  };
 }
 
-// Barras de los 42 días visibles, por `YYYY-MM-DD`: una vez por mes/datos, no por render de celda
+// Barras (y festivo) de los 42 días visibles, por `YYYY-MM-DD`: una vez por mes/datos, no por render de celda
 const barsByDay = computed(() => {
-  const bars = new Map<string, DayBars>();
+  const days: [string, DayBars][] = [];
   let day = startOfWeek(startOfMonth(placeholder.value), CALENDAR_LOCALE);
   for (let i = 0; i < GRID_DAYS; i++, day = day.add({ days: 1 }))
-    bars.set(day.toString(), getDayBars(day));
-  return bars;
+    days.push([day.toString(), getDayBars(day)]);
+
+  // El nombre va al inicio de cada tramo (días seguidos de la misma semana con el viaje en el
+  // mismo carril) y se extiende sobre todo el tramo. Así un viaje que entra a un hueco libre a
+  // media semana también lleva su nombre.
+  const sameTravel = (index: number, lane: number, travelId: string) =>
+    days[index]?.[1].bars[lane]?.id === travelId;
+  days.forEach(([, dayBars], index) => {
+    dayBars.labelSpans = dayBars.bars.map((travel, lane) => {
+      if (!travel || (index % 7 !== 0 && sameTravel(index - 1, lane, travel.id)))
+        return 0;
+      let span = 1;
+      while ((index + span) % 7 !== 0 && sameTravel(index + span, lane, travel.id))
+        span++;
+      return span;
+    });
+  });
+
+  return new Map(days);
 });
 
 function getBars(day: DateValue): DayBars {
   return barsByDay.value.get(day.toString()) ?? getDayBars(day);
+}
+
+function getDayHolidays(day: DateValue): MexicanHoliday[] {
+  const holiday = getBars(day).holiday;
+  return holiday ? [holiday] : [];
 }
 
 function getBarClasses(travel: Travel, day: DateValue): string[] {
@@ -92,6 +123,16 @@ function getBarClasses(travel: Travel, day: DateValue): string[] {
 }
 
 const timeZone = getLocalTimeZone();
+
+// Número del día: círculo si es hoy; si no, rojo en festivos oficiales del mes visible
+// (los días de otro mes se quedan atenuados como el resto de su celda)
+function getDayNumberClasses(day: DateValue, holiday: MexicanHoliday | undefined): string {
+  if (isToday(day, timeZone))
+    return 'bg-primary font-semibold text-inverted';
+  if (holiday?.kind === 'official' && isSameMonth(day, placeholder.value))
+    return `font-semibold ${HOLIDAY_KIND_TEXT_CLASSES.official}`;
+  return '';
+}
 
 const calendarUi = {
   root: 'w-full',
@@ -121,12 +162,22 @@ const calendarUi = {
     :ui="calendarUi"
   >
     <template #day="{ day }">
-      <span class="flex px-1.5 pt-1">
+      <span class="flex min-w-0 items-center gap-0.5 px-1 pt-1">
         <span
-          class="inline-flex size-6 items-center justify-center rounded-full"
-          :class="isToday(day, timeZone) ? 'bg-primary font-semibold text-inverted' : ''"
+          class="inline-flex size-6 shrink-0 items-center justify-center rounded-full"
+          :class="getDayNumberClasses(day, getBars(day).holiday)"
         >
           {{ day.day }}
+        </span>
+        <!-- 0 o 1 festivo: el v-for da una variable tipada sin repetir la búsqueda -->
+        <span
+          v-for="holiday in getDayHolidays(day)"
+          :key="holiday.date.toString()"
+          class="min-w-0 truncate text-left text-[11px] font-medium"
+          :class="[HOLIDAY_KIND_TEXT_CLASSES[holiday.kind], isSameMonth(day, placeholder) ? '' : 'opacity-50']"
+          :title="holiday.name"
+        >
+          {{ holiday.shortName }}
         </span>
       </span>
 
@@ -140,9 +191,9 @@ const calendarUi = {
           <!-- El nombre se extiende sobre los días siguientes del tramo: z-10 para quedar sobre sus barras
                y pointer-events-none para que el clic llegue al día de abajo, no al de la etiqueta -->
           <span
-            v-if="shouldShowTravelLabel(travel, day)"
+            v-if="getBars(day).labelSpans[lane]"
             class="pointer-events-none relative z-10 block truncate"
-            :style="{ width: `calc(${getTravelLabelSpanDays(travel, day) * 100}% - 0.25rem)` }"
+            :style="{ width: `calc(${getBars(day).labelSpans[lane]} * 100% - 0.25rem)` }"
           >
             {{ travel.label }}
           </span>
