@@ -5,6 +5,7 @@ import type {
   BusPayment,
   BusPaymentFormData,
   BusPaymentStatus,
+  CostSplitType,
   ProviderPayment,
   ProviderPaymentFormData,
   ProviderPaymentStatus,
@@ -303,21 +304,27 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  // Entre cuántas personas se reparte un costo según "Dividir entre": los asientos mínimos
+  // objetivo o los asientos vendibles. También es el número de personas por defecto de un
+  // servicio cobrado por persona.
+  const getDivisorCosto = computed(() => {
+    return (quotationId: string, splitType: CostSplitType): number => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion)
+        return 0;
+      return splitType === 'total'
+        ? getAsientosVendibles.value(quotationId)
+        : cotizacion.minimumSeatTarget;
+    };
+  });
+
   const getCostoPerPersonaProveedor = computed(() => {
     return (quotationProviderId: string): number => {
       const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
 
-      const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
-      if (!cotizacion)
-        return 0;
-
-      const splitType = proveedor.splitType ?? 'minimum';
-      const divisor = splitType === 'total'
-        ? getAsientosVendibles.value(cotizacion.id)
-        : cotizacion.minimumSeatTarget;
-
+      const divisor = getDivisorCosto.value(proveedor.quotationId, proveedor.splitType ?? 'minimum');
       if (divisor === 0)
         return 0;
       return proveedor.totalCost / divisor;
@@ -1452,6 +1459,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getGananciaProyectada,
     getAnticipadoProveedor,
     getCostoPerPersonaProveedor,
+    getDivisorCosto,
     getSaldoPendienteProveedor,
     getProviderPaymentStatus,
     getSaldoTotalPendiente,

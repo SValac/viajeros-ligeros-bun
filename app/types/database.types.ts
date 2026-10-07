@@ -729,36 +729,45 @@ export type Database = {
       quotation_providers: {
         Row: {
           confirmed: boolean
+          cost_type: Database["public"]["Enums"]["provider_cost_type"]
           id: string
           payment_method: Database["public"]["Enums"]["payment_type"]
+          person_count: number | null
           provider_id: string
           quotation_id: string
           remarks: string | null
           service_description: string
           split_type: Database["public"]["Enums"]["cost_split_type"]
           total_cost: number
+          unit_cost: number | null
         }
         Insert: {
           confirmed?: boolean
+          cost_type?: Database["public"]["Enums"]["provider_cost_type"]
           id?: string
           payment_method: Database["public"]["Enums"]["payment_type"]
+          person_count?: number | null
           provider_id: string
           quotation_id: string
           remarks?: string | null
           service_description: string
           split_type: Database["public"]["Enums"]["cost_split_type"]
           total_cost: number
+          unit_cost?: number | null
         }
         Update: {
           confirmed?: boolean
+          cost_type?: Database["public"]["Enums"]["provider_cost_type"]
           id?: string
           payment_method?: Database["public"]["Enums"]["payment_type"]
+          person_count?: number | null
           provider_id?: string
           quotation_id?: string
           remarks?: string | null
           service_description?: string
           split_type?: Database["public"]["Enums"]["cost_split_type"]
           total_cost?: number
+          unit_cost?: number | null
         }
         Relationships: [
           {
@@ -1591,6 +1600,7 @@ export type Database = {
         | "bus_agencies"
         | "food_services"
         | "other"
+      provider_cost_type: "total" | "per_person"
       quotation_bus_status: "reserved" | "confirmed" | "pending"
       quotation_status: "draft" | "confirmed"
       travel_status:
@@ -1741,6 +1751,7 @@ export const Constants = {
         "food_services",
         "other",
       ],
+      provider_cost_type: ["total", "per_person"],
       quotation_bus_status: ["reserved", "confirmed", "pending"],
       quotation_status: ["draft", "confirmed"],
       travel_status: [

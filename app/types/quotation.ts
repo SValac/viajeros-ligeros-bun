@@ -26,6 +26,9 @@ export type Quotation = {
 
 export type CostSplitType = 'minimum' | 'total';
 
+// Cómo capturó el usuario el costo de un servicio: el total o un precio por persona.
+export type ProviderCostType = 'total' | 'per_person';
+
 export type QuotationProvider = {
   id: string;
   quotationId: string;
@@ -33,6 +36,10 @@ export type QuotationProvider = {
   serviceDescription: string;
   remarks?: string;
   totalCost: number;
+  costType: ProviderCostType;
+  // Solo con costType 'per_person': totalCost = unitCost × personCount.
+  unitCost?: number;
+  personCount?: number;
   paymentMethod: PaymentType;
   splitType: CostSplitType;
   confirmed: boolean;
