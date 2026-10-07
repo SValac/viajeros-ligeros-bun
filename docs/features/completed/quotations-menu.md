@@ -57,6 +57,9 @@ pestaña. Además, cada archivo queda chico.
 - **Asignación de Autobuses:** operadores y coordinadores por autobús. Antes estaba en el
   detalle y en la edición del viaje. Se oculta mientras la cotización no tenga autobuses, y
   sigue siendo editable con la cotización confirmada.
+  **Actualización 2026-10-07:** se movió a la pestaña «Autobuses» del viaje
+  (`/travels/[id]/buses`, ruta `travel-buses`), porque operadores y coordinadores son del
+  viaje y no de la cotización. La pestaña de la cotización solo muestra un aviso con enlace.
 - Para agregar una pestaña: crear `pages/quotations/[id]/<name>.vue` y agregarla a `tabs`
   en el padre.
 
