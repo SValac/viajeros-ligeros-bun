@@ -20,28 +20,6 @@ const travels = computed(() => travelsStore.allTravels);
 const stats = computed(() => travelsStore.stats);
 
 // Funciones auxiliares
-function getStatusColor(status: TravelStatus): string {
-  const colors: Record<TravelStatus, string> = {
-    pending: 'amber',
-    published: 'blue',
-    in_progress: 'purple',
-    completed: 'green',
-    cancelled: 'red',
-  };
-  return colors[status] || 'gray';
-}
-
-function getStatusLabel(status: TravelStatus): string {
-  const labels: Record<TravelStatus, string> = {
-    pending: 'Pendiente',
-    published: 'Publicado',
-    in_progress: 'En Curso',
-    completed: 'Completado',
-    cancelled: 'Cancelado',
-  };
-  return labels[status] || status;
-}
-
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
   return date.toLocaleDateString('es-MX', {
@@ -120,7 +98,7 @@ const columns: TableColumn<Travel>[] = [
         to: `/travels/${row.original.id}`,
         class: 'flex items-center gap-2 hover:text-primary transition-colors group',
       }, () => [
-        h('span', { class: 'i-lucide-tag w-4 h-4 text-muted group-hover:text-primary' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
         h('span', { class: 'font-medium' }, row.getValue('label')),
       ]),
   },
@@ -136,7 +114,7 @@ const columns: TableColumn<Travel>[] = [
         return c ? c.name : '—';
       });
       return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-user-star w-4 h-4 text-gray-400 shrink-0' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-user-star', class: 'w-4 h-4 text-muted shrink-0' }),
         h('span', { class: 'text-sm' }, names.join(', ')),
       ]);
     },
@@ -155,9 +133,9 @@ const columns: TableColumn<Travel>[] = [
     cell: ({ row }) => {
       const status = row.getValue('status') as TravelStatus;
       return h(resolveComponent('UBadge'), {
-        color: getStatusColor(status),
+        color: getTravelStatusColor(status),
         variant: 'subtle',
-      }, () => getStatusLabel(status));
+      }, () => getTravelStatusLabel(status));
     },
   },
   {
@@ -204,16 +182,16 @@ const columns: TableColumn<Travel>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Total Viajes
             </p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ stats.total }}
             </p>
           </div>
           <UIcon
             name="i-lucide-globe"
-            class="w-10 h-10 text-gray-400"
+            class="w-10 h-10 text-muted"
           />
         </div>
       </UCard>
@@ -222,16 +200,16 @@ const columns: TableColumn<Travel>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Publicados
             </p>
-            <p class="text-2xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ stats.published }}
             </p>
           </div>
           <UIcon
             name="i-lucide-check-circle"
-            class="w-10 h-10 text-blue-400"
+            class="w-10 h-10 text-muted"
           />
         </div>
       </UCard>
@@ -240,16 +218,16 @@ const columns: TableColumn<Travel>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               En Curso
             </p>
-            <p class="text-2xl font-bold text-purple-600 dark:text-purple-400 mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ stats.inProgress }}
             </p>
           </div>
           <UIcon
             name="i-lucide-plane"
-            class="w-10 h-10 text-purple-400"
+            class="w-10 h-10 text-muted"
           />
         </div>
       </UCard>

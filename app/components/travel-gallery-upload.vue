@@ -126,7 +126,6 @@ onUnmounted(() => {
           :label="pending.mediaType === 'video' ? 'Video' : 'Imagen'"
           color="neutral"
           variant="solid"
-          size="xs"
         />
       </div>
     </div>

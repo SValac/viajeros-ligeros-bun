@@ -717,42 +717,42 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Total Viajeros
             </p>
-            <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ totalTravelers }}
             </p>
           </div>
-          <UIcon name="i-lucide-users" class="w-10 h-10 text-gray-400" />
+          <UIcon name="i-lucide-users" class="w-10 h-10 text-muted" />
         </div>
       </UCard>
 
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Representantes
             </p>
-            <p class="text-2xl font-bold text-primary-600 dark:text-primary-400 mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ totalRepresentantes }}
             </p>
           </div>
-          <UIcon name="i-lucide-user-check" class="w-10 h-10 text-primary-400" />
+          <UIcon name="i-lucide-user-check" class="w-10 h-10 text-muted" />
         </div>
       </UCard>
 
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Acompañantes
             </p>
-            <p class="text-2xl font-bold text-gray-600 dark:text-gray-300 mt-1">
+            <p class="text-2xl font-bold text-highlighted mt-1">
               {{ totalAcompañantes }}
             </p>
           </div>
-          <UIcon name="i-lucide-user" class="w-10 h-10 text-gray-400" />
+          <UIcon name="i-lucide-user" class="w-10 h-10 text-muted" />
         </div>
       </UCard>
     </div>

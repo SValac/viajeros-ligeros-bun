@@ -82,7 +82,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
       to: { name: 'payments-travel', params: { id: row.original.travel.id } },
       class: 'flex items-center gap-2 hover:text-primary transition-colors group',
     }, () => [
-      h('span', { class: 'i-lucide-tag w-4 h-4 text-muted group-hover:text-primary' }),
+      h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
       h('span', { class: 'font-medium' }, row.original.travel.label),
     ]),
   },
@@ -109,14 +109,14 @@ const columns: TableColumn<TravelSummaryRow>[] = [
   {
     id: 'totalCollected',
     header: 'Recaudado',
-    cell: ({ row }) => h('span', { class: 'text-sm text-success' }, formatCurrency(row.original.totalCollected)),
+    cell: ({ row }) => h('span', { class: 'text-sm' }, formatCurrency(row.original.totalCollected)),
   },
   {
     id: 'balance',
     header: 'Saldo pendiente',
     cell: ({ row }) => {
       const balance = row.original.balance;
-      return h('span', { class: balance > 0 ? 'text-sm text-error' : 'text-sm text-success' }, formatCurrency(balance));
+      return h('span', { class: balance > 0 ? 'text-sm text-warning' : 'text-sm text-success' }, formatCurrency(balance));
     },
   },
   {
@@ -124,7 +124,8 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     header: '% Completado',
     cell: ({ row }) => {
       const pct = row.original.percent;
-      const color = pct >= 100 ? 'text-success' : pct >= 50 ? 'text-warning' : 'text-error';
+      // Solo el viaje liquidado lleva color; un avance parcial es normal, no un error.
+      const color = pct >= 100 ? 'text-success' : 'text-highlighted';
       return h('span', { class: `text-sm font-medium ${color}` }, `${pct}%`);
     },
   },
@@ -164,56 +165,63 @@ const columns: TableColumn<TravelSummaryRow>[] = [
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Viajes con pagos
             </p>
             <p class="text-2xl font-bold mt-1">
               {{ globalStats.travelsWithPayments }}
             </p>
           </div>
-          <UIcon name="i-lucide-map" class="w-10 h-10 text-gray-400" />
+          <UIcon name="i-lucide-map" class="w-10 h-10 text-muted" />
         </div>
       </UCard>
 
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Total recaudado
             </p>
-            <p class="text-2xl font-bold text-success mt-1">
+            <p class="text-2xl font-bold mt-1">
               {{ formatCurrency(globalStats.totalCollected) }}
             </p>
           </div>
-          <UIcon name="i-lucide-trending-up" class="w-10 h-10 text-success opacity-60" />
+          <UIcon name="i-lucide-trending-up" class="w-10 h-10 text-muted" />
         </div>
       </UCard>
 
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Saldo pendiente
             </p>
-            <p class="text-2xl font-bold text-error mt-1">
+            <p
+              class="text-2xl font-bold mt-1"
+              :class="globalStats.totalBalance > 0 ? 'text-warning' : 'text-success'"
+            >
               {{ formatCurrency(globalStats.totalBalance) }}
             </p>
           </div>
-          <UIcon name="i-lucide-clock" class="w-10 h-10 text-error opacity-60" />
+          <UIcon
+            name="i-lucide-clock"
+            class="w-10 h-10 opacity-60"
+            :class="globalStats.totalBalance > 0 ? 'text-warning' : 'text-success'"
+          />
         </div>
       </UCard>
 
       <UCard>
         <div class="flex items-center justify-between">
           <div>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            <p class="text-sm text-muted">
               Viajes liquidados
             </p>
-            <p class="text-2xl font-bold text-primary mt-1">
+            <p class="text-2xl font-bold mt-1">
               {{ globalStats.settledTravels }}
             </p>
           </div>
-          <UIcon name="i-lucide-check-circle" class="w-10 h-10 text-primary opacity-60" />
+          <UIcon name="i-lucide-check-circle" class="w-10 h-10 text-muted" />
         </div>
       </UCard>
     </div>

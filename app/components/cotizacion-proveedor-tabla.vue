@@ -324,7 +324,6 @@ function getProveedorActions(proveedor: QuotationProvider) {
                 :label="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Cap. bus'"
                 :color="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -353,7 +352,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
             </td>
 
             <!-- Pagado -->
-            <td class="py-3 pr-4 text-success">
+            <td class="py-3 pr-4">
               {{ formatCurrency(cotizacionStore.getAnticipadoProveedor(proveedor.id)) }}
             </td>
 
@@ -368,9 +367,8 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <td class="py-3 pr-4">
               <UBadge
                 :label="proveedor.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="proveedor.paymentMethod === 'cash' ? 'success' : 'info'"
+                color="neutral"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -380,7 +378,6 @@ function getProveedorActions(proveedor: QuotationProvider) {
                 :label="getEstadoPagoLabel(cotizacionStore.getProviderPaymentStatus(proveedor.id))"
                 :color="getEstadoPagoColor(cotizacionStore.getProviderPaymentStatus(proveedor.id))"
                 variant="subtle"
-                size="xs"
               />
             </td>
 
@@ -390,7 +387,6 @@ function getProveedorActions(proveedor: QuotationProvider) {
                 :label="proveedor.confirmed ? 'Sí' : 'No'"
                 :color="proveedor.confirmed ? 'success' : 'neutral'"
                 variant="subtle"
-                size="xs"
               />
             </td>
 

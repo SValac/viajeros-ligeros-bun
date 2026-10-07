@@ -145,7 +145,6 @@ async function confirmDelete() {
                 :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
                 :color="pago.paymentType === 'cash' ? 'success' : 'info'"
                 variant="subtle"
-                size="xs"
               />
             </td>
             <td class="py-2 pr-4 font-medium">
@@ -195,7 +194,7 @@ async function confirmDelete() {
     <!-- Footer: totales -->
     <div class="pt-2 border-t border-default flex items-center justify-between text-sm">
       <span class="text-muted">Total pagado</span>
-      <span class="font-semibold text-success">{{ formatCurrency(anticipado) }}</span>
+      <span class="font-semibold">{{ formatCurrency(anticipado) }}</span>
     </div>
     <div class="flex items-center justify-between text-sm">
       <span class="text-muted">Saldo pendiente</span>

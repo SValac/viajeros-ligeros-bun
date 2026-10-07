@@ -79,10 +79,9 @@ async function confirmarQuotation() {
 <template>
   <div class="flex flex-wrap items-center justify-between gap-3">
     <!-- Estado badge -->
+    <!-- Sin título propio: la página ya muestra "Cotización" como <h1> -->
     <div class="flex items-center gap-2">
-      <h2 class="text-lg font-semibold">
-        Cotización
-      </h2>
+      <span class="text-sm text-muted">Estado</span>
       <UBadge
         v-if="cotizacion"
         :label="getEstadoLabel(cotizacion.status)"

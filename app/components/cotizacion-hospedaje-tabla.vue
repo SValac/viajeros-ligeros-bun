@@ -206,7 +206,7 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       cell: ({ row }) => {
         const status = cotizacionStore.getAccommodationPaymentStatus(row.original.id);
         const badge = estadoPagoBadge[status];
-        return h(resolveComponent('UBadge'), { label: badge.label, color: badge.color, variant: 'subtle', size: 'xs' });
+        return h(resolveComponent('UBadge'), { label: badge.label, color: badge.color, variant: 'subtle' });
       },
     },
     {
@@ -217,7 +217,6 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
           label: row.original.confirmed ? 'Sí' : 'No',
           color: row.original.confirmed ? 'success' : 'neutral',
           variant: 'subtle',
-          size: 'xs',
         }),
     },
   ];
