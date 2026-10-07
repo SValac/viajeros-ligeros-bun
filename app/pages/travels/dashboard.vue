@@ -120,7 +120,7 @@ const columns: TableColumn<Travel>[] = [
         to: `/travels/${row.original.id}`,
         class: 'flex items-center gap-2 hover:text-primary transition-colors group',
       }, () => [
-        h('span', { class: 'i-lucide-tag w-4 h-4 text-muted group-hover:text-primary' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
         h('span', { class: 'font-medium' }, row.getValue('label')),
       ]),
   },
@@ -136,7 +136,7 @@ const columns: TableColumn<Travel>[] = [
         return c ? c.name : '—';
       });
       return h('div', { class: 'flex items-center gap-2' }, [
-        h('span', { class: 'i-lucide-user-star w-4 h-4 text-gray-400 shrink-0' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-user-star', class: 'w-4 h-4 text-muted shrink-0' }),
         h('span', { class: 'text-sm' }, names.join(', ')),
       ]);
     },
