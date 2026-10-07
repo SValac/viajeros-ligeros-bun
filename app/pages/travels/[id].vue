@@ -23,8 +23,9 @@ const isDeleting = shallowRef(false);
 // Redirect to dashboard if travel not found.
 // `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
 // y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
-watch(travel, (value) => {
-  if (!value && travelId.value && !isDeleting.value) {
+// Espera a `loaded`: al abrir el link directo los viajes todavía se están cargando.
+watch([travel, () => travelsStore.loaded], ([value, loaded]) => {
+  if (loaded && !value && travelId.value && !isDeleting.value) {
     toast.add({
       title: 'Viaje no encontrado',
       description: 'El viaje que buscas no existe',
