@@ -34,8 +34,12 @@ const buses = computed(() => {
   return cotizacionStore.getBusesByQuotation(cotizacion.value.id);
 });
 
+// El vínculo real es quotation_bus_id; el texto (proveedor + unidad) solo sirve para filas sin vínculo,
+// porque el modelo se puede editar del lado del viaje y dos buses pueden compartir proveedor y unidad
 function getTravelBusForQuotationBus(bus: QuotationBus) {
-  return travel.value?.buses?.find(b => b.providerId === bus.providerId && b.model === bus.unitNumber);
+  const travelBuses = travel.value?.buses ?? [];
+  return travelBuses.find(b => b.quotationBusId === bus.id)
+    ?? travelBuses.find(b => !b.quotationBusId && b.providerId === bus.providerId && b.model === bus.unitNumber);
 }
 
 function getOperadores(bus: QuotationBus) {
@@ -81,8 +85,10 @@ watch(operatorDraft, (drafts) => {
 
 async function saveOperators(bus: QuotationBus) {
   const travelBus = getTravelBusForQuotationBus(bus);
-  if (!travelBus)
+  if (!travelBus) {
+    toast.add({ title: 'No se encontró el bus del viaje', description: 'Recarga la página e inténtalo de nuevo.', color: 'error', icon: 'i-lucide-alert-circle' });
     return;
+  }
   const draft = operatorDraft[bus.id];
   if (!draft)
     return;
