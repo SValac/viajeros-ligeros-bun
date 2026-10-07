@@ -187,16 +187,15 @@ function handleSubmit() {
         :key="index"
         class="flex gap-2 mb-2"
       >
-        <UInput
-          v-model.number="item.amount"
-          type="number"
-          :min="0"
-          step="0.01"
-          placeholder="0"
+        <MoneyInput
+          v-model="item.amount"
+          aria-label="Monto del descuento"
+          :percent="item.type === 'percentage'"
           class="flex-1"
         />
         <USelect
           v-model="item.type"
+          aria-label="Tipo de descuento"
           :items="ajusteTypeOptions"
           value-key="value"
           label-key="label"
@@ -235,16 +234,15 @@ function handleSubmit() {
         :key="index"
         class="flex gap-2 mb-2"
       >
-        <UInput
-          v-model.number="item.amount"
-          type="number"
-          :min="0"
-          step="0.01"
-          placeholder="0"
+        <MoneyInput
+          v-model="item.amount"
+          aria-label="Monto del incremento"
+          :percent="item.type === 'percentage'"
           class="flex-1"
         />
         <USelect
           v-model="item.type"
+          aria-label="Tipo de incremento"
           :items="ajusteTypeOptions"
           value-key="value"
           label-key="label"

@@ -91,12 +91,7 @@ function onSubmit() {
       name="amount"
       required
     >
-      <UInput
-        v-model.number="state.amount"
-        type="number"
-        placeholder="0.00"
-        class="w-full"
-      />
+      <MoneyInput v-model="state.amount" />
       <template #hint>
         <span class="text-xs text-muted">
           Saldo pendiente: {{ formatCurrency(maxMonto) }}

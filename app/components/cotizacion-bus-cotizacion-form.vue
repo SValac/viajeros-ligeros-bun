@@ -81,12 +81,7 @@ function onSubmit() {
       name="costoTotal"
       required
     >
-      <UInput
-        v-model.number="state.totalCost"
-        type="number"
-        placeholder="0.00"
-        class="w-full"
-      />
+      <MoneyInput v-model="state.totalCost" />
     </UFormField>
 
     <!-- Dividir entre -->

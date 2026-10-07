@@ -226,12 +226,7 @@ function onSubmit() {
       name="totalCost"
       required
     >
-      <UInput
-        v-model.number="state.totalCost"
-        type="number"
-        placeholder="0.00"
-        class="w-full"
-      />
+      <MoneyInput v-model="state.totalCost" />
     </UFormField>
 
     <!-- Costo por persona -->
@@ -242,12 +237,7 @@ function onSubmit() {
           name="unitCost"
           required
         >
-          <UInput
-            v-model.number="state.unitCost"
-            type="number"
-            placeholder="0.00"
-            class="w-full"
-          />
+          <MoneyInput v-model="state.unitCost" />
         </UFormField>
 
         <UFormField
