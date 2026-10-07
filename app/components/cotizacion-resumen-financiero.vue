@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { formatCurrency } from '~/utils/currency';
+
 type Props = {
   quotationId: string;
   acumuladoViajeros: number;
@@ -39,13 +41,6 @@ const gananciaColor = computed(() => {
     return 'text-error';
   return 'text-highlighted';
 });
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
 </script>
 
 <template>

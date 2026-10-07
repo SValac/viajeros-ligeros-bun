@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { QuotationBus } from '~/types/quotation';
 
-import { sanitizeName, sanitizePhone } from '~/utils/form-validation';
+import { sanitizeName } from '~/utils/form-validation';
 
 type Props = {
   travelId: string;
@@ -66,24 +66,16 @@ watch(
   { immediate: true },
 );
 
-// Sanea los campos de operador mientras el usuario escribe (nombres sin dígitos, teléfonos sin letras)
+// Sanea los nombres de operador mientras el usuario escribe (sin dígitos); el teléfono lo controla <PhoneInput>
 watch(operatorDraft, (drafts) => {
   Object.values(drafts).forEach((draft) => {
     const cleanOperator1Name = sanitizeName(draft.operator1Name);
     if (cleanOperator1Name !== draft.operator1Name)
       draft.operator1Name = cleanOperator1Name;
 
-    const cleanOperator1Phone = sanitizePhone(draft.operator1Phone);
-    if (cleanOperator1Phone !== draft.operator1Phone)
-      draft.operator1Phone = cleanOperator1Phone;
-
     const cleanOperator2Name = sanitizeName(draft.operator2Name);
     if (cleanOperator2Name !== draft.operator2Name)
       draft.operator2Name = cleanOperator2Name;
-
-    const cleanOperator2Phone = sanitizePhone(draft.operator2Phone);
-    if (cleanOperator2Phone !== draft.operator2Phone)
-      draft.operator2Phone = cleanOperator2Phone;
   });
 }, { deep: true });
 
@@ -94,6 +86,11 @@ async function saveOperators(bus: QuotationBus) {
   const draft = operatorDraft[bus.id];
   if (!draft)
     return;
+  const invalidPhone = [draft.operator1Phone, draft.operator2Phone].some(phone => phone && !isValidPhone(phone));
+  if (invalidPhone) {
+    toast.add({ title: 'Teléfono incompleto', description: 'Revisa el teléfono de los operadores.', color: 'error' });
+    return;
+  }
   const ok = await travelsStore.updateTravelBus(travelId, travelBus.id, {
     operator1Name: draft.operator1Name,
     operator1Phone: draft.operator1Phone,
@@ -229,20 +226,14 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
                     v-model="operatorDraft[bus.id]!.operator1Name"
                     placeholder="Nombre operador 1"
                   />
-                  <UInput
-                    v-model="operatorDraft[bus.id]!.operator1Phone"
-                    placeholder="Teléfono operador 1"
-                  />
+                  <PhoneInput v-model="operatorDraft[bus.id]!.operator1Phone" aria-label="Teléfono operador 1" />
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                   <UInput
                     v-model="operatorDraft[bus.id]!.operator2Name"
                     placeholder="Nombre operador 2 (opcional)"
                   />
-                  <UInput
-                    v-model="operatorDraft[bus.id]!.operator2Phone"
-                    placeholder="Teléfono operador 2"
-                  />
+                  <PhoneInput v-model="operatorDraft[bus.id]!.operator2Phone" aria-label="Teléfono operador 2" />
                 </div>
                 <div class="flex justify-end">
                   <UButton
@@ -294,7 +285,7 @@ function onCoordinadoresChange(busId: string, selected: string[]) {
                   <UIcon name="i-lucide-user" class="w-3.5 h-3.5 text-muted shrink-0" />
                   <span class="font-medium">{{ op.nombre }}</span>
                   <UIcon name="i-lucide-phone" class="w-3.5 h-3.5 text-muted shrink-0" />
-                  <span class="text-muted">{{ op.telefono }}</span>
+                  <span class="text-muted">{{ formatPhone(op.telefono) }}</span>
                 </div>
                 <p v-if="getOperadores(bus).length === 0" class="text-sm text-muted italic">
                   Sin operadores asignados

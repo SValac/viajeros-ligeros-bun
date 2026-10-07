@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import type { TravelerPaymentSummary } from '~/types/payment';
 
+import { formatCurrency } from '~/utils/currency';
+
 defineProps<{
   summary: TravelerPaymentSummary;
   travelerName: string;
 }>();
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-}
 
 function formatAjusteAmount(item: { amount: number; type: 'fixed' | 'percentage' }, appliedPrice: number) {
   return item.type === 'percentage'

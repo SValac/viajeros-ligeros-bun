@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
-import { nameSchema, phoneSchema, sanitizeName, sanitizePhone, sanitizeText, textSchema } from '~/utils/form-validation';
+import { nameSchema, phoneSchema, sanitizeName, sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   coordinator?: Coordinator | null;
@@ -26,7 +26,7 @@ const schema = z.object({
     .min(18, 'Mínimo 18 años')
     .max(99, 'Máximo 99 años'),
 
-  phone: phoneSchema({ min: 7, max: 20 }),
+  phone: phoneSchema({ required: true }),
 
   email: z.string()
     .email('Email inválido')
@@ -47,7 +47,6 @@ const state = ref<Schema>({
 
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeName);
-const phoneInput = useSanitizedModel(() => state.value.phone, v => state.value.phone = v, sanitizePhone);
 const notesInput = useSanitizedModel(() => state.value.notes ?? '', v => state.value.notes = v, sanitizeText);
 
 const isSubmitting = shallowRef(false);
@@ -111,11 +110,7 @@ function onCancel() {
         name="phone"
         required
       >
-        <UInput
-          v-model="phoneInput"
-          type="tel"
-          placeholder="+52 55 1234 5678"
-        />
+        <PhoneInput v-model="state.phone" />
       </UFormField>
     </div>
 

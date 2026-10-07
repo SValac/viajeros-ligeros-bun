@@ -2,6 +2,8 @@
 import type { AdjustmentItem, DiscountType, TravelerAccountConfig, TravelerType } from '~/types/payment';
 import type { QuotationPublicPrice } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 const props = defineProps<{
   travelerId: string;
   travelId: string;
@@ -66,10 +68,6 @@ const finalCost = computed(() => {
   }, 0);
   return Math.max(0, base - totalDiscount + totalSurcharge);
 });
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-}
 
 function addDiscount() {
   discounts.value.push({ amount: 0, type: 'fixed' as DiscountType, description: '' });
@@ -187,16 +185,15 @@ function handleSubmit() {
         :key="index"
         class="flex gap-2 mb-2"
       >
-        <UInput
-          v-model.number="item.amount"
-          type="number"
-          :min="0"
-          step="0.01"
-          placeholder="0"
+        <MoneyInput
+          v-model="item.amount"
+          aria-label="Monto del descuento"
+          :percent="item.type === 'percentage'"
           class="flex-1"
         />
         <USelect
           v-model="item.type"
+          aria-label="Tipo de descuento"
           :items="ajusteTypeOptions"
           value-key="value"
           label-key="label"
@@ -235,16 +232,15 @@ function handleSubmit() {
         :key="index"
         class="flex gap-2 mb-2"
       >
-        <UInput
-          v-model.number="item.amount"
-          type="number"
-          :min="0"
-          step="0.01"
-          placeholder="0"
+        <MoneyInput
+          v-model="item.amount"
+          aria-label="Monto del incremento"
+          :percent="item.type === 'percentage'"
           class="flex-1"
         />
         <USelect
           v-model="item.type"
+          aria-label="Tipo de incremento"
           :items="ajusteTypeOptions"
           value-key="value"
           label-key="label"

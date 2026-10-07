@@ -33,7 +33,7 @@ const schema = z.object({
       count: z.number().int().min(1).max(10),
     }),
   ).min(1, 'Agrega al menos una cama'),
-  pricePerNight: z.number().positive('El precio debe ser mayor a 0'),
+  pricePerNight: z.number({ message: 'Ingresa el precio por noche' }).positive('El precio debe ser mayor a 0'),
   additionalDetails: textSchema({ max: 500 }).optional().or(z.literal('')),
 });
 
@@ -164,15 +164,7 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
       name="pricePerNight"
       required
     >
-      <UInput
-        v-model.number="state.pricePerNight"
-        type="number"
-        step="0.01"
-        :min="0"
-        placeholder="0.00"
-        icon="i-lucide-dollar-sign"
-        class="w-full"
-      />
+      <MoneyInput v-model="state.pricePerNight" />
     </UFormField>
 
     <UFormField label="Detalles adicionales" name="additionalDetails">

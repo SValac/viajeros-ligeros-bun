@@ -11,7 +11,6 @@ import {
   phoneSchema,
   sanitizeBusinessName,
   sanitizeName,
-  sanitizePhone,
   sanitizeText,
   textSchema,
 } from '~/utils/form-validation';
@@ -69,9 +68,8 @@ const schema = z.object({
       .optional()
       .or(z.literal('')),
 
-    phone: phoneSchema({ max: 20 })
-      .optional()
-      .or(z.literal('')),
+    phone: phoneSchema()
+      .optional(),
 
     email: z.string()
       .trim()
@@ -126,7 +124,6 @@ const stateInput = useSanitizedModel(() => state.value.location.state, v => stat
 const countryInput = useSanitizedModel(() => state.value.location.country, v => state.value.location.country = v, sanitizeName);
 const descriptionInput = useSanitizedModel(() => state.value.description ?? '', v => state.value.description = v, sanitizeText);
 const contactNameInput = useSanitizedModel(() => state.value.contact.name ?? '', v => state.value.contact.name = v, sanitizeName);
-const contactPhoneInput = useSanitizedModel(() => state.value.contact.phone ?? '', v => state.value.contact.phone = v, sanitizePhone);
 const contactNotesInput = useSanitizedModel(() => state.value.contact.notes ?? '', v => state.value.contact.notes = v, sanitizeText);
 
 // Auto-fill city/state/country when a new map location is picked
@@ -281,12 +278,7 @@ function onCancel() {
         label="Teléfono"
         name="contact.phone"
       >
-        <UInput
-          v-model="contactPhoneInput"
-          type="tel"
-          placeholder="+52 55 1234 5678"
-          class="w-full"
-        />
+        <PhoneInput v-model="state.contact.phone" />
       </UFormField>
 
       <UFormField

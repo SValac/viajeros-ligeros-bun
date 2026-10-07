@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { QuotationAccommodation } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 type Props = {
@@ -81,18 +82,18 @@ const columns: TableColumn<DetalleRow>[] = [
   {
     accessorKey: 'precioPorNoche',
     header: 'Precio/noche',
-    cell: ({ row }) => h('div', { class: 'text-right' }, `$${row.original.pricePerNight.toFixed(2)}`),
+    cell: ({ row }) => h('div', { class: 'text-right' }, `${formatCurrency(row.original.pricePerNight)}`),
   },
   {
     accessorKey: 'costPerPerson',
     header: 'Precio/Persona',
     cell: ({ row }) =>
-      h('div', { class: 'text-right' }, row.original.costPerPerson != null ? `$${row.original.costPerPerson.toFixed(2)}` : '—'),
+      h('div', { class: 'text-right' }, row.original.costPerPerson != null ? `${formatCurrency(row.original.costPerPerson)}` : '—'),
   },
   {
     accessorKey: 'costoTotal',
     header: 'Subtotal',
-    cell: ({ row }) => h('div', { class: 'text-right font-semibold' }, `$${row.original.totalCost.toFixed(2)}`),
+    cell: ({ row }) => h('div', { class: 'text-right font-semibold' }, `${formatCurrency(row.original.totalCost)}`),
   },
 ];
 
@@ -139,7 +140,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
             Costo Total
           </p>
           <p class="text-2xl font-bold text-primary">
-            ${{ totalCosto.toFixed(2) }}
+            {{ formatCurrency(totalCosto) }}
           </p>
         </div>
       </div>
@@ -167,7 +168,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
           <UTable :data="getDetalleRows(hospedaje)" :columns="columns" />
           <div class="px-4 py-2 bg-muted/10 flex justify-between items-center text-sm font-semibold border-t">
             <span>Total ({{ hospedaje.nightCount }} noche{{ hospedaje.nightCount !== 1 ? 's' : '' }})</span>
-            <span class="text-primary">${{ hospedaje.totalCost.toFixed(2) }}</span>
+            <span class="text-primary">{{ formatCurrency(hospedaje.totalCost) }}</span>
           </div>
         </template>
       </UAccordion>
@@ -177,7 +178,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
     <div class="bg-secondary/10 rounded-lg p-3 text-sm border border-secondary/20">
       <div class="flex justify-between items-center">
         <span class="text-muted">Costo Promedio por Persona (hospedaje)</span>
-        <span class="font-semibold">${{ costoPromedioPorPersona.toFixed(2) }}</span>
+        <span class="font-semibold">{{ formatCurrency(costoPromedioPorPersona) }}</span>
       </div>
     </div>
   </div>

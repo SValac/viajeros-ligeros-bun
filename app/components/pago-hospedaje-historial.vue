@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { AccommodationPayment, AccommodationPaymentFormData } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 type Props = {
   quotationAccommodationId: string;
   hotelName?: string;
@@ -19,13 +21,6 @@ const isFormModalOpen = shallowRef(false);
 const selectedPago = shallowRef<AccommodationPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
 const pagoToDelete = shallowRef<AccommodationPayment | null>(null);
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('es-MX', {
