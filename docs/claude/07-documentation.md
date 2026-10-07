@@ -46,6 +46,8 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `agency-profile/PLAN.md` — Perfil de agencia público (catálogo MX, logo, colores, gate de publicación)
 - `agency-site-customization.md` — Sitio por agencia: RPC `get_public_agency_profile`, campos del sitio y páginas "Nosotros" y principal por secciones
 - `quotations-menu.md` — Menú de Cotizaciones (`/quotations`) con detalle en pestañas; la cotización sale de las páginas de viajes
+- `coordinator-seats.md` — Coordinadores con asiento de autobús y habitación (filas de `travelers` con `kind = 'coordinator'`)
+- `provider-cost-per-person.md` — Costo de servicio total o por persona en la cotización; la app calcula el total
 
 ---
 
