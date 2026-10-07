@@ -172,6 +172,7 @@ function onCancel() {
       <UInput
         v-model="nameInput"
         placeholder="Ejemplo: Transportes del Norte"
+        class="w-full"
       />
     </UFormField>
 
@@ -194,6 +195,7 @@ function onCancel() {
         v-model="state.category"
         :items="categoriaOptions"
         placeholder="Seleccionar categoría"
+        class="w-full"
       />
     </UFormField>
 
@@ -231,6 +233,7 @@ function onCancel() {
         <UInput
           v-model="countryInput"
           placeholder="México"
+          class="w-full"
         />
       </UFormField>
 
@@ -242,6 +245,7 @@ function onCancel() {
         <UInput
           v-model="stateInput"
           placeholder="CDMX"
+          class="w-full"
         />
       </UFormField>
 
@@ -253,6 +257,7 @@ function onCancel() {
         <UInput
           v-model="cityInput"
           placeholder="Ciudad de México"
+          class="w-full"
         />
       </UFormField>
     </div>
@@ -267,6 +272,7 @@ function onCancel() {
       <UInput
         v-model="contactNameInput"
         placeholder="Nombre de la persona de contacto"
+        class="w-full"
       />
     </UFormField>
 
@@ -279,6 +285,7 @@ function onCancel() {
           v-model="contactPhoneInput"
           type="tel"
           placeholder="+52 55 1234 5678"
+          class="w-full"
         />
       </UFormField>
 
@@ -290,6 +297,7 @@ function onCancel() {
           v-model="state.contact.email"
           type="email"
           placeholder="contacto@ejemplo.com"
+          class="w-full"
         />
       </UFormField>
     </div>

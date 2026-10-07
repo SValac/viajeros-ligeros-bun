@@ -151,7 +151,7 @@ const columns: TableColumn<Coordinator>[] = [
 
 <template>
   <div class="space-y-6">
-    <div class="flex justify-between items-center">
+    <div class="flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-4">
         <UIcon name="i-lucide-user-star" class="w-10 h-10 text-violet-500" />
         <div>
