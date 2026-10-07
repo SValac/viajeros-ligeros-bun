@@ -5,8 +5,6 @@ import { h } from 'vue';
 
 import type { QuotationStatus } from '~/types/quotation';
 
-import { formatCurrency } from '~/utils/currency';
-
 definePageMeta({
   name: 'quotations-index',
 });
@@ -92,14 +90,6 @@ const columns: TableColumn<QuotationRow>[] = [
         color: getQuotationStatusColor(quotation.status),
         variant: 'subtle',
       }, () => getQuotationStatusLabel(quotation.status));
-    },
-  },
-  {
-    id: 'seatPrice',
-    header: 'Precio por asiento',
-    cell: ({ row }) => {
-      const quotation = row.original.quotation;
-      return h('span', { class: 'text-sm' }, quotation ? formatCurrency(quotation.seatPrice) : '—');
     },
   },
   {

@@ -36,6 +36,7 @@ El layout es CSR-only (`ssr: false` en `nuxt.config.ts`). Las páginas de auth (
 | `/travels/[id]` | `pages/travels/[id]/index.vue` | Detalle del viaje |
 | `/travels/[id]/edit` | `pages/travels/[id]/edit.vue` | Editar viaje |
 | `/travels/[id]/travelers` | `pages/travels/[id]/travelers/index.vue` | Viajeros del viaje |
+| `/travels/[id]/buses` | `pages/travels/[id]/buses.vue` | Pestaña «Autobuses»: coordinadores y operadores de cada autobús |
 
 ### Cotizaciones
 Uso interno del CRM, no se publica en la web. `[id]` es el id del **viaje** (la cotización es 1:1 con el viaje).
@@ -46,7 +47,7 @@ Uso interno del CRM, no se publica en la web. `[id]` es el id del **viaje** (la 
 | `/quotations/[id]` | `pages/quotations/[id].vue` + `[id]/index.vue` | Padre con encabezado, estado y pestañas. Pestaña «Resumen»: indicadores y parámetros |
 | `/quotations/[id]/services` | `pages/quotations/[id]/services.vue` | Pestaña «Servicios» (proveedores) |
 | `/quotations/[id]/accommodation` | `pages/quotations/[id]/accommodation.vue` | Pestaña «Hospedaje» |
-| `/quotations/[id]/buses` | `pages/quotations/[id]/buses.vue` | Pestaña «Autobuses»: costos y asignación de operadores/coordinadores |
+| `/quotations/[id]/buses` | `pages/quotations/[id]/buses.vue` | Pestaña «Autobuses»: costos; enlaza a la pestaña «Autobuses» del viaje para operadores/coordinadores |
 | `/quotations/[id]/prices` | `pages/quotations/[id]/prices.vue` | Pestaña «Precios al público» |
 
 ### Proveedores

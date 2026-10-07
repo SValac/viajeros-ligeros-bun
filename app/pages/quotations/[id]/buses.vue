@@ -24,16 +24,16 @@ const isAgregarBusModalOpen = shallowRef(false);
       @agregar-bus="isAgregarBusModalOpen = true"
     />
 
-    <!-- Operadores y coordinadores: editable también con la cotización confirmada -->
-    <UCard v-if="hasBuses">
-      <template #header>
-        <h2 class="font-semibold flex items-center gap-2">
-          <UIcon name="i-lucide-users" class="w-5 h-5 text-muted" />
-          Asignación de Autobuses
-        </h2>
-      </template>
-      <TravelBusesSection :travel-id="travelId" editable />
-    </UCard>
+    <!-- Operadores y coordinadores: son del viaje, se asignan en su pestaña Autobuses -->
+    <UAlert
+      v-if="hasBuses"
+      icon="i-lucide-users"
+      color="neutral"
+      variant="subtle"
+      title="Coordinadores y operadores"
+      description="Se asignan en el viaje, en la pestaña Autobuses."
+      :actions="[{ label: 'Ir al viaje', icon: 'i-lucide-arrow-right', trailing: true, to: { name: 'travel-buses', params: { id: travelId } } }]"
+    />
 
     <CotizacionBusForm
       :open="isAgregarBusModalOpen"

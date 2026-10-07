@@ -73,17 +73,6 @@ async function handleToggleConfirmado(bus: QuotationBus) {
   await cotizacionStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
 }
 
-async function handleDetallesSubmit(data: Partial<import('~/types/quotation').QuotationBusFormData>) {
-  if (!selectedBus.value)
-    return;
-  const result = await cotizacionStore.updateBusQuotation(selectedBus.value.id, data);
-  if (result) {
-    toast.add({ title: 'Autobús actualizado', color: 'success' });
-  }
-  isDetallesFormOpen.value = false;
-  selectedBus.value = null;
-}
-
 async function confirmDelete() {
   if (!selectedBus.value)
     return;
@@ -218,7 +207,7 @@ function getBusActions(bus: QuotationBus) {
             <!-- División -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Cap. bus'"
+                :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
                 :color="(bus.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
               />
@@ -324,22 +313,12 @@ function getBusActions(bus: QuotationBus) {
     </template>
   </USlideover>
 
-  <!-- Modal: editar detalles financieros -->
-  <UModal
+  <!-- Modal: editar autobús (mismo formulario que agregar) -->
+  <CotizacionBusForm
     v-model:open="isDetallesFormOpen"
-    title="Detalles de Cotización"
-    description="Actualiza los datos financieros del autobús"
-    class="sm:max-w-lg"
-  >
-    <template #body>
-      <CotizacionBusCotizacionForm
-        v-if="selectedBus"
-        :bus="selectedBus"
-        @submit="handleDetallesSubmit"
-        @cancel="isDetallesFormOpen = false"
-      />
-    </template>
-  </UModal>
+    :quotation-id="quotationId"
+    :bus="selectedBus"
+  />
 
   <!-- Modal: confirmar eliminación -->
   <UModal

@@ -316,7 +316,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <!-- División -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Cap. bus'"
+                :label="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
                 :color="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
               />
