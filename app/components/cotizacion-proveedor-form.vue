@@ -5,6 +5,7 @@ import type { PaymentType } from '~/types/payment';
 import type { CostSplitType, ProviderCostType, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { calculateProviderTotalCost } from '~/composables/quotation/use-quotation-domain';
+import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
@@ -130,13 +131,6 @@ function isValidAmount(value: unknown): value is number {
   return typeof value === 'number' && value > 0;
 }
 
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
-
 function onSubmit() {
   const result = schema.safeParse(state);
   if (!result.success)
@@ -226,12 +220,7 @@ function onSubmit() {
       name="totalCost"
       required
     >
-      <UInput
-        v-model.number="state.totalCost"
-        type="number"
-        placeholder="0.00"
-        class="w-full"
-      />
+      <MoneyInput v-model="state.totalCost" />
     </UFormField>
 
     <!-- Costo por persona -->
@@ -242,12 +231,7 @@ function onSubmit() {
           name="unitCost"
           required
         >
-          <UInput
-            v-model.number="state.unitCost"
-            type="number"
-            placeholder="0.00"
-            class="w-full"
-          />
+          <MoneyInput v-model="state.unitCost" />
         </UFormField>
 
         <UFormField

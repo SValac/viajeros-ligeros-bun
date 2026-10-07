@@ -7,6 +7,8 @@ import { h } from 'vue';
 import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
+import { formatCurrency } from '~/utils/currency';
+
 // Payments of a travel's travelers: cash summary, account configs and payments. Used by the
 // travel's "Pagos" tab and by /payments/travel/[id].
 const props = defineProps<{
@@ -154,10 +156,6 @@ async function handleConfigSubmit(config: TravelerAccountConfig) {
   await paymentStore.setAccountConfig(config);
   toast.add({ title: 'Configuración guardada', color: 'success' });
   closeModals();
-}
-
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
 }
 
 type BadgeColor = 'warning' | 'info' | 'success' | 'neutral';

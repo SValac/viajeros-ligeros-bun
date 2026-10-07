@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderPayment, ProviderPaymentFormData } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 type Props = {
   quotationProviderId: string;
   proveedorNombre?: string;
@@ -20,13 +22,6 @@ const isFormModalOpen = shallowRef(false);
 const selectedPago = shallowRef<ProviderPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
 const pagoToDelete = shallowRef<ProviderPayment | null>(null);
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('es-MX', {

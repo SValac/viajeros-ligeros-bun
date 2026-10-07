@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { HotelRoomType } from '~/types/hotel-room';
 
+import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 defineProps<{
@@ -46,7 +47,7 @@ const dropdownItems = computed(() => [[
           {{ formatBedConfiguration(roomType.beds) }}
         </p>
         <p class="text-sm text-gray-500">
-          ${{ roomType.pricePerNight.toFixed(2) }}/noche
+          {{ formatCurrency(roomType.pricePerNight) }}/noche
         </p>
         <p v-if="roomType.additionalDetails" class="text-xs text-gray-400 mt-1">
           {{ roomType.additionalDetails }}

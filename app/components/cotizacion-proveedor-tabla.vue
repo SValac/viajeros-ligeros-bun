@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderPaymentStatus, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 type Props = {
   quotationId: string;
   readonly?: boolean;
@@ -58,13 +60,6 @@ const metodoPagoOptions = [
   { label: 'Efectivo', value: 'cash' },
   { label: 'Transferencia', value: 'transfer' },
 ];
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency: 'MXN',
-  }).format(amount);
-}
 
 function getEstadoPagoColor(status: ProviderPaymentStatus): 'warning' | 'info' | 'success' {
   if (status === 'pending')

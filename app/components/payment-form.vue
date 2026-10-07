@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { PaymentFormData, PaymentType } from '~/types/payment';
 
+import { formatCurrency } from '~/utils/currency';
+
 const props = defineProps<{
   payment?: { id: string; amount: number; paymentDate: string; paymentType: PaymentType; notes?: string } | null;
   travelerId: string;
@@ -41,10 +43,6 @@ const isValid = computed(() =>
   && paymentType.value !== undefined,
 );
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value);
-}
-
 function handleSubmit() {
   if (!isValid.value || amount.value === null)
     return;
@@ -73,14 +71,7 @@ function handleSubmit() {
         Monto
         <span class="text-xs text-gray-400 ml-1">(Saldo pendiente: {{ formatCurrency(maxAmount) }})</span>
       </label>
-      <UInput
-        v-model.number="amount"
-        type="number"
-        :min="0.01"
-        :max="maxAmount"
-        placeholder="0.00"
-        step="0.01"
-      />
+      <MoneyInput v-model="amount" />
       <p v-if="amountError" class="text-xs text-error mt-1">
         {{ amountError }}
       </p>

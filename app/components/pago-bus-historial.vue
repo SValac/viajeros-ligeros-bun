@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { BusPayment, BusPaymentFormData } from '~/types/quotation';
 
+import { formatCurrency } from '~/utils/currency';
+
 type Props = {
   quotationBusId: string;
   busLabel?: string;
@@ -19,10 +21,6 @@ const isFormModalOpen = shallowRef(false);
 const selectedPago = shallowRef<BusPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
 const pagoToDelete = shallowRef<BusPayment | null>(null);
-
-function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
-}
 
 function formatDate(dateString: string): string {
   return new Date(dateString).toLocaleDateString('es-MX', {
