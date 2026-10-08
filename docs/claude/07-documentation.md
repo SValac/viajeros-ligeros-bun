@@ -49,6 +49,7 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `coordinator-seats.md` — Coordinadores con asiento de autobús y habitación (filas de `travelers` con `kind = 'coordinator'`)
 - `provider-cost-per-person.md` — Costo de servicio total o por persona en la cotización; la app calcula el total
 - `room-count-from-travel.md` — Cantidad de habitaciones desde el viaje: la cotización elige tipos, el viaje aparta cuartos y la BD calcula el costo del hotel
+- `optional-provider-services.md` — Servicios opcionales: al proveedor se le paga por los viajeros que lo toman (pestaña del viaje), el precio del asiento sigue con el total cotizado
 - `travel-calendar.md` — Calendario de viajes (`/calendar`): mes sobre `UCalendar` con barras por viaje y resumen al elegir uno
 
 ---
