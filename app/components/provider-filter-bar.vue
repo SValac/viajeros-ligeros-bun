@@ -85,8 +85,8 @@ const hasFilters = computed(() =>
     <UInput
       :model-value="searchTerm"
       icon="i-lucide-search"
-      placeholder="Buscar proveedor..."
-      class="w-56"
+      placeholder="Buscar por nombre, ubicación o contacto..."
+      class="w-full sm:w-80"
       @update:model-value="onSearchInput"
     />
 

@@ -37,12 +37,26 @@ export type QuotationProvider = {
   remarks?: string;
   totalCost: number;
   costType: ProviderCostType;
-  // Solo con costType 'per_person': totalCost = unitCost × personCount.
+  // Solo con costType 'per_person': precio por persona. Se suma directo al precio del
+  // asiento y al proveedor se le paga por cada viajero que toma el servicio. Su totalCost
+  // es solo de referencia (costo × asientos vendibles al guardar).
   unitCost?: number;
-  personCount?: number;
   paymentMethod: PaymentType;
+  // Solo en costo total: entre qué asientos se reparte.
   splitType: CostSplitType;
   confirmed: boolean;
+  // Solo por persona: los coordinadores no cuentan para el pago.
+  coordinatorsCourtesy: boolean;
+  // Lo que se le debe al proveedor (lo calcula la base de datos): por persona, costo ×
+  // viajeros que lo toman; en costo total, totalCost.
+  payableCost: number;
+};
+
+// Un viajero que no toma un servicio opcional.
+export type ProviderOptOut = {
+  quotationProviderId: string;
+  travelerId: string;
+  travelId: string;
 };
 
 export type ProviderPayment = {
@@ -65,7 +79,7 @@ export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt'
   /** Defaults to `true` (shown) when a quotation is created. */
   showPublicDescription?: boolean;
 };
-export type QuotationProviderFormData = Omit<QuotationProvider, 'id'> & { id?: string };
+export type QuotationProviderFormData = Omit<QuotationProvider, 'id' | 'payableCost'> & { id?: string };
 export type ProviderPaymentFormData = Omit<ProviderPayment, 'id' | 'createdAt'> & { id?: string };
 
 export type QuotationProviderFilters = {
