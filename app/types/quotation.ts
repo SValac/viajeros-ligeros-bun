@@ -96,6 +96,25 @@ export type ProviderPayment = {
   createdAt: string;
 };
 
+// Gasto adicional de la cotización que no es un servicio de proveedor: publicidad, viáticos,
+// comisiones, box lunch... Siempre se reparte entre los asientos según splitType. Sin pagos.
+export type QuotationExpense = {
+  id: string;
+  quotationId: string;
+  // Texto libre: categorías por defecto más las que la agencia ya usó.
+  category: string;
+  description?: string;
+  costType: ProviderCostType;
+  // Solo con costType 'per_person': totalCost = unitCost × personCount.
+  unitCost?: number;
+  personCount?: number;
+  totalCost: number;
+  splitType: CostSplitType;
+  createdAt: string;
+};
+
+export type QuotationExpenseFormData = Omit<QuotationExpense, 'id' | 'createdAt'> & { id?: string };
+
 export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt' | 'showPublicRoomType' | 'showPublicDescription' | 'coordinatorsTakeSeats'> & {
   id?: string;
   /** Defaults to `false` (every seat is sellable) when a quotation is created. */
@@ -246,5 +265,6 @@ export type QuotationFetchResult = {
   accommodationPayments: AccommodationPayment[];
   buses: QuotationBus[];
   busPayments: BusPayment[];
+  expenses: QuotationExpense[];
   publicPrices: QuotationPublicPrice[];
 };

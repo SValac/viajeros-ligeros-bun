@@ -22,9 +22,10 @@ const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(q
 const costoBuses = computed(() => cotizacionStore.getTotalCostoBuses(quotationId));
 const costoBusesTipoMinimo = computed(() => cotizacionStore.getCostoBusesTipoMinimo(quotationId));
 const costoBusesTipoTotal = computed(() => cotizacionStore.getCostoBusesTipoTotal(quotationId));
-const costoTotal = computed(() => costoProveedores.value + costoBuses.value);
-const costoMinimoConBuses = computed(() => costoTipoMinimo.value + costoBusesTipoMinimo.value);
-const costoCapacidadConBuses = computed(() => costoTipoTotal.value + costoBusesTipoTotal.value);
+const costoGastos = computed(() => cotizacionStore.getTotalGastos(quotationId));
+const costoTotal = computed(() => costoProveedores.value + costoBuses.value + costoGastos.value);
+const costoMinimoConBuses = computed(() => costoTipoMinimo.value + costoBusesTipoMinimo.value + cotizacionStore.getGastosTipoMinimo(quotationId));
+const costoCapacidadConBuses = computed(() => costoTipoTotal.value + costoBusesTipoTotal.value + cotizacionStore.getGastosTipoTotal(quotationId));
 const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(quotationId));
 const asientoConGanancia = computed(() => cotizacionStore.getAsientoConGanancia(quotationId));
 // Total seats minus the coordinators when they take passenger seats.
@@ -71,13 +72,13 @@ function saldoColor(saldo: number): string {
       title="Costos del viaje"
       description="Lo que cuesta operar el viaje. El hospedaje se cobra aparte en los precios al público."
     >
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <CotizacionKpiCard
           label="Costo total"
           icon="i-lucide-wallet"
           :value="formatCurrency(costoTotal)"
         >
-          <p>Servicios + autobuses</p>
+          <p>Servicios + autobuses + gastos</p>
         </CotizacionKpiCard>
         <CotizacionKpiCard
           label="Servicios"
@@ -88,6 +89,11 @@ function saldoColor(saldo: number): string {
           label="Autobuses"
           icon="i-lucide-bus"
           :value="formatCurrency(costoBuses)"
+        />
+        <CotizacionKpiCard
+          label="Gastos adicionales"
+          icon="i-lucide-receipt"
+          :value="formatCurrency(costoGastos)"
         />
         <CotizacionKpiCard
           label="Hospedaje"

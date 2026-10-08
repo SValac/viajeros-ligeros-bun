@@ -19,6 +19,8 @@ import type {
   QuotationAccommodationDetail,
   QuotationBus,
   QuotationBusFormData,
+  QuotationExpense,
+  QuotationExpenseFormData,
   QuotationFormData,
   QuotationProvider,
   QuotationProviderFormData,
@@ -526,6 +528,40 @@ export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'cos
     cost_type: data.costType,
     unit_cost: perPerson ? data.unitCost ?? null : null,
     coordinators_courtesy: perPerson && data.coordinatorsCourtesy,
+  };
+}
+
+// ============================================================================
+// Quotation Expense
+// ============================================================================
+
+export function mapQuotationExpenseRowToDomain(row: Tables<'quotation_expenses'>): QuotationExpense {
+  return {
+    id: row.id,
+    quotationId: row.quotation_id,
+    category: row.category,
+    description: row.description ?? undefined,
+    costType: row.cost_type,
+    unitCost: row.unit_cost ?? undefined,
+    personCount: row.person_count ?? undefined,
+    totalCost: row.total_cost,
+    splitType: row.split_type,
+    createdAt: row.created_at,
+  };
+}
+
+// Un costo total no lleva precio por persona ni personas.
+export function mapQuotationExpenseToRow(data: QuotationExpenseFormData): TablesInsert<'quotation_expenses'> {
+  const perPerson = data.costType === 'per_person';
+  return {
+    quotation_id: data.quotationId,
+    category: data.category,
+    description: data.description || null,
+    cost_type: data.costType,
+    unit_cost: perPerson ? data.unitCost ?? null : null,
+    person_count: perPerson ? data.personCount ?? null : null,
+    total_cost: data.totalCost,
+    split_type: data.splitType,
   };
 }
 

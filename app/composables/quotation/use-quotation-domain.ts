@@ -1,4 +1,4 @@
-import type { ProviderPriceAdjustment, Quotation, QuotationAccommodation, QuotationBus, QuotationProvider } from '~/types/quotation';
+import type { ProviderPriceAdjustment, Quotation, QuotationAccommodation, QuotationBus, QuotationExpense, QuotationProvider } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 
 type ProviderPaymentStatus = 'pending' | 'partial' | 'paid';
@@ -110,31 +110,36 @@ export function calculateProviderQuotedCost(
 }
 
 /**
- * Calculates the price per seat for a quotation based on provider and bus costs.
- * Costs split by `'minimum'` are divided by `minimumSeatTarget`; costs split by `'total'`
- * are divided by `sellableSeats`. Per-person providers add their unit cost directly, since
- * each traveler takes one. The parts are summed and rounded up.
+ * Calculates the price per seat for a quotation based on provider, bus and extra expense
+ * costs. Costs split by `'minimum'` are divided by `minimumSeatTarget`; costs split by
+ * `'total'` are divided by `sellableSeats`. Per-person providers add their unit cost
+ * directly, since each traveler takes one; extra expenses always split their total, even
+ * when captured per person. The parts are summed and rounded up.
  * Returns 0 if there are no costs yet.
  * @param seats - The quotation's seat target and its sellable seats (see `calculateSellableSeats`)
  * @param seats.minimumSeatTarget - Divisor for costs split by `'minimum'`
  * @param seats.sellableSeats - Divisor for costs split by `'total'`
  * @param providers - Providers belonging to this quotation (pre-filtered by caller)
  * @param buses - Buses belonging to this quotation (pre-filtered by caller)
+ * @param expenses - Extra expenses belonging to this quotation (pre-filtered by caller)
  * @returns Price per seat in whole units (ceiling), or 0 if no costs are defined
  */
 export function calculateSeatPrice(
   seats: { minimumSeatTarget: number; sellableSeats: number },
   providers: Pick<QuotationProvider, 'totalCost' | 'splitType' | 'costType' | 'unitCost'>[],
   buses: Pick<QuotationBus, 'totalCost' | 'splitType'>[],
+  expenses: Pick<QuotationExpense, 'totalCost' | 'splitType'>[],
 ): number {
   const totalProviders = providers.filter(p => !isPerPersonProvider(p));
   const minCost = totalProviders.filter(p => (p.splitType ?? 'minimum') === 'minimum').reduce((acc, p) => acc + p.totalCost, 0);
   const occupiedCost = totalProviders.filter(p => (p.splitType ?? 'minimum') === 'total').reduce((acc, p) => acc + p.totalCost, 0);
   const minBusesCost = buses.filter(b => (b.splitType ?? 'minimum') === 'minimum').reduce((acc, b) => acc + (b.totalCost ?? 0), 0);
   const busesTotalCost = buses.filter(b => (b.splitType ?? 'minimum') === 'total').reduce((acc, b) => acc + (b.totalCost ?? 0), 0);
+  const minExpensesCost = expenses.filter(e => e.splitType === 'minimum').reduce((acc, e) => acc + e.totalCost, 0);
+  const expensesTotalCost = expenses.filter(e => e.splitType === 'total').reduce((acc, e) => acc + e.totalCost, 0);
 
-  const minPart = seats.minimumSeatTarget > 0 ? (minCost + minBusesCost) / seats.minimumSeatTarget : 0;
-  const occupiedPart = seats.sellableSeats > 0 ? (occupiedCost + busesTotalCost) / seats.sellableSeats : 0;
+  const minPart = seats.minimumSeatTarget > 0 ? (minCost + minBusesCost + minExpensesCost) / seats.minimumSeatTarget : 0;
+  const occupiedPart = seats.sellableSeats > 0 ? (occupiedCost + busesTotalCost + expensesTotalCost) / seats.sellableSeats : 0;
   const perPersonPart = providers.filter(isPerPersonProvider).reduce((acc, p) => acc + (p.unitCost ?? 0), 0);
 
   if (minPart === 0 && occupiedPart === 0 && perPersonPart === 0) {
