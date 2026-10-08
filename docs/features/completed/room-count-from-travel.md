@@ -1,6 +1,6 @@
 # Feature: Cantidad de habitaciones desde el viaje
 
-**Estado:** ✅ Implementada (2026-10-08) en PR #115 (`fix/quotation-issues`), pendiente de merge y de la migración en Stage/QA y Producción.
+**Estado:** ✅ COMPLETADA. PR #115 mergeado a `main` (2026-10-08); migración en todos los entornos. La columna `quantity` se borra en el PR de contract (`chore/drop-quotation-detail-quantity`).
 
 ---
 
@@ -50,8 +50,10 @@ Todas las funciones son `SECURITY INVOKER` con `search_path = ''`, siguiendo el 
 **Producción antes del push (solo lectura, 2026-10-08):** 0 hospedajes y 0 pagos de hotel, así
 que el backfill no cambia ningún monto real.
 
-**Pendiente (contract, otro PR):** borrar `quotation_accommodation_details.quantity` con guard
-una vez desplegado este cambio.
+**Contract (`20261008062250_drop_quotation_detail_quantity.sql`):** borra
+`quotation_accommodation_details.quantity` una vez desplegado este cambio. Un guard se niega a
+borrarla si alguna fila tiene `quantity <> 0` (un conteo escrito por el CRM anterior). Antes de
+escribirla (solo lectura, 2026-10-08): 0 filas en Producción y en Stage/QA.
 
 ## Código
 
