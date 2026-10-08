@@ -759,6 +759,83 @@ export type Database = {
           },
         ]
       }
+      quotation_provider_price_adjustments: {
+        Row: {
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["price_adjustment_kind"]
+          label: string
+          mode: Database["public"]["Enums"]["price_adjustment_mode"]
+          quotation_provider_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["price_adjustment_kind"]
+          label: string
+          mode: Database["public"]["Enums"]["price_adjustment_mode"]
+          quotation_provider_id: string
+          value: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["price_adjustment_kind"]
+          label?: string
+          mode?: Database["public"]["Enums"]["price_adjustment_mode"]
+          quotation_provider_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_provider_price_adjustments_quotation_provider_id_fkey"
+            columns: ["quotation_provider_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      quotation_provider_traveler_adjustments: {
+        Row: {
+          adjustment_id: string
+          created_at: string
+          quotation_provider_id: string
+          travel_id: string
+          traveler_id: string
+        }
+        Insert: {
+          adjustment_id: string
+          created_at?: string
+          quotation_provider_id: string
+          travel_id: string
+          traveler_id: string
+        }
+        Update: {
+          adjustment_id?: string
+          created_at?: string
+          quotation_provider_id?: string
+          travel_id?: string
+          traveler_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_provider_traveler_adjustments_adjustment_fkey"
+            columns: ["adjustment_id", "quotation_provider_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_provider_price_adjustments"
+            referencedColumns: ["id", "quotation_provider_id"]
+          },
+          {
+            foreignKeyName: "quotation_provider_traveler_adjustments_traveler_fkey"
+            columns: ["traveler_id", "travel_id"]
+            isOneToOne: false
+            referencedRelation: "travelers"
+            referencedColumns: ["id", "travel_id"]
+          },
+        ]
+      }
       quotation_providers: {
         Row: {
           confirmed: boolean
@@ -1632,6 +1709,8 @@ export type Database = {
     Enums: {
       cost_split_type: "minimum" | "total"
       payment_type: "cash" | "transfer"
+      price_adjustment_kind: "discount" | "surcharge"
+      price_adjustment_mode: "percent" | "amount"
       provider_category:
         | "guides"
         | "transportation"
@@ -1782,6 +1861,8 @@ export const Constants = {
     Enums: {
       cost_split_type: ["minimum", "total"],
       payment_type: ["cash", "transfer"],
+      price_adjustment_kind: ["discount", "surcharge"],
+      price_adjustment_mode: ["percent", "amount"],
       provider_category: [
         "guides",
         "transportation",
