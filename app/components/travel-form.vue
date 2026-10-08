@@ -34,6 +34,9 @@ const coordinatorItems = computed(() =>
   })),
 );
 
+// The public site's listing card shows the summary as a short teaser.
+const SUMMARY_MAX_LENGTH = 200;
+
 // Schema de validación Zod
 const schema = z.object({
   label: businessNameSchema({ min: 3, max: 100 }),
@@ -45,7 +48,7 @@ const schema = z.object({
   description: textSchema({ min: 10, max: 3000 }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
   departureFrom: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
-  summary: textSchema({ min: 10, max: 200 }),
+  summary: textSchema({ min: 10, max: SUMMARY_MAX_LENGTH }),
   highlights: z.array(businessNameSchema({ min: 1, max: 40 })).max(6, 'Máximo 6 destacados'),
   featured: z.boolean(),
   internalNotes: textSchema({ max: 500 }).optional().or(z.literal('')),
@@ -135,6 +138,10 @@ const labelInput = useSanitizedModel(() => state.value.label, v => state.value.l
 const destinationInput = useSanitizedModel(() => state.value.destination ?? '', v => state.value.destination = v, sanitizeBusinessName);
 const departureFromInput = useSanitizedModel(() => state.value.departureFrom ?? '', v => state.value.departureFrom = v, sanitizeBusinessName);
 const summaryInput = useSanitizedModel(() => state.value.summary ?? '', v => state.value.summary = v, sanitizeText);
+
+// Counts like the schema (trimmed), so the user can tell how much to cut once over the limit.
+const summaryLength = computed(() => (state.value.summary ?? '').trim().length);
+const summaryOverBy = computed(() => summaryLength.value - SUMMARY_MAX_LENGTH);
 const internalNotesInput = useSanitizedModel(() => state.value.internalNotes ?? '', v => state.value.internalNotes = v, sanitizeText);
 
 // UInputTags entrega el array completo en cada cambio; se sanitiza cada entrada y se descartan las vacías.
@@ -433,10 +440,16 @@ function onCancel() {
               description="Teaser corto para el listado del sitio público."
               required
             >
+              <template #hint>
+                <span :class="summaryOverBy > 0 ? 'text-error font-medium' : undefined">
+                  {{ summaryLength }}/{{ SUMMARY_MAX_LENGTH }}<template v-if="summaryOverBy > 0"> · sobran {{ summaryOverBy }}</template>
+                </span>
+              </template>
               <UTextarea
                 v-model="summaryInput"
                 placeholder="Una escapada inolvidable entre lagos y montañas"
                 :rows="2"
+                autoresize
                 class="w-full"
               />
             </UFormField>
