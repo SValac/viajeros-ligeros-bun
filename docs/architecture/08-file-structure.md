@@ -42,7 +42,7 @@ app/
 │   │   ├── use-provider-domain.ts
 │   │   └── use-provider-repository.ts
 │   ├── quotation/
-│   │   ├── use-quotation-domain.ts     # calcPaymentStatus, calcSeatPrice, reconcileAccommodations
+│   │   ├── use-quotation-domain.ts     # calcPaymentStatus, calcSeatPrice, countRoomsByType
 │   │   └── use-quotation-repository.ts # ~30 funciones, 8 tablas
 │   ├── travelers/
 │   │   ├── use-traveler-domain.ts
