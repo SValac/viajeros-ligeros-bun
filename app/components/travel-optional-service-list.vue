@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { formatCurrency } from '~/utils/currency';
 
-// Lista compacta de los servicios opcionales del viaje para elegir cuál editar. En
+// Lista compacta de los servicios por persona del viaje para elegir cuál editar. En
 // escritorio es una columna; en tablet, una fila con scroll horizontal para no empujar
 // la tarjeta hacia abajo.
 
@@ -24,7 +24,7 @@ const selected = defineModel<string | undefined>({ required: true });
 </script>
 
 <template>
-  <nav aria-label="Servicios opcionales">
+  <nav aria-label="Servicios por persona">
     <ul class="flex gap-1 overflow-x-auto lg:flex-col lg:overflow-visible">
       <li
         v-for="item in items"

@@ -14,10 +14,12 @@ type Props = {
   /** Ids de los viajeros que no lo toman. */
   optedOut: Set<string>;
   paid: number;
+  /** Para el costo de referencia con el autobús lleno. */
+  sellableSeats: number;
   busy?: boolean;
 };
 
-const { service, occupants, optedOut, paid, busy = false } = defineProps<Props>();
+const { service, occupants, optedOut, paid, sellableSeats, busy = false } = defineProps<Props>();
 
 const emit = defineEmits<{
   change: [travelerIds: string[], toman: boolean];
@@ -129,13 +131,13 @@ function setAll(toman: boolean) {
         </div>
         <div>
           <dt class="text-muted">
-            Cotizado
+            Con el autobús lleno
           </dt>
           <dd class="font-semibold text-lg">
-            {{ formatCurrency(service.totalCost) }}
+            {{ formatCurrency((service.unitCost ?? 0) * sellableSeats) }}
           </dd>
           <dd class="text-xs text-muted">
-            {{ service.personCount }} personas
+            {{ sellableSeats }} asientos vendibles
           </dd>
         </div>
         <div>

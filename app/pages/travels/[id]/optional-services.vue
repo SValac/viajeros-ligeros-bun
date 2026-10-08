@@ -2,14 +2,15 @@
 import type { OptionalServiceListItem } from '~/components/travel-optional-service-list.vue';
 import type { QuotationProvider } from '~/types/quotation';
 
+import { isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 
 definePageMeta({
   name: 'travel-optional-services',
 });
 
-// Servicios de la cotización que se le pagan al proveedor por los viajeros que los toman
-// (un tour, una comida). El precio del asiento no cambia; solo lo que se le debe.
+// Servicios de la cotización cobrados por persona (un tour, una comida): al proveedor se le
+// paga por los viajeros que los toman. Todos lo toman salvo los que se desmarcan aquí.
 
 const route = useRoute();
 const router = useRouter();
@@ -25,8 +26,10 @@ const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId
 const services = computed<QuotationProvider[]>(() => {
   if (!cotizacion.value)
     return [];
-  return cotizacionStore.getProveedoresByQuotation(cotizacion.value.id).filter(p => p.isOptional);
+  return cotizacionStore.getProveedoresByQuotation(cotizacion.value.id).filter(isPerPersonProvider);
 });
+
+const sellableSeats = computed(() => (cotizacion.value ? cotizacionStore.getAsientosVendibles(cotizacion.value.id) : 0));
 
 const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s => ({
   id: s.id,
@@ -94,9 +97,9 @@ async function onChange(travelerIds: string[], toman: boolean) {
       <UCard v-if="services.length === 0">
         <div class="text-center py-8 text-muted">
           <UIcon name="i-lucide-ticket-check" class="size-10 mx-auto mb-2 opacity-40" />
-          <p>Este viaje no tiene servicios opcionales.</p>
+          <p>Este viaje no tiene servicios cobrados por persona.</p>
           <p class="text-sm mt-1">
-            En la cotización, marca como opcional un servicio cobrado por persona para pagarle al proveedor solo por los viajeros que lo toman.
+            En la cotización, agrega un servicio con "Costo por persona" para pagarle al proveedor solo por los viajeros que lo toman.
           </p>
           <UButton
             label="Ir a los servicios de la cotización"
@@ -120,6 +123,7 @@ async function onChange(travelerIds: string[], toman: boolean) {
           :occupants="occupants"
           :opted-out="cotizacionStore.getOptOutsByProveedor(selectedService.id)"
           :paid="cotizacionStore.getAnticipadoProveedor(selectedService.id)"
+          :sellable-seats="sellableSeats"
           :busy="savingServiceId === selectedService.id"
           @change="onChange"
         />
