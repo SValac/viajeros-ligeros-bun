@@ -30,9 +30,11 @@ lo toman**. Quién lo toma se marca en una pestaña nueva del viaje, como las ha
     es una columna y en tablet una fila con scroll horizontal.
   - La tarjeta del servicio elegido (`?servicio=` en la URL, para que sobreviva al recargar)
     con cuántos lo toman, lo que se debe pagar, lo cotizado y el pendiente o lo pagado de más.
-  - Los viajeros se agrupan por representante, ordenados por nombre, cada grupo con una
-    casilla para marcarlo completo. Siguen quienes viajan sin acompañantes y al final los
-    coordinadores. Además están "Marcar todos" y "Desmarcar todos".
+  - Lista compacta de viajeros con casilla. Cada acompañante muestra el nombre de su
+    representante, igual que en "Agregar viajero a la habitación". Los de un mismo
+    representante van juntos (el representante y luego sus acompañantes, por nombre del
+    representante) y los coordinadores al final. Además están "Marcar todos" y
+    "Desmarcar todos".
 - **Cotización confirmada**: se puede marcar y desmarcar viajeros, igual que las habitaciones.
   La acción **"Cobro por viajero"** de la tabla cambia los dos switches aunque la cotización
   esté confirmada, porque no tocan el precio del asiento.
@@ -74,8 +76,7 @@ nuevos. No puede haberlas, porque las columnas nacen en `false`.
 | `app/components/cotizacion-proveedor-opcional-form.vue` | Modal "Cobro por viajero" (solo los dos switches) |
 | `app/components/cotizacion-proveedor-tabla.vue` | Badge "Opcional", columna "A pagar" con enlace "N lo toman", "Pagado de más", acción "Cobro por viajero" |
 | `app/components/travel-optional-service-list.vue` | Lista para elegir el servicio |
-| `app/components/travel-optional-service-card.vue` | Tarjeta de un servicio: cifras y grupos por representante |
-| `app/components/travel-optional-service-group.vue` | Un grupo (representante y acompañantes, sin acompañantes o coordinadores) con casilla de grupo |
+| `app/components/travel-optional-service-card.vue` | Tarjeta de un servicio: cifras y casillas por ocupante, ordenadas por representante |
 | `app/pages/travels/[id]/optional-services.vue` + `app/pages/travels/[id].vue` | Pestaña nueva. Al abrirla refresca `payable_cost`, que cambia al agregar o borrar viajeros |
 | `app/pages/quotations/[id].vue` | Refresca `payable_cost` al abrir la cotización |
 
