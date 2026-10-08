@@ -34,24 +34,32 @@ const coordinatorItems = computed(() =>
   })),
 );
 
-// The public site's listing card shows the summary as a short teaser.
-const SUMMARY_MAX_LENGTH = 200;
+// Shared by the schema and the fields' character counters. The summary is the public
+// site's listing teaser, hence short.
+const MAX_LENGTH = {
+  label: 100,
+  destination: 100,
+  departureFrom: 100,
+  summary: 200,
+  description: 3000,
+  internalNotes: 500,
+} as const;
 
 // Schema de validación Zod
 const schema = z.object({
-  label: businessNameSchema({ min: 3, max: 100 }),
-  destination: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
+  label: businessNameSchema({ min: 3, max: MAX_LENGTH.label }),
+  destination: businessNameSchema({ min: 1, max: MAX_LENGTH.destination }).optional().or(z.literal('')),
   coordinatorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
   startDate: z.string().min(1, 'Fecha requerida'),
   endDate: z.string().min(1, 'Fecha requerida'),
   // Contenido HTML del editor enriquecido: solo se despojan caracteres de control, no se restringe el charset.
-  description: textSchema({ min: 10, max: 3000 }),
+  description: textSchema({ min: 10, max: MAX_LENGTH.description }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
-  departureFrom: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
-  summary: textSchema({ min: 10, max: SUMMARY_MAX_LENGTH }),
+  departureFrom: businessNameSchema({ min: 1, max: MAX_LENGTH.departureFrom }).optional().or(z.literal('')),
+  summary: textSchema({ min: 10, max: MAX_LENGTH.summary }),
   highlights: z.array(businessNameSchema({ min: 1, max: 40 })).max(6, 'Máximo 6 destacados'),
   featured: z.boolean(),
-  internalNotes: textSchema({ max: 500 }).optional().or(z.literal('')),
+  internalNotes: textSchema({ max: MAX_LENGTH.internalNotes }).optional().or(z.literal('')),
 }).refine(
   data => new Date(data.endDate) >= new Date(data.startDate),
   { message: 'Fecha fin debe ser mayor o igual a fecha inicio', path: ['startDate'] },
@@ -138,10 +146,6 @@ const labelInput = useSanitizedModel(() => state.value.label, v => state.value.l
 const destinationInput = useSanitizedModel(() => state.value.destination ?? '', v => state.value.destination = v, sanitizeBusinessName);
 const departureFromInput = useSanitizedModel(() => state.value.departureFrom ?? '', v => state.value.departureFrom = v, sanitizeBusinessName);
 const summaryInput = useSanitizedModel(() => state.value.summary ?? '', v => state.value.summary = v, sanitizeText);
-
-// Counts like the schema (trimmed), so the user can tell how much to cut once over the limit.
-const summaryLength = computed(() => (state.value.summary ?? '').trim().length);
-const summaryOverBy = computed(() => summaryLength.value - SUMMARY_MAX_LENGTH);
 const internalNotesInput = useSanitizedModel(() => state.value.internalNotes ?? '', v => state.value.internalNotes = v, sanitizeText);
 
 // UInputTags entrega el array completo en cada cambio; se sanitiza cada entrada y se descartan las vacías.
@@ -238,6 +242,9 @@ function onCancel() {
             name="label"
             required
           >
+            <template #hint>
+              <CharCounter :value="state.label" :max="MAX_LENGTH.label" />
+            </template>
             <UInput
               v-model="labelInput"
               placeholder="Aventura en París"
@@ -250,6 +257,9 @@ function onCancel() {
             label="Destino"
             name="destination"
           >
+            <template #hint>
+              <CharCounter :value="state.destination" :max="MAX_LENGTH.destination" />
+            </template>
             <UInput
               v-model="destinationInput"
               placeholder="París, Francia"
@@ -263,6 +273,9 @@ function onCancel() {
             name="departureFrom"
             description="Ciudad/punto de partida que se muestra en el sitio público"
           >
+            <template #hint>
+              <CharCounter :value="state.departureFrom" :max="MAX_LENGTH.departureFrom" />
+            </template>
             <UInput
               v-model="departureFromInput"
               placeholder="Ciudad de México"
@@ -441,9 +454,7 @@ function onCancel() {
               required
             >
               <template #hint>
-                <span :class="summaryOverBy > 0 ? 'text-error font-medium' : undefined">
-                  {{ summaryLength }}/{{ SUMMARY_MAX_LENGTH }}<template v-if="summaryOverBy > 0"> · sobran {{ summaryOverBy }}</template>
-                </span>
+                <CharCounter :value="state.summary" :max="MAX_LENGTH.summary" />
               </template>
               <UTextarea
                 v-model="summaryInput"
@@ -518,6 +529,9 @@ function onCancel() {
             name="internalNotes"
             description="Información privada solo para el equipo"
           >
+            <template #hint>
+              <CharCounter :value="state.internalNotes" :max="MAX_LENGTH.internalNotes" />
+            </template>
             <UTextarea
               v-model="internalNotesInput"
               placeholder="Preferencias del cliente, observaciones especiales..."
@@ -528,8 +542,12 @@ function onCancel() {
           <UFormField
             label="Descripción"
             name="description"
+            description="El límite cuenta también el formato (negritas, listas, enlaces)."
             required
           >
+            <template #hint>
+              <CharCounter :value="state.description" :max="MAX_LENGTH.description" />
+            </template>
             <RichTextEditor
               v-model="state.description"
               placeholder="Describe el viaje, actividades incluidas, etc."
