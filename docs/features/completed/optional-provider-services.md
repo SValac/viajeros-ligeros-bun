@@ -80,6 +80,11 @@ nuevos. No puede haberlas, porque las columnas nacen en `false`.
 | `app/pages/travels/[id]/optional-services.vue` + `app/pages/travels/[id].vue` | Pestaña nueva. Al abrirla refresca `payable_cost`, que cambia al agregar o borrar viajeros |
 | `app/pages/quotations/[id].vue` | Refresca `payable_cost` al abrir la cotización |
 
+El selector de proveedor del form (`app/components/provider-selector.vue`) pasó de `USelect`
+a `USelectMenu`, con búsqueda por nombre, ubicación (ciudad, estado, país) o contacto
+(nombre, teléfono, email). Cada opción muestra "Proveedor - Contacto" con la ciudad debajo,
+y ambos selects ocupan todo el ancho.
+
 De paso se arregló el filtro "Liquidado" de la tabla de servicios: filtraba por `'liquidado'`
 en vez de `'paid'` y nunca encontraba nada.
 

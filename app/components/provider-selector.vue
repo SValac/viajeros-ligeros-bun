@@ -48,13 +48,21 @@ const availableProviders = computed(() => {
   );
 });
 
-// Opciones para el select de proveedores
+// Opciones para el select de proveedores. La etiqueta lleva el contacto para distinguir
+// proveedores parecidos; se puede buscar por nombre, ubicación o contacto.
 const providerOptions = computed(() => {
-  return availableProviders.value.map(provider => ({
-    value: provider.id,
-    label: provider.name,
-    icon: getCategoryIcon(provider.category),
-  }));
+  return availableProviders.value.map((provider) => {
+    const { city, state, country } = provider.location;
+    const { name: contactName, phone, email } = provider.contact;
+    return {
+      value: provider.id,
+      label: contactName ? `${provider.name} - ${contactName}` : provider.name,
+      description: [city, state].filter(Boolean).join(', ') || undefined,
+      icon: getCategoryIcon(provider.category),
+      location: [city, state, country].filter(Boolean).join(' '),
+      contact: [contactName, phone, email].filter(Boolean).join(' '),
+    };
+  });
 });
 
 // Función auxiliar para obtener icono de categoría
@@ -147,6 +155,7 @@ onMounted(() => {
           :items="categoryOptions"
           placeholder="1. Seleccionar categoría del servicio"
           clearable
+          class="w-full"
           @update:model-value="handleCategoryChange"
         />
       </div>
@@ -154,15 +163,23 @@ onMounted(() => {
 
     <!-- Select de proveedor (solo se muestra si hay categoría seleccionada) -->
     <div v-if="selectedCategory" class="flex gap-2 items-center">
-      <div class="flex-1">
-        <USelect
+      <div class="flex-1 min-w-0">
+        <USelectMenu
           :model-value="selectedProviderId"
           :items="providerOptions"
+          value-key="value"
+          :filter-fields="['label', 'location', 'contact']"
+          :search-input="{ placeholder: 'Buscar por nombre, ubicación o contacto...' }"
           :placeholder="availableProviders.length > 0 ? '2. Seleccionar proveedor' : 'No hay proveedores en esta categoría'"
           :disabled="availableProviders.length === 0"
           clearable
+          class="w-full"
           @update:model-value="handleProviderChange"
-        />
+        >
+          <template #empty>
+            Ningún proveedor coincide
+          </template>
+        </USelectMenu>
       </div>
 
       <!-- Botón para agregar nuevo proveedor -->
