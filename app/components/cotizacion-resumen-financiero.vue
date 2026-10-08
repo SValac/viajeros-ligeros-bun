@@ -32,7 +32,23 @@ const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(quo
 const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(quotationId));
 const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(quotationId));
 
-// El color solo marca estado: ganancia/pérdida aquí y saldo pendiente/liquidado abajo.
+const totalPorPagar = computed(() =>
+  saldoPendiente.value + saldoPendienteHospedajes.value + saldoPendienteBuses.value,
+);
+
+// Each pending balance row: what's owed to that kind of supplier. With no costs there's
+// nothing to settle, so it doesn't read "Liquidado".
+const porPagar = computed(() => [
+  { label: 'Servicios', icon: 'i-lucide-building', costo: costoProveedores.value, saldo: saldoPendiente.value },
+  { label: 'Hospedaje', icon: 'i-lucide-hotel', costo: costoHospedajes.value, saldo: saldoPendienteHospedajes.value },
+  { label: 'Autobuses', icon: 'i-lucide-bus', costo: costoBuses.value, saldo: saldoPendienteBuses.value },
+].map(item => ({
+  ...item,
+  texto: item.costo === 0 ? 'Sin costos' : item.saldo > 0 ? formatCurrency(item.saldo) : 'Liquidado',
+  clase: item.costo === 0 ? 'text-muted' : saldoColor(item.saldo),
+})));
+
+// El color solo marca estado: ganancia/pérdida y saldo pendiente/liquidado.
 // Costos, precios y totales van en texto normal.
 const gananciaColor = computed(() => {
   if (gananciaProyectada.value > 0)
@@ -41,206 +57,129 @@ const gananciaColor = computed(() => {
     return 'text-error';
   return 'text-highlighted';
 });
+
+function saldoColor(saldo: number): string {
+  return saldo > 0 ? 'text-warning' : 'text-success';
+}
 </script>
 
 <template>
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-    <!-- Costo Total (Servicios + Buses, sin hospedaje) -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-wallet" class="w-4 h-4" />
-          Costo Total
-        </p>
-        <p class="text-2xl font-bold text-highlighted">
-          {{ formatCurrency(costoTotal) }}
-        </p>
-        <div class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
-          <span class="text-xs text-muted">
-            Servicios: <span class="font-medium">{{ formatCurrency(costoProveedores) }}</span>
-          </span>
-          <span class="text-xs text-muted">
-            Buses: <span class="font-medium">{{ formatCurrency(costoBuses) }}</span>
-          </span>
-          <span class="text-xs text-muted italic">
-            Hospedaje no incluido
-          </span>
-        </div>
+  <div class="space-y-8">
+    <!-- 1. Costos -->
+    <CotizacionResumenSeccion
+      title="Costos del viaje"
+      description="Lo que cuesta operar el viaje. El hospedaje se cobra aparte en los precios al público."
+    >
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <CotizacionKpiCard
+          label="Costo total"
+          icon="i-lucide-wallet"
+          :value="formatCurrency(costoTotal)"
+        >
+          <p>Servicios + autobuses</p>
+        </CotizacionKpiCard>
+        <CotizacionKpiCard
+          label="Servicios"
+          icon="i-lucide-building"
+          :value="formatCurrency(costoProveedores)"
+        />
+        <CotizacionKpiCard
+          label="Autobuses"
+          icon="i-lucide-bus"
+          :value="formatCurrency(costoBuses)"
+        />
+        <CotizacionKpiCard
+          label="Hospedaje"
+          icon="i-lucide-door-open"
+          :value="formatCurrency(costoHospedajes)"
+        >
+          <p>No entra en el precio por asiento</p>
+        </CotizacionKpiCard>
       </div>
-    </UCard>
+    </CotizacionResumenSeccion>
 
-    <!-- Total Autobuses -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-bus" class="w-4 h-4" />
-          Total Autobuses
-        </p>
-        <p class="text-2xl font-bold text-highlighted">
-          {{ formatCurrency(costoBuses) }}
-        </p>
-        <!-- <p class="text-xs text-muted pt-1">
-          Incluido en costo total: {{ formatCurrency(costoTotal) }}
-        </p> -->
-      </div>
-    </UCard>
-
-    <!-- Total Hospedaje -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-door-open" class="w-4 h-4" />
-          Total Hospedaje
-        </p>
-        <p class="text-2xl font-bold text-highlighted">
-          {{ formatCurrency(costoHospedajes) }}
-        </p>
-        <!-- <p class="text-xs text-muted pt-1">
-          Costo Total: {{ formatCurrency(costoTotalConHospedaje) }}
-        </p> -->
-      </div>
-    </UCard>
-
-    <!-- Precio por Asiento -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-armchair" class="w-4 h-4" />
-          Precio por Asiento
-        </p>
-        <p class="text-2xl font-bold text-highlighted">
-          {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}
-        </p>
-        <div class="flex flex-wrap gap-x-3 gap-y-1 pt-1">
-          <span class="text-xs text-muted">
-            Reparto mínimo: <span class="font-medium">{{ formatCurrency(costoMinimoConBuses) }}</span>
+    <!-- 2. Precio y ganancia -->
+    <CotizacionResumenSeccion
+      title="Precio y ganancia"
+      description="Cuánto se cobra por asiento, desde qué asiento se gana y cuánto deja el viaje lleno."
+    >
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <CotizacionKpiCard
+          label="Precio por asiento"
+          icon="i-lucide-armchair"
+          :value="formatCurrency(cotizacion?.seatPrice ?? 0)"
+        >
+          <p>
+            Reparto mínimo: <span class="font-medium tabular-nums">{{ formatCurrency(costoMinimoConBuses) }}</span>
             ÷ {{ cotizacion?.minimumSeatTarget ?? 0 }} asientos
-          </span>
-          <span class="text-xs text-muted">
-            Reparto total: <span class="font-medium">{{ formatCurrency(costoCapacidadConBuses) }}</span>
+          </p>
+          <p>
+            Reparto total: <span class="font-medium tabular-nums">{{ formatCurrency(costoCapacidadConBuses) }}</span>
             ÷ {{ asientosVendibles }} asientos vendibles
-          </span>
-          <span class="text-xs text-muted italic">
-            Hospedaje no incluido
-          </span>
-        </div>
-      </div>
-    </UCard>
-
-    <!-- Asiento Mínimo / Objetivo -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-target" class="w-4 h-4" />
-          Meta mínima de asientos
-        </p>
-        <p class="text-2xl font-bold text-highlighted">
-          {{ cotizacion?.minimumSeatTarget ?? 0 }}
-        </p>
-        <p v-if="asientoConGanancia === 0" class="text-xs text-muted">
-          Sin precio por asiento todavía
-        </p>
-        <p v-else-if="asientoConGanancia > asientosVendibles" class="text-xs text-error">
-          Sin ganancia aun con el autobús lleno
-        </p>
-        <p v-else class="text-xs text-muted">
-          Ganancia a partir del asiento {{ asientoConGanancia }}
-        </p>
-      </div>
-    </UCard>
-
-    <!-- Ganancia Proyectada -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon
-            :name="gananciaProyectada < 0 ? 'i-lucide-trending-down' : 'i-lucide-trending-up'"
-            class="w-4 h-4"
-            :class="gananciaColor"
-          />
-          Ganancia Proyectada
-        </p>
-        <p class="text-2xl font-bold" :class="gananciaColor">
-          {{ formatCurrency(gananciaProyectada) }}
-        </p>
-        <p class="text-xs text-muted pt-1">
-          ({{ asientosVendibles }} asientos vendibles × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }}) − costo total
-          <span class="block italic">Hospedaje no incluido</span>
-        </p>
-      </div>
-    </UCard>
-
-    <!-- Acumulado Viajeros -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon name="i-lucide-users" class="w-4 h-4" />
-          Acumulado Viajeros
-        </p>
-        <p class="text-2xl font-bold text-highlighted">
-          {{ formatCurrency(acumuladoViajeros) }}
-        </p>
-      </div>
-    </UCard>
-
-    <!-- Saldo Pendiente Proveedores -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon
-            name="i-lucide-clock"
-            class="w-4 h-4"
-            :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'"
-          />
-          Saldo Pendiente Proveedores
-        </p>
-        <p
-          class="text-2xl font-bold"
-          :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'"
+          </p>
+        </CotizacionKpiCard>
+        <CotizacionKpiCard
+          label="Meta mínima de asientos"
+          icon="i-lucide-target"
+          :value="String(cotizacion?.minimumSeatTarget ?? 0)"
         >
-          {{ formatCurrency(saldoPendiente) }}
-        </p>
-      </div>
-    </UCard>
-
-    <!-- Saldo Pendiente Hospedajes -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon
-            name="i-lucide-hotel"
-            class="w-4 h-4"
-            :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
-          />
-          Saldo Pendiente Hospedaje
-        </p>
-        <p
-          class="text-2xl font-bold"
-          :class="saldoPendienteHospedajes > 0 ? 'text-warning' : 'text-success'"
+          <p v-if="asientoConGanancia === 0">
+            Sin precio por asiento todavía
+          </p>
+          <p v-else-if="asientoConGanancia > asientosVendibles" class="text-error">
+            Sin ganancia aun con el autobús lleno
+          </p>
+          <p v-else>
+            Ganancia a partir del asiento {{ asientoConGanancia }}
+          </p>
+        </CotizacionKpiCard>
+        <CotizacionKpiCard
+          label="Ganancia proyectada"
+          :icon="gananciaProyectada < 0 ? 'i-lucide-trending-down' : 'i-lucide-trending-up'"
+          :value="formatCurrency(gananciaProyectada)"
+          :value-class="gananciaColor"
         >
-          {{ formatCurrency(saldoPendienteHospedajes) }}
-        </p>
+          <p>
+            {{ asientosVendibles }} asientos vendibles × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }} − costo total
+          </p>
+        </CotizacionKpiCard>
       </div>
-    </UCard>
+    </CotizacionResumenSeccion>
 
-    <!-- Saldo Pendiente Autobuses -->
-    <UCard>
-      <div class="space-y-1">
-        <p class="text-sm text-muted flex items-center gap-2">
-          <UIcon
-            name="i-lucide-bus"
-            class="w-4 h-4"
-            :class="saldoPendienteBuses > 0 ? 'text-warning' : 'text-success'"
-          />
-          Saldo Pendiente Autobuses
-        </p>
-        <p
-          class="text-2xl font-bold"
-          :class="saldoPendienteBuses > 0 ? 'text-warning' : 'text-success'"
+    <!-- 3. Pagos -->
+    <CotizacionResumenSeccion
+      title="Pagos"
+      description="Lo que ya pagaron los viajeros y lo que falta pagar a proveedores."
+    >
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <CotizacionKpiCard
+          label="Cobrado a viajeros"
+          icon="i-lucide-users"
+          :value="formatCurrency(acumuladoViajeros)"
+        />
+        <CotizacionKpiCard
+          label="Por pagar a proveedores"
+          icon="i-lucide-clock"
+          :value="formatCurrency(totalPorPagar)"
+          :value-class="saldoColor(totalPorPagar)"
         >
-          {{ formatCurrency(saldoPendienteBuses) }}
-        </p>
+          <ul class="space-y-1">
+            <li
+              v-for="item in porPagar"
+              :key="item.label"
+              class="flex items-center justify-between gap-3"
+            >
+              <span class="flex items-center gap-1.5">
+                <UIcon :name="item.icon" class="size-3.5" />
+                {{ item.label }}
+              </span>
+              <span class="font-medium tabular-nums" :class="item.clase">
+                {{ item.texto }}
+              </span>
+            </li>
+          </ul>
+        </CotizacionKpiCard>
       </div>
-    </UCard>
+    </CotizacionResumenSeccion>
   </div>
 </template>

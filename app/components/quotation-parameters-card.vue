@@ -5,9 +5,11 @@ import { sanitizeText } from '~/utils/form-validation';
 
 type Props = {
   quotation: Quotation;
+  /** Confirmed quotations show their parameters without the edit button. */
+  readonly?: boolean;
 };
 
-const { quotation } = defineProps<Props>();
+const { quotation, readonly = false } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const travelStore = useTravelsStore();
@@ -112,7 +114,7 @@ async function guardarParametros() {
           Parámetros de la Cotización
         </h2>
         <UButton
-          v-if="!editandoParametros"
+          v-if="!readonly && !editandoParametros"
           icon="i-lucide-pencil"
           size="xs"
           variant="ghost"
@@ -172,7 +174,7 @@ async function guardarParametros() {
       </div>
     </div>
 
-    <div v-else class="space-y-4">
+    <div v-else-if="!readonly" class="space-y-4">
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <UFormField
           label="Capacidad total de asientos"

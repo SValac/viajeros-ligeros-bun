@@ -18,6 +18,7 @@ type Emits = {
   addTraveler: [accommodationId: string];
   removeTraveler: [travelerId: string];
   update: [accommodation: TravelAccommodation, data: { roomNumber?: string | null; floor?: number | null }];
+  delete: [accommodationId: string];
 };
 
 const props = defineProps<Props>();
@@ -56,7 +57,7 @@ function toggleEditing() {
       <div class="flex items-center justify-between gap-2">
         <div class="flex items-center gap-2">
           <UIcon name="i-lucide-bed-double" class="size-4 text-muted" />
-          <span class="font-semibold text-sm">{{ roomLabel }}</span>
+          <span class="font-semibold text-sm whitespace-nowrap">{{ roomLabel }}</span>
           <UBadge
             v-if="floorLabel"
             :label="floorLabel"
@@ -75,7 +76,18 @@ function toggleEditing() {
             size="xs"
             variant="ghost"
             color="neutral"
+            aria-label="Editar habitación"
             @click="toggleEditing"
+          />
+          <!-- Only empty rooms can go: deleting one cascades to its assignments. -->
+          <UButton
+            v-if="occupants.length === 0"
+            icon="i-lucide-trash-2"
+            size="xs"
+            variant="ghost"
+            color="error"
+            aria-label="Eliminar habitación"
+            @click="emit('delete', accommodation.id)"
           />
         </div>
       </div>

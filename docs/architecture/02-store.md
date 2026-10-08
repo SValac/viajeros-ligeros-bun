@@ -163,7 +163,7 @@ Aplica patrón Repository + Domain: `composables/hotel-rooms/use-hotel-room-doma
 ## 2.9 Quotation Store (`use-cotizacion-store.ts`)
 
 Gestiona todo el flujo de cotización de un viaje. Aplica el patrón Repository + Domain:
-- `app/composables/quotation/use-quotation-domain.ts` — lógica pura (calcPaymentStatus, calcSeatPrice, buildDesiredRoomsMap, reconcileAccommodations)
+- `app/composables/quotation/use-quotation-domain.ts` — lógica pura (calcPaymentStatus, calcSeatPrice, countRoomsByType, findRoomsOutsideQuotation)
 - `app/composables/quotation/use-quotation-repository.ts` — acceso a Supabase (~30 funciones, 8 tablas)
 - `use-cotizacion-store.ts` — orquestación, cache reactivo, cross-store
 
