@@ -44,7 +44,8 @@ Uso interno del CRM, no se publica en la web. `[id]` es el id del **viaje** (la 
 | Ruta | Archivo | Descripción |
 |------|---------|-------------|
 | `/quotations` | `pages/quotations/index.vue` | Viajes con el estado de su cotización |
-| `/quotations/[id]` | `pages/quotations/[id].vue` + `[id]/index.vue` | Padre con encabezado, estado y pestañas. Pestaña «Resumen»: indicadores y parámetros |
+| `/quotations/[id]` | `pages/quotations/[id].vue` + `[id]/index.vue` | Padre con encabezado, estado y pestañas. Pestaña «Resumen»: indicadores financieros |
+| `/quotations/[id]/parameters` | `pages/quotations/[id]/parameters.vue` | Pestaña «Parámetros»: asientos, meta mínima, coordinadores y notas; editables solo en borrador |
 | `/quotations/[id]/services` | `pages/quotations/[id]/services.vue` | Pestaña «Servicios» (proveedores) |
 | `/quotations/[id]/accommodation` | `pages/quotations/[id]/accommodation.vue` | Pestaña «Hospedaje» |
 | `/quotations/[id]/buses` | `pages/quotations/[id]/buses.vue` | Pestaña «Autobuses»: costos; enlaza a la pestaña «Autobuses» del viaje para operadores/coordinadores |

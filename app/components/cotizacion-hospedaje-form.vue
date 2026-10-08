@@ -1,11 +1,7 @@
 <script setup lang="ts">
 import { z } from 'zod';
 
-import type { HotelRoomType } from '~/types/hotel-room';
-import type { QuotationAccommodationDetailFormData, QuotationAccommodationFormData } from '~/types/quotation';
-
-import { formatCurrency } from '~/utils/currency';
-import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import type { QuotationAccommodationFormData } from '~/types/quotation';
 
 type Props = {
   quotationId: string;
@@ -57,7 +53,6 @@ const formSchema = z.object({
   paymentMethod: z.enum(['cash', 'transfer']),
   details: z.array(z.object({
     roomTypeId: z.string(),
-    quantity: z.number().int().positive('Debe ser mayor a 0'),
     pricePerNight: z.number().positive(),
     maxOccupancy: z.number().int().positive(),
   })).min(1, 'Selecciona al menos un tipo de habitación'),
@@ -83,63 +78,9 @@ const tiposHabitacionSeleccionado = computed(() => {
   return hotelRoomData.roomTypes;
 });
 
-// Mapa de qué tipos están seleccionados
-const detallesMap = computed(() => {
-  const map = new Map<string, QuotationAccommodationDetailFormData>();
-  for (const detalle of formState.details ?? []) {
-    map.set(detalle.roomTypeId, detalle);
-  }
-  return map;
-});
-
 // Al cambiar de hotel, reiniciar detalles
 watch(() => formState.providerId, () => {
   formState.details = [];
-});
-
-// Toggle selección de tipo de habitación
-function toggleTipoHabitacion(tipo: HotelRoomType) {
-  if (!formState.details)
-    formState.details = [];
-
-  const existe = detallesMap.value.has(tipo.id);
-  if (existe) {
-    formState.details = formState.details.filter(d => d.roomTypeId !== tipo.id);
-  }
-  else {
-    formState.details.push({
-      roomTypeId: tipo.id,
-      quantity: 1,
-      pricePerNight: tipo.pricePerNight,
-      maxOccupancy: tipo.maxOccupancy,
-    });
-  }
-}
-
-// Actualizar cantidad de habitaciones
-function actualizarCantidad(tipoId: string, count: number) {
-  const detalle = formState.details?.find(d => d.roomTypeId === tipoId);
-  if (!detalle || count <= 0)
-    return;
-  const tipo = tiposHabitacionSeleccionado.value.find(t => t.id === tipoId);
-  detalle.quantity = tipo ? Math.min(count, tipo.roomCount) : count;
-}
-
-// Calcular costo por persona
-function calcularCostoPorPersona(detalle: QuotationAccommodationDetailFormData): number {
-  return detalle.pricePerNight / detalle.maxOccupancy;
-}
-
-// Calcular costo total (por noche * noches * cantidad)
-function calcularCostoTotal(detalle: QuotationAccommodationDetailFormData): number {
-  return (detalle.pricePerNight * (formState.nightCount ?? 1)) * detalle.quantity;
-}
-
-// Calcular costo total de todas las habitaciones
-const costoTotalHospedaje = computed(() => {
-  return (formState.details ?? []).reduce((sum, detalle) => {
-    return sum + calcularCostoTotal(detalle);
-  }, 0);
 });
 
 async function handleSubmit() {
@@ -165,17 +106,9 @@ async function handleSubmit() {
 
   toast.add({
     title: 'Hospedaje agregado',
+    description: 'Agrega sus habitaciones en la pestaña Habitaciones del viaje.',
     color: 'success',
   });
-
-  if (response.skippedOccupied > 0) {
-    toast.add({
-      title: `${response.skippedOccupied} habitación(es) ocupadas no pudieron eliminarse`,
-      description: 'Remueve los viajeros manualmente si deseas liberar esas habitaciones.',
-      color: 'warning',
-      duration: 8000,
-    });
-  }
 
   // Reiniciar form
   formState.quotationId = props.quotationId;
@@ -244,81 +177,13 @@ function handleCancel() {
         </UFormField>
 
         <!-- Tipos de Habitación -->
-        <div v-if="formState.providerId" class="space-y-4">
-          <h3 class="font-semibold flex items-center gap-2">
-            <UIcon name="i-lucide-door-open" class="w-4 h-4" />
-            Tipos de Habitación
-          </h3>
-
-          <div v-if="tiposHabitacionSeleccionado.length === 0" class="text-center py-6 text-muted">
-            <p>Este hotel no tiene tipos de habitación configurados</p>
-          </div>
-
-          <div v-else class="space-y-3 max-h-80 overflow-y-auto border rounded-lg p-4">
-            <div
-              v-for="tipo in tiposHabitacionSeleccionado"
-              :key="tipo.id"
-              class="border rounded-lg p-4 space-y-3"
-            >
-              <!-- Checkbox para seleccionar tipo -->
-              <div class="flex items-start gap-3">
-                <UCheckbox
-                  :model-value="detallesMap.has(tipo.id)"
-                  @update:model-value="() => toggleTipoHabitacion(tipo)"
-                />
-                <div class="flex-1">
-                  <p class="font-medium">
-                    {{ tipo.maxOccupancy }} personas - {{ formatCurrency(tipo.pricePerNight) }}/noche
-                  </p>
-                  <p class="text-xs text-muted">
-                    Cama(s): {{ formatBedConfiguration(tipo.beds) }}
-                  </p>
-                  <p v-if="tipo.additionalDetails" class="text-xs text-muted">
-                    {{ tipo.additionalDetails }}
-                  </p>
-                </div>
-              </div>
-
-              <!-- Detalles del tipo si está seleccionado -->
-              <div v-if="detallesMap.has(tipo.id)" class="ml-8 space-y-2 border-l-2 border-primary pl-4">
-                <div class="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <label class="text-xs text-muted">Cantidad de Habitaciones (máx. {{ tipo.roomCount }})</label>
-                    <UInput
-                      :model-value="detallesMap.get(tipo.id)?.quantity ?? 1"
-                      type="number"
-                      min="1"
-                      :max="tipo.roomCount"
-                      size="sm"
-                      @update:model-value="(v) => actualizarCantidad(tipo.id, v)"
-                    />
-                  </div>
-                  <div>
-                    <label class="text-xs text-muted">Costo por Persona</label>
-                    <div class="text-sm font-medium py-2">
-                      {{ formatCurrency(calcularCostoPorPersona(detallesMap.get(tipo.id)!)) }}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Desglose: costo total por tipo -->
-                <div class="text-xs bg-muted/20 rounded px-2 py-1">
-                  <p>
-                    {{ formatCurrency(tipo.pricePerNight) }} × {{ formState.nightCount }} noches × {{ detallesMap.get(tipo.id)?.quantity ?? 1 }} hab = <span class="font-medium">{{ formatCurrency(calcularCostoTotal(detallesMap.get(tipo.id)!)) }}</span>
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Resumen de costos -->
-        <div v-if="(formState.details?.length ?? 0) > 0" class="bg-primary/10 rounded-lg p-4">
-          <div class="flex justify-between items-center">
-            <span class="font-semibold">Costo Total del Hospedaje</span>
-            <span class="text-lg font-bold">{{ formatCurrency(costoTotalHospedaje) }}</span>
-          </div>
-        </div>
+        <CotizacionHospedajeTipos
+          v-if="formState.providerId"
+          :model-value="formState.details ?? []"
+          :room-types="tiposHabitacionSeleccionado"
+          :night-count="formState.nightCount ?? 1"
+          @update:model-value="(details) => formState.details = details"
+        />
 
         <!-- Acciones -->
         <div class="flex justify-end gap-3 pt-2">

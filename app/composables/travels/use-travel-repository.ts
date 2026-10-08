@@ -204,7 +204,10 @@ export function useTravelRepository() {
    * @returns The inserted accommodations mapped to domain objects
    * @throws {PostgrestError} on Supabase failure
    */
-  async function insertAccommodations(travelId: string, accommodations: TravelAccommodation[]): Promise<TravelAccommodation[]> {
+  async function insertAccommodations(
+    travelId: string,
+    accommodations: Pick<TravelAccommodation, 'providerId' | 'hotelRoomTypeId' | 'maxOccupancy' | 'roomNumber' | 'floor'>[],
+  ): Promise<TravelAccommodation[]> {
     const { data, error } = await supabase
       .from('travel_accommodations')
       .insert(
@@ -301,6 +304,36 @@ export function useTravelRepository() {
       throw error;
 
     return mapTravelAccommodationRowToDomain(row);
+  }
+
+  /**
+   * Deletes one room of a travel, only while nobody is assigned to it: deleting a room
+   * cascades to its `traveler_room_assignments`, which would silently unassign people.
+   * @param id - UUID of the `travel_accommodations` record
+   * @throws {Error} when the room has occupants or the delete didn't remove it (e.g. RLS)
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function deleteEmptyAccommodation(id: string): Promise<void> {
+    const { count, error: countError } = await supabase
+      .from('traveler_room_assignments')
+      .select('traveler_id', { count: 'exact', head: true })
+      .eq('travel_accommodation_id', id);
+
+    if (countError)
+      throw countError;
+    if ((count ?? 0) > 0)
+      throw new Error('La habitación tiene viajeros asignados. Sácalos antes de eliminarla.');
+
+    const { data, error } = await supabase
+      .from('travel_accommodations')
+      .delete()
+      .eq('id', id)
+      .select('id');
+
+    if (error)
+      throw error;
+    if (data.length === 0)
+      throw new Error('No se pudo eliminar la habitación.');
   }
 
   /**
@@ -547,6 +580,7 @@ export function useTravelRepository() {
     fetchAll,
     updateTravel,
     updateTravelAccommodation,
+    deleteEmptyAccommodation,
     updateTravelBus,
     isOwnedByCurrentUser,
     removeTravel,
