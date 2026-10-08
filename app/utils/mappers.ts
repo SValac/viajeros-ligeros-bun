@@ -495,11 +495,9 @@ export function mapQuotationProviderRowToDomain(row: Tables<'quotation_providers
     totalCost: row.total_cost,
     costType: row.cost_type,
     unitCost: row.unit_cost ?? undefined,
-    personCount: row.person_count ?? undefined,
     paymentMethod: row.payment_method,
     splitType: row.split_type,
     confirmed: row.confirmed,
-    isOptional: row.is_optional,
     coordinatorsCourtesy: row.coordinators_courtesy,
     payableCost: row.payable_cost,
   };
@@ -513,29 +511,21 @@ export function mapQuotationProviderToInsert(data: QuotationProviderFormData): T
     remarks: data.remarks ?? null,
     total_cost: data.totalCost,
     ...mapProviderCostFields(data),
-    ...mapProviderOptionalFields(data),
     payment_method: data.paymentMethod,
     split_type: data.splitType,
     confirmed: data.confirmed,
   };
 }
 
-// Las columnas de costo por persona van juntas: un costo total no lleva ninguna.
-export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'personCount'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'person_count'> {
+// Un costo total no lleva precio por persona. person_count ya no se captura (el costo por
+// persona se suma directo al asiento) y se deja vacío.
+export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'coordinatorsCourtesy'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'person_count' | 'coordinators_courtesy'> {
   const perPerson = data.costType === 'per_person';
   return {
     cost_type: data.costType,
     unit_cost: perPerson ? data.unitCost ?? null : null,
-    person_count: perPerson ? data.personCount ?? null : null,
-  };
-}
-
-// Solo un costo por persona puede ser opcional, y la cortesía solo aplica a un opcional.
-export function mapProviderOptionalFields(data: Pick<QuotationProviderFormData, 'costType' | 'isOptional' | 'coordinatorsCourtesy'>): Pick<Tables<'quotation_providers'>, 'is_optional' | 'coordinators_courtesy'> {
-  const isOptional = data.costType === 'per_person' && data.isOptional;
-  return {
-    is_optional: isOptional,
-    coordinators_courtesy: isOptional && data.coordinatorsCourtesy,
+    person_count: null,
+    coordinators_courtesy: perPerson && data.coordinatorsCourtesy,
   };
 }
 

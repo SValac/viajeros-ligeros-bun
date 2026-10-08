@@ -5,7 +5,6 @@ import {
   mapAccommodationPaymentRowToDomain,
   mapBusPaymentRowToDomain,
   mapProviderCostFields,
-  mapProviderOptionalFields,
   mapProviderOptOutRowToDomain,
   mapProviderPaymentRowToDomain,
   mapQuotationAccommodationDetailRowToDomain,
@@ -184,9 +183,7 @@ export function useQuotationRepository() {
     if (data.totalCost !== undefined)
       update.total_cost = data.totalCost;
     if (data.costType !== undefined)
-      Object.assign(update, mapProviderCostFields({ costType: data.costType, unitCost: data.unitCost, personCount: data.personCount }));
-    if (data.costType !== undefined && data.isOptional !== undefined)
-      Object.assign(update, mapProviderOptionalFields({ costType: data.costType, isOptional: data.isOptional, coordinatorsCourtesy: data.coordinatorsCourtesy ?? false }));
+      Object.assign(update, mapProviderCostFields({ costType: data.costType, unitCost: data.unitCost, coordinatorsCourtesy: data.coordinatorsCourtesy ?? false }));
     if (data.paymentMethod !== undefined)
       update.payment_method = data.paymentMethod;
     if (data.splitType !== undefined)
@@ -218,21 +215,15 @@ export function useQuotationRepository() {
   }
 
   /**
-   * Switches how a provider is paid: by the travelers that take it or by the total.
+   * Sets whether a per-person provider gives the coordinators the service for free.
    * Allowed on confirmed quotations because it doesn't touch the seat price.
    * @returns The provider with the payable cost the database recomputed
    * @throws {PostgrestError} on Supabase failure
    */
-  async function updateProviderOptional(
-    id: string,
-    data: { isOptional: boolean; coordinatorsCourtesy: boolean },
-  ): Promise<QuotationProvider> {
+  async function updateProviderCourtesy(id: string, coordinatorsCourtesy: boolean): Promise<QuotationProvider> {
     const { data: row, error } = await supabase
       .from('quotation_providers')
-      .update({
-        is_optional: data.isOptional,
-        coordinators_courtesy: data.isOptional && data.coordinatorsCourtesy,
-      })
+      .update({ coordinators_courtesy: coordinatorsCourtesy })
       .eq('id', id)
       .select()
       .single();
@@ -812,7 +803,7 @@ export function useQuotationRepository() {
     updateProvider,
     deleteProvider,
     toggleProviderConfirmado,
-    updateProviderOptional,
+    updateProviderCourtesy,
     fetchProviderPayableCosts,
     fetchProviderOptOuts,
     insertProviderOptOuts,

@@ -37,18 +37,18 @@ export type QuotationProvider = {
   remarks?: string;
   totalCost: number;
   costType: ProviderCostType;
-  // Solo con costType 'per_person': totalCost = unitCost × personCount.
+  // Solo con costType 'per_person': precio por persona. Se suma directo al precio del
+  // asiento y al proveedor se le paga por cada viajero que toma el servicio. Su totalCost
+  // es solo de referencia (costo × asientos vendibles al guardar).
   unitCost?: number;
-  personCount?: number;
   paymentMethod: PaymentType;
+  // Solo en costo total: entre qué asientos se reparte.
   splitType: CostSplitType;
   confirmed: boolean;
-  // Solo por persona: se le paga al proveedor por los viajeros que lo toman.
-  isOptional: boolean;
-  // Solo opcional: los coordinadores no cuentan para el pago.
+  // Solo por persona: los coordinadores no cuentan para el pago.
   coordinatorsCourtesy: boolean;
-  // Lo que se le debe al proveedor (lo calcula la base de datos). Igual a totalCost
-  // salvo en los opcionales; el precio del asiento siempre usa totalCost.
+  // Lo que se le debe al proveedor (lo calcula la base de datos): por persona, costo ×
+  // viajeros que lo toman; en costo total, totalCost.
   payableCost: number;
 };
 
