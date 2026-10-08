@@ -575,7 +575,6 @@ export function mapQuotationAccommodationDetailRowToDomain(row: Tables<'quotatio
   return {
     id: row.id,
     roomTypeId: row.hotel_room_type_id,
-    quantity: row.quantity,
     pricePerNight: row.price_per_night,
     maxOccupancy: row.max_occupancy,
   };

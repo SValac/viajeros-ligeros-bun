@@ -78,10 +78,11 @@ export type QuotationProviderFilters = {
 // Accommodation Types
 // ============================================================================
 
+// A hotel room type picked for the quotation. How many rooms of it the travel holds lives
+// on the travel (travel_accommodations), not here: it changes until the trip leaves.
 export type QuotationAccommodationDetail = {
   id: string;
   roomTypeId: string;
-  quantity: number;
   pricePerNight: number;
   maxOccupancy: number;
   costPerPerson?: number;

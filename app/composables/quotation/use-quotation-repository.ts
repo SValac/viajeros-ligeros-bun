@@ -1,6 +1,5 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderPayment, ProviderPaymentFormData, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
-import type { TravelAccommodation } from '~/types/travel';
 
 import {
   mapAccommodationPaymentRowToDomain,
@@ -14,8 +13,6 @@ import {
   mapQuotationPublicPriceRowToDomain,
   mapQuotationRowToDomain,
 } from '~/utils/mappers';
-
-import type { RoomSlot } from './use-quotation-domain';
 
 export function useQuotationRepository() {
   const supabase = useSupabase();
@@ -435,24 +432,72 @@ export function useQuotationRepository() {
     if (error)
       throw error;
   }
-  async function insertAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation> {
-    const detalles = data.details.map(d => ({
-      ...d,
-      id: d.id ?? crypto.randomUUID(),
-      costPerPerson: d.pricePerNight / d.maxOccupancy,
-    }));
-    const totalCost = detalles.reduce(
-      (sum, d) => sum + d.pricePerNight * data.nightCount * d.quantity,
-      0,
-    );
+  // total_cost is computed by the database from the travel's rooms (see the
+  // lodging_cost_from_travel_rooms migration), so it's read back after the details are written.
+  async function fetchAccommodationTotalCost(id: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('quotation_accommodations')
+      .select('total_cost')
+      .eq('id', id)
+      .single();
 
+    if (error)
+      throw error;
+
+    return data.total_cost;
+  }
+
+  /**
+   * Reads the current cost of every hotel in a quotation. Rooms added or removed on the
+   * travel change these costs in the database, so the store refreshes them afterwards.
+   * @param quotationId - UUID of the quotation
+   * @returns One `{ id, totalCost }` per quotation hotel
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchAccommodationCosts(quotationId: string): Promise<{ id: string; totalCost: number }[]> {
+    const { data, error } = await supabase
+      .from('quotation_accommodations')
+      .select('id, total_cost')
+      .eq('quotation_id', quotationId);
+
+    if (error)
+      throw error;
+
+    return data.map(row => ({ id: row.id, totalCost: row.total_cost }));
+  }
+
+  async function insertAccommodationDetails(
+    accommodationId: string,
+    details: QuotationAccommodationFormData['details'],
+  ): Promise<QuotationAccommodationDetail[]> {
+    const { data: detailRows, error } = await supabase
+      .from('quotation_accommodation_details')
+      .insert(details.map(d => ({
+        quotation_accommodation_id: accommodationId,
+        hotel_room_type_id: d.roomTypeId,
+        price_per_night: d.pricePerNight,
+        max_occupancy: d.maxOccupancy,
+      })))
+      .select();
+
+    if (error)
+      throw error;
+
+    return (detailRows ?? []).map(d => ({
+      ...mapQuotationAccommodationDetailRowToDomain(d),
+      costPerPerson: d.price_per_night / d.max_occupancy,
+    }));
+  }
+
+  async function insertAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation> {
     const { data: accRow, error: accErr } = await supabase
       .from('quotation_accommodations')
       .insert({
         quotation_id: data.quotationId,
         provider_id: data.providerId,
         night_count: data.nightCount,
-        total_cost: totalCost,
+        // Placeholder: the database computes it from the travel's rooms.
+        total_cost: 0,
         payment_method: data.paymentMethod,
         confirmed: data.confirmed,
       })
@@ -462,46 +507,18 @@ export function useQuotationRepository() {
     if (accErr)
       throw accErr;
 
-    const { data: detailRows, error: detErr } = await supabase
-      .from('quotation_accommodation_details')
-      .insert(detalles.map(d => ({
-        quotation_accommodation_id: accRow.id,
-        hotel_room_type_id: d.roomTypeId,
-        quantity: d.quantity,
-        price_per_night: d.pricePerNight,
-        max_occupancy: d.maxOccupancy,
-      })))
-      .select();
+    const mappedDetails = await insertAccommodationDetails(accRow.id, data.details);
+    const totalCost = await fetchAccommodationTotalCost(accRow.id);
 
-    if (detErr)
-      throw detErr;
-
-    const mappedDetails = (detailRows ?? []).map(d => ({
-      ...mapQuotationAccommodationDetailRowToDomain(d),
-      costPerPerson: d.price_per_night / d.max_occupancy,
-    }));
-
-    return mapQuotationAccommodationRowToDomain(accRow, mappedDetails);
+    return mapQuotationAccommodationRowToDomain({ ...accRow, total_cost: totalCost }, mappedDetails);
   }
 
   async function updateAccommodation(
     id: string,
     data: Partial<QuotationAccommodationFormData>,
-    existingNightCount: number,
     existingDetails: QuotationAccommodationDetail[],
   ): Promise<QuotationAccommodation> {
-    const detallesBase = data.details ?? existingDetails;
-    const detalles = detallesBase.map(d => ({
-      ...d,
-      id: d.id ?? crypto.randomUUID(),
-      costPerPerson: d.pricePerNight / d.maxOccupancy,
-    }));
-    const totalCost = detalles.reduce(
-      (sum, d) => sum + d.pricePerNight * (data.nightCount ?? existingNightCount) * d.quantity,
-      0,
-    );
-
-    const accUpdate: TablesUpdate<'quotation_accommodations'> = { total_cost: totalCost };
+    const accUpdate: TablesUpdate<'quotation_accommodations'> = {};
     if (data.providerId !== undefined)
       accUpdate.provider_id = data.providerId;
     if (data.nightCount !== undefined)
@@ -529,26 +546,10 @@ export function useQuotationRepository() {
     if (delErr)
       throw delErr;
 
-    const { data: newDetailRows, error: detErr } = await supabase
-      .from('quotation_accommodation_details')
-      .insert(detalles.map(d => ({
-        quotation_accommodation_id: id,
-        hotel_room_type_id: d.roomTypeId,
-        quantity: d.quantity,
-        price_per_night: d.pricePerNight,
-        max_occupancy: d.maxOccupancy,
-      })))
-      .select();
+    const mappedDetails = await insertAccommodationDetails(id, data.details ?? existingDetails);
+    const totalCost = await fetchAccommodationTotalCost(id);
 
-    if (detErr)
-      throw detErr;
-
-    const mappedDetails = (newDetailRows ?? []).map(d => ({
-      ...mapQuotationAccommodationDetailRowToDomain(d),
-      costPerPerson: d.price_per_night / d.max_occupancy,
-    }));
-
-    return mapQuotationAccommodationRowToDomain(updatedRow, mappedDetails);
+    return mapQuotationAccommodationRowToDomain({ ...updatedRow, total_cost: totalCost }, mappedDetails);
   }
 
   async function deleteAccommodation(id: string): Promise<void> {
@@ -696,26 +697,6 @@ export function useQuotationRepository() {
       throw new Error(`No se pudo eliminar habitaciones: ${error.message}`);
   }
 
-  async function insertTravelAccommodations(
-    travelId: string,
-    slots: RoomSlot[],
-  ): Promise<TravelAccommodation[]> {
-    const { data, error } = await supabase
-      .from('travel_accommodations')
-      .insert(slots.map(slot => ({
-        travel_id: travelId,
-        provider_id: slot.providerId,
-        hotel_room_type_id: slot.hotelRoomTypeId ?? null,
-        max_occupancy: slot.maxOccupancy,
-        room_number: null,
-        floor: null,
-      })))
-      .select();
-    if (error)
-      throw new Error(`No se pudo insertar habitaciones: ${error.message}`);
-    return (data ?? []).map(mapTravelAccommodationRowToDomain);
-  }
-
   return {
     fetchAll,
     fetchByTravel,
@@ -746,7 +727,7 @@ export function useQuotationRepository() {
     deleteBus,
     updateSeatPrice,
     getOccupiedAccommodationIds,
+    fetchAccommodationCosts,
     deleteUnoccupiedAccommodations,
-    insertTravelAccommodations,
   };
 }
