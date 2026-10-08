@@ -10,6 +10,7 @@ import type {
   AccommodationPaymentFormData,
   BusPayment,
   BusPaymentFormData,
+  ProviderOptOut,
   ProviderPayment,
   ProviderPaymentFormData,
   Quotation,
@@ -498,10 +499,13 @@ export function mapQuotationProviderRowToDomain(row: Tables<'quotation_providers
     paymentMethod: row.payment_method,
     splitType: row.split_type,
     confirmed: row.confirmed,
+    isOptional: row.is_optional,
+    coordinatorsCourtesy: row.coordinators_courtesy,
+    payableCost: row.payable_cost,
   };
 }
 
-export function mapQuotationProviderToInsert(data: QuotationProviderFormData): Omit<Tables<'quotation_providers'>, 'id'> {
+export function mapQuotationProviderToInsert(data: QuotationProviderFormData): TablesInsert<'quotation_providers'> {
   return {
     quotation_id: data.quotationId,
     provider_id: data.providerId,
@@ -509,6 +513,7 @@ export function mapQuotationProviderToInsert(data: QuotationProviderFormData): O
     remarks: data.remarks ?? null,
     total_cost: data.totalCost,
     ...mapProviderCostFields(data),
+    ...mapProviderOptionalFields(data),
     payment_method: data.paymentMethod,
     split_type: data.splitType,
     confirmed: data.confirmed,
@@ -522,6 +527,23 @@ export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'cos
     cost_type: data.costType,
     unit_cost: perPerson ? data.unitCost ?? null : null,
     person_count: perPerson ? data.personCount ?? null : null,
+  };
+}
+
+// Solo un costo por persona puede ser opcional, y la cortesía solo aplica a un opcional.
+export function mapProviderOptionalFields(data: Pick<QuotationProviderFormData, 'costType' | 'isOptional' | 'coordinatorsCourtesy'>): Pick<Tables<'quotation_providers'>, 'is_optional' | 'coordinators_courtesy'> {
+  const isOptional = data.costType === 'per_person' && data.isOptional;
+  return {
+    is_optional: isOptional,
+    coordinators_courtesy: isOptional && data.coordinatorsCourtesy,
+  };
+}
+
+export function mapProviderOptOutRowToDomain(row: Tables<'quotation_provider_opt_outs'>): ProviderOptOut {
+  return {
+    quotationProviderId: row.quotation_provider_id,
+    travelerId: row.traveler_id,
+    travelId: row.travel_id,
   };
 }
 

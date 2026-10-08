@@ -43,6 +43,20 @@ export type QuotationProvider = {
   paymentMethod: PaymentType;
   splitType: CostSplitType;
   confirmed: boolean;
+  // Solo por persona: se le paga al proveedor por los viajeros que lo toman.
+  isOptional: boolean;
+  // Solo opcional: los coordinadores no cuentan para el pago.
+  coordinatorsCourtesy: boolean;
+  // Lo que se le debe al proveedor (lo calcula la base de datos). Igual a totalCost
+  // salvo en los opcionales; el precio del asiento siempre usa totalCost.
+  payableCost: number;
+};
+
+// Un viajero que no toma un servicio opcional.
+export type ProviderOptOut = {
+  quotationProviderId: string;
+  travelerId: string;
+  travelId: string;
 };
 
 export type ProviderPayment = {
@@ -65,7 +79,7 @@ export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt'
   /** Defaults to `true` (shown) when a quotation is created. */
   showPublicDescription?: boolean;
 };
-export type QuotationProviderFormData = Omit<QuotationProvider, 'id'> & { id?: string };
+export type QuotationProviderFormData = Omit<QuotationProvider, 'id' | 'payableCost'> & { id?: string };
 export type ProviderPaymentFormData = Omit<ProviderPayment, 'id' | 'createdAt'> & { id?: string };
 
 export type QuotationProviderFilters = {

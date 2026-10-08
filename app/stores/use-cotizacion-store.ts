@@ -6,6 +6,7 @@ import type {
   BusPaymentFormData,
   BusPaymentStatus,
   CostSplitType,
+  ProviderOptOut,
   ProviderPayment,
   ProviderPaymentFormData,
   ProviderPaymentStatus,
@@ -47,6 +48,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const cotizaciones = ref<Quotation[]>([]);
   const proveedoresQuotation = ref<QuotationProvider[]>([]);
   const pagosProveedor = ref<ProviderPayment[]>([]);
+  const optOutsProveedor = ref<ProviderOptOut[]>([]);
   const hospedajesQuotation = ref<QuotationAccommodation[]>([]);
   const pagosHospedaje = ref<AccommodationPayment[]>([]);
   const preciosPublicos = ref<QuotationPublicPrice[]>([]);
@@ -332,8 +334,31 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
+      // Lo que se le debe es payableCost (en un servicio opcional, solo por quienes lo toman).
       const anticipado = getAnticipadoProveedor.value(quotationProviderId);
-      return proveedor.totalCost - anticipado;
+      return Math.max(0, proveedor.payableCost - anticipado);
+    };
+  });
+
+  // Lo pagado de más a un proveedor opcional cuando después se desmarcan o se borran viajeros.
+  const getSobrepagoProveedor = computed(() => {
+    return (quotationProviderId: string): number => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+      if (!proveedor)
+        return 0;
+      const anticipado = getAnticipadoProveedor.value(quotationProviderId);
+      return Math.max(0, anticipado - proveedor.payableCost);
+    };
+  });
+
+  // Viajeros (por id) que NO toman un servicio opcional. Todos los demás sí lo toman.
+  const getOptOutsByProveedor = computed(() => {
+    return (quotationProviderId: string): Set<string> => {
+      return new Set(
+        optOutsProveedor.value
+          .filter(o => o.quotationProviderId === quotationProviderId)
+          .map(o => o.travelerId),
+      );
     };
   });
 
@@ -343,7 +368,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!proveedor)
         return 'pending';
       const anticipado = getAnticipadoProveedor.value(quotationProviderId);
-      return calculatePaymentStatus(anticipado, proveedor.totalCost);
+      return calculatePaymentStatus(anticipado, proveedor.payableCost);
     };
   });
 
@@ -862,6 +887,111 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
     finally {
       loading.value = false;
+    }
+  }
+
+  /**
+   * Cambia si un servicio se paga por los viajeros que lo toman. Se permite con la
+   * cotización confirmada porque no cambia el precio del asiento.
+   */
+  async function updateProveedorOpcional(
+    id: string,
+    data: { isOptional: boolean; coordinatorsCourtesy: boolean },
+  ): Promise<QuotationProvider | { error: string }> {
+    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
+    const existing = proveedoresQuotation.value[index];
+    if (!existing)
+      return { error: 'Proveedor no encontrado' };
+    if (data.isOptional && existing.costType !== 'per_person')
+      return { error: 'Solo un servicio cobrado por persona puede ser opcional' };
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const updated = await repository.updateProviderOptional(id, data);
+      proveedoresQuotation.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Re-lee lo que se le debe a cada proveedor de la cotización del viaje. La base de datos
+   * lo recalcula cuando se agregan, borran o desmarcan viajeros.
+   * @param travelId - El viaje cuyos viajeros cambiaron
+   */
+  async function refreshProviderPayableCosts(travelId: string): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    if (!cotizacion)
+      return;
+
+    try {
+      const costs = new Map(
+        (await repository.fetchProviderPayableCosts(cotizacion.id)).map(c => [c.id, c.payableCost]),
+      );
+      proveedoresQuotation.value = proveedoresQuotation.value.map(p =>
+        costs.has(p.id) ? { ...p, payableCost: costs.get(p.id)! } : p,
+      );
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  async function fetchProviderOptOuts(travelId: string): Promise<void> {
+    try {
+      const optOuts = await repository.fetchProviderOptOuts(travelId);
+      optOutsProveedor.value = [
+        ...optOutsProveedor.value.filter(o => o.travelId !== travelId),
+        ...optOuts,
+      ];
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  /**
+   * Marca si unos viajeros toman o no un servicio opcional y refresca lo que se le debe.
+   * Se permite con la cotización confirmada, igual que las habitaciones.
+   * @returns Un mensaje de error, o null si todo salió bien
+   */
+  async function setTomanServicio(
+    quotationProviderId: string,
+    travelId: string,
+    travelerIds: string[],
+    toman: boolean,
+  ): Promise<string | null> {
+    const optedOut = getOptOutsByProveedor.value(quotationProviderId);
+    const changed = travelerIds.filter(id => optedOut.has(id) === toman);
+    if (changed.length === 0)
+      return null;
+
+    error.value = null;
+    try {
+      if (toman) {
+        await repository.deleteProviderOptOuts(quotationProviderId, changed);
+        optOutsProveedor.value = optOutsProveedor.value.filter(o =>
+          !(o.quotationProviderId === quotationProviderId && changed.includes(o.travelerId)),
+        );
+      }
+      else {
+        const nuevos = changed.map(travelerId => ({ quotationProviderId, travelerId, travelId }));
+        await repository.insertProviderOptOuts(nuevos);
+        optOutsProveedor.value.push(...nuevos);
+      }
+      await refreshProviderPayableCosts(travelId);
+      return null;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return error.value;
     }
   }
 
@@ -1482,6 +1612,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     cotizaciones,
     proveedoresQuotation,
     pagosProveedor,
+    optOutsProveedor,
     hospedajesQuotation,
     pagosHospedaje,
     preciosPublicos,
@@ -1505,6 +1636,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getCostoPerPersonaProveedor,
     getDivisorCosto,
     getSaldoPendienteProveedor,
+    getSobrepagoProveedor,
+    getOptOutsByProveedor,
     getProviderPaymentStatus,
     getSaldoTotalPendiente,
     getPagosByHospedaje,
@@ -1543,6 +1676,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     updateProveedorQuotation,
     deleteProveedorQuotation,
     toggleConfirmadoProveedor,
+    updateProveedorOpcional,
+    refreshProviderPayableCosts,
+    fetchProviderOptOuts,
+    setTomanServicio,
     addProviderPayment,
     updateProviderPayment,
     deleteProviderPayment,

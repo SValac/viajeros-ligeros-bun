@@ -1,10 +1,12 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderPayment, ProviderPaymentFormData, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
+import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
 
 import {
   mapAccommodationPaymentRowToDomain,
   mapBusPaymentRowToDomain,
   mapProviderCostFields,
+  mapProviderOptionalFields,
+  mapProviderOptOutRowToDomain,
   mapProviderPaymentRowToDomain,
   mapQuotationAccommodationDetailRowToDomain,
   mapQuotationAccommodationRowToDomain,
@@ -183,6 +185,8 @@ export function useQuotationRepository() {
       update.total_cost = data.totalCost;
     if (data.costType !== undefined)
       Object.assign(update, mapProviderCostFields({ costType: data.costType, unitCost: data.unitCost, personCount: data.personCount }));
+    if (data.costType !== undefined && data.isOptional !== undefined)
+      Object.assign(update, mapProviderOptionalFields({ costType: data.costType, isOptional: data.isOptional, coordinatorsCourtesy: data.coordinatorsCourtesy ?? false }));
     if (data.paymentMethod !== undefined)
       update.payment_method = data.paymentMethod;
     if (data.splitType !== undefined)
@@ -208,6 +212,108 @@ export function useQuotationRepository() {
       .from('quotation_providers')
       .delete()
       .eq('id', id);
+
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Switches how a provider is paid: by the travelers that take it or by the total.
+   * Allowed on confirmed quotations because it doesn't touch the seat price.
+   * @returns The provider with the payable cost the database recomputed
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function updateProviderOptional(
+    id: string,
+    data: { isOptional: boolean; coordinatorsCourtesy: boolean },
+  ): Promise<QuotationProvider> {
+    const { data: row, error } = await supabase
+      .from('quotation_providers')
+      .update({
+        is_optional: data.isOptional,
+        coordinators_courtesy: data.isOptional && data.coordinatorsCourtesy,
+      })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return mapQuotationProviderRowToDomain(row);
+  }
+
+  /**
+   * Reads what's owed to every provider of a quotation. Travelers added, removed or
+   * opted out change it in the database, so the store refreshes it afterwards.
+   * @param quotationId - UUID of the quotation
+   * @returns One `{ id, payableCost }` per quotation provider
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchProviderPayableCosts(quotationId: string): Promise<{ id: string; payableCost: number }[]> {
+    const { data, error } = await supabase
+      .from('quotation_providers')
+      .select('id, payable_cost')
+      .eq('quotation_id', quotationId);
+
+    if (error)
+      throw error;
+
+    return data.map(row => ({ id: row.id, payableCost: row.payable_cost }));
+  }
+
+  /**
+   * Travelers of a travel that don't take some optional service.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchProviderOptOuts(travelId: string): Promise<ProviderOptOut[]> {
+    const { data, error } = await supabase
+      .from('quotation_provider_opt_outs')
+      .select('*')
+      .eq('travel_id', travelId);
+
+    if (error)
+      throw error;
+
+    return data.map(mapProviderOptOutRowToDomain);
+  }
+
+  /**
+   * Opts travelers out of a service. Already opted-out travelers are left as they are.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function insertProviderOptOuts(optOuts: ProviderOptOut[]): Promise<void> {
+    if (optOuts.length === 0)
+      return;
+
+    const { error } = await supabase
+      .from('quotation_provider_opt_outs')
+      .upsert(
+        optOuts.map(o => ({
+          quotation_provider_id: o.quotationProviderId,
+          traveler_id: o.travelerId,
+          travel_id: o.travelId,
+        })),
+        { onConflict: 'quotation_provider_id,traveler_id', ignoreDuplicates: true },
+      );
+
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Opts travelers back into a service.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function deleteProviderOptOuts(quotationProviderId: string, travelerIds: string[]): Promise<void> {
+    if (travelerIds.length === 0)
+      return;
+
+    const { error } = await supabase
+      .from('quotation_provider_opt_outs')
+      .delete()
+      .eq('quotation_provider_id', quotationProviderId)
+      .in('traveler_id', travelerIds);
 
     if (error)
       throw error;
@@ -706,6 +812,11 @@ export function useQuotationRepository() {
     updateProvider,
     deleteProvider,
     toggleProviderConfirmado,
+    updateProviderOptional,
+    fetchProviderPayableCosts,
+    fetchProviderOptOuts,
+    insertProviderOptOuts,
+    deleteProviderOptOuts,
     insertProviderPayment,
     updateProviderPayment,
     deleteProviderPayment,
