@@ -723,6 +723,53 @@ export type Database = {
           },
         ]
       }
+      quotation_expenses: {
+        Row: {
+          category: string
+          cost_type: Database["public"]["Enums"]["provider_cost_type"]
+          created_at: string
+          description: string | null
+          id: string
+          person_count: number | null
+          quotation_id: string
+          split_type: Database["public"]["Enums"]["cost_split_type"]
+          total_cost: number
+          unit_cost: number | null
+        }
+        Insert: {
+          category: string
+          cost_type?: Database["public"]["Enums"]["provider_cost_type"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          person_count?: number | null
+          quotation_id: string
+          split_type?: Database["public"]["Enums"]["cost_split_type"]
+          total_cost: number
+          unit_cost?: number | null
+        }
+        Update: {
+          category?: string
+          cost_type?: Database["public"]["Enums"]["provider_cost_type"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          person_count?: number | null
+          quotation_id?: string
+          split_type?: Database["public"]["Enums"]["cost_split_type"]
+          total_cost?: number
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_expenses_quotation_id_fkey"
+            columns: ["quotation_id"]
+            isOneToOne: false
+            referencedRelation: "quotations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       quotation_provider_opt_outs: {
         Row: {
           created_at: string
