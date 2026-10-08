@@ -578,7 +578,7 @@ export type Database = {
           id?: string
           max_occupancy: number
           price_per_night: number
-          quantity: number
+          quantity?: number
           quotation_accommodation_id: string
         }
         Update: {
