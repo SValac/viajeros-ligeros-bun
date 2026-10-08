@@ -57,6 +57,7 @@ const tabs = computed<NavigationMenuItem[]>(() => {
     { label: 'Galería', icon: 'i-lucide-images', to: { name: 'travel-gallery', params } },
     { label: 'Viajeros', icon: 'i-lucide-users', to: { name: 'travel-travelers', params }, badge: count(travelerStore.getTravelersByTravel(travelId.value).length) },
     { label: 'Habitaciones', icon: 'i-lucide-bed-double', to: { name: 'travel-habitaciones', params } },
+    { label: 'Servicios opcionales', icon: 'i-lucide-ticket-check', to: { name: 'travel-optional-services', params } },
     { label: 'Autobuses', icon: 'i-lucide-bus', to: { name: 'travel-buses', params } },
     { label: 'Pagos', icon: 'i-lucide-credit-card', to: { name: 'travel-payments', params } },
   ];
