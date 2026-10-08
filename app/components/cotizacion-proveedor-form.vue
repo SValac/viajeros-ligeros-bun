@@ -2,9 +2,9 @@
 import { z } from 'zod';
 
 import type { PaymentType } from '~/types/payment';
-import type { CostSplitType, ProviderCostType, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
+import type { CostSplitType, ProviderCostType, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
-import { calculateProviderTotalCost } from '~/composables/quotation/use-quotation-domain';
+import { calculateProviderTotalCost, getPriceAdjustmentError } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -16,7 +16,8 @@ type Props = {
 const { quotationId, proveedorCotizacion = null } = defineProps<Props>();
 
 const emit = defineEmits<{
-  submit: [data: QuotationProviderFormData];
+  /** `ajustes` solo aplica a un servicio por persona; en costo total va vacío. */
+  submit: [data: QuotationProviderFormData, ajustes: ProviderPriceAdjustmentDraft[]];
   cancel: [];
 }>();
 
@@ -87,6 +88,14 @@ const state = reactive<FormState>({
   confirmed: proveedorCotizacion?.confirmed ?? false,
 });
 
+// Ajustes de precio por tipo de persona (copia editable; se guardan al enviar).
+const ajustes = ref<ProviderPriceAdjustmentDraft[]>(
+  proveedorCotizacion
+    ? cotizacionStore.getAjustesByProveedor(proveedorCotizacion.id).map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }))
+    : [],
+);
+const ajustesInvalidos = computed(() => ajustes.value.some(a => getPriceAdjustmentError(a) !== null));
+
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const serviceDescriptionInput = useSanitizedModel(() => state.serviceDescription ?? '', v => state.serviceDescription = v, sanitizeText);
 const remarksInput = useSanitizedModel(() => state.remarks ?? '', v => state.remarks = v, sanitizeText);
@@ -111,6 +120,8 @@ function isValidAmount(value: unknown): value is number {
 function onSubmit() {
   const result = schema.safeParse(state);
   if (!result.success)
+    return;
+  if (state.costType === 'per_person' && ajustesInvalidos.value)
     return;
 
   const form = result.data;
@@ -142,7 +153,7 @@ function onSubmit() {
     ...(proveedorCotizacion?.id ? { id: proveedorCotizacion.id } : {}),
   };
 
-  emit('submit', data);
+  emit('submit', data, form.costType === 'per_person' ? ajustes.value : []);
 }
 </script>
 
@@ -226,6 +237,8 @@ function onSubmit() {
           description="El proveedor no cobra a los coordinadores, así que no cuentan para el pago."
         />
       </UFormField>
+
+      <CotizacionProveedorAjustesEditor v-model="ajustes" :unit-cost="state.unitCost" />
     </div>
 
     <!-- Dividir entre: solo un costo total se reparte -->
@@ -285,6 +298,7 @@ function onSubmit() {
       />
       <UButton
         type="submit"
+        :disabled="state.costType === 'per_person' && ajustesInvalidos"
         :label="proveedorCotizacion ? 'Actualizar' : 'Agregar Proveedor'"
       />
     </div>

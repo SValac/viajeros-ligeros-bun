@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { ProviderPaymentStatus, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
+import type { ProviderPaymentStatus, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
-import { calculateProviderQuotedCost, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -41,6 +41,10 @@ const historialProveedorId = shallowRef<string>('');
 const historialProveedorNombre = shallowRef<string>('');
 const isDeleteModalOpen = shallowRef(false);
 const proveedorToDelete = shallowRef<QuotationProvider | null>(null);
+const isAjustesOpen = shallowRef(false);
+const proveedorAjustes = shallowRef<QuotationProvider | null>(null);
+const ajustesDraft = ref<ProviderPriceAdjustmentDraft[]>([]);
+const ajustesInvalidos = computed(() => ajustesDraft.value.some(a => getPriceAdjustmentError(a) !== null));
 const isCortesiaOpen = shallowRef(false);
 const proveedorCortesia = shallowRef<QuotationProvider | null>(null);
 
@@ -102,6 +106,30 @@ function getTakersCount(proveedor: QuotationProvider): number {
   return proveedor.unitCost ? Math.round(proveedor.payableCost / proveedor.unitCost) : 0;
 }
 
+function openAjustes(proveedor: QuotationProvider) {
+  proveedorAjustes.value = proveedor;
+  ajustesDraft.value = cotizacionStore.getAjustesByProveedor(proveedor.id)
+    .map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }));
+  isAjustesOpen.value = true;
+}
+
+function closeAjustes() {
+  isAjustesOpen.value = false;
+}
+
+async function handleAjustesSave() {
+  if (!proveedorAjustes.value || ajustesInvalidos.value)
+    return;
+  const error = await cotizacionStore.saveAjustesProveedor(proveedorAjustes.value.id, ajustesDraft.value);
+  if (error) {
+    toast.add({ title: 'Error', description: error, color: 'error' });
+    return;
+  }
+  toast.add({ title: 'Precios por tipo guardados', color: 'success' });
+  isAjustesOpen.value = false;
+  proveedorAjustes.value = null;
+}
+
 function openCortesia(proveedor: QuotationProvider) {
   proveedorCortesia.value = proveedor;
   isCortesiaOpen.value = true;
@@ -151,11 +179,16 @@ function closeDeleteModal() {
   isDeleteModalOpen.value = false;
 }
 
-async function handleProveedorSubmit(data: QuotationProviderFormData) {
+async function handleProveedorSubmit(data: QuotationProviderFormData, ajustes: ProviderPriceAdjustmentDraft[]) {
+  let saved: QuotationProvider | undefined;
   if (selectedProveedor.value) {
-    const result = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
-    if (result) {
+    saved = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
+    if (saved) {
       toast.add({ title: 'Proveedor actualizado', color: 'success' });
+    }
+    else {
+      toast.add({ title: 'No se pudo actualizar el proveedor', description: cotizacionStore.error ?? undefined, color: 'error' });
+      return;
     }
   }
   else {
@@ -164,8 +197,15 @@ async function handleProveedorSubmit(data: QuotationProviderFormData) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
     else {
+      saved = result;
       toast.add({ title: 'Proveedor agregado', color: 'success' });
     }
+  }
+  // Los ajustes van aparte; en costo total se borran los que hubiera.
+  if (saved && (ajustes.length > 0 || cotizacionStore.getAjustesByProveedor(saved.id).length > 0)) {
+    const error = await cotizacionStore.saveAjustesProveedor(saved.id, ajustes);
+    if (error)
+      toast.add({ title: 'No se guardaron los precios por tipo', description: error, color: 'error' });
   }
   isProveedorFormOpen.value = false;
   selectedProveedor.value = null;
@@ -204,6 +244,10 @@ function getProveedorActions(proveedor: QuotationProvider) {
     // cotización confirmada.
     ...(isPerPersonProvider(proveedor)
       ? [{
+          label: 'Precios por tipo de persona',
+          icon: 'i-lucide-tags',
+          onSelect: () => openAjustes(proveedor),
+        }, {
           label: 'Cortesía para coordinadores',
           icon: 'i-lucide-gift',
           onSelect: () => openCortesia(proveedor),
@@ -384,6 +428,14 @@ function getProveedorActions(proveedor: QuotationProvider) {
               >
                 {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ cotizacionStore.getAsientosVendibles(proveedor.quotationId) }} asientos
               </p>
+              <button
+                v-if="isPerPersonProvider(proveedor) && cotizacionStore.getAjustesByProveedor(proveedor.id).length > 0"
+                type="button"
+                class="text-xs text-primary hover:underline whitespace-nowrap"
+                @click="openAjustes(proveedor)"
+              >
+                {{ cotizacionStore.getAjustesByProveedor(proveedor.id).length }} precio{{ cotizacionStore.getAjustesByProveedor(proveedor.id).length === 1 ? '' : 's' }} por tipo
+              </button>
             </td>
 
             <!-- A pagar: en un opcional, solo por los viajeros que lo toman -->
@@ -497,6 +549,37 @@ function getProveedorActions(proveedor: QuotationProvider) {
         @submit="handleProveedorSubmit"
         @cancel="isProveedorFormOpen = false"
       />
+    </template>
+  </UModal>
+
+  <!-- Modal: precios por tipo de persona -->
+  <UModal
+    v-model:open="isAjustesOpen"
+    title="Precios por tipo de persona"
+    :description="proveedorAjustes ? `${getProviderName(proveedorAjustes.providerId)} · ${proveedorAjustes.serviceDescription} · base ${formatCurrency(proveedorAjustes.unitCost ?? 0)}` : undefined"
+    class="sm:max-w-2xl"
+  >
+    <template #body>
+      <CotizacionProveedorAjustesEditor
+        v-if="proveedorAjustes"
+        v-model="ajustesDraft"
+        :unit-cost="proveedorAjustes.unitCost"
+      />
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-3 w-full">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          label="Cancelar"
+          @click="closeAjustes"
+        />
+        <UButton
+          label="Guardar"
+          :disabled="ajustesInvalidos"
+          @click="handleAjustesSave"
+        />
+      </div>
     </template>
   </UModal>
 
