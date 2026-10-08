@@ -24,12 +24,11 @@ import type {
 import type { TravelAccommodation } from '~/types/travel';
 
 import {
-  buildDesiredRoomsMap,
   calculatePaymentStatus,
   calculateSeatPrice,
   calculateSellableSeats,
-  reconcileAccommodations,
-
+  countRoomsByType,
+  findRoomsOutsideQuotation,
 } from '~/composables/quotation/use-quotation-domain';
 import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
 import { useTravelsStore } from '~/stores/use-travel-store';
@@ -115,18 +114,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const getTotalHabitacionesPorTipo = computed(() => {
-    return (quotationId: string): { [tipoId: string]: number } => {
-      const resultado: { [tipoId: string]: number } = {};
-      const hospedajes = getHospedajesByQuotation.value(quotationId);
-
-      for (const hospedaje of hospedajes) {
-        for (const detalle of hospedaje.details) {
-          resultado[detalle.roomTypeId] = (resultado[detalle.roomTypeId] ?? 0) + detalle.quantity;
-        }
-      }
-
-      return resultado;
+  // Rooms the quotation's travel holds per hotel room type (key: roomTypeKey). The count
+  // lives on the travel: it's set on the rooms page and changes until the trip leaves.
+  const getRoomCountsByQuotation = computed(() => {
+    return (quotationId: string): Map<string, number> => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion)
+        return new Map();
+      return countRoomsByType(useTravelsStore().getAccommodationsByTravel(cotizacion.travelId));
     };
   });
 
@@ -550,39 +545,46 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
   }
 
-  // Helper interno — sincroniza habitaciones de cotización hacia travel_accommodations
-  async function _syncHospedajeToTravel(quotationId: string): Promise<{ skippedOccupied: number }> {
+  /**
+   * Rooms the travel would keep for hotel room types the quotation no longer lists once
+   * `nextAccommodations` is saved. They'd cost nothing, so they're deleted after the save;
+   * while any of them has someone in it the change is refused instead.
+   * @param quotationId - The quotation being changed
+   * @param nextAccommodations - The quotation's hotels as they'll be after the change
+   * @returns The empty rooms to delete, or an error when some are occupied
+   */
+  async function _findRoomsToDrop(
+    quotationId: string,
+    nextAccommodations: Pick<QuotationAccommodation, 'providerId' | 'details'>[],
+  ): Promise<TravelAccommodation[] | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-    if (!cotizacion || cotizacion.status === 'confirmed')
-      return { skippedOccupied: 0 };
+    if (!cotizacion)
+      return [];
 
-    const travelStore = useTravelsStore();
-    const travelId = cotizacion.travelId;
+    const rooms = findRoomsOutsideQuotation(
+      nextAccommodations,
+      useTravelsStore().getAccommodationsByTravel(cotizacion.travelId),
+    );
+    if (rooms.length === 0)
+      return [];
 
-    // Build desired state: group by providerId:hotelRoomTypeId -> list of desired room slots
-    const desiredGroupMap = buildDesiredRoomsMap(hospedajesQuotation.value.filter(h => h.quotationId === quotationId));
-
-    // Get existing rooms for this travel
-    const existingAccommodations = travelStore.getAccommodationsByTravel(travelId);
-
-    // Get occupied room IDs from DB (travelers with a room in this travel)
-    const occupiedIds = await repository.getOccupiedAccommodationIds(travelId);
-
-    const { toDeleteIds, toInsert, skippedOccupied } = reconcileAccommodations(desiredGroupMap, existingAccommodations, occupiedIds);
-
-    // Execute DB changes
-    if (toDeleteIds.length > 0) {
-      await repository.deleteUnoccupiedAccommodations(toDeleteIds);
+    const occupiedIds = await repository.getOccupiedAccommodationIds(cotizacion.travelId);
+    const occupied = rooms.filter(room => occupiedIds.has(room.id)).length;
+    if (occupied > 0) {
+      return {
+        error: `${occupied} habitación(es) de lo que quitaste tienen viajeros. Sácalos en la pestaña Habitaciones del viaje y vuelve a intentarlo.`,
+      };
     }
+    return rooms;
+  }
 
-    let inserted: TravelAccommodation[] = [];
-    if (toInsert.length > 0) {
-      inserted = await repository.insertTravelAccommodations(travelId, toInsert);
-    }
-
-    // Update local state without nuking occupied assignments
-    travelStore.updateLocalAccommodations(travelId, new Set(toDeleteIds), inserted);
-    return { skippedOccupied };
+  async function _deleteRooms(quotationId: string, rooms: TravelAccommodation[]): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    if (!cotizacion || rooms.length === 0)
+      return;
+    const ids = rooms.map(room => room.id);
+    await repository.deleteUnoccupiedAccommodations(ids);
+    useTravelsStore().updateLocalAccommodations(cotizacion.travelId, new Set(ids), []);
   }
 
   // Actions
@@ -975,7 +977,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Hospedaje Actions
   // ============================================================================
 
-  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<(QuotationAccommodation & { skippedOccupied: number }) | { error: string }> {
+  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
@@ -985,11 +987,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
+      // No rooms are created here: they're added on the travel's rooms page.
       const newHospedaje = await repository.insertAccommodation(data);
       hospedajesQuotation.value.push(newHospedaje);
       await _syncSeatPrice(data.quotationId);
-      const addSyncResult = await _syncHospedajeToTravel(data.quotationId);
-      return { ...newHospedaje, skippedOccupied: addSyncResult.skippedOccupied };
+      return newHospedaje;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1003,64 +1005,100 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function updateHospedajeQuotation(
     id: string,
     data: Partial<QuotationAccommodationFormData>,
-  ): Promise<(QuotationAccommodation & { skippedOccupied: number }) | undefined> {
+  ): Promise<QuotationAccommodation | { error: string }> {
     const index = hospedajesQuotation.value.findIndex(h => h.id === id);
-    if (index === -1)
-      return undefined;
-
     const existing = hospedajesQuotation.value[index];
     if (!existing)
-      return undefined;
+      return { error: 'Hospedaje no encontrado' };
 
     const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
     if (cotizacion?.status === 'confirmed')
-      return undefined;
+      return { error: 'No se puede modificar una cotización confirmada' };
 
     loading.value = true;
     error.value = null;
     try {
-      const updated = await repository.updateAccommodation(id, data, existing.nightCount, existing.details);
+      const next = getHospedajesByQuotation.value(existing.quotationId)
+        .map(h => (h.id === id ? { ...h, details: data.details ?? h.details } : h));
+      const roomsToDrop = await _findRoomsToDrop(existing.quotationId, next);
+      if ('error' in roomsToDrop)
+        return roomsToDrop;
+
+      const updated = await repository.updateAccommodation(id, data, existing.details);
       hospedajesQuotation.value[index] = updated;
+      await _deleteRooms(existing.quotationId, roomsToDrop);
       await _syncSeatPrice(existing.quotationId);
-      const updateSyncResult = await _syncHospedajeToTravel(existing.quotationId);
-      return { ...updated, skippedOccupied: updateSyncResult.skippedOccupied };
+      return updated;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
+      return { error: error.value };
     }
     finally {
       loading.value = false;
     }
   }
 
-  async function deleteHospedajeQuotation(id: string): Promise<number> {
+  /**
+   * Removes a hotel from the quotation, along with its empty rooms on the travel.
+   * Refused while any of its rooms has someone in it.
+   * @returns An error message, or `null` when it was deleted
+   */
+  async function deleteHospedajeQuotation(id: string): Promise<string | null> {
     const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
-      return 0;
+      return 'Hospedaje no encontrado';
 
     const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
     if (cotizacion?.status === 'confirmed')
-      return 0;
+      return 'No se puede modificar una cotización confirmada';
 
     const quotationId = hospedaje.quotationId;
     loading.value = true;
     error.value = null;
     try {
+      const next = getHospedajesByQuotation.value(quotationId).filter(h => h.id !== id);
+      const roomsToDrop = await _findRoomsToDrop(quotationId, next);
+      if ('error' in roomsToDrop)
+        return roomsToDrop.error;
+
       await repository.deleteAccommodation(id);
 
       hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
+      await _deleteRooms(quotationId, roomsToDrop);
       await _syncSeatPrice(quotationId);
-      const deleteSyncResult = await _syncHospedajeToTravel(quotationId);
-      return deleteSyncResult.skippedOccupied;
+      return null;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return 0;
+      return error.value;
     }
     finally {
       loading.value = false;
+    }
+  }
+
+  /**
+   * Re-reads what's owed to each hotel of the travel's quotation. The database recomputes
+   * it whenever a room is added to or removed from the travel.
+   * @param travelId - The travel whose rooms changed
+   */
+  async function refreshHospedajeCosts(travelId: string): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    if (!cotizacion)
+      return;
+
+    try {
+      const costs = new Map(
+        (await repository.fetchAccommodationCosts(cotizacion.id)).map(c => [c.id, c.totalCost]),
+      );
+      hospedajesQuotation.value = hospedajesQuotation.value.map(h =>
+        costs.has(h.id) ? { ...h, totalCost: costs.get(h.id)! } : h,
+      );
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
   }
 
@@ -1479,7 +1517,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     filteredProveedores,
     getHospedajesByQuotation,
     getTotalCostoHospedajes,
-    getTotalHabitacionesPorTipo,
+    getRoomCountsByQuotation,
     getPreciosPublicosByQuotation,
     getMatrizPreciosReferencia,
     getTotalCostoBuses,
@@ -1513,6 +1551,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addHospedajeQuotation,
     updateHospedajeQuotation,
     deleteHospedajeQuotation,
+    refreshHospedajeCosts,
     toggleConfirmadoHospedaje,
     addPagoHospedaje,
     updatePagoHospedaje,

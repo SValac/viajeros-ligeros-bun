@@ -3,14 +3,6 @@ import type { TravelAccommodation } from '~/types/travel';
 
 type ProviderPaymentStatus = 'pending' | 'partial' | 'paid';
 
-export type RoomSlot = { providerId: string; hotelRoomTypeId?: string; maxOccupancy: number };
-export type DesiredGroup = { key: string; slots: RoomSlot[] };
-export type ReconcileResult = {
-  toDeleteIds: string[];
-  toInsert: RoomSlot[];
-  skippedOccupied: number;
-};
-
 /**
  * Derives the payment status of a quotation item from the amount paid vs. the total cost.
  * Used uniformly for providers, accommodations, and buses to avoid duplicating this logic.
@@ -85,94 +77,44 @@ export function calculateSeatPrice(
 }
 
 /**
- * Builds the desired room state from the accommodations in a quotation.
- * Groups room slots by `"providerId:hotelRoomTypeId"` key, expanding each detail's
- * `quantity` into individual `RoomSlot` entries. Used as input for `reconcileAccommodations`.
- * @param accommodations - Accommodations for a single quotation (pre-filtered by caller)
- * @returns Map keyed by `"providerId:roomTypeId"`, each entry holding its desired slots
+ * Key that ties a travel room to the quoted room type it was booked as.
+ * @param providerId - Hotel (provider) UUID
+ * @param roomTypeId - Hotel room type UUID
+ * @returns `"providerId:roomTypeId"`
  */
-export function buildDesiredRoomsMap(accommodations: QuotationAccommodation[]): Map<string, DesiredGroup> {
-  const desiredGroupMap = new Map<string, DesiredGroup>();
-  for (const accommodation of accommodations) {
-    for (const detail of accommodation.details) {
-      const key = `${accommodation.providerId}:${detail.roomTypeId ?? ''}`;
-      if (!desiredGroupMap.has(key)) {
-        desiredGroupMap.set(key, { key, slots: [] });
-      }
-      for (let i = 0; i < detail.quantity; i++) {
-        desiredGroupMap.get(key)?.slots.push({
-          providerId: accommodation.providerId,
-          hotelRoomTypeId: detail.roomTypeId,
-          maxOccupancy: detail.maxOccupancy,
-        });
-      }
-    }
-  }
-  return desiredGroupMap;
+export function roomTypeKey(providerId: string, roomTypeId?: string): string {
+  return `${providerId}:${roomTypeId ?? ''}`;
 }
 
 /**
- * Compares the desired room state against existing `travel_accommodations` and produces
- * the minimal set of DB changes needed to reach the desired state.
- * Occupied rooms (rooms with a traveler assigned) are never deleted — they are counted
- * as `skippedOccupied` so the caller can surface a warning to the user.
- * @param desired - Output of `buildDesiredRoomsMap` for this quotation
- * @param existing - Current `travel_accommodations` rows for this travel
- * @param occupiedIds - Set of `travel_accommodation` IDs that have a traveler assigned
- * @returns IDs to delete, slots to insert, and count of occupied rooms skipped
+ * Counts a travel's rooms per hotel room type. The room count lives on the travel (it can
+ * change until the trip leaves), so the quotation reads it from here.
+ * @param rooms - The travel's `travel_accommodations`
+ * @returns Map keyed by {@link roomTypeKey} with the number of rooms of that type
  */
-export function reconcileAccommodations(
-  desired: Map<string, DesiredGroup>,
-  existing: TravelAccommodation[],
-  occupiedIds: Set<string>,
-): ReconcileResult {
-  const existingGroupMap = new Map<string, TravelAccommodation[]>();
-  for (const acc of existing) {
-    const key = `${acc.providerId}:${acc.hotelRoomTypeId ?? ''}`;
-    if (!existingGroupMap.has(key))
-      existingGroupMap.set(key, []);
-    existingGroupMap.get(key)!.push(acc);
+export function countRoomsByType(rooms: TravelAccommodation[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const room of rooms) {
+    const key = roomTypeKey(room.providerId, room.hotelRoomTypeId);
+    counts.set(key, (counts.get(key) ?? 0) + 1);
   }
+  return counts;
+}
 
-  const toDeleteIds: string[] = [];
-  const toInsert: RoomSlot[] = [];
-  let skippedOccupied = 0;
-
-  for (const [key, desiredGroup] of desired) {
-    const existingGroup = existingGroupMap.get(key) ?? [];
-    const desiredCount = desiredGroup.slots.length;
-    const existingCount = existingGroup.length;
-
-    if (desiredCount > existingCount) {
-      for (let i = 0; i < desiredCount - existingCount; i++) {
-        toInsert.push(desiredGroup.slots[0]!);
-      }
-    }
-    else if (desiredCount < existingCount) {
-      let removed = 0;
-      for (let i = existingGroup.length - 1; i >= 0 && removed < existingCount
-        - desiredCount; i--) {
-        const acc = existingGroup[i]!;
-        if (!occupiedIds.has(acc.id)) {
-          toDeleteIds.push(acc.id);
-          removed++;
-        }
-        else {
-          skippedOccupied++;
-        }
-      }
-    }
-  }
-
-  for (const [key, existingGroup] of existingGroupMap) {
-    if (!desired.has(key)) {
-      for (const acc of existingGroup) {
-        if (!occupiedIds.has(acc.id))
-          toDeleteIds.push(acc.id);
-        else skippedOccupied++;
-      }
-    }
-  }
-
-  return { toDeleteIds, toInsert, skippedOccupied };
+/**
+ * Finds the travel's rooms whose hotel room type isn't quoted any more, e.g. after a type
+ * or a whole hotel is removed from the quotation. Those rooms would cost nothing, so the
+ * caller deletes them when empty and refuses the change while someone is in them.
+ * @param accommodations - The quotation's hotels as they'll be after the change
+ * @param rooms - The travel's `travel_accommodations`
+ * @returns Rooms that no quoted hotel room type covers
+ */
+export function findRoomsOutsideQuotation(
+  accommodations: Pick<QuotationAccommodation, 'providerId' | 'details'>[],
+  rooms: TravelAccommodation[],
+): TravelAccommodation[] {
+  const quoted = new Set(
+    accommodations.flatMap(acc => acc.details.map(d => roomTypeKey(acc.providerId, d.roomTypeId))),
+  );
+  return rooms.filter(room => !quoted.has(roomTypeKey(room.providerId, room.hotelRoomTypeId)));
 }

@@ -4,9 +4,9 @@ import type { TableColumn } from '@nuxt/ui';
 import { h } from 'vue';
 import { z } from 'zod';
 
-import type { BedConfiguration, HotelRoomType } from '~/types/hotel-room';
-import type { AccommodationPaymentStatus, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData } from '~/types/quotation';
+import type { AccommodationPaymentStatus, QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
 
+import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -37,7 +37,6 @@ const editSchema = z.object({
   nightCount: z.number().int().positive(),
   details: z.array(z.object({
     roomTypeId: z.string(),
-    quantity: z.number().int().positive(),
     pricePerNight: z.number().positive(),
     maxOccupancy: z.number().int().positive(),
   })).min(1),
@@ -46,14 +45,8 @@ const editSchema = z.object({
 // Estado del form de edición
 const editFormState = reactive({
   nightCount: 0,
-  details: [] as QuotationAccommodationDetail[],
+  details: [] as QuotationAccommodationDetailFormData[],
 });
-
-// Obtener camas de un detalle buscando el HotelRoomType en el store
-function getCamasDetalle(providerId: string, roomTypeId: string): BedConfiguration[] {
-  const roomData = hotelRoomStore.getRoomDataByProviderId(providerId);
-  return roomData?.roomTypes.find(rt => rt.id === roomTypeId)?.beds ?? [];
-}
 
 // Tipos de habitación disponibles para el hospedaje en edición
 const tiposHabitacionEdit = computed(() => {
@@ -62,39 +55,22 @@ const tiposHabitacionEdit = computed(() => {
   return hotelRoomStore.getRoomDataByProviderId(editingHospedaje.value.providerId)?.roomTypes ?? [];
 });
 
-// Mapa de detalles seleccionados en edición
-const editDetallesMap = computed(() => {
-  const map = new Map<string, QuotationAccommodationDetail>();
-  for (const detalle of editFormState.details) {
-    map.set(detalle.roomTypeId, detalle);
-  }
-  return map;
+// Rooms the travel already holds per room type of the hotel being edited
+const roomCountsEdit = computed(() => {
+  const hospedaje = editingHospedaje.value;
+  if (!hospedaje)
+    return new Map<string, number>();
+  const counts = cotizacionStore.getRoomCountsByQuotation(props.quotationId);
+  return new Map(tiposHabitacionEdit.value.map(t => [t.id, counts.get(roomTypeKey(hospedaje.providerId, t.id)) ?? 0]));
 });
 
-// Toggle tipo de habitación en edición
-function toggleTipoHabitacionEdit(tipo: HotelRoomType) {
-  const existe = editDetallesMap.value.has(tipo.id);
-  if (existe) {
-    editFormState.details = editFormState.details.filter(d => d.roomTypeId !== tipo.id);
-  }
-  else {
-    editFormState.details.push({
-      id: crypto.randomUUID(),
-      roomTypeId: tipo.id,
-      quantity: 1,
-      pricePerNight: tipo.pricePerNight,
-      maxOccupancy: tipo.maxOccupancy,
-    });
-  }
-}
-
-// Actualizar cantidad en edición respetando el máximo del hotel
-function actualizarCantidadEdit(tipoId: string, count: number) {
-  const detalle = editFormState.details.find(d => d.roomTypeId === tipoId);
-  if (!detalle || count <= 0)
-    return;
-  const tipo = tiposHabitacionEdit.value.find(t => t.id === tipoId);
-  detalle.quantity = tipo ? Math.min(count, tipo.roomCount) : count;
+// Rooms the travel holds in a quoted hotel (only its quoted types count toward the cost)
+function getHabitacionesViaje(accommodation: QuotationAccommodation): number {
+  const counts = cotizacionStore.getRoomCountsByQuotation(props.quotationId);
+  return accommodation.details.reduce(
+    (sum, d) => sum + (counts.get(roomTypeKey(accommodation.providerId, d.roomTypeId)) ?? 0),
+    0,
+  );
 }
 
 // Obtener nombre del hotel
@@ -176,6 +152,11 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       accessorKey: 'cantidadNoches',
       header: 'Noches',
       cell: ({ row }) => h('span', { class: 'font-medium' }, String(row.original.nightCount)),
+    },
+    {
+      id: 'habitaciones',
+      header: 'Habitaciones',
+      cell: ({ row }) => h('span', { class: 'font-medium' }, String(getHabitacionesViaje(row.original))),
     },
     {
       accessorKey: 'costoTotal',
@@ -261,16 +242,13 @@ async function guardarEdicion() {
 
   const updated = await cotizacionStore.updateHospedajeQuotation(editingHospedaje.value.id, {
     nightCount: editFormState.nightCount,
-    details: editFormState.details,
-    totalCost: editFormState.details.reduce((sum, d) => {
-      return sum + (d.pricePerNight * editFormState.nightCount * d.quantity);
-    }, 0),
-  } as Partial<QuotationAccommodationFormData>);
+    details: editFormState.details.map(d => ({ ...d, id: d.id ?? crypto.randomUUID() })),
+  });
 
-  if (!updated) {
+  if ('error' in updated) {
     toast.add({
-      title: 'Error',
-      description: 'No se pudo actualizar el hospedaje',
+      title: 'No se pudo actualizar el hospedaje',
+      description: updated.error,
       color: 'error',
     });
     return;
@@ -280,15 +258,6 @@ async function guardarEdicion() {
     title: 'Hospedaje actualizado',
     color: 'success',
   });
-
-  if (updated.skippedOccupied > 0) {
-    toast.add({
-      title: `${updated.skippedOccupied} habitación(es) ocupadas no pudieron eliminarse`,
-      description: 'Remueve los viajeros manualmente si deseas liberar esas habitaciones.',
-      color: 'warning',
-      duration: 8000,
-    });
-  }
 
   isEditModalOpen.value = false;
   editingHospedaje.value = null;
@@ -300,19 +269,19 @@ function cerrarEdicion() {
 
 // Eliminar hospedaje
 async function eliminarHospedaje(id: string) {
-  const skippedOccupied = await cotizacionStore.deleteHospedajeQuotation(id);
+  const error = await cotizacionStore.deleteHospedajeQuotation(id);
+  if (error) {
+    toast.add({
+      title: 'No se pudo eliminar el hospedaje',
+      description: error,
+      color: 'error',
+    });
+    return;
+  }
   toast.add({
     title: 'Hospedaje eliminado',
     color: 'success',
   });
-  if (skippedOccupied > 0) {
-    toast.add({
-      title: `${skippedOccupied} habitación(es) ocupadas no pudieron eliminarse`,
-      description: 'Remueve los viajeros manualmente si deseas liberar esas habitaciones.',
-      color: 'warning',
-      duration: 8000,
-    });
-  }
 }
 </script>
 
@@ -362,84 +331,12 @@ async function eliminarHospedaje(id: string) {
           </div>
 
           <!-- Tipos de habitación con checkboxes -->
-          <div class="space-y-3">
-            <h4 class="text-sm font-semibold flex items-center gap-2">
-              <UIcon name="i-lucide-door-open" class="w-4 h-4" />
-              Tipos de Habitación
-            </h4>
-
-            <div v-if="tiposHabitacionEdit.length === 0" class="text-center py-6 text-muted text-sm">
-              Este hotel no tiene tipos de habitación configurados
-            </div>
-
-            <div v-else class="space-y-3 max-h-80 overflow-y-auto border rounded-lg p-4">
-              <div
-                v-for="tipo in tiposHabitacionEdit"
-                :key="tipo.id"
-                class="border rounded-lg p-4 space-y-3"
-              >
-                <!-- Checkbox para seleccionar/deseleccionar tipo -->
-                <div class="flex items-start gap-3">
-                  <UCheckbox
-                    :model-value="editDetallesMap.has(tipo.id)"
-                    @update:model-value="() => toggleTipoHabitacionEdit(tipo)"
-                  />
-                  <div class="flex-1">
-                    <p>
-                      {{ tipo.maxOccupancy }} personas
-                    </p>
-                    <p class="text-sm">
-                      {{ formatBedConfiguration(getCamasDetalle(editingHospedaje.providerId, tipo.id)) }}
-                    </p>
-                    <p class="text-xs text-muted">
-                      {{ formatCurrency(tipo.pricePerNight) }}/noche
-                    </p>
-                    <p v-if="tipo.additionalDetails" class="text-xs text-muted">
-                      {{ tipo.additionalDetails }}
-                    </p>
-                  </div>
-                </div>
-
-                <!-- Controles de cantidad si está seleccionado -->
-                <div v-if="editDetallesMap.has(tipo.id)" class="ml-8 space-y-2 border-l-2 border-primary pl-4">
-                  <div class="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <label class="text-xs text-muted">Cantidad (máx. {{ tipo.roomCount }})</label>
-                      <UInput
-                        :model-value="editDetallesMap.get(tipo.id)?.quantity ?? 1"
-                        type="number"
-                        min="1"
-                        :max="tipo.roomCount"
-                        size="sm"
-                        @update:model-value="(v) => actualizarCantidadEdit(tipo.id, Number(v))"
-                      />
-                    </div>
-                    <div>
-                      <label class="text-xs text-muted">Costo/Persona</label>
-                      <div class="text-sm font-medium py-2">
-                        {{ formatCurrency(tipo.pricePerNight / tipo.maxOccupancy) }}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div class="text-xs bg-muted/20 rounded px-2 py-1">
-                    {{ formatCurrency(tipo.pricePerNight) }} × {{ editFormState.nightCount }} noches × {{ editDetallesMap.get(tipo.id)?.quantity ?? 1 }} hab =
-                    <span class="font-semibold">{{ formatCurrency(tipo.pricePerNight * editFormState.nightCount * (editDetallesMap.get(tipo.id)?.quantity ?? 1)) }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Costo total -->
-          <div v-if="editFormState.details.length > 0" class="bg-primary/10 rounded-lg p-4 border border-primary/20">
-            <div class="flex justify-between items-center">
-              <span class="font-semibold">Costo Total</span>
-              <span class="text-lg font-bold">
-                {{ formatCurrency(editFormState.details.reduce((sum, d) => sum + (d.pricePerNight * editFormState.nightCount * d.quantity), 0)) }}
-              </span>
-            </div>
-          </div>
+          <CotizacionHospedajeTipos
+            v-model="editFormState.details"
+            :room-types="tiposHabitacionEdit"
+            :night-count="editFormState.nightCount"
+            :room-counts="roomCountsEdit"
+          />
 
           <!-- Acciones -->
           <div class="flex justify-end gap-3 pt-2">
