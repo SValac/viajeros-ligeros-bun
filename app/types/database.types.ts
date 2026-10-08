@@ -570,7 +570,6 @@ export type Database = {
           id: string
           max_occupancy: number
           price_per_night: number
-          quantity: number
           quotation_accommodation_id: string
         }
         Insert: {
@@ -578,7 +577,6 @@ export type Database = {
           id?: string
           max_occupancy: number
           price_per_night: number
-          quantity?: number
           quotation_accommodation_id: string
         }
         Update: {
@@ -586,7 +584,6 @@ export type Database = {
           id?: string
           max_occupancy?: number
           price_per_night?: number
-          quantity?: number
           quotation_accommodation_id?: string
         }
         Relationships: [
