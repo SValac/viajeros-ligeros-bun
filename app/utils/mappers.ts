@@ -10,6 +10,7 @@ import type {
   AccommodationPaymentFormData,
   BusPayment,
   BusPaymentFormData,
+  ProviderOptOut,
   ProviderPayment,
   ProviderPaymentFormData,
   Quotation,
@@ -494,14 +495,15 @@ export function mapQuotationProviderRowToDomain(row: Tables<'quotation_providers
     totalCost: row.total_cost,
     costType: row.cost_type,
     unitCost: row.unit_cost ?? undefined,
-    personCount: row.person_count ?? undefined,
     paymentMethod: row.payment_method,
     splitType: row.split_type,
     confirmed: row.confirmed,
+    coordinatorsCourtesy: row.coordinators_courtesy,
+    payableCost: row.payable_cost,
   };
 }
 
-export function mapQuotationProviderToInsert(data: QuotationProviderFormData): Omit<Tables<'quotation_providers'>, 'id'> {
+export function mapQuotationProviderToInsert(data: QuotationProviderFormData): TablesInsert<'quotation_providers'> {
   return {
     quotation_id: data.quotationId,
     provider_id: data.providerId,
@@ -515,13 +517,23 @@ export function mapQuotationProviderToInsert(data: QuotationProviderFormData): O
   };
 }
 
-// Las columnas de costo por persona van juntas: un costo total no lleva ninguna.
-export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'personCount'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'person_count'> {
+// Un costo total no lleva precio por persona. person_count ya no se captura (el costo por
+// persona se suma directo al asiento) y se deja vacío.
+export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'coordinatorsCourtesy'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'person_count' | 'coordinators_courtesy'> {
   const perPerson = data.costType === 'per_person';
   return {
     cost_type: data.costType,
     unit_cost: perPerson ? data.unitCost ?? null : null,
-    person_count: perPerson ? data.personCount ?? null : null,
+    person_count: null,
+    coordinators_courtesy: perPerson && data.coordinatorsCourtesy,
+  };
+}
+
+export function mapProviderOptOutRowToDomain(row: Tables<'quotation_provider_opt_outs'>): ProviderOptOut {
+  return {
+    quotationProviderId: row.quotation_provider_id,
+    travelerId: row.traveler_id,
+    travelId: row.travel_id,
   };
 }
 

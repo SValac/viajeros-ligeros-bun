@@ -17,6 +17,7 @@ const cotizacion = computed(() =>
 const costoProveedores = computed(() => cotizacionStore.getCostoTotal(quotationId));
 const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(quotationId));
 const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(quotationId));
+const costoPorPersonaAsiento = computed(() => cotizacionStore.getCostoPorPersonaAsiento(quotationId));
 const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(quotationId));
 const costoBuses = computed(() => cotizacionStore.getTotalCostoBuses(quotationId));
 const costoBusesTipoMinimo = computed(() => cotizacionStore.getCostoBusesTipoMinimo(quotationId));
@@ -116,6 +117,9 @@ function saldoColor(saldo: number): string {
           <p>
             Reparto total: <span class="font-medium tabular-nums">{{ formatCurrency(costoCapacidadConBuses) }}</span>
             ÷ {{ asientosVendibles }} asientos vendibles
+          </p>
+          <p v-if="costoPorPersonaAsiento > 0">
+            Servicios por persona: + <span class="font-medium tabular-nums">{{ formatCurrency(costoPorPersonaAsiento) }}</span> por asiento
           </p>
         </CotizacionKpiCard>
         <CotizacionKpiCard

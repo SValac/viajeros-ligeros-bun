@@ -20,6 +20,8 @@ const { travelId, quotation: cotizacion, readonly } = useQuotationRoute();
 
 onMounted(async () => {
   await cotizacionStore.fetchByTravel(travelId.value);
+  // Lo que se le debe a un servicio opcional cambia con los viajeros del viaje.
+  await cotizacionStore.refreshProviderPayableCosts(travelId.value);
 });
 
 const travel = computed(() => travelStore.getTravelById(travelId.value));
