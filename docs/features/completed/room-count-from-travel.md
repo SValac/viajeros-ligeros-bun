@@ -1,6 +1,6 @@
 # Feature: Cantidad de habitaciones desde el viaje
 
-**Estado:** ✅ Implementada en la rama `fix/quotation-issues` (2026-10-08), pendiente de PR y merge.
+**Estado:** ✅ Implementada (2026-10-08) en PR #115 (`fix/quotation-issues`), pendiente de merge y de la migración en Stage/QA y Producción.
 
 ---
 
