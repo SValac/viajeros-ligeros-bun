@@ -7,7 +7,7 @@ definePageMeta({
 
 const paymentStore = usePaymentStore();
 
-const { travelId, quotation, readonly } = useQuotationRoute();
+const { travelId, quotation } = useQuotationRoute();
 
 // Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
 const cotizacion = computed(() => quotation.value!);
@@ -21,16 +21,9 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <CotizacionResumenFinanciero
-      :quotation-id="cotizacion.id"
-      :acumulado-viajeros="acumuladoViajeros"
-    />
-
-    <!-- Parámetros editables (solo borrador) -->
-    <QuotationParametersCard
-      v-if="!readonly"
-      :quotation="cotizacion"
-    />
-  </div>
+  <!-- Los parámetros tienen su propia pestaña (parameters.vue) -->
+  <CotizacionResumenFinanciero
+    :quotation-id="cotizacion.id"
+    :acumulado-viajeros="acumuladoViajeros"
+  />
 </template>
