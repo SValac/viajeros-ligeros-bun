@@ -53,6 +53,7 @@ const tabs = computed<NavigationMenuItem[]>(() => {
     { label: 'Proveedores', icon: 'i-lucide-building', to: { name: 'quotation-services', params }, badge: count(cotizacionStore.getProveedoresByQuotation(quotationId).length) },
     { label: 'Hospedaje', icon: 'i-lucide-door-open', to: { name: 'quotation-accommodation', params }, badge: count(cotizacionStore.getHospedajesByQuotation(quotationId).length) },
     { label: 'Autobuses', icon: 'i-lucide-bus', to: { name: 'quotation-buses', params }, badge: count(cotizacionStore.getBusesByQuotation(quotationId).length) },
+    { label: 'Gastos', icon: 'i-lucide-receipt', to: { name: 'quotation-expenses', params }, badge: count(cotizacionStore.getGastosByQuotation(quotationId).length) },
     { label: 'Precios al público', icon: 'i-lucide-tag', to: { name: 'quotation-prices', params }, badge: count(cotizacionStore.getPreciosPublicosByQuotation(quotationId).length) },
   ];
 });

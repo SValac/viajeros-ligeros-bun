@@ -1,5 +1,5 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, ProviderPriceAdjustment, ProviderPriceAdjustmentDraft, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData, TravelerPriceAdjustment } from '~/types/quotation';
+import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, ProviderPriceAdjustment, ProviderPriceAdjustmentDraft, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationExpense, QuotationExpenseFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData, TravelerPriceAdjustment } from '~/types/quotation';
 
 import {
   mapAccommodationPaymentRowToDomain,
@@ -11,6 +11,8 @@ import {
   mapQuotationAccommodationDetailRowToDomain,
   mapQuotationAccommodationRowToDomain,
   mapQuotationBusRowToDomain,
+  mapQuotationExpenseRowToDomain,
+  mapQuotationExpenseToRow,
   mapQuotationProviderRowToDomain,
   mapQuotationPublicPriceRowToDomain,
   mapQuotationRowToDomain,
@@ -46,7 +48,7 @@ export function useQuotationRepository() {
 
     const quotationId = quotRow.id;
 
-    const [providersResult, accommodationsResult, publicPricesResult, busesResult]
+    const [providersResult, accommodationsResult, publicPricesResult, busesResult, expensesResult]
       = await Promise.all([
         supabase
           .from('quotation_providers')
@@ -64,6 +66,11 @@ export function useQuotationRepository() {
           .from('quotation_buses')
           .select('*, bus_payments(*)')
           .eq('quotation_id', quotationId),
+        supabase
+          .from('quotation_expenses')
+          .select('*')
+          .eq('quotation_id', quotationId)
+          .order('created_at'),
       ]);
 
     if (providersResult.error)
@@ -74,6 +81,8 @@ export function useQuotationRepository() {
       throw publicPricesResult.error;
     if (busesResult.error)
       throw busesResult.error;
+    if (expensesResult.error)
+      throw expensesResult.error;
 
     const providers = (providersResult.data ?? [])
       .map(row => mapQuotationProviderRowToDomain(row));
@@ -117,6 +126,7 @@ export function useQuotationRepository() {
       publicPrices: (publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
       buses,
       busPayments,
+      expenses: (expensesResult.data ?? []).map(mapQuotationExpenseRowToDomain),
     };
   }
 
@@ -888,6 +898,60 @@ export function useQuotationRepository() {
       throw error;
   }
 
+  async function insertExpense(data: QuotationExpenseFormData): Promise<QuotationExpense> {
+    const { data: row, error } = await supabase
+      .from('quotation_expenses')
+      .insert(mapQuotationExpenseToRow(data))
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return mapQuotationExpenseRowToDomain(row);
+  }
+
+  async function updateExpense(id: string, data: QuotationExpenseFormData): Promise<QuotationExpense> {
+    const { quotation_id: _quotationId, ...update } = mapQuotationExpenseToRow(data);
+    const { data: row, error } = await supabase
+      .from('quotation_expenses')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return mapQuotationExpenseRowToDomain(row);
+  }
+
+  async function deleteExpense(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('quotation_expenses')
+      .delete()
+      .eq('id', id);
+
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Categories the agency already used on its expenses (RLS keeps it to the agency),
+   * so the form can suggest them next to the defaults.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchExpenseCategories(): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('quotation_expenses')
+      .select('category');
+
+    if (error)
+      throw error;
+
+    return [...new Set((data ?? []).map(row => row.category))];
+  }
+
   async function updateSeatPrice(quotationId: string, price: number): Promise<void> {
     const { error } = await supabase
       .from('quotations')
@@ -955,6 +1019,10 @@ export function useQuotationRepository() {
     insertBus,
     updateBus,
     deleteBus,
+    insertExpense,
+    updateExpense,
+    deleteExpense,
+    fetchExpenseCategories,
     updateSeatPrice,
     getOccupiedAccommodationIds,
     fetchAccommodationCosts,

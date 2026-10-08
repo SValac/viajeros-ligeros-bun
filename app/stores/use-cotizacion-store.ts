@@ -17,6 +17,8 @@ import type {
   QuotationAccommodationFormData,
   QuotationBus,
   QuotationBusFormData,
+  QuotationExpense,
+  QuotationExpenseFormData,
   QuotationFormData,
   QuotationProvider,
   QuotationProviderFilters,
@@ -61,6 +63,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const preciosPublicos = ref<QuotationPublicPrice[]>([]);
   const busesApartados = ref<QuotationBus[]>([]);
   const pagosBus = ref<BusPayment[]>([]);
+  const gastosAdicionales = ref<QuotationExpense[]>([]);
+  // Categorías que la agencia ya usó en sus gastos (se cargan al abrir el formulario).
+  const categoriasGasto = ref<string[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<QuotationProviderFilters>({});
@@ -248,6 +253,34 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  const getGastosByQuotation = computed(() => {
+    return (quotationId: string): QuotationExpense[] => {
+      return gastosAdicionales.value.filter(g => g.quotationId === quotationId);
+    };
+  });
+
+  const getTotalGastos = computed(() => {
+    return (quotationId: string): number => {
+      return getGastosByQuotation.value(quotationId).reduce((sum, g) => sum + g.totalCost, 0);
+    };
+  });
+
+  const getGastosTipoMinimo = computed(() => {
+    return (quotationId: string): number => {
+      return getGastosByQuotation.value(quotationId)
+        .filter(g => g.splitType === 'minimum')
+        .reduce((sum, g) => sum + g.totalCost, 0);
+    };
+  });
+
+  const getGastosTipoTotal = computed(() => {
+    return (quotationId: string): number => {
+      return getGastosByQuotation.value(quotationId)
+        .filter(g => g.splitType === 'total')
+        .reduce((sum, g) => sum + g.totalCost, 0);
+    };
+  });
+
   // Asientos que se pueden vender: el total menos los coordinadores del viaje cuando la
   // cotización dice que ocupan asiento. Es el divisor de los costos repartidos entre el
   // total y la base de la ganancia proyectada.
@@ -273,7 +306,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses.
+  // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses + gastos.
   // El hospedaje queda fuera: cada viajero lo paga aparte según su habitación.
   // Devuelve 0 si aún no hay precio por asiento.
   const getAsientoConGanancia = computed(() => {
@@ -287,13 +320,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const margenPorAsiento = cotizacion.seatPrice - costoPorAsiento;
       if (margenPorAsiento <= 0)
         return getAsientosVendibles.value(quotationId) + 1;
-      const costoFijo = getCostoTipoMinimo.value(quotationId) + getCostoTipoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
+      const costoFijo = getCostoTipoMinimo.value(quotationId) + getCostoTipoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId) + getTotalGastos.value(quotationId);
       return Math.floor(costoFijo / margenPorAsiento) + 1;
     };
   });
 
   // Precio calculado a partir del asiento mínimo objetivo (seatPrice de la cotización)
-  // Incluye costos de proveedores y autobuses; el hospedaje se suma aparte en la matriz de precios de referencia
+  // Incluye costos de proveedores, autobuses y gastos adicionales; el hospedaje se suma aparte en la matriz de precios de referencia
   const getPrecioAsientoCalculado = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
@@ -304,11 +337,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         { minimumSeatTarget: cotizacion.minimumSeatTarget, sellableSeats: getAsientosVendibles.value(quotationId) },
         proveedoresQuotation.value.filter(p => p.quotationId === quotationId),
         busesApartados.value.filter(b => b.quotationId === quotationId),
+        getGastosByQuotation.value(quotationId),
       );
     };
   });
 
-  // Ganancia con el autobús lleno: asientos vendibles × precio por asiento − (servicios + autobuses).
+  // Ganancia con el autobús lleno: asientos vendibles × precio por asiento − (servicios + autobuses + gastos).
   // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
   const getGananciaProyectada = computed(() => {
     return (quotationId: string): number => {
@@ -316,7 +350,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const asientosVendibles = getAsientosVendibles.value(quotationId);
       if (!cotizacion || asientosVendibles === 0)
         return 0;
-      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
+      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId) + getTotalGastos.value(quotationId);
       return (asientosVendibles * cotizacion.seatPrice) - costoTotal;
     };
   });
@@ -712,11 +746,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
             pagosBus.value = pagosBus.value.filter(p =>
               !busesApartados.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
             );
+            gastosAdicionales.value = gastosAdicionales.value.filter(g => g.quotationId !== qId);
           }
           travelFetchCache.add(travelId);
           return;
         }
-        const { quotation, providers, providerPayments, providerAdjustments, accommodations, accommodationPayments, publicPrices, buses, busPayments } = result;
+        const { quotation, providers, providerPayments, providerAdjustments, accommodations, accommodationPayments, publicPrices, buses, busPayments, expenses } = result;
         const quotationId = quotation.id;
 
         cotizaciones.value = [...cotizaciones.value.filter(c => c.travelId !== travelId), quotation];
@@ -728,6 +763,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         preciosPublicos.value = [...preciosPublicos.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
         busesApartados.value = [...busesApartados.value.filter(b => b.quotationId !== quotationId), ...buses];
         pagosBus.value = [...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...busPayments];
+        gastosAdicionales.value = [...gastosAdicionales.value.filter(g => g.quotationId !== quotationId), ...expenses];
 
         travelFetchCache.add(travelId);
       }
@@ -1525,6 +1561,103 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   // ============================================================================
+  // Gastos Adicionales Actions
+  // ============================================================================
+
+  async function fetchCategoriasGasto(): Promise<void> {
+    try {
+      categoriasGasto.value = await repository.fetchExpenseCategories();
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  function _rememberCategoria(category: string): void {
+    if (!categoriasGasto.value.includes(category))
+      categoriasGasto.value = [...categoriasGasto.value, category];
+  }
+
+  async function addGasto(data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
+    if (!cotizacion)
+      return { error: 'Cotización no encontrada' };
+    if (cotizacion.status === 'confirmed')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const gasto = await repository.insertExpense(data);
+      gastosAdicionales.value.push(gasto);
+      _rememberCategoria(gasto.category);
+      await _syncSeatPrice(data.quotationId);
+      return gasto;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function updateGasto(id: string, data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
+    const index = gastosAdicionales.value.findIndex(g => g.id === id);
+    const existing = gastosAdicionales.value[index];
+    if (!existing)
+      return { error: 'Gasto no encontrado' };
+
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const gasto = await repository.updateExpense(id, data);
+      gastosAdicionales.value[index] = gasto;
+      _rememberCategoria(gasto.category);
+      await _syncSeatPrice(existing.quotationId);
+      return gasto;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function deleteGasto(id: string): Promise<boolean> {
+    const gasto = gastosAdicionales.value.find(g => g.id === id);
+    if (!gasto)
+      return false;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === gasto.quotationId);
+    if (cotizacion?.status === 'confirmed')
+      return false;
+
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.deleteExpense(id);
+      gastosAdicionales.value = gastosAdicionales.value.filter(g => g.id !== id);
+      await _syncSeatPrice(gasto.quotationId);
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return false;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  // ============================================================================
   // Autobuses Apartados Actions
   // ============================================================================
 
@@ -1748,6 +1881,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     preciosPublicos,
     busesApartados,
     pagosBus,
+    gastosAdicionales,
+    categoriasGasto,
     loading,
     error,
     filters,
@@ -1797,6 +1932,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getSaldoPendienteBus,
     getBusPaymentStatus,
     getCostoPerPersonaBus,
+    getGastosByQuotation,
+    getTotalGastos,
+    getGastosTipoMinimo,
+    getGastosTipoTotal,
     // Actions
     fetchAll,
     fetchByTravel,
@@ -1838,5 +1977,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addBusPayment,
     updateBusPayment,
     deleteBusPayment,
+    fetchCategoriasGasto,
+    addGasto,
+    updateGasto,
+    deleteGasto,
   };
 });
