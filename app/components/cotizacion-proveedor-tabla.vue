@@ -46,7 +46,7 @@ const estadoPagoOptions = [
   { label: 'Todos', value: 'all' },
   { label: 'Pendiente', value: 'pending' },
   { label: 'Anticipo', value: 'partial' },
-  { label: 'Liquidado', value: 'liquidado' },
+  { label: 'Liquidado', value: 'paid' },
 ];
 
 const confirmadoOptions = [
