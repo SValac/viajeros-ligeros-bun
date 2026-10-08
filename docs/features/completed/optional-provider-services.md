@@ -81,9 +81,12 @@ nuevos. No puede haberlas, porque las columnas nacen en `false`.
 | `app/pages/quotations/[id].vue` | Refresca `payable_cost` al abrir la cotización |
 
 El selector de proveedor del form (`app/components/provider-selector.vue`) pasó de `USelect`
-a `USelectMenu`, con búsqueda por nombre, ubicación (ciudad, estado, país) o contacto
-(nombre, teléfono, email). Cada opción muestra "Proveedor - Contacto" con la ciudad debajo,
-y ambos selects ocupan todo el ancho.
+a `USelectMenu`. Cada opción muestra "Proveedor - Contacto" con la ciudad debajo, y ambos
+selects ocupan todo el ancho. La búsqueda es la misma que la del buscador de las páginas de
+proveedores (`/providers` y cada categoría): `matchesProviderSearch` en
+`use-provider-domain.ts` busca por nombre, descripción, ubicación (ciudad, estado, país) o
+contacto (nombre, teléfono, email). Ignora mayúsculas y acentos, y compara el teléfono solo
+por dígitos para que "(812) 123 4567" lo encuentre.
 
 De paso se arregló el filtro "Liquidado" de la tabla de servicios: filtraba por `'liquidado'`
 en vez de `'paid'` y nunca encontraba nada.

@@ -7,6 +7,43 @@ export function formatProviderLocation(location: ProviderLocation): string {
   return [location.city, location.state, location.country].join(', ');
 }
 
+// Lowercase without accents, so "montana" finds "Montaña".
+function normalizeSearch(value: string): string {
+  return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+}
+
+/**
+ * Whether a provider matches a free-text search: name, description, location
+ * (city, state, country) or contact (name, phone, email). Ignores case and accents, and
+ * matches phones by digits only.
+ * @param provider - Provider to test
+ * @param term - Text typed by the user; blank matches everything
+ */
+export function matchesProviderSearch(provider: Provider, term: string): boolean {
+  const needle = normalizeSearch(term.trim());
+  if (!needle)
+    return true;
+
+  const { location, contact } = provider;
+  const textMatch = [
+    provider.name,
+    provider.description,
+    location.city,
+    location.state,
+    location.country,
+    contact.name,
+    contact.phone,
+    contact.email,
+  ].some(field => !!field && normalizeSearch(field).includes(needle));
+  if (textMatch)
+    return true;
+
+  // El teléfono se muestra con formato ("(812) 123 4567") pero se guarda en E.164: se
+  // compara solo por dígitos para encontrarlo como sea que se escriba.
+  const digits = term.replace(/\D/g, '');
+  return digits.length >= 3 && !!contact.phone && contact.phone.replace(/\D/g, '').includes(digits);
+}
+
 /**
  * Filters and sorts a provider list according to the given criteria.
  * When `filters.active` is omitted, only active providers are included by default.
@@ -41,13 +78,8 @@ export function filterProviders(providers: Provider[], filters: ProviderFilters)
   }
 
   if (filters.searchTerm) {
-    const term = filters.searchTerm.toLowerCase();
-    result = result.filter(
-      p =>
-        p.name.toLowerCase().includes(term)
-        || p.description?.toLowerCase().includes(term)
-        || p.contact.name?.toLowerCase().includes(term),
-    );
+    const term = filters.searchTerm;
+    result = result.filter(p => matchesProviderSearch(p, term));
   }
 
   return result.sort((a, b) => a.name.localeCompare(b.name, 'es'));

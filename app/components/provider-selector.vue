@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderCategory, ProviderFormData } from '~/types/provider';
 
+import { matchesProviderSearch } from '~/composables/providers/use-provider-domain';
+
 type Props = {
   modelValue?: string;
   excludeCategories?: ProviderCategory[];
@@ -20,6 +22,7 @@ const toast = useToast();
 const isAddModalOpen = ref(false);
 const selectedCategory = ref<ProviderCategory | undefined>(undefined);
 const selectedProviderId = ref(modelValue);
+const searchTerm = shallowRef('');
 
 // Opciones de categoría
 const allCategoryOptions = [
@@ -49,20 +52,21 @@ const availableProviders = computed(() => {
 });
 
 // Opciones para el select de proveedores. La etiqueta lleva el contacto para distinguir
-// proveedores parecidos; se puede buscar por nombre, ubicación o contacto.
+// proveedores parecidos. La búsqueda es la misma que en las páginas de proveedores
+// (nombre, descripción, ubicación o contacto, sin importar acentos).
 const providerOptions = computed(() => {
-  return availableProviders.value.map((provider) => {
-    const { city, state, country } = provider.location;
-    const { name: contactName, phone, email } = provider.contact;
-    return {
-      value: provider.id,
-      label: contactName ? `${provider.name} - ${contactName}` : provider.name,
-      description: [city, state].filter(Boolean).join(', ') || undefined,
-      icon: getCategoryIcon(provider.category),
-      location: [city, state, country].filter(Boolean).join(' '),
-      contact: [contactName, phone, email].filter(Boolean).join(' '),
-    };
-  });
+  return availableProviders.value
+    .filter(provider => matchesProviderSearch(provider, searchTerm.value))
+    .map((provider) => {
+      const { city, state } = provider.location;
+      const contactName = provider.contact.name;
+      return {
+        value: provider.id,
+        label: contactName ? `${provider.name} - ${contactName}` : provider.name,
+        description: [city, state].filter(Boolean).join(', ') || undefined,
+        icon: getCategoryIcon(provider.category),
+      };
+    });
 });
 
 // Función auxiliar para obtener icono de categoría
@@ -165,10 +169,11 @@ onMounted(() => {
     <div v-if="selectedCategory" class="flex gap-2 items-center">
       <div class="flex-1 min-w-0">
         <USelectMenu
+          v-model:search-term="searchTerm"
           :model-value="selectedProviderId"
           :items="providerOptions"
           value-key="value"
-          :filter-fields="['label', 'location', 'contact']"
+          ignore-filter
           :search-input="{ placeholder: 'Buscar por nombre, ubicación o contacto...' }"
           :placeholder="availableProviders.length > 0 ? '2. Seleccionar proveedor' : 'No hay proveedores en esta categoría'"
           :disabled="availableProviders.length === 0"
