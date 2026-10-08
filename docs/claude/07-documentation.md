@@ -50,6 +50,7 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `provider-cost-per-person.md` — Costo de servicio total o por persona en la cotización; la app calcula el total
 - `room-count-from-travel.md` — Cantidad de habitaciones desde el viaje: la cotización elige tipos, el viaje aparta cuartos y la BD calcula el costo del hotel
 - `optional-provider-services.md` — Servicios por persona: el costo por persona se suma al asiento y al proveedor se le paga por los viajeros que lo toman (pestaña del viaje)
+- `provider-category-tickets.md` — Categoría de proveedor "Entradas" (zoológico, parques…) y una sola lista de categorías para menú, filtros y selects
 - `travel-calendar.md` — Calendario de viajes (`/calendar`): mes sobre `UCalendar` con barras por viaje y resumen al elegir uno
 
 ---

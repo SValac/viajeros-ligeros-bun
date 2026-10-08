@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderCategory, ProviderFilters } from '~/types/provider';
 
+import { PROVIDER_CATEGORY_LIST } from '~/utils/provider-categories';
+
 type Props = {
   modelValue: ProviderFilters;
   availableCiudades: string[];
@@ -16,14 +18,7 @@ const emit = defineEmits<{
   'update:modelValue': [filters: ProviderFilters];
 }>();
 
-const categoryOptions = [
-  { label: 'Guías', value: 'guides' },
-  { label: 'Transporte', value: 'transportation' },
-  { label: 'Hospedaje', value: 'accommodation' },
-  { label: 'Agencias de Autobús', value: 'bus_agencies' },
-  { label: 'Comidas', value: 'food_services' },
-  { label: 'Otros', value: 'other' },
-];
+const categoryOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ label: meta.label, value: meta.category }));
 
 const searchTerm = ref(props.modelValue.searchTerm ?? '');
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
