@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import type { OptionalServiceMember } from '~/components/travel-optional-service-group.vue';
 import type { QuotationProvider } from '~/types/quotation';
 import type { Traveler } from '~/types/traveler';
 
@@ -37,13 +38,74 @@ const overpaid = computed(() => Math.max(0, paid - service.payableCost));
 const allTake = computed(() => takers.value.length === selectable.value.length);
 const noneTake = computed(() => takers.value.length === 0);
 
+type MemberGroup = {
+  key: string;
+  title: string;
+  subtitle: string;
+  members: OptionalServiceMember[];
+};
+
 function fullName(traveler: Traveler): string {
   return `${traveler.firstName} ${traveler.lastName}`.trim();
 }
 
-function toggle(traveler: Traveler, toman: boolean | 'indeterminate') {
-  emit('change', [traveler.id], toman === true);
+function byName(a: Traveler, b: Traveler): number {
+  return fullName(a).localeCompare(fullName(b), 'es');
 }
+
+function toMember(traveler: Traveler): OptionalServiceMember {
+  const courtesy = isCourtesy(traveler);
+  return { traveler, courtesy, takes: !courtesy && !optedOut.has(traveler.id) };
+}
+
+// Cada representante con sus acompañantes, por nombre del representante; luego quienes
+// viajan sin acompañantes y al final los coordinadores. Un acompañante cuyo representante
+// no está cuenta como sin acompañantes.
+const groups = computed<MemberGroup[]>(() => {
+  const travelers = occupants.filter(t => t.kind === 'traveler');
+  const ids = new Set(travelers.map(t => t.id));
+  const isCompanion = (t: Traveler) => !!t.representativeId && ids.has(t.representativeId);
+
+  const result: MemberGroup[] = [];
+  const alone: Traveler[] = [];
+
+  for (const lead of travelers.filter(t => !isCompanion(t)).sort(byName)) {
+    const companions = travelers.filter(t => t.representativeId === lead.id).sort(byName);
+    if (companions.length === 0) {
+      alone.push(lead);
+      continue;
+    }
+    result.push({
+      key: lead.id,
+      title: fullName(lead),
+      subtitle: `Representante con ${companions.length} acompañante${companions.length === 1 ? '' : 's'}`,
+      members: [lead, ...companions].map(toMember),
+    });
+  }
+
+  if (alone.length > 0) {
+    result.push({
+      key: 'alone',
+      title: 'Sin acompañantes',
+      subtitle: `${alone.length} viajero${alone.length === 1 ? '' : 's'}`,
+      members: alone.map(toMember),
+    });
+  }
+
+  const coordinators = occupants.filter(t => t.kind === 'coordinator').sort(byName);
+  if (coordinators.length > 0) {
+    result.push({
+      key: 'coordinators',
+      title: 'Coordinadores',
+      subtitle: service.coordinatorsCourtesy
+        ? 'Cortesía del proveedor: no cuentan para el pago'
+        : `${coordinators.length} coordinador${coordinators.length === 1 ? '' : 'es'}`,
+      members: coordinators.map(toMember),
+    });
+  }
+
+  return result;
+});
 
 function setAll(toman: boolean) {
   emit('change', selectable.value.map(t => t.id), toman);
@@ -151,29 +213,17 @@ function setAll(toman: boolean) {
         Este viaje aún no tiene viajeros.
       </p>
 
-      <ul v-else class="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        <li
-          v-for="traveler in occupants"
-          :key="traveler.id"
-          class="flex items-center justify-between gap-2 rounded-md border border-default px-3 py-2"
-        >
-          <UCheckbox
-            :model-value="!isCourtesy(traveler) && !optedOut.has(traveler.id)"
-            :label="fullName(traveler)"
-            :disabled="busy || isCourtesy(traveler)"
-            class="min-w-0"
-            :ui="{ label: 'truncate' }"
-            @update:model-value="toggle(traveler, $event)"
-          />
-          <UBadge
-            v-if="traveler.kind === 'coordinator'"
-            :label="isCourtesy(traveler) ? 'Cortesía' : 'Coordinador'"
-            :color="isCourtesy(traveler) ? 'info' : 'neutral'"
-            variant="subtle"
-            class="shrink-0"
-          />
-        </li>
-      </ul>
+      <div v-else class="space-y-3">
+        <TravelOptionalServiceGroup
+          v-for="group in groups"
+          :key="group.key"
+          :title="group.title"
+          :subtitle="group.subtitle"
+          :members="group.members"
+          :busy="busy"
+          @change="(ids, toman) => emit('change', ids, toman)"
+        />
+      </div>
     </div>
   </UCard>
 </template>
