@@ -198,6 +198,13 @@ function setAll(toman: boolean) {
             @update:model-value="value => emit('change', [row.traveler.id], value === true)"
           >
             <template #label>
+              <!-- Mismo ícono de coordinador que en Habitaciones -->
+              <UIcon
+                v-if="row.traveler.kind === 'coordinator'"
+                name="i-lucide-user-cog"
+                class="size-4 text-info align-[-3px] mr-1"
+                aria-hidden="true"
+              />
               {{ fullName(row.traveler) }}
               <span
                 v-if="row.representativeName"
