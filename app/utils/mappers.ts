@@ -13,6 +13,7 @@ import type {
   ProviderOptOut,
   ProviderPayment,
   ProviderPaymentFormData,
+  ProviderPriceAdjustment,
   Quotation,
   QuotationAccommodation,
   QuotationAccommodationDetail,
@@ -23,6 +24,7 @@ import type {
   QuotationProviderFormData,
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
+  TravelerPriceAdjustment,
 } from '~/types/quotation';
 import type { MapLocation, Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
 import type { TravelAccessCode, TravelAccessCodeGenerated } from '~/types/travel-access';
@@ -524,6 +526,26 @@ export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'cos
     cost_type: data.costType,
     unit_cost: perPerson ? data.unitCost ?? null : null,
     coordinators_courtesy: perPerson && data.coordinatorsCourtesy,
+  };
+}
+
+export function mapProviderPriceAdjustmentRowToDomain(row: Tables<'quotation_provider_price_adjustments'>): ProviderPriceAdjustment {
+  return {
+    id: row.id,
+    quotationProviderId: row.quotation_provider_id,
+    label: row.label,
+    kind: row.kind,
+    mode: row.mode,
+    value: row.value,
+  };
+}
+
+export function mapTravelerPriceAdjustmentRowToDomain(row: Tables<'quotation_provider_traveler_adjustments'>): TravelerPriceAdjustment {
+  return {
+    quotationProviderId: row.quotation_provider_id,
+    travelerId: row.traveler_id,
+    travelId: row.travel_id,
+    adjustmentId: row.adjustment_id,
   };
 }
 

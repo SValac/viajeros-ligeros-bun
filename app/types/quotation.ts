@@ -52,6 +52,32 @@ export type QuotationProvider = {
   payableCost: number;
 };
 
+// Ajuste al costo por persona de un servicio para un tipo de persona (ej. "Niño" -10%,
+// "Adulto mayor" -$50). Solo cambia lo que se le paga al proveedor, no el precio del asiento.
+export type PriceAdjustmentKind = 'discount' | 'surcharge';
+export type PriceAdjustmentMode = 'percent' | 'amount';
+
+export type ProviderPriceAdjustment = {
+  id: string;
+  quotationProviderId: string;
+  label: string;
+  kind: PriceAdjustmentKind;
+  mode: PriceAdjustmentMode;
+  /** Porcentaje (1-100 en descuento) o cantidad en pesos. Siempre > 0. */
+  value: number;
+};
+
+/** Un ajuste mientras se edita: sin id todavía si es nuevo. */
+export type ProviderPriceAdjustmentDraft = Omit<ProviderPriceAdjustment, 'id' | 'quotationProviderId'> & { id?: string };
+
+// El ajuste que paga un viajero en un servicio (sin fila = precio base).
+export type TravelerPriceAdjustment = {
+  quotationProviderId: string;
+  travelerId: string;
+  travelId: string;
+  adjustmentId: string;
+};
+
 // Un viajero que no toma un servicio opcional.
 export type ProviderOptOut = {
   quotationProviderId: string;
@@ -215,6 +241,7 @@ export type QuotationFetchResult = {
   quotation: Quotation;
   providers: QuotationProvider[];
   providerPayments: ProviderPayment[];
+  providerAdjustments: ProviderPriceAdjustment[];
   accommodations: QuotationAccommodation[];
   accommodationPayments: AccommodationPayment[];
   buses: QuotationBus[];

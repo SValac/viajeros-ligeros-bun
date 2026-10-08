@@ -1,4 +1,4 @@
-import type { Quotation, QuotationAccommodation, QuotationBus, QuotationProvider } from '~/types/quotation';
+import type { ProviderPriceAdjustment, Quotation, QuotationAccommodation, QuotationBus, QuotationProvider } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 
 type ProviderPaymentStatus = 'pending' | 'partial' | 'paid';
@@ -42,6 +42,48 @@ export function calculateSellableSeats(
 ): number {
   const coordinatorSeats = quotation.coordinatorsTakeSeats ? coordinatorCount : 0;
   return Math.max(quotation.totalSeats - coordinatorSeats, 0);
+}
+
+/**
+ * Price one traveler pays a per-person provider: the base unit cost, or with their
+ * adjustment applied (percent of the base or a fixed amount), never below 0 and rounded to
+ * cents. Mirrors private.quotation_provider_payable_cost in the database.
+ * @param unitCost - The provider's base cost per person
+ * @param adjustment - The traveler's adjustment, if any
+ */
+export function calculateAdjustedUnitCost(
+  unitCost: number,
+  adjustment?: Pick<ProviderPriceAdjustment, 'kind' | 'mode' | 'value'>,
+): number {
+  if (!adjustment)
+    return unitCost;
+  const delta = adjustment.mode === 'percent' ? unitCost * adjustment.value / 100 : adjustment.value;
+  const price = adjustment.kind === 'discount' ? unitCost - delta : unitCost + delta;
+  return Math.round(Math.max(0, price) * 100) / 100;
+}
+
+/**
+ * Short text for an adjustment, e.g. "-10%" or "+$25.00".
+ */
+export function formatPriceAdjustment(adjustment: Pick<ProviderPriceAdjustment, 'kind' | 'mode' | 'value'>, formatAmount: (n: number) => string): string {
+  const sign = adjustment.kind === 'discount' ? '-' : '+';
+  return adjustment.mode === 'percent' ? `${sign}${adjustment.value}%` : `${sign}${formatAmount(adjustment.value)}`;
+}
+
+/**
+ * What's wrong with an adjustment being edited, or null if it can be saved. Same rules as
+ * the database checks.
+ */
+export function getPriceAdjustmentError(adjustment: Pick<ProviderPriceAdjustment, 'label' | 'kind' | 'mode' | 'value'>): string | null {
+  if (!adjustment.label.trim())
+    return 'Escribe el motivo';
+  if (adjustment.label.trim().length > 60)
+    return 'Máximo 60 caracteres';
+  if (!(adjustment.value > 0))
+    return 'El valor debe ser mayor a 0';
+  if (adjustment.kind === 'discount' && adjustment.mode === 'percent' && adjustment.value > 100)
+    return 'Un descuento no puede pasar de 100%';
+  return null;
 }
 
 /**

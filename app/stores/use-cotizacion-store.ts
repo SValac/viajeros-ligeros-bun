@@ -10,6 +10,8 @@ import type {
   ProviderPayment,
   ProviderPaymentFormData,
   ProviderPaymentStatus,
+  ProviderPriceAdjustment,
+  ProviderPriceAdjustmentDraft,
   Quotation,
   QuotationAccommodation,
   QuotationAccommodationFormData,
@@ -21,6 +23,7 @@ import type {
   QuotationProviderFormData,
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
+  TravelerPriceAdjustment,
 } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 
@@ -51,6 +54,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const proveedoresQuotation = ref<QuotationProvider[]>([]);
   const pagosProveedor = ref<ProviderPayment[]>([]);
   const optOutsProveedor = ref<ProviderOptOut[]>([]);
+  const ajustesProveedor = ref<ProviderPriceAdjustment[]>([]);
+  const ajustesViajero = ref<TravelerPriceAdjustment[]>([]);
   const hospedajesQuotation = ref<QuotationAccommodation[]>([]);
   const pagosHospedaje = ref<AccommodationPayment[]>([]);
   const preciosPublicos = ref<QuotationPublicPrice[]>([]);
@@ -377,6 +382,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  // Ajustes de precio (Niño -10%, Adulto mayor -$50...) de un servicio por persona.
+  const getAjustesByProveedor = computed(() => {
+    return (quotationProviderId: string): ProviderPriceAdjustment[] =>
+      ajustesProveedor.value.filter(a => a.quotationProviderId === quotationProviderId);
+  });
+
+  // El ajuste que paga un viajero en un servicio; undefined = precio base.
+  const getAjusteDeViajero = computed(() => {
+    return (quotationProviderId: string, travelerId: string): ProviderPriceAdjustment | undefined => {
+      const choice = ajustesViajero.value.find(a => a.quotationProviderId === quotationProviderId && a.travelerId === travelerId);
+      return choice ? ajustesProveedor.value.find(a => a.id === choice.adjustmentId) : undefined;
+    };
+  });
+
   // Viajeros (por id) que NO toman un servicio opcional. Todos los demás sí lo toman.
   const getOptOutsByProveedor = computed(() => {
     return (quotationProviderId: string): Set<string> => {
@@ -697,12 +716,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
           travelFetchCache.add(travelId);
           return;
         }
-        const { quotation, providers, providerPayments, accommodations, accommodationPayments, publicPrices, buses, busPayments } = result;
+        const { quotation, providers, providerPayments, providerAdjustments, accommodations, accommodationPayments, publicPrices, buses, busPayments } = result;
         const quotationId = quotation.id;
 
         cotizaciones.value = [...cotizaciones.value.filter(c => c.travelId !== travelId), quotation];
         proveedoresQuotation.value = [...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId), ...providers];
         pagosProveedor.value = [...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...providerPayments];
+        ajustesProveedor.value = [...ajustesProveedor.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
         hospedajesQuotation.value = [...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId), ...accommodations];
         pagosHospedaje.value = [...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...accommodationPayments];
         preciosPublicos.value = [...preciosPublicos.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
@@ -906,6 +926,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
       pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
+      ajustesProveedor.value = ajustesProveedor.value.filter(a => a.quotationProviderId !== id);
+      ajustesViajero.value = ajustesViajero.value.filter(a => a.quotationProviderId !== id);
       await _syncSeatPrice(quotationId);
     }
     catch (e) {
@@ -1012,6 +1034,86 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         await repository.insertProviderOptOuts(nuevos);
         optOutsProveedor.value.push(...nuevos);
       }
+      await refreshProviderPayableCosts(travelId);
+      return null;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return error.value;
+    }
+  }
+
+  /**
+   * Guarda los ajustes de precio de un servicio por persona y refresca lo que se le debe.
+   * Se permite con la cotización confirmada porque no cambian el precio del asiento.
+   * @returns Un mensaje de error, o null si todo salió bien
+   */
+  async function saveAjustesProveedor(
+    quotationProviderId: string,
+    drafts: ProviderPriceAdjustmentDraft[],
+  ): Promise<string | null> {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+    if (!proveedor)
+      return 'Proveedor no encontrado';
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+
+    error.value = null;
+    try {
+      const saved = await repository.saveProviderAdjustments(quotationProviderId, drafts);
+      ajustesProveedor.value = [
+        ...ajustesProveedor.value.filter(a => a.quotationProviderId !== quotationProviderId),
+        ...saved,
+      ];
+      // Un ajuste borrado regresa a sus viajeros al precio base (en la BD por cascada).
+      const savedIds = new Set(saved.map(a => a.id));
+      ajustesViajero.value = ajustesViajero.value.filter(a =>
+        a.quotationProviderId !== quotationProviderId || savedIds.has(a.adjustmentId),
+      );
+      if (cotizacion)
+        await refreshProviderPayableCosts(cotizacion.travelId);
+      return null;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return error.value;
+    }
+  }
+
+  async function fetchTravelerAdjustments(travelId: string): Promise<void> {
+    try {
+      const choices = await repository.fetchTravelerAdjustments(travelId);
+      ajustesViajero.value = [
+        ...ajustesViajero.value.filter(a => a.travelId !== travelId),
+        ...choices,
+      ];
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  /**
+   * Elige el ajuste que pagan unos viajeros en un servicio (null = precio base) y refresca
+   * lo que se le debe al proveedor.
+   * @returns Un mensaje de error, o null si todo salió bien
+   */
+  async function setAjusteViajero(
+    quotationProviderId: string,
+    travelId: string,
+    travelerIds: string[],
+    adjustmentId: string | null,
+  ): Promise<string | null> {
+    error.value = null;
+    try {
+      await repository.setTravelerAdjustment(quotationProviderId, travelId, travelerIds, adjustmentId);
+      ajustesViajero.value = [
+        ...ajustesViajero.value.filter(a =>
+          !(a.quotationProviderId === quotationProviderId && travelerIds.includes(a.travelerId)),
+        ),
+        ...(adjustmentId
+          ? travelerIds.map(travelerId => ({ quotationProviderId, travelerId, travelId, adjustmentId }))
+          : []),
+      ];
       await refreshProviderPayableCosts(travelId);
       return null;
     }
@@ -1639,6 +1741,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     proveedoresQuotation,
     pagosProveedor,
     optOutsProveedor,
+    ajustesProveedor,
+    ajustesViajero,
     hospedajesQuotation,
     pagosHospedaje,
     preciosPublicos,
@@ -1665,6 +1769,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getSaldoPendienteProveedor,
     getSobrepagoProveedor,
     getOptOutsByProveedor,
+    getAjustesByProveedor,
+    getAjusteDeViajero,
     getProviderPaymentStatus,
     getSaldoTotalPendiente,
     getPagosByHospedaje,
@@ -1707,6 +1813,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     refreshProviderPayableCosts,
     fetchProviderOptOuts,
     setTomanServicio,
+    saveAjustesProveedor,
+    fetchTravelerAdjustments,
+    setAjusteViajero,
     addProviderPayment,
     updateProviderPayment,
     deleteProviderPayment,

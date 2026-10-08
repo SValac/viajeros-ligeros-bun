@@ -54,6 +54,15 @@ const selectedServiceId = computed<string | undefined>({
 
 const selectedService = computed(() => services.value.find(s => s.id === selectedServiceId.value));
 
+const selectedAdjustments = computed(() => (selectedService.value ? cotizacionStore.getAjustesByProveedor(selectedService.value.id) : []));
+
+// travelerId → ajuste que paga en el servicio elegido.
+const selectedAdjustmentByTraveler = computed(() => new Map(
+  cotizacionStore.ajustesViajero
+    .filter(a => a.quotationProviderId === selectedService.value?.id)
+    .map(a => [a.travelerId, a.adjustmentId]),
+));
+
 // Coordinadores incluidos: cuentan para el pago salvo que el proveedor les dé cortesía.
 const occupants = computed(() => travelerStore.getOccupantsByTravel(travelId.value));
 
@@ -67,6 +76,7 @@ watch(travelId, async (id) => {
     travelerStore.fetchByTravel(id),
     cotizacionStore.fetchByTravel(id),
     cotizacionStore.fetchProviderOptOuts(id),
+    cotizacionStore.fetchTravelerAdjustments(id),
   ]);
   // Viajeros agregados o borrados desde la última carga cambian lo que se debe.
   await cotizacionStore.refreshProviderPayableCosts(id);
@@ -74,6 +84,19 @@ watch(travelId, async (id) => {
 
 function getProviderName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
+}
+
+async function onAdjust(travelerIds: string[], adjustmentId: string | null) {
+  const service = selectedService.value;
+  if (!service)
+    return;
+
+  savingServiceId.value = service.id;
+  const error = await cotizacionStore.setAjusteViajero(service.id, travelId.value, travelerIds, adjustmentId);
+  savingServiceId.value = null;
+
+  if (error)
+    toast.add({ title: 'No se pudo guardar el precio', description: error, color: 'error' });
 }
 
 async function onChange(travelerIds: string[], toman: boolean) {
@@ -124,8 +147,11 @@ async function onChange(travelerIds: string[], toman: boolean) {
           :opted-out="cotizacionStore.getOptOutsByProveedor(selectedService.id)"
           :paid="cotizacionStore.getAnticipadoProveedor(selectedService.id)"
           :sellable-seats="sellableSeats"
+          :adjustments="selectedAdjustments"
+          :adjustment-by-traveler="selectedAdjustmentByTraveler"
           :busy="savingServiceId === selectedService.id"
           @change="onChange"
+          @adjust="onAdjust"
         />
       </div>
     </div>
