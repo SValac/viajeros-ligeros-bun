@@ -40,6 +40,11 @@ const historialProveedorId = shallowRef<string>('');
 const historialProveedorNombre = shallowRef<string>('');
 const isDeleteModalOpen = shallowRef(false);
 const proveedorToDelete = shallowRef<QuotationProvider | null>(null);
+const isOpcionalOpen = shallowRef(false);
+const proveedorOpcional = shallowRef<QuotationProvider | null>(null);
+
+// El viaje de la cotización, para enlazar a su pestaña de servicios opcionales.
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
 
 // Filter options
 const estadoPagoOptions = [
@@ -94,6 +99,29 @@ function getDivisor(proveedor: QuotationProvider): number {
 // el divisor actual (las editó el usuario o cambiaron los asientos), sin mover saldos.
 function hasPersonCountDrift(proveedor: QuotationProvider): boolean {
   return proveedor.costType === 'per_person' && proveedor.personCount !== getDivisor(proveedor);
+}
+
+// Cuántos viajeros cuentan para el pago de un servicio opcional.
+function getTakersCount(proveedor: QuotationProvider): number {
+  return proveedor.unitCost ? Math.round(proveedor.payableCost / proveedor.unitCost) : 0;
+}
+
+function openOpcional(proveedor: QuotationProvider) {
+  proveedorOpcional.value = proveedor;
+  isOpcionalOpen.value = true;
+}
+
+async function handleOpcionalSubmit(data: { isOptional: boolean; coordinatorsCourtesy: boolean }) {
+  if (!proveedorOpcional.value)
+    return;
+  const result = await cotizacionStore.updateProveedorOpcional(proveedorOpcional.value.id, data);
+  if ('error' in result) {
+    toast.add({ title: 'Error', description: result.error, color: 'error' });
+    return;
+  }
+  toast.add({ title: 'Cobro actualizado', color: 'success' });
+  isOpcionalOpen.value = false;
+  proveedorOpcional.value = null;
 }
 
 function openNewProveedor() {
@@ -176,6 +204,15 @@ function getProveedorActions(proveedor: QuotationProvider) {
       disabled: cotizacionStore.getSaldoPendienteProveedor(proveedor.id) <= 0,
       onSelect: () => openRegistrarPago(proveedor),
     },
+    // Cómo se le paga a un servicio por persona; no cambia el precio del asiento, así que
+    // también se puede con la cotización confirmada.
+    ...(proveedor.costType === 'per_person'
+      ? [{
+          label: 'Cobro por viajero',
+          icon: 'i-lucide-ticket-check',
+          onSelect: () => openOpcional(proveedor),
+        }]
+      : []),
   ];
 
   if (readonly)
@@ -267,6 +304,9 @@ function getProveedorActions(proveedor: QuotationProvider) {
               Costo Total
             </th>
             <th class="pb-2 pr-4 font-medium">
+              A pagar
+            </th>
+            <th class="pb-2 pr-4 font-medium">
               Costo/persona
             </th>
             <th class="pb-2 pr-4 font-medium">
@@ -311,6 +351,14 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <!-- Servicio -->
             <td class="py-3 pr-4 max-w-40">
               <span class="truncate block">{{ proveedor.serviceDescription }}</span>
+              <UBadge
+                v-if="proveedor.isOptional"
+                label="Opcional"
+                icon="i-lucide-ticket-check"
+                color="info"
+                variant="subtle"
+                class="mt-1"
+              />
             </td>
 
             <!-- División -->
@@ -341,6 +389,20 @@ function getProveedorActions(proveedor: QuotationProvider) {
               </p>
             </td>
 
+            <!-- A pagar: en un opcional, solo por los viajeros que lo toman -->
+            <td class="py-3 pr-4">
+              <p class="font-medium">
+                {{ formatCurrency(proveedor.payableCost) }}
+              </p>
+              <ULink
+                v-if="proveedor.isOptional && travelId"
+                :to="{ name: 'travel-optional-services', params: { id: travelId } }"
+                class="text-xs text-primary whitespace-nowrap"
+              >
+                {{ getTakersCount(proveedor) }} lo toman
+              </ULink>
+            </td>
+
             <!-- Costo/persona -->
             <td class="py-3 pr-4">
               {{ formatCurrency(cotizacionStore.getCostoPerPersonaProveedor(proveedor.id)) }}
@@ -356,6 +418,12 @@ function getProveedorActions(proveedor: QuotationProvider) {
               <span :class="cotizacionStore.getSaldoPendienteProveedor(proveedor.id) > 0 ? 'text-warning' : 'text-success'">
                 {{ formatCurrency(cotizacionStore.getSaldoPendienteProveedor(proveedor.id)) }}
               </span>
+              <p
+                v-if="cotizacionStore.getSobrepagoProveedor(proveedor.id) > 0"
+                class="text-xs text-error whitespace-nowrap"
+              >
+                Pagado de más: {{ formatCurrency(cotizacionStore.getSobrepagoProveedor(proveedor.id)) }}
+              </p>
             </td>
 
             <!-- Método -->
@@ -431,6 +499,22 @@ function getProveedorActions(proveedor: QuotationProvider) {
         :proveedor-cotizacion="selectedProveedor"
         @submit="handleProveedorSubmit"
         @cancel="isProveedorFormOpen = false"
+      />
+    </template>
+  </UModal>
+
+  <!-- Modal: cobro por viajero -->
+  <UModal
+    v-model:open="isOpcionalOpen"
+    title="Cobro por viajero"
+    description="Define si al proveedor se le paga solo por los viajeros que toman el servicio"
+  >
+    <template #body>
+      <CotizacionProveedorOpcionalForm
+        v-if="proveedorOpcional"
+        :proveedor="proveedorOpcional"
+        @submit="handleOpcionalSubmit"
+        @cancel="isOpcionalOpen = false"
       />
     </template>
   </UModal>

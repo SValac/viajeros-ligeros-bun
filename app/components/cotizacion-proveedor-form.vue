@@ -45,6 +45,8 @@ const schema = z.discriminatedUnion('costType', [
     personCount: z.number({ message: 'Ingresa un número válido' })
       .int('Debe ser un número entero')
       .positive('Debe ser mayor a 0'),
+    isOptional: z.boolean(),
+    coordinatorsCourtesy: z.boolean(),
   }),
 ]);
 
@@ -55,6 +57,8 @@ type FormState = {
   totalCost?: number;
   unitCost?: number;
   personCount?: number;
+  isOptional: boolean;
+  coordinatorsCourtesy: boolean;
   paymentMethod: PaymentType;
   splitType: CostSplitType;
   remarks: string;
@@ -83,6 +87,8 @@ const state = reactive<FormState>({
   totalCost: proveedorCotizacion?.totalCost ?? undefined,
   unitCost: proveedorCotizacion?.unitCost ?? undefined,
   personCount: proveedorCotizacion?.personCount ?? undefined,
+  isOptional: proveedorCotizacion?.isOptional ?? false,
+  coordinatorsCourtesy: proveedorCotizacion?.coordinatorsCourtesy ?? false,
   paymentMethod: proveedorCotizacion?.paymentMethod ?? 'cash',
   splitType: proveedorCotizacion?.splitType ?? 'minimum',
   remarks: proveedorCotizacion?.remarks ?? '',
@@ -127,6 +133,12 @@ watch(() => state.costType, (costType) => {
     state.totalCost = costoTotalCalculado.value;
 });
 
+// La cortesía solo aplica a un servicio opcional.
+watch(() => state.isOptional, (isOptional) => {
+  if (!isOptional)
+    state.coordinatorsCourtesy = false;
+});
+
 function isValidAmount(value: unknown): value is number {
   return typeof value === 'number' && value > 0;
 }
@@ -137,18 +149,22 @@ function onSubmit() {
     return;
 
   const form = result.data;
-  const cost: Pick<QuotationProviderFormData, 'costType' | 'totalCost' | 'unitCost' | 'personCount'> = form.costType === 'per_person'
+  const cost: Pick<QuotationProviderFormData, 'costType' | 'totalCost' | 'unitCost' | 'personCount' | 'isOptional' | 'coordinatorsCourtesy'> = form.costType === 'per_person'
     ? {
         costType: 'per_person',
         unitCost: form.unitCost,
         personCount: form.personCount,
         totalCost: calculateProviderTotalCost(form.unitCost, form.personCount),
+        isOptional: form.isOptional,
+        coordinatorsCourtesy: form.isOptional && form.coordinatorsCourtesy,
       }
     : {
         costType: 'total',
         unitCost: undefined,
         personCount: undefined,
         totalCost: form.totalCost,
+        isOptional: false,
+        coordinatorsCourtesy: false,
       };
 
   const data: QuotationProviderFormData = {
@@ -261,6 +277,25 @@ function onSubmit() {
           ({{ formatCurrency(state.unitCost ?? 0) }} × {{ state.personCount }} personas)
         </span>
       </p>
+
+      <!-- Opcional: se le paga por quienes lo toman -->
+      <div class="space-y-3 rounded-md border border-default p-3">
+        <UFormField name="isOptional">
+          <USwitch
+            v-model="state.isOptional"
+            label="Servicio opcional"
+            description="Al proveedor se le paga solo por los viajeros que lo toman. El precio del asiento sigue usando el costo total."
+          />
+        </UFormField>
+
+        <UFormField v-if="state.isOptional" name="coordinatorsCourtesy">
+          <USwitch
+            v-model="state.coordinatorsCourtesy"
+            label="Cortesía para coordinadores"
+            description="El proveedor no cobra a los coordinadores, así que no cuentan para el pago."
+          />
+        </UFormField>
+      </div>
     </div>
 
     <!-- Dividir entre -->
