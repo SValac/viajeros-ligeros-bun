@@ -1,5 +1,5 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
+import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, ProviderPriceAdjustment, ProviderPriceAdjustmentDraft, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData, TravelerPriceAdjustment } from '~/types/quotation';
 
 import {
   mapAccommodationPaymentRowToDomain,
@@ -7,12 +7,14 @@ import {
   mapProviderCostFields,
   mapProviderOptOutRowToDomain,
   mapProviderPaymentRowToDomain,
+  mapProviderPriceAdjustmentRowToDomain,
   mapQuotationAccommodationDetailRowToDomain,
   mapQuotationAccommodationRowToDomain,
   mapQuotationBusRowToDomain,
   mapQuotationProviderRowToDomain,
   mapQuotationPublicPriceRowToDomain,
   mapQuotationRowToDomain,
+  mapTravelerPriceAdjustmentRowToDomain,
 } from '~/utils/mappers';
 
 export function useQuotationRepository() {
@@ -48,7 +50,7 @@ export function useQuotationRepository() {
       = await Promise.all([
         supabase
           .from('quotation_providers')
-          .select('*, provider_payments(*)')
+          .select('*, provider_payments(*), quotation_provider_price_adjustments(*)')
           .eq('quotation_id', quotationId),
         supabase
           .from('quotation_accommodations')
@@ -79,6 +81,9 @@ export function useQuotationRepository() {
     const providerPayments = (providersResult.data ?? [])
       .flatMap(row => (row.provider_payments ?? []).map(mapProviderPaymentRowToDomain));
 
+    const providerAdjustments = (providersResult.data ?? [])
+      .flatMap(row => (row.quotation_provider_price_adjustments ?? []).map(mapProviderPriceAdjustmentRowToDomain));
+
     const accommodations = (accommodationsResult.data ?? [])
       .map((row) => {
         const details = (row.quotation_accommodation_details ?? [])
@@ -106,6 +111,7 @@ export function useQuotationRepository() {
       quotation: mapQuotationRowToDomain(quotRow),
       providers,
       providerPayments,
+      providerAdjustments,
       accommodations,
       accommodationPayments,
       publicPrices: (publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
@@ -306,6 +312,125 @@ export function useQuotationRepository() {
       .eq('quotation_provider_id', quotationProviderId)
       .in('traveler_id', travelerIds);
 
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Makes a provider's price adjustments match `drafts`: updates the ones with an id,
+   * inserts the new ones and deletes the rest (their travelers go back to the base price).
+   * @returns The provider's adjustments after saving
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function saveProviderAdjustments(
+    quotationProviderId: string,
+    drafts: ProviderPriceAdjustmentDraft[],
+  ): Promise<ProviderPriceAdjustment[]> {
+    const { data: current, error: readError } = await supabase
+      .from('quotation_provider_price_adjustments')
+      .select('id')
+      .eq('quotation_provider_id', quotationProviderId);
+    if (readError)
+      throw readError;
+
+    const keepIds = new Set(drafts.flatMap(d => (d.id ? [d.id] : [])));
+    const removeIds = current.map(r => r.id).filter(id => !keepIds.has(id));
+    if (removeIds.length > 0) {
+      const { error } = await supabase
+        .from('quotation_provider_price_adjustments')
+        .delete()
+        .in('id', removeIds);
+      if (error)
+        throw error;
+    }
+
+    for (const draft of drafts.filter(d => d.id)) {
+      const { error } = await supabase
+        .from('quotation_provider_price_adjustments')
+        .update({ label: draft.label, kind: draft.kind, mode: draft.mode, value: draft.value })
+        .eq('id', draft.id!);
+      if (error)
+        throw error;
+    }
+
+    const inserts = drafts.filter(d => !d.id);
+    if (inserts.length > 0) {
+      const { error } = await supabase
+        .from('quotation_provider_price_adjustments')
+        .insert(inserts.map(d => ({
+          quotation_provider_id: quotationProviderId,
+          label: d.label,
+          kind: d.kind,
+          mode: d.mode,
+          value: d.value,
+        })));
+      if (error)
+        throw error;
+    }
+
+    const { data, error } = await supabase
+      .from('quotation_provider_price_adjustments')
+      .select('*')
+      .eq('quotation_provider_id', quotationProviderId)
+      .order('created_at');
+    if (error)
+      throw error;
+
+    return data.map(mapProviderPriceAdjustmentRowToDomain);
+  }
+
+  /**
+   * Which adjustment each traveler of a travel pays, per service.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchTravelerAdjustments(travelId: string): Promise<TravelerPriceAdjustment[]> {
+    const { data, error } = await supabase
+      .from('quotation_provider_traveler_adjustments')
+      .select('*')
+      .eq('travel_id', travelId);
+
+    if (error)
+      throw error;
+
+    return data.map(mapTravelerPriceAdjustmentRowToDomain);
+  }
+
+  /**
+   * Sets the adjustment some travelers pay for a service, or sends them back to the base
+   * price with `adjustmentId = null`.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function setTravelerAdjustment(
+    quotationProviderId: string,
+    travelId: string,
+    travelerIds: string[],
+    adjustmentId: string | null,
+  ): Promise<void> {
+    if (travelerIds.length === 0)
+      return;
+
+    if (adjustmentId === null) {
+      const { error } = await supabase
+        .from('quotation_provider_traveler_adjustments')
+        .delete()
+        .eq('quotation_provider_id', quotationProviderId)
+        .in('traveler_id', travelerIds);
+      if (error)
+        throw error;
+      return;
+    }
+
+    const { error } = await supabase
+      .from('quotation_provider_traveler_adjustments')
+      .upsert(
+        travelerIds.map(travelerId => ({
+          quotation_provider_id: quotationProviderId,
+          traveler_id: travelerId,
+          travel_id: travelId,
+          adjustment_id: adjustmentId,
+        })),
+        { onConflict: 'quotation_provider_id,traveler_id' },
+      );
     if (error)
       throw error;
   }
@@ -808,6 +933,9 @@ export function useQuotationRepository() {
     fetchProviderOptOuts,
     insertProviderOptOuts,
     deleteProviderOptOuts,
+    saveProviderAdjustments,
+    fetchTravelerAdjustments,
+    setTravelerAdjustment,
     insertProviderPayment,
     updateProviderPayment,
     deleteProviderPayment,
