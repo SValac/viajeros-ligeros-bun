@@ -765,7 +765,6 @@ export type Database = {
           coordinators_courtesy: boolean
           cost_type: Database["public"]["Enums"]["provider_cost_type"]
           id: string
-          is_optional: boolean
           payable_cost: number
           payment_method: Database["public"]["Enums"]["payment_type"]
           person_count: number | null
@@ -782,7 +781,6 @@ export type Database = {
           coordinators_courtesy?: boolean
           cost_type?: Database["public"]["Enums"]["provider_cost_type"]
           id?: string
-          is_optional?: boolean
           payable_cost?: number
           payment_method: Database["public"]["Enums"]["payment_type"]
           person_count?: number | null
@@ -799,7 +797,6 @@ export type Database = {
           coordinators_courtesy?: boolean
           cost_type?: Database["public"]["Enums"]["provider_cost_type"]
           id?: string
-          is_optional?: boolean
           payable_cost?: number
           payment_method?: Database["public"]["Enums"]["payment_type"]
           person_count?: number | null
