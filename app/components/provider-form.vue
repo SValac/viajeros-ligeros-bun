@@ -14,6 +14,7 @@ import {
   sanitizeText,
   textSchema,
 } from '~/utils/form-validation';
+import { PROVIDER_CATEGORY_LIST, PROVIDER_CATEGORY_VALUES } from '~/utils/provider-categories';
 
 type Props = {
   provider?: Provider | null;
@@ -32,14 +33,7 @@ const emit = defineEmits<{
 const schema = z.object({
   name: businessNameSchema({ min: 3, max: 100 }),
 
-  category: z.enum([
-    'guides',
-    'transportation',
-    'accommodation',
-    'bus_agencies',
-    'food_services',
-    'other',
-  ]),
+  category: z.enum(PROVIDER_CATEGORY_VALUES),
 
   description: textSchema({ max: 500 })
     .optional()
@@ -108,14 +102,7 @@ const state = ref<Schema>({
 });
 
 // Opciones de categoría
-const categoriaOptions = [
-  { value: 'guides', label: 'Guías' },
-  { value: 'transportation', label: 'Transporte' },
-  { value: 'accommodation', label: 'Hospedaje' },
-  { value: 'bus_agencies', label: 'Agencias de Autobús' },
-  { value: 'food_services', label: 'Comidas' },
-  { value: 'other', label: 'Otros' },
-];
+const categoriaOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ value: meta.category, label: meta.label }));
 
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeBusinessName);
