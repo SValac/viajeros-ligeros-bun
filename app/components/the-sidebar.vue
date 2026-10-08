@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui';
 
+import { PROVIDER_CATEGORY_LIST } from '~/utils/provider-categories';
+
 import UserMenu from './user-menu.vue';
 
 const route = useRoute();
@@ -41,31 +43,9 @@ const items = computed<NavigationMenuItem[]>(() => [{
     label: 'Todos',
     icon: 'i-lucide-list',
     to: { name: 'providers-dashboard' },
-  }, {
-    label: 'Guías',
-    icon: 'i-lucide-user-search',
-    to: '/providers/guides',
-  }, {
-    label: 'Transportes',
-    icon: 'i-lucide-car',
-    to: '/providers/transportation',
-  }, {
-    label: 'Hospedajes',
-    icon: 'i-lucide-hotel',
-    to: '/providers/accommodation',
-  }, {
-    label: 'Agencias de Autobús',
-    icon: 'i-lucide-bus',
-    to: '/providers/bus-agencies',
-  }, {
-    label: 'Comidas',
-    icon: 'i-lucide-utensils',
-    to: '/providers/food-services',
-  }, {
-    label: 'Otros',
-    icon: 'i-lucide-package',
-    to: '/providers/other',
-  }],
+  },
+  // Una entrada por categoría, en el orden de PROVIDER_CATEGORY_META
+  ...PROVIDER_CATEGORY_LIST.map(meta => ({ label: meta.label, icon: meta.icon, to: meta.route }))],
 }]);
 </script>
 

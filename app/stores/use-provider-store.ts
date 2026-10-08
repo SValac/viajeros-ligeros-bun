@@ -44,6 +44,7 @@ export const useProviderStore = defineStore('providers', () => {
       [PROVIDER_CATEGORY.ACCOMMODATION]: 0,
       [PROVIDER_CATEGORY.BUS_AGENCIES]: 0,
       [PROVIDER_CATEGORY.FOOD_SERVICES]: 0,
+      [PROVIDER_CATEGORY.TICKETS]: 0,
       [PROVIDER_CATEGORY.OTHER]: 0,
     };
 

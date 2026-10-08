@@ -844,7 +844,6 @@ export type Database = {
           id: string
           payable_cost: number
           payment_method: Database["public"]["Enums"]["payment_type"]
-          person_count: number | null
           provider_id: string
           quotation_id: string
           remarks: string | null
@@ -860,7 +859,6 @@ export type Database = {
           id?: string
           payable_cost?: number
           payment_method: Database["public"]["Enums"]["payment_type"]
-          person_count?: number | null
           provider_id: string
           quotation_id: string
           remarks?: string | null
@@ -876,7 +874,6 @@ export type Database = {
           id?: string
           payable_cost?: number
           payment_method?: Database["public"]["Enums"]["payment_type"]
-          person_count?: number | null
           provider_id?: string
           quotation_id?: string
           remarks?: string | null
@@ -1717,6 +1714,7 @@ export type Database = {
         | "accommodation"
         | "bus_agencies"
         | "food_services"
+        | "tickets"
         | "other"
       provider_cost_type: "total" | "per_person"
       quotation_bus_status: "reserved" | "confirmed" | "pending"
@@ -1869,6 +1867,7 @@ export const Constants = {
         "accommodation",
         "bus_agencies",
         "food_services",
+        "tickets",
         "other",
       ],
       provider_cost_type: ["total", "per_person"],

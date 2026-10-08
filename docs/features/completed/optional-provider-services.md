@@ -65,14 +65,17 @@ Dos migraciones que salen en el mismo push:
    `payable_cost`, la tabla de exclusiones y los triggers. También agregaba `is_optional`.
 2. `20261008153118_per_person_providers_paid_by_takers.sql`: todo servicio por persona se paga
    por quienes lo toman. Quita `is_optional`, que solo existió en local. `person_count` deja de
-   ser obligatorio (contract pendiente para borrarlo). Corrige el CHECK de costo, que dejaba
-   pasar un `unit_cost` NULL.
+   ser obligatorio. Corrige el CHECK de costo, que dejaba pasar un `unit_cost` NULL.
+3. `20261008160111_drop_provider_person_count.sql` (contract, PR aparte): borra
+   `person_count` y rehace el CHECK de costo sin ella. Tiene un guard que se niega a borrarla
+   si alguna fila conserva un valor (en prod y stage había 0). **Orden**: primero el deploy
+   del CRM de ese PR, que deja de enviar `person_count`, y después el push de la migración.
 
 | Pieza | Qué hace |
 | --- | --- |
 | `quotation_providers.coordinators_courtesy` | `NOT NULL DEFAULT false`. CHECK: solo con `per_person` |
 | `quotation_providers.payable_cost` | Lo que se le debe. Lo calcula el trigger, no el cliente |
-| `quotation_providers_cost_type_fields_check` | Total: sin `unit_cost` ni `person_count`. Por persona: `unit_cost` no NULL y > 0; `person_count` NULL o > 0 |
+| `quotation_providers_cost_type_fields_check` | Total: sin `unit_cost`. Por persona: `unit_cost` no NULL y > 0 |
 | `quotation_provider_opt_outs` | `(quotation_provider_id, traveler_id)` + `travel_id`. FK compuesta a `travelers(id, travel_id)` y CASCADE desde el proveedor y el viajero. RLS `_owner` por `travel_id` |
 | `private.check_opt_out_same_travel()` | Rechaza (`opt_out_travel_mismatch`) un viajero de otro viaje |
 | `private.quotation_provider_payable_cost(...)` | Por persona: `unit_cost × COUNT(viajeros del viaje)`, sin los desmarcados y, con cortesía, sin los coordinadores. Costo total: `total_cost` |
