@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ProviderPaymentStatus, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { calculateProviderQuotedCost, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -40,10 +41,10 @@ const historialProveedorId = shallowRef<string>('');
 const historialProveedorNombre = shallowRef<string>('');
 const isDeleteModalOpen = shallowRef(false);
 const proveedorToDelete = shallowRef<QuotationProvider | null>(null);
-const isOpcionalOpen = shallowRef(false);
-const proveedorOpcional = shallowRef<QuotationProvider | null>(null);
+const isCortesiaOpen = shallowRef(false);
+const proveedorCortesia = shallowRef<QuotationProvider | null>(null);
 
-// El viaje de la cotización, para enlazar a su pestaña de servicios opcionales.
+// El viaje de la cotización, para enlazar a su pestaña de servicios por persona.
 const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
 
 // Filter options
@@ -91,37 +92,32 @@ function isProviderInactive(providerId: string): boolean {
   return provider ? !provider.active : false;
 }
 
-function getDivisor(proveedor: QuotationProvider): number {
-  return cotizacionStore.getDivisorCosto(proveedor.quotationId, proveedor.splitType ?? 'minimum');
+// Costo con el autobús lleno: en un servicio por persona, costo × asientos vendibles.
+function getQuotedCost(proveedor: QuotationProvider): number {
+  return calculateProviderQuotedCost(proveedor, cotizacionStore.getAsientosVendibles(proveedor.quotationId));
 }
 
-// Un costo por persona no se recalcula solo: avisa cuando sus personas no coinciden con
-// el divisor actual (las editó el usuario o cambiaron los asientos), sin mover saldos.
-function hasPersonCountDrift(proveedor: QuotationProvider): boolean {
-  return proveedor.costType === 'per_person' && proveedor.personCount !== getDivisor(proveedor);
-}
-
-// Cuántos viajeros cuentan para el pago de un servicio opcional.
+// Cuántos viajeros cuentan para el pago de un servicio por persona.
 function getTakersCount(proveedor: QuotationProvider): number {
   return proveedor.unitCost ? Math.round(proveedor.payableCost / proveedor.unitCost) : 0;
 }
 
-function openOpcional(proveedor: QuotationProvider) {
-  proveedorOpcional.value = proveedor;
-  isOpcionalOpen.value = true;
+function openCortesia(proveedor: QuotationProvider) {
+  proveedorCortesia.value = proveedor;
+  isCortesiaOpen.value = true;
 }
 
-async function handleOpcionalSubmit(data: { isOptional: boolean; coordinatorsCourtesy: boolean }) {
-  if (!proveedorOpcional.value)
+async function handleCortesiaSubmit(coordinatorsCourtesy: boolean) {
+  if (!proveedorCortesia.value)
     return;
-  const result = await cotizacionStore.updateProveedorOpcional(proveedorOpcional.value.id, data);
+  const result = await cotizacionStore.updateProveedorCortesia(proveedorCortesia.value.id, coordinatorsCourtesy);
   if ('error' in result) {
     toast.add({ title: 'Error', description: result.error, color: 'error' });
     return;
   }
-  toast.add({ title: 'Cobro actualizado', color: 'success' });
-  isOpcionalOpen.value = false;
-  proveedorOpcional.value = null;
+  toast.add({ title: 'Cortesía actualizada', color: 'success' });
+  isCortesiaOpen.value = false;
+  proveedorCortesia.value = null;
 }
 
 function openNewProveedor() {
@@ -204,13 +200,13 @@ function getProveedorActions(proveedor: QuotationProvider) {
       disabled: cotizacionStore.getSaldoPendienteProveedor(proveedor.id) <= 0,
       onSelect: () => openRegistrarPago(proveedor),
     },
-    // Cómo se le paga a un servicio por persona; no cambia el precio del asiento, así que
-    // también se puede con la cotización confirmada.
-    ...(proveedor.costType === 'per_person'
+    // La cortesía no cambia el precio del asiento, así que también se puede con la
+    // cotización confirmada.
+    ...(isPerPersonProvider(proveedor)
       ? [{
-          label: 'Cobro por viajero',
-          icon: 'i-lucide-ticket-check',
-          onSelect: () => openOpcional(proveedor),
+          label: 'Cortesía para coordinadores',
+          icon: 'i-lucide-gift',
+          onSelect: () => openCortesia(proveedor),
         }]
       : []),
   ];
@@ -352,9 +348,9 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <td class="py-3 pr-4 max-w-40">
               <span class="truncate block">{{ proveedor.serviceDescription }}</span>
               <UBadge
-                v-if="proveedor.isOptional"
-                label="Opcional"
-                icon="i-lucide-ticket-check"
+                v-if="proveedor.coordinatorsCourtesy"
+                label="Cortesía coord."
+                icon="i-lucide-gift"
                 color="info"
                 variant="subtle"
                 class="mt-1"
@@ -364,28 +360,29 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <!-- División -->
             <td class="py-3 pr-4">
               <UBadge
+                v-if="isPerPersonProvider(proveedor)"
+                label="Por persona"
+                color="primary"
+                variant="subtle"
+              />
+              <UBadge
+                v-else
                 :label="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
                 :color="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
               />
             </td>
 
-            <!-- Costo Total -->
+            <!-- Costo Total: en un servicio por persona, con el autobús lleno -->
             <td class="py-3 pr-4">
               <p class="font-medium">
-                {{ formatCurrency(proveedor.totalCost) }}
+                {{ formatCurrency(getQuotedCost(proveedor)) }}
               </p>
               <p
-                v-if="proveedor.costType === 'per_person'"
-                class="text-xs text-muted flex items-center gap-1 whitespace-nowrap"
+                v-if="isPerPersonProvider(proveedor)"
+                class="text-xs text-muted whitespace-nowrap"
               >
-                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ proveedor.personCount }} pers.
-                <UIcon
-                  v-if="hasPersonCountDrift(proveedor)"
-                  name="i-lucide-alert-triangle"
-                  class="size-3.5 text-warning shrink-0"
-                  :title="`Calculado para ${proveedor.personCount} personas, pero el costo se reparte entre ${getDivisor(proveedor)}. Edita el servicio si debe recalcularse.`"
-                />
+                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ cotizacionStore.getAsientosVendibles(proveedor.quotationId) }} asientos
               </p>
             </td>
 
@@ -395,7 +392,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
                 {{ formatCurrency(proveedor.payableCost) }}
               </p>
               <ULink
-                v-if="proveedor.isOptional && travelId"
+                v-if="isPerPersonProvider(proveedor) && travelId"
                 :to="{ name: 'travel-optional-services', params: { id: travelId } }"
                 class="text-xs text-primary whitespace-nowrap"
               >
@@ -503,18 +500,18 @@ function getProveedorActions(proveedor: QuotationProvider) {
     </template>
   </UModal>
 
-  <!-- Modal: cobro por viajero -->
+  <!-- Modal: cortesía para coordinadores -->
   <UModal
-    v-model:open="isOpcionalOpen"
-    title="Cobro por viajero"
-    description="Define si al proveedor se le paga solo por los viajeros que toman el servicio"
+    v-model:open="isCortesiaOpen"
+    title="Cortesía para coordinadores"
+    description="Define si los coordinadores cuentan para el pago de este servicio"
   >
     <template #body>
-      <CotizacionProveedorOpcionalForm
-        v-if="proveedorOpcional"
-        :proveedor="proveedorOpcional"
-        @submit="handleOpcionalSubmit"
-        @cancel="isOpcionalOpen = false"
+      <CotizacionProveedorCortesiaForm
+        v-if="proveedorCortesia"
+        :proveedor="proveedorCortesia"
+        @submit="handleCortesiaSubmit"
+        @cancel="isCortesiaOpen = false"
       />
     </template>
   </UModal>

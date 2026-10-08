@@ -42,10 +42,6 @@ const schema = z.discriminatedUnion('costType', [
   baseSchema.extend({
     costType: z.literal('per_person'),
     unitCost: costSchema,
-    personCount: z.number({ message: 'Ingresa un número válido' })
-      .int('Debe ser un número entero')
-      .positive('Debe ser mayor a 0'),
-    isOptional: z.boolean(),
     coordinatorsCourtesy: z.boolean(),
   }),
 ]);
@@ -56,8 +52,6 @@ type FormState = {
   costType: ProviderCostType;
   totalCost?: number;
   unitCost?: number;
-  personCount?: number;
-  isOptional: boolean;
   coordinatorsCourtesy: boolean;
   paymentMethod: PaymentType;
   splitType: CostSplitType;
@@ -86,8 +80,6 @@ const state = reactive<FormState>({
   costType: proveedorCotizacion?.costType ?? 'total',
   totalCost: proveedorCotizacion?.totalCost ?? undefined,
   unitCost: proveedorCotizacion?.unitCost ?? undefined,
-  personCount: proveedorCotizacion?.personCount ?? undefined,
-  isOptional: proveedorCotizacion?.isOptional ?? false,
   coordinatorsCourtesy: proveedorCotizacion?.coordinatorsCourtesy ?? false,
   paymentMethod: proveedorCotizacion?.paymentMethod ?? 'cash',
   splitType: proveedorCotizacion?.splitType ?? 'minimum',
@@ -99,44 +91,17 @@ const state = reactive<FormState>({
 const serviceDescriptionInput = useSanitizedModel(() => state.serviceDescription ?? '', v => state.serviceDescription = v, sanitizeText);
 const remarksInput = useSanitizedModel(() => state.remarks ?? '', v => state.remarks = v, sanitizeText);
 
-// Personas por defecto: las mismas entre las que se reparte el costo ("Dividir entre").
+// Entre cuántas personas se reparte un costo total ("Dividir entre").
 const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotationId, state.splitType));
 
-const personasHelp = computed(() => {
-  const origen = state.splitType === 'total' ? 'Asientos vendibles' : 'Asientos mínimos objetivo';
-  return `${origen}: ${divisorPersonas.value}`;
-});
+// Un servicio por persona suma su costo directo al asiento; su total de referencia es el
+// costo × asientos vendibles (lo que costaría con el autobús lleno).
+const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId));
 
-// Un número de personas distinto al divisor lo puso el usuario a mano y ya no se prellena.
-const personCountTouched = shallowRef(
-  proveedorCotizacion?.costType === 'per_person' && proveedorCotizacion.personCount !== divisorPersonas.value,
-);
-
-watch(
-  [() => state.costType, divisorPersonas],
-  ([costType, divisor]) => {
-    if (costType === 'per_person' && !personCountTouched.value)
-      state.personCount = divisor > 0 ? divisor : undefined;
-  },
-  { immediate: true },
-);
-
-const costoTotalCalculado = computed(() => {
-  if (!isValidAmount(state.unitCost) || !isValidAmount(state.personCount))
-    return null;
-  return calculateProviderTotalCost(state.unitCost, state.personCount);
-});
-
-// Al pasar de "por persona" a "total" el total arranca con lo que ya se calculó.
+// Al pasar de "por persona" a "total" el total arranca con el de referencia.
 watch(() => state.costType, (costType) => {
-  if (costType === 'total' && costoTotalCalculado.value !== null)
-    state.totalCost = costoTotalCalculado.value;
-});
-
-// La cortesía solo aplica a un servicio opcional.
-watch(() => state.isOptional, (isOptional) => {
-  if (!isOptional)
-    state.coordinatorsCourtesy = false;
+  if (costType === 'total' && isValidAmount(state.unitCost))
+    state.totalCost = calculateProviderTotalCost(state.unitCost, asientosVendibles.value);
 });
 
 function isValidAmount(value: unknown): value is number {
@@ -149,29 +114,27 @@ function onSubmit() {
     return;
 
   const form = result.data;
-  const cost: Pick<QuotationProviderFormData, 'costType' | 'totalCost' | 'unitCost' | 'personCount' | 'isOptional' | 'coordinatorsCourtesy'> = form.costType === 'per_person'
+  // Por persona no se reparte: splitType queda en 'total' solo porque la columna lo exige.
+  const cost: Pick<QuotationProviderFormData, 'costType' | 'totalCost' | 'unitCost' | 'coordinatorsCourtesy' | 'splitType'> = form.costType === 'per_person'
     ? {
         costType: 'per_person',
         unitCost: form.unitCost,
-        personCount: form.personCount,
-        totalCost: calculateProviderTotalCost(form.unitCost, form.personCount),
-        isOptional: form.isOptional,
-        coordinatorsCourtesy: form.isOptional && form.coordinatorsCourtesy,
+        totalCost: calculateProviderTotalCost(form.unitCost, asientosVendibles.value),
+        coordinatorsCourtesy: form.coordinatorsCourtesy,
+        splitType: 'total',
       }
     : {
         costType: 'total',
         unitCost: undefined,
-        personCount: undefined,
         totalCost: form.totalCost,
-        isOptional: false,
         coordinatorsCourtesy: false,
+        splitType: form.splitType,
       };
 
   const data: QuotationProviderFormData = {
     providerId: form.providerId,
     serviceDescription: form.serviceDescription,
     paymentMethod: form.paymentMethod,
-    splitType: form.splitType,
     remarks: form.remarks,
     confirmed: form.confirmed,
     ...cost,
@@ -240,66 +203,34 @@ function onSubmit() {
     </UFormField>
 
     <!-- Costo por persona -->
-    <div v-else class="space-y-2">
-      <div class="grid gap-4 sm:grid-cols-2">
-        <UFormField
-          label="Costo por persona"
-          name="unitCost"
-          required
-        >
-          <MoneyInput v-model="state.unitCost" />
-        </UFormField>
+    <div v-else class="space-y-3">
+      <UFormField
+        label="Costo por persona"
+        name="unitCost"
+        required
+      >
+        <MoneyInput v-model="state.unitCost" />
+      </UFormField>
 
-        <UFormField
-          label="Número de personas"
-          name="personCount"
-          :help="personasHelp"
-          required
-        >
-          <UInput
-            v-model.number="state.personCount"
-            type="number"
-            min="1"
-            step="1"
-            placeholder="0"
-            class="w-full"
-            @update:model-value="personCountTouched = true"
-          />
-        </UFormField>
-      </div>
+      <UAlert
+        icon="i-lucide-info"
+        color="info"
+        variant="subtle"
+        :description="`Se suma ${formatCurrency(state.unitCost ?? 0)} al precio de cada asiento. Al proveedor se le paga por cada viajero que toma el servicio; todos lo toman salvo los que desmarques en la pestaña Servicios por persona del viaje.`"
+      />
 
-      <p class="text-sm text-muted">
-        Costo total:
-        <span class="font-medium text-default">
-          {{ costoTotalCalculado === null ? '—' : formatCurrency(costoTotalCalculado) }}
-        </span>
-        <span v-if="costoTotalCalculado !== null">
-          ({{ formatCurrency(state.unitCost ?? 0) }} × {{ state.personCount }} personas)
-        </span>
-      </p>
-
-      <!-- Opcional: se le paga por quienes lo toman -->
-      <div class="space-y-3 rounded-md border border-default p-3">
-        <UFormField name="isOptional">
-          <USwitch
-            v-model="state.isOptional"
-            label="Servicio opcional"
-            description="Al proveedor se le paga solo por los viajeros que lo toman. El precio del asiento sigue usando el costo total."
-          />
-        </UFormField>
-
-        <UFormField v-if="state.isOptional" name="coordinatorsCourtesy">
-          <USwitch
-            v-model="state.coordinatorsCourtesy"
-            label="Cortesía para coordinadores"
-            description="El proveedor no cobra a los coordinadores, así que no cuentan para el pago."
-          />
-        </UFormField>
-      </div>
+      <UFormField name="coordinatorsCourtesy">
+        <USwitch
+          v-model="state.coordinatorsCourtesy"
+          label="Cortesía para coordinadores"
+          description="El proveedor no cobra a los coordinadores, así que no cuentan para el pago."
+        />
+      </UFormField>
     </div>
 
-    <!-- Dividir entre -->
+    <!-- Dividir entre: solo un costo total se reparte -->
     <UFormField
+      v-if="state.costType === 'total'"
       label="Dividir entre"
       name="splitType"
       :help="`Entre ${divisorPersonas} personas`"
