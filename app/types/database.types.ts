@@ -723,11 +723,50 @@ export type Database = {
           },
         ]
       }
+      quotation_provider_opt_outs: {
+        Row: {
+          created_at: string
+          quotation_provider_id: string
+          travel_id: string
+          traveler_id: string
+        }
+        Insert: {
+          created_at?: string
+          quotation_provider_id: string
+          travel_id: string
+          traveler_id: string
+        }
+        Update: {
+          created_at?: string
+          quotation_provider_id?: string
+          travel_id?: string
+          traveler_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "quotation_provider_opt_outs_quotation_provider_id_fkey"
+            columns: ["quotation_provider_id"]
+            isOneToOne: false
+            referencedRelation: "quotation_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotation_provider_opt_outs_traveler_fkey"
+            columns: ["traveler_id", "travel_id"]
+            isOneToOne: false
+            referencedRelation: "travelers"
+            referencedColumns: ["id", "travel_id"]
+          },
+        ]
+      }
       quotation_providers: {
         Row: {
           confirmed: boolean
+          coordinators_courtesy: boolean
           cost_type: Database["public"]["Enums"]["provider_cost_type"]
           id: string
+          is_optional: boolean
+          payable_cost: number
           payment_method: Database["public"]["Enums"]["payment_type"]
           person_count: number | null
           provider_id: string
@@ -740,8 +779,11 @@ export type Database = {
         }
         Insert: {
           confirmed?: boolean
+          coordinators_courtesy?: boolean
           cost_type?: Database["public"]["Enums"]["provider_cost_type"]
           id?: string
+          is_optional?: boolean
+          payable_cost?: number
           payment_method: Database["public"]["Enums"]["payment_type"]
           person_count?: number | null
           provider_id: string
@@ -754,8 +796,11 @@ export type Database = {
         }
         Update: {
           confirmed?: boolean
+          coordinators_courtesy?: boolean
           cost_type?: Database["public"]["Enums"]["provider_cost_type"]
           id?: string
+          is_optional?: boolean
+          payable_cost?: number
           payment_method?: Database["public"]["Enums"]["payment_type"]
           person_count?: number | null
           provider_id?: string
