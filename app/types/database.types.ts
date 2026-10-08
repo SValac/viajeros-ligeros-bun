@@ -1635,6 +1635,7 @@ export type Database = {
         | "accommodation"
         | "bus_agencies"
         | "food_services"
+        | "tickets"
         | "other"
       provider_cost_type: "total" | "per_person"
       quotation_bus_status: "reserved" | "confirmed" | "pending"
@@ -1785,6 +1786,7 @@ export const Constants = {
         "accommodation",
         "bus_agencies",
         "food_services",
+        "tickets",
         "other",
       ],
       provider_cost_type: ["total", "per_person"],
