@@ -2,6 +2,7 @@
 import type { ProviderCategory, ProviderFormData } from '~/types/provider';
 
 import { matchesProviderSearch } from '~/composables/providers/use-provider-domain';
+import { PROVIDER_CATEGORY_LIST, PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 type Props = {
   modelValue?: string;
@@ -25,14 +26,7 @@ const selectedProviderId = ref(modelValue);
 const searchTerm = shallowRef('');
 
 // Opciones de categoría
-const allCategoryOptions = [
-  { value: 'guides', label: 'Guías', icon: 'i-lucide-user-search' },
-  { value: 'transportation', label: 'Transporte', icon: 'i-lucide-car' },
-  { value: 'accommodation', label: 'Hospedaje', icon: 'i-lucide-hotel' },
-  { value: 'bus_agencies', label: 'Agencias de Autobús', icon: 'i-lucide-bus' },
-  { value: 'food_services', label: 'Comidas', icon: 'i-lucide-utensils' },
-  { value: 'other', label: 'Otros', icon: 'i-lucide-package' },
-];
+const allCategoryOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ value: meta.category, label: meta.label, icon: meta.icon }));
 
 const categoryOptions = computed(() =>
   excludeCategories.length
@@ -64,23 +58,10 @@ const providerOptions = computed(() => {
         value: provider.id,
         label: contactName ? `${provider.name} - ${contactName}` : provider.name,
         description: [city, state].filter(Boolean).join(', ') || undefined,
-        icon: getCategoryIcon(provider.category),
+        icon: PROVIDER_CATEGORY_META[provider.category].icon,
       };
     });
 });
-
-// Función auxiliar para obtener icono de categoría
-function getCategoryIcon(category: ProviderCategory): string {
-  const icons: Record<ProviderCategory, string> = {
-    guides: 'i-lucide-user-search',
-    transportation: 'i-lucide-car',
-    accommodation: 'i-lucide-hotel',
-    bus_agencies: 'i-lucide-bus',
-    food_services: 'i-lucide-utensils',
-    other: 'i-lucide-package',
-  };
-  return icons[category] || 'i-lucide-package';
-}
 
 // Handlers
 function handleCategoryChange(value: string | null | undefined) {

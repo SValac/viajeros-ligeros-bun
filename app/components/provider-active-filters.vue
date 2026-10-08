@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { ProviderCategory, ProviderFilters } from '~/types/provider';
 
+import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
+
 type Props = {
   filters: ProviderFilters;
   totalCount: number;
@@ -14,14 +16,9 @@ const emit = defineEmits<{
   clearAll: [];
 }>();
 
-const categoryLabels: Record<ProviderCategory, string> = {
-  guides: 'Guías',
-  transportation: 'Transporte',
-  accommodation: 'Hospedaje',
-  bus_agencies: 'Agencias de Autobús',
-  food_services: 'Comidas',
-  other: 'Otros',
-};
+function categoryLabel(category: ProviderCategory): string {
+  return PROVIDER_CATEGORY_META[category].label;
+}
 
 type ActiveChip = {
   key: keyof ProviderFilters;
@@ -34,7 +31,7 @@ const activeChips = computed<ActiveChip[]>(() => {
   if (props.filters.category) {
     chips.push({
       key: 'category',
-      label: `Categoría: ${categoryLabels[props.filters.category]}`,
+      label: `Categoría: ${categoryLabel(props.filters.category)}`,
     });
   }
   if (props.filters.city) {

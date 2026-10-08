@@ -6,6 +6,7 @@ export const PROVIDER_CATEGORY = {
   ACCOMMODATION: 'accommodation',
   BUS_AGENCIES: 'bus_agencies',
   FOOD_SERVICES: 'food_services',
+  TICKETS: 'tickets',
   OTHER: 'other',
 } as const;
 
