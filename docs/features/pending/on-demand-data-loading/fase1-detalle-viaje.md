@@ -16,7 +16,11 @@
   (`enabled: !!id`, así que un id vacío no hace petición). Quedan con `getTravelById` a
   propósito: `calendar.vue` y `payments/traveler/[id].vue` (Fase 2) y
   `use-cotizacion-store.ts` `getAsientosVendibles` (Fase 4)
-- [ ] Verificación + punto de decisión
+- [x] Verificación (2026-10-10, playwright-cli contra el seed local): todos los puntos de
+  la lista de abajo pasan, incluido el refresco al volver a la pestaña tras un cambio externo.
+  Encontró que Habitaciones y Viajeros leían alojamientos de `getAccommodationsByTravel`;
+  ya leen `travel.accommodations` de la query
+- [ ] Punto de decisión
 
 > **Limitación conocida (Fase 4):** la pestaña Autobuses lista los buses desde
 > `cotizacionStore` (se carga una vez por viaje, `travelFetchCache`), no desde la query del
