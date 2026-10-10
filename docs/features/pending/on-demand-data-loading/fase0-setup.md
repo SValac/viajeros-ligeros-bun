@@ -1,6 +1,6 @@
 # Fase 0 — Setup de Pinia Colada
 
-**Estado:** Pendiente
+**Estado:** Completada ✅
 **Dependencia:** Ninguna
 **Migración:** No
 
@@ -33,7 +33,8 @@ bun add @pinia/colada @pinia/colada-nuxt
 
 - Agregar `'@pinia/colada-nuxt'` a `modules` en `nuxt.config.ts` (después de
   `'@pinia/nuxt'`).
-- `@pinia/colada-devtools` es peer opcional del módulo: evaluar si vale la pena en dev.
+- `@pinia/colada-devtools` quedó instalado como devDependency, pero el módulo solo lo registra
+  con `@nuxt/devtools >=4` (el proyecto tiene 3.4.2): hoy no se activa solo. Revisar en Fase 1.
 
 ### 3. Defaults globales — `colada.options.ts` (raíz)
 

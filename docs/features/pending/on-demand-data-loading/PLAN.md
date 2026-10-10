@@ -113,7 +113,7 @@ de [Production data safety](../../../claude/05-git-workflow.md#production-data-s
 
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
-| [fase0-setup.md](fase0-setup.md) | Subir Vue, instalar Colada + módulo Nuxt, defaults, convención de claves | Ninguna | Pendiente |
+| [fase0-setup.md](fase0-setup.md) | Subir Vue, instalar Colada + módulo Nuxt, defaults, convención de claves | Ninguna | Completada ✅ |
 | [fase1-detalle-viaje.md](fase1-detalle-viaje.md) | **Piloto**: viaje por id con `useQuery`; corrige el "no encontrado" tras 1000 viajes · punto de decisión | Fase 0 | Pendiente |
 | [fase2-listados-viajes.md](fase2-listados-viajes.md) | Listados ligeros + conteos en servidor: dashboard, calendario, `/quotations`, `/payments`; adiós `travelsStore.travels` | Fase 1 | Pendiente |
 | [fase3-viajeros.md](fase3-viajeros.md) | Viajeros y asignaciones de habitación por viaje; adiós `travelerStore.fetchAll()` | Fase 2 | Pendiente |
