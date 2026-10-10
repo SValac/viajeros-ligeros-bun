@@ -34,21 +34,32 @@ const coordinatorItems = computed(() =>
   })),
 );
 
+// Shared by the schema and the fields' character counters. The summary is the public
+// site's listing teaser, hence short.
+const MAX_LENGTH = {
+  label: 100,
+  destination: 100,
+  departureFrom: 100,
+  summary: 200,
+  description: 3000,
+  internalNotes: 500,
+} as const;
+
 // Schema de validación Zod
 const schema = z.object({
-  label: businessNameSchema({ min: 3, max: 100 }),
-  destination: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
+  label: businessNameSchema({ min: 3, max: MAX_LENGTH.label }),
+  destination: businessNameSchema({ min: 1, max: MAX_LENGTH.destination }).optional().or(z.literal('')),
   coordinatorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
   startDate: z.string().min(1, 'Fecha requerida'),
   endDate: z.string().min(1, 'Fecha requerida'),
   // Contenido HTML del editor enriquecido: solo se despojan caracteres de control, no se restringe el charset.
-  description: textSchema({ min: 10, max: 3000 }),
+  description: textSchema({ min: 10, max: MAX_LENGTH.description }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
-  departureFrom: businessNameSchema({ min: 1, max: 100 }).optional().or(z.literal('')),
-  summary: textSchema({ min: 10, max: 200 }),
+  departureFrom: businessNameSchema({ min: 1, max: MAX_LENGTH.departureFrom }).optional().or(z.literal('')),
+  summary: textSchema({ min: 10, max: MAX_LENGTH.summary }),
   highlights: z.array(businessNameSchema({ min: 1, max: 40 })).max(6, 'Máximo 6 destacados'),
   featured: z.boolean(),
-  internalNotes: textSchema({ max: 500 }).optional().or(z.literal('')),
+  internalNotes: textSchema({ max: MAX_LENGTH.internalNotes }).optional().or(z.literal('')),
 }).refine(
   data => new Date(data.endDate) >= new Date(data.startDate),
   { message: 'Fecha fin debe ser mayor o igual a fecha inicio', path: ['startDate'] },
@@ -231,6 +242,9 @@ function onCancel() {
             name="label"
             required
           >
+            <template #hint>
+              <CharCounter :value="state.label" :max="MAX_LENGTH.label" />
+            </template>
             <UInput
               v-model="labelInput"
               placeholder="Aventura en París"
@@ -243,6 +257,9 @@ function onCancel() {
             label="Destino"
             name="destination"
           >
+            <template #hint>
+              <CharCounter :value="state.destination" :max="MAX_LENGTH.destination" />
+            </template>
             <UInput
               v-model="destinationInput"
               placeholder="París, Francia"
@@ -256,6 +273,9 @@ function onCancel() {
             name="departureFrom"
             description="Ciudad/punto de partida que se muestra en el sitio público"
           >
+            <template #hint>
+              <CharCounter :value="state.departureFrom" :max="MAX_LENGTH.departureFrom" />
+            </template>
             <UInput
               v-model="departureFromInput"
               placeholder="Ciudad de México"
@@ -432,10 +452,14 @@ function onCancel() {
               description="Teaser corto para el listado del sitio público."
               required
             >
+              <template #hint>
+                <CharCounter :value="state.summary" :max="MAX_LENGTH.summary" />
+              </template>
               <UTextarea
                 v-model="summaryInput"
                 placeholder="Una escapada inolvidable entre lagos y montañas"
                 :rows="2"
+                autoresize
                 class="w-full"
               />
             </UFormField>
@@ -504,6 +528,9 @@ function onCancel() {
             name="internalNotes"
             description="Información privada solo para el equipo"
           >
+            <template #hint>
+              <CharCounter :value="state.internalNotes" :max="MAX_LENGTH.internalNotes" />
+            </template>
             <UTextarea
               v-model="internalNotesInput"
               placeholder="Preferencias del cliente, observaciones especiales..."
@@ -514,8 +541,12 @@ function onCancel() {
           <UFormField
             label="Descripción"
             name="description"
+            description="El límite cuenta también el formato (negritas, listas, enlaces)."
             required
           >
+            <template #hint>
+              <CharCounter :value="state.description" :max="MAX_LENGTH.description" />
+            </template>
             <RichTextEditor
               v-model="state.description"
               placeholder="Describe el viaje, actividades incluidas, etc."

@@ -1,21 +1,23 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderPayment, ProviderPaymentFormData, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData } from '~/types/quotation';
-import type { TravelAccommodation } from '~/types/travel';
+import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, ProviderPriceAdjustment, ProviderPriceAdjustmentDraft, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationExpense, QuotationExpenseFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData, TravelerPriceAdjustment } from '~/types/quotation';
 
 import {
   mapAccommodationPaymentRowToDomain,
   mapBusPaymentRowToDomain,
   mapProviderCostFields,
+  mapProviderOptOutRowToDomain,
   mapProviderPaymentRowToDomain,
+  mapProviderPriceAdjustmentRowToDomain,
   mapQuotationAccommodationDetailRowToDomain,
   mapQuotationAccommodationRowToDomain,
   mapQuotationBusRowToDomain,
+  mapQuotationExpenseRowToDomain,
+  mapQuotationExpenseToRow,
   mapQuotationProviderRowToDomain,
   mapQuotationPublicPriceRowToDomain,
   mapQuotationRowToDomain,
+  mapTravelerPriceAdjustmentRowToDomain,
 } from '~/utils/mappers';
-
-import type { RoomSlot } from './use-quotation-domain';
 
 export function useQuotationRepository() {
   const supabase = useSupabase();
@@ -46,11 +48,11 @@ export function useQuotationRepository() {
 
     const quotationId = quotRow.id;
 
-    const [providersResult, accommodationsResult, publicPricesResult, busesResult]
+    const [providersResult, accommodationsResult, publicPricesResult, busesResult, expensesResult]
       = await Promise.all([
         supabase
           .from('quotation_providers')
-          .select('*, provider_payments(*)')
+          .select('*, provider_payments(*), quotation_provider_price_adjustments(*)')
           .eq('quotation_id', quotationId),
         supabase
           .from('quotation_accommodations')
@@ -64,6 +66,11 @@ export function useQuotationRepository() {
           .from('quotation_buses')
           .select('*, bus_payments(*)')
           .eq('quotation_id', quotationId),
+        supabase
+          .from('quotation_expenses')
+          .select('*')
+          .eq('quotation_id', quotationId)
+          .order('created_at'),
       ]);
 
     if (providersResult.error)
@@ -74,12 +81,17 @@ export function useQuotationRepository() {
       throw publicPricesResult.error;
     if (busesResult.error)
       throw busesResult.error;
+    if (expensesResult.error)
+      throw expensesResult.error;
 
     const providers = (providersResult.data ?? [])
       .map(row => mapQuotationProviderRowToDomain(row));
 
     const providerPayments = (providersResult.data ?? [])
       .flatMap(row => (row.provider_payments ?? []).map(mapProviderPaymentRowToDomain));
+
+    const providerAdjustments = (providersResult.data ?? [])
+      .flatMap(row => (row.quotation_provider_price_adjustments ?? []).map(mapProviderPriceAdjustmentRowToDomain));
 
     const accommodations = (accommodationsResult.data ?? [])
       .map((row) => {
@@ -108,11 +120,13 @@ export function useQuotationRepository() {
       quotation: mapQuotationRowToDomain(quotRow),
       providers,
       providerPayments,
+      providerAdjustments,
       accommodations,
       accommodationPayments,
       publicPrices: (publicPricesResult.data ?? []).map(mapQuotationPublicPriceRowToDomain),
       buses,
       busPayments,
+      expenses: (expensesResult.data ?? []).map(mapQuotationExpenseRowToDomain),
     };
   }
 
@@ -185,7 +199,7 @@ export function useQuotationRepository() {
     if (data.totalCost !== undefined)
       update.total_cost = data.totalCost;
     if (data.costType !== undefined)
-      Object.assign(update, mapProviderCostFields({ costType: data.costType, unitCost: data.unitCost, personCount: data.personCount }));
+      Object.assign(update, mapProviderCostFields({ costType: data.costType, unitCost: data.unitCost, coordinatorsCourtesy: data.coordinatorsCourtesy ?? false }));
     if (data.paymentMethod !== undefined)
       update.payment_method = data.paymentMethod;
     if (data.splitType !== undefined)
@@ -212,6 +226,221 @@ export function useQuotationRepository() {
       .delete()
       .eq('id', id);
 
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Sets whether a per-person provider gives the coordinators the service for free.
+   * Allowed on confirmed quotations because it doesn't touch the seat price.
+   * @returns The provider with the payable cost the database recomputed
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function updateProviderCourtesy(id: string, coordinatorsCourtesy: boolean): Promise<QuotationProvider> {
+    const { data: row, error } = await supabase
+      .from('quotation_providers')
+      .update({ coordinators_courtesy: coordinatorsCourtesy })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return mapQuotationProviderRowToDomain(row);
+  }
+
+  /**
+   * Reads what's owed to every provider of a quotation. Travelers added, removed or
+   * opted out change it in the database, so the store refreshes it afterwards.
+   * @param quotationId - UUID of the quotation
+   * @returns One `{ id, payableCost }` per quotation provider
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchProviderPayableCosts(quotationId: string): Promise<{ id: string; payableCost: number }[]> {
+    const { data, error } = await supabase
+      .from('quotation_providers')
+      .select('id, payable_cost')
+      .eq('quotation_id', quotationId);
+
+    if (error)
+      throw error;
+
+    return data.map(row => ({ id: row.id, payableCost: row.payable_cost }));
+  }
+
+  /**
+   * Travelers of a travel that don't take some optional service.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchProviderOptOuts(travelId: string): Promise<ProviderOptOut[]> {
+    const { data, error } = await supabase
+      .from('quotation_provider_opt_outs')
+      .select('*')
+      .eq('travel_id', travelId);
+
+    if (error)
+      throw error;
+
+    return data.map(mapProviderOptOutRowToDomain);
+  }
+
+  /**
+   * Opts travelers out of a service. Already opted-out travelers are left as they are.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function insertProviderOptOuts(optOuts: ProviderOptOut[]): Promise<void> {
+    if (optOuts.length === 0)
+      return;
+
+    const { error } = await supabase
+      .from('quotation_provider_opt_outs')
+      .upsert(
+        optOuts.map(o => ({
+          quotation_provider_id: o.quotationProviderId,
+          traveler_id: o.travelerId,
+          travel_id: o.travelId,
+        })),
+        { onConflict: 'quotation_provider_id,traveler_id', ignoreDuplicates: true },
+      );
+
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Opts travelers back into a service.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function deleteProviderOptOuts(quotationProviderId: string, travelerIds: string[]): Promise<void> {
+    if (travelerIds.length === 0)
+      return;
+
+    const { error } = await supabase
+      .from('quotation_provider_opt_outs')
+      .delete()
+      .eq('quotation_provider_id', quotationProviderId)
+      .in('traveler_id', travelerIds);
+
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Makes a provider's price adjustments match `drafts`: updates the ones with an id,
+   * inserts the new ones and deletes the rest (their travelers go back to the base price).
+   * @returns The provider's adjustments after saving
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function saveProviderAdjustments(
+    quotationProviderId: string,
+    drafts: ProviderPriceAdjustmentDraft[],
+  ): Promise<ProviderPriceAdjustment[]> {
+    const { data: current, error: readError } = await supabase
+      .from('quotation_provider_price_adjustments')
+      .select('id')
+      .eq('quotation_provider_id', quotationProviderId);
+    if (readError)
+      throw readError;
+
+    const keepIds = new Set(drafts.flatMap(d => (d.id ? [d.id] : [])));
+    const removeIds = current.map(r => r.id).filter(id => !keepIds.has(id));
+    if (removeIds.length > 0) {
+      const { error } = await supabase
+        .from('quotation_provider_price_adjustments')
+        .delete()
+        .in('id', removeIds);
+      if (error)
+        throw error;
+    }
+
+    for (const draft of drafts.filter(d => d.id)) {
+      const { error } = await supabase
+        .from('quotation_provider_price_adjustments')
+        .update({ label: draft.label, kind: draft.kind, mode: draft.mode, value: draft.value })
+        .eq('id', draft.id!);
+      if (error)
+        throw error;
+    }
+
+    const inserts = drafts.filter(d => !d.id);
+    if (inserts.length > 0) {
+      const { error } = await supabase
+        .from('quotation_provider_price_adjustments')
+        .insert(inserts.map(d => ({
+          quotation_provider_id: quotationProviderId,
+          label: d.label,
+          kind: d.kind,
+          mode: d.mode,
+          value: d.value,
+        })));
+      if (error)
+        throw error;
+    }
+
+    const { data, error } = await supabase
+      .from('quotation_provider_price_adjustments')
+      .select('*')
+      .eq('quotation_provider_id', quotationProviderId)
+      .order('created_at');
+    if (error)
+      throw error;
+
+    return data.map(mapProviderPriceAdjustmentRowToDomain);
+  }
+
+  /**
+   * Which adjustment each traveler of a travel pays, per service.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchTravelerAdjustments(travelId: string): Promise<TravelerPriceAdjustment[]> {
+    const { data, error } = await supabase
+      .from('quotation_provider_traveler_adjustments')
+      .select('*')
+      .eq('travel_id', travelId);
+
+    if (error)
+      throw error;
+
+    return data.map(mapTravelerPriceAdjustmentRowToDomain);
+  }
+
+  /**
+   * Sets the adjustment some travelers pay for a service, or sends them back to the base
+   * price with `adjustmentId = null`.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function setTravelerAdjustment(
+    quotationProviderId: string,
+    travelId: string,
+    travelerIds: string[],
+    adjustmentId: string | null,
+  ): Promise<void> {
+    if (travelerIds.length === 0)
+      return;
+
+    if (adjustmentId === null) {
+      const { error } = await supabase
+        .from('quotation_provider_traveler_adjustments')
+        .delete()
+        .eq('quotation_provider_id', quotationProviderId)
+        .in('traveler_id', travelerIds);
+      if (error)
+        throw error;
+      return;
+    }
+
+    const { error } = await supabase
+      .from('quotation_provider_traveler_adjustments')
+      .upsert(
+        travelerIds.map(travelerId => ({
+          quotation_provider_id: quotationProviderId,
+          traveler_id: travelerId,
+          travel_id: travelId,
+          adjustment_id: adjustmentId,
+        })),
+        { onConflict: 'quotation_provider_id,traveler_id' },
+      );
     if (error)
       throw error;
   }
@@ -435,24 +664,72 @@ export function useQuotationRepository() {
     if (error)
       throw error;
   }
-  async function insertAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation> {
-    const detalles = data.details.map(d => ({
-      ...d,
-      id: d.id ?? crypto.randomUUID(),
-      costPerPerson: d.pricePerNight / d.maxOccupancy,
-    }));
-    const totalCost = detalles.reduce(
-      (sum, d) => sum + d.pricePerNight * data.nightCount * d.quantity,
-      0,
-    );
+  // total_cost is computed by the database from the travel's rooms (see the
+  // lodging_cost_from_travel_rooms migration), so it's read back after the details are written.
+  async function fetchAccommodationTotalCost(id: string): Promise<number> {
+    const { data, error } = await supabase
+      .from('quotation_accommodations')
+      .select('total_cost')
+      .eq('id', id)
+      .single();
 
+    if (error)
+      throw error;
+
+    return data.total_cost;
+  }
+
+  /**
+   * Reads the current cost of every hotel in a quotation. Rooms added or removed on the
+   * travel change these costs in the database, so the store refreshes them afterwards.
+   * @param quotationId - UUID of the quotation
+   * @returns One `{ id, totalCost }` per quotation hotel
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchAccommodationCosts(quotationId: string): Promise<{ id: string; totalCost: number }[]> {
+    const { data, error } = await supabase
+      .from('quotation_accommodations')
+      .select('id, total_cost')
+      .eq('quotation_id', quotationId);
+
+    if (error)
+      throw error;
+
+    return data.map(row => ({ id: row.id, totalCost: row.total_cost }));
+  }
+
+  async function insertAccommodationDetails(
+    accommodationId: string,
+    details: QuotationAccommodationFormData['details'],
+  ): Promise<QuotationAccommodationDetail[]> {
+    const { data: detailRows, error } = await supabase
+      .from('quotation_accommodation_details')
+      .insert(details.map(d => ({
+        quotation_accommodation_id: accommodationId,
+        hotel_room_type_id: d.roomTypeId,
+        price_per_night: d.pricePerNight,
+        max_occupancy: d.maxOccupancy,
+      })))
+      .select();
+
+    if (error)
+      throw error;
+
+    return (detailRows ?? []).map(d => ({
+      ...mapQuotationAccommodationDetailRowToDomain(d),
+      costPerPerson: d.price_per_night / d.max_occupancy,
+    }));
+  }
+
+  async function insertAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation> {
     const { data: accRow, error: accErr } = await supabase
       .from('quotation_accommodations')
       .insert({
         quotation_id: data.quotationId,
         provider_id: data.providerId,
         night_count: data.nightCount,
-        total_cost: totalCost,
+        // Placeholder: the database computes it from the travel's rooms.
+        total_cost: 0,
         payment_method: data.paymentMethod,
         confirmed: data.confirmed,
       })
@@ -462,46 +739,18 @@ export function useQuotationRepository() {
     if (accErr)
       throw accErr;
 
-    const { data: detailRows, error: detErr } = await supabase
-      .from('quotation_accommodation_details')
-      .insert(detalles.map(d => ({
-        quotation_accommodation_id: accRow.id,
-        hotel_room_type_id: d.roomTypeId,
-        quantity: d.quantity,
-        price_per_night: d.pricePerNight,
-        max_occupancy: d.maxOccupancy,
-      })))
-      .select();
+    const mappedDetails = await insertAccommodationDetails(accRow.id, data.details);
+    const totalCost = await fetchAccommodationTotalCost(accRow.id);
 
-    if (detErr)
-      throw detErr;
-
-    const mappedDetails = (detailRows ?? []).map(d => ({
-      ...mapQuotationAccommodationDetailRowToDomain(d),
-      costPerPerson: d.price_per_night / d.max_occupancy,
-    }));
-
-    return mapQuotationAccommodationRowToDomain(accRow, mappedDetails);
+    return mapQuotationAccommodationRowToDomain({ ...accRow, total_cost: totalCost }, mappedDetails);
   }
 
   async function updateAccommodation(
     id: string,
     data: Partial<QuotationAccommodationFormData>,
-    existingNightCount: number,
     existingDetails: QuotationAccommodationDetail[],
   ): Promise<QuotationAccommodation> {
-    const detallesBase = data.details ?? existingDetails;
-    const detalles = detallesBase.map(d => ({
-      ...d,
-      id: d.id ?? crypto.randomUUID(),
-      costPerPerson: d.pricePerNight / d.maxOccupancy,
-    }));
-    const totalCost = detalles.reduce(
-      (sum, d) => sum + d.pricePerNight * (data.nightCount ?? existingNightCount) * d.quantity,
-      0,
-    );
-
-    const accUpdate: TablesUpdate<'quotation_accommodations'> = { total_cost: totalCost };
+    const accUpdate: TablesUpdate<'quotation_accommodations'> = {};
     if (data.providerId !== undefined)
       accUpdate.provider_id = data.providerId;
     if (data.nightCount !== undefined)
@@ -529,26 +778,10 @@ export function useQuotationRepository() {
     if (delErr)
       throw delErr;
 
-    const { data: newDetailRows, error: detErr } = await supabase
-      .from('quotation_accommodation_details')
-      .insert(detalles.map(d => ({
-        quotation_accommodation_id: id,
-        hotel_room_type_id: d.roomTypeId,
-        quantity: d.quantity,
-        price_per_night: d.pricePerNight,
-        max_occupancy: d.maxOccupancy,
-      })))
-      .select();
+    const mappedDetails = await insertAccommodationDetails(id, data.details ?? existingDetails);
+    const totalCost = await fetchAccommodationTotalCost(id);
 
-    if (detErr)
-      throw detErr;
-
-    const mappedDetails = (newDetailRows ?? []).map(d => ({
-      ...mapQuotationAccommodationDetailRowToDomain(d),
-      costPerPerson: d.price_per_night / d.max_occupancy,
-    }));
-
-    return mapQuotationAccommodationRowToDomain(updatedRow, mappedDetails);
+    return mapQuotationAccommodationRowToDomain({ ...updatedRow, total_cost: totalCost }, mappedDetails);
   }
 
   async function deleteAccommodation(id: string): Promise<void> {
@@ -665,6 +898,60 @@ export function useQuotationRepository() {
       throw error;
   }
 
+  async function insertExpense(data: QuotationExpenseFormData): Promise<QuotationExpense> {
+    const { data: row, error } = await supabase
+      .from('quotation_expenses')
+      .insert(mapQuotationExpenseToRow(data))
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return mapQuotationExpenseRowToDomain(row);
+  }
+
+  async function updateExpense(id: string, data: QuotationExpenseFormData): Promise<QuotationExpense> {
+    const { quotation_id: _quotationId, ...update } = mapQuotationExpenseToRow(data);
+    const { data: row, error } = await supabase
+      .from('quotation_expenses')
+      .update(update)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error)
+      throw error;
+
+    return mapQuotationExpenseRowToDomain(row);
+  }
+
+  async function deleteExpense(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('quotation_expenses')
+      .delete()
+      .eq('id', id);
+
+    if (error)
+      throw error;
+  }
+
+  /**
+   * Categories the agency already used on its expenses (RLS keeps it to the agency),
+   * so the form can suggest them next to the defaults.
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchExpenseCategories(): Promise<string[]> {
+    const { data, error } = await supabase
+      .from('quotation_expenses')
+      .select('category');
+
+    if (error)
+      throw error;
+
+    return [...new Set((data ?? []).map(row => row.category))];
+  }
+
   async function updateSeatPrice(quotationId: string, price: number): Promise<void> {
     const { error } = await supabase
       .from('quotations')
@@ -696,26 +983,6 @@ export function useQuotationRepository() {
       throw new Error(`No se pudo eliminar habitaciones: ${error.message}`);
   }
 
-  async function insertTravelAccommodations(
-    travelId: string,
-    slots: RoomSlot[],
-  ): Promise<TravelAccommodation[]> {
-    const { data, error } = await supabase
-      .from('travel_accommodations')
-      .insert(slots.map(slot => ({
-        travel_id: travelId,
-        provider_id: slot.providerId,
-        hotel_room_type_id: slot.hotelRoomTypeId ?? null,
-        max_occupancy: slot.maxOccupancy,
-        room_number: null,
-        floor: null,
-      })))
-      .select();
-    if (error)
-      throw new Error(`No se pudo insertar habitaciones: ${error.message}`);
-    return (data ?? []).map(mapTravelAccommodationRowToDomain);
-  }
-
   return {
     fetchAll,
     fetchByTravel,
@@ -725,6 +992,14 @@ export function useQuotationRepository() {
     updateProvider,
     deleteProvider,
     toggleProviderConfirmado,
+    updateProviderCourtesy,
+    fetchProviderPayableCosts,
+    fetchProviderOptOuts,
+    insertProviderOptOuts,
+    deleteProviderOptOuts,
+    saveProviderAdjustments,
+    fetchTravelerAdjustments,
+    setTravelerAdjustment,
     insertProviderPayment,
     updateProviderPayment,
     deleteProviderPayment,
@@ -744,9 +1019,13 @@ export function useQuotationRepository() {
     insertBus,
     updateBus,
     deleteBus,
+    insertExpense,
+    updateExpense,
+    deleteExpense,
+    fetchExpenseCategories,
     updateSeatPrice,
     getOccupiedAccommodationIds,
+    fetchAccommodationCosts,
     deleteUnoccupiedAccommodations,
-    insertTravelAccommodations,
   };
 }

@@ -1,8 +1,8 @@
 import type { BedConfiguration, BedSize, HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
 const BED_SIZE_LABELS: Record<BedSize, { singular: string; plural: string }> = {
-  single: { singular: 'single', plural: 'individuales' },
-  double: { singular: 'double', plural: 'matrimoniales' },
+  single: { singular: 'individual', plural: 'individuales' },
+  double: { singular: 'matrimonial', plural: 'matrimoniales' },
   queen: { singular: 'queen', plural: 'queen' },
   king: { singular: 'king', plural: 'king' },
 };

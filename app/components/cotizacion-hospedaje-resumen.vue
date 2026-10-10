@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { QuotationAccommodation } from '~/types/quotation';
 
+import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
@@ -20,6 +21,16 @@ const hotelRoomStore = useHotelRoomStore();
 
 const hospedajes = computed(() => cotizacionStore.getHospedajesByQuotation(props.quotationId));
 const totalCosto = computed(() => cotizacionStore.getTotalCostoHospedajes(props.quotationId));
+// Room counts come from the travel's rooms page, not from the quotation.
+const roomCounts = computed(() => cotizacionStore.getRoomCountsByQuotation(props.quotationId));
+
+function getRoomCount(accommodation: QuotationAccommodation, roomTypeId: string): number {
+  return roomCounts.value.get(roomTypeKey(accommodation.providerId, roomTypeId)) ?? 0;
+}
+
+const totalHabitaciones = computed(() =>
+  hospedajes.value.reduce((sum, h) => sum + h.details.reduce((s, d) => s + getRoomCount(h, d.roomTypeId), 0), 0),
+);
 
 function getNombreHotel(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
@@ -28,7 +39,7 @@ function getNombreHotel(providerId: string): string {
 // Items del accordion — uno por hospedaje
 function getDesgloseHabitaciones(accommodation: QuotationAccommodation): string {
   return accommodation.details
-    .map(d => `${d.quantity} hab (${d.maxOccupancy} p)`)
+    .map(d => `${getRoomCount(accommodation, d.roomTypeId)} hab (${d.maxOccupancy} p)`)
     .join(' · ');
 }
 
@@ -46,7 +57,7 @@ const costoPromedioPorPersona = computed(() => {
   let totalPersonas = 0;
   for (const h of hospedajes.value) {
     for (const d of h.details) {
-      totalPersonas += d.quantity * d.maxOccupancy;
+      totalPersonas += getRoomCount(h, d.roomTypeId) * d.maxOccupancy;
     }
   }
   return totalPersonas > 0 ? totalCosto.value / totalPersonas : 0;
@@ -105,10 +116,10 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
       id: d.id,
       camasLabel: formatBedConfiguration(tipoInfo?.beds ?? []),
       ocupacion: d.maxOccupancy,
-      count: d.quantity,
+      count: getRoomCount(accommodation, d.roomTypeId),
       pricePerNight: d.pricePerNight,
       costPerPerson: d.costPerPerson,
-      totalCost: d.pricePerNight * accommodation.nightCount * d.quantity,
+      totalCost: d.pricePerNight * accommodation.nightCount * getRoomCount(accommodation, d.roomTypeId),
     };
   });
 }
@@ -129,10 +140,10 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
         </div>
         <div>
           <p class="text-xs text-muted mb-1">
-            Habitaciones Totales
+            Habitaciones en el viaje
           </p>
           <p class="text-2xl font-bold">
-            {{ hospedajes.reduce((s, h) => s + h.details.reduce((ss, d) => ss + d.quantity, 0), 0) }}
+            {{ totalHabitaciones }}
           </p>
         </div>
         <div>

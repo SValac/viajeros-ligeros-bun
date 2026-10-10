@@ -37,12 +37,52 @@ export type QuotationProvider = {
   remarks?: string;
   totalCost: number;
   costType: ProviderCostType;
-  // Solo con costType 'per_person': totalCost = unitCost × personCount.
+  // Solo con costType 'per_person': precio por persona. Se suma directo al precio del
+  // asiento y al proveedor se le paga por cada viajero que toma el servicio. Su totalCost
+  // es solo de referencia (costo × asientos vendibles al guardar).
   unitCost?: number;
-  personCount?: number;
   paymentMethod: PaymentType;
+  // Solo en costo total: entre qué asientos se reparte.
   splitType: CostSplitType;
   confirmed: boolean;
+  // Solo por persona: los coordinadores no cuentan para el pago.
+  coordinatorsCourtesy: boolean;
+  // Lo que se le debe al proveedor (lo calcula la base de datos): por persona, costo ×
+  // viajeros que lo toman; en costo total, totalCost.
+  payableCost: number;
+};
+
+// Ajuste al costo por persona de un servicio para un tipo de persona (ej. "Niño" -10%,
+// "Adulto mayor" -$50). Solo cambia lo que se le paga al proveedor, no el precio del asiento.
+export type PriceAdjustmentKind = 'discount' | 'surcharge';
+export type PriceAdjustmentMode = 'percent' | 'amount';
+
+export type ProviderPriceAdjustment = {
+  id: string;
+  quotationProviderId: string;
+  label: string;
+  kind: PriceAdjustmentKind;
+  mode: PriceAdjustmentMode;
+  /** Porcentaje (1-100 en descuento) o cantidad en pesos. Siempre > 0. */
+  value: number;
+};
+
+/** Un ajuste mientras se edita: sin id todavía si es nuevo. */
+export type ProviderPriceAdjustmentDraft = Omit<ProviderPriceAdjustment, 'id' | 'quotationProviderId'> & { id?: string };
+
+// El ajuste que paga un viajero en un servicio (sin fila = precio base).
+export type TravelerPriceAdjustment = {
+  quotationProviderId: string;
+  travelerId: string;
+  travelId: string;
+  adjustmentId: string;
+};
+
+// Un viajero que no toma un servicio opcional.
+export type ProviderOptOut = {
+  quotationProviderId: string;
+  travelerId: string;
+  travelId: string;
 };
 
 export type ProviderPayment = {
@@ -56,6 +96,25 @@ export type ProviderPayment = {
   createdAt: string;
 };
 
+// Gasto adicional de la cotización que no es un servicio de proveedor: publicidad, viáticos,
+// comisiones, box lunch... Siempre se reparte entre los asientos según splitType. Sin pagos.
+export type QuotationExpense = {
+  id: string;
+  quotationId: string;
+  // Texto libre: categorías por defecto más las que la agencia ya usó.
+  category: string;
+  description?: string;
+  costType: ProviderCostType;
+  // Solo con costType 'per_person': totalCost = unitCost × personCount.
+  unitCost?: number;
+  personCount?: number;
+  totalCost: number;
+  splitType: CostSplitType;
+  createdAt: string;
+};
+
+export type QuotationExpenseFormData = Omit<QuotationExpense, 'id' | 'createdAt'> & { id?: string };
+
 export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt' | 'showPublicRoomType' | 'showPublicDescription' | 'coordinatorsTakeSeats'> & {
   id?: string;
   /** Defaults to `false` (every seat is sellable) when a quotation is created. */
@@ -65,7 +124,7 @@ export type QuotationFormData = Omit<Quotation, 'id' | 'createdAt' | 'updatedAt'
   /** Defaults to `true` (shown) when a quotation is created. */
   showPublicDescription?: boolean;
 };
-export type QuotationProviderFormData = Omit<QuotationProvider, 'id'> & { id?: string };
+export type QuotationProviderFormData = Omit<QuotationProvider, 'id' | 'payableCost'> & { id?: string };
 export type ProviderPaymentFormData = Omit<ProviderPayment, 'id' | 'createdAt'> & { id?: string };
 
 export type QuotationProviderFilters = {
@@ -78,10 +137,11 @@ export type QuotationProviderFilters = {
 // Accommodation Types
 // ============================================================================
 
+// A hotel room type picked for the quotation. How many rooms of it the travel holds lives
+// on the travel (travel_accommodations), not here: it changes until the trip leaves.
 export type QuotationAccommodationDetail = {
   id: string;
   roomTypeId: string;
-  quantity: number;
   pricePerNight: number;
   maxOccupancy: number;
   costPerPerson?: number;
@@ -200,9 +260,11 @@ export type QuotationFetchResult = {
   quotation: Quotation;
   providers: QuotationProvider[];
   providerPayments: ProviderPayment[];
+  providerAdjustments: ProviderPriceAdjustment[];
   accommodations: QuotationAccommodation[];
   accommodationPayments: AccommodationPayment[];
   buses: QuotationBus[];
   busPayments: BusPayment[];
+  expenses: QuotationExpense[];
   publicPrices: QuotationPublicPrice[];
 };

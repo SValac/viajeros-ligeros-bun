@@ -396,9 +396,62 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   }
 
   /**
-   * Syncs a travel's accommodations after the quotation store rewrote `travel_accommodations`
-   * through its own repository. The DB already changed, so the travel detail query is
-   * invalidated here too: this is the only hook the travel side gets for that write.
+   * Adds rooms of one quoted hotel room type to a travel. The room count lives on the
+   * travel and changes until the trip leaves; the hotel's cost follows it in the database.
+   * @param travelId - The travel
+   * @param room - Hotel, room type and capacity of the rooms to add
+   * @param count - How many rooms to add
+   * @returns Whether the rooms were added
+   */
+  async function addTravelRooms(
+    travelId: string,
+    room: Pick<TravelAccommodation, 'providerId' | 'hotelRoomTypeId' | 'maxOccupancy'>,
+    count = 1,
+  ): Promise<boolean> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const added = await repository.insertAccommodations(travelId, Array.from({ length: count }, () => ({ ...room })));
+      updateLocalAccommodations(travelId, new Set(), added);
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al agregar habitaciones';
+      return false;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Deletes an empty room from a travel. Refused (returns false with `error` set) while
+   * someone is assigned to it.
+   * @param travelId - The travel
+   * @param roomId - The `travel_accommodations` row to delete
+   * @returns Whether the room was deleted
+   */
+  async function deleteTravelRoom(travelId: string, roomId: string): Promise<boolean> {
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.deleteEmptyAccommodation(roomId);
+      updateLocalAccommodations(travelId, new Set([roomId]), []);
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error al eliminar la habitación';
+      return false;
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Syncs a travel's accommodations after a write to `travel_accommodations` (the room
+   * actions above, or the quotation store through its own repository). The DB already
+   * changed, so the travel detail query is invalidated here too.
    * @param travelId - UUID of the travel
    * @param deletedIds - Accommodation ids deleted from the DB
    * @param added - Accommodations inserted in the DB
@@ -441,6 +494,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     updateTravelBus,
     removeBusFromTravel,
     updateTravelAccommodation,
+    addTravelRooms,
+    deleteTravelRoom,
     updateLocalAccommodations,
   };
 });

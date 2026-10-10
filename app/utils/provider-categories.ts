@@ -62,6 +62,15 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
     iconBgClass: 'bg-amber-50 dark:bg-amber-900/20',
     dashboardTextColorClass: 'text-amber-600 dark:text-amber-400',
   },
+  [PROVIDER_CATEGORY.TICKETS]: {
+    category: PROVIDER_CATEGORY.TICKETS,
+    label: 'Entradas',
+    icon: 'i-lucide-ticket',
+    route: '/providers/tickets',
+    iconColorClass: 'text-pink-500',
+    iconBgClass: 'bg-pink-50 dark:bg-pink-900/20',
+    dashboardTextColorClass: 'text-pink-600 dark:text-pink-400',
+  },
   [PROVIDER_CATEGORY.OTHER]: {
     category: PROVIDER_CATEGORY.OTHER,
     label: 'Otros',
@@ -72,3 +81,9 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
     dashboardTextColorClass: 'text-gray-600 dark:text-gray-400',
   },
 };
+
+/** Every category in menu order ('other' last). Single source for menus, selects and filters. */
+export const PROVIDER_CATEGORY_LIST: ProviderCategoryMeta[] = Object.values(PROVIDER_CATEGORY_META);
+
+/** Category values as a non-empty tuple, for `z.enum`. */
+export const PROVIDER_CATEGORY_VALUES = PROVIDER_CATEGORY_LIST.map(meta => meta.category) as [ProviderCategory, ...ProviderCategory[]];

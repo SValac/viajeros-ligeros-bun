@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import type { ProviderPaymentStatus, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
+import type { ProviderPaymentStatus, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -40,13 +41,22 @@ const historialProveedorId = shallowRef<string>('');
 const historialProveedorNombre = shallowRef<string>('');
 const isDeleteModalOpen = shallowRef(false);
 const proveedorToDelete = shallowRef<QuotationProvider | null>(null);
+const isAjustesOpen = shallowRef(false);
+const proveedorAjustes = shallowRef<QuotationProvider | null>(null);
+const ajustesDraft = ref<ProviderPriceAdjustmentDraft[]>([]);
+const ajustesInvalidos = computed(() => ajustesDraft.value.some(a => getPriceAdjustmentError(a) !== null));
+const isCortesiaOpen = shallowRef(false);
+const proveedorCortesia = shallowRef<QuotationProvider | null>(null);
+
+// El viaje de la cotización, para enlazar a su pestaña de servicios por persona.
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
 
 // Filter options
 const estadoPagoOptions = [
   { label: 'Todos', value: 'all' },
   { label: 'Pendiente', value: 'pending' },
   { label: 'Anticipo', value: 'partial' },
-  { label: 'Liquidado', value: 'liquidado' },
+  { label: 'Liquidado', value: 'paid' },
 ];
 
 const confirmadoOptions = [
@@ -86,14 +96,56 @@ function isProviderInactive(providerId: string): boolean {
   return provider ? !provider.active : false;
 }
 
-function getDivisor(proveedor: QuotationProvider): number {
-  return cotizacionStore.getDivisorCosto(proveedor.quotationId, proveedor.splitType ?? 'minimum');
+// Costo con el autobús lleno: en un servicio por persona, costo × asientos vendibles.
+function getQuotedCost(proveedor: QuotationProvider): number {
+  return calculateProviderQuotedCost(proveedor, cotizacionStore.getAsientosVendibles(proveedor.quotationId));
 }
 
-// Un costo por persona no se recalcula solo: avisa cuando sus personas no coinciden con
-// el divisor actual (las editó el usuario o cambiaron los asientos), sin mover saldos.
-function hasPersonCountDrift(proveedor: QuotationProvider): boolean {
-  return proveedor.costType === 'per_person' && proveedor.personCount !== getDivisor(proveedor);
+// Cuántos viajeros cuentan para el pago de un servicio por persona.
+function getTakersCount(proveedor: QuotationProvider): number {
+  return proveedor.unitCost ? Math.round(proveedor.payableCost / proveedor.unitCost) : 0;
+}
+
+function openAjustes(proveedor: QuotationProvider) {
+  proveedorAjustes.value = proveedor;
+  ajustesDraft.value = cotizacionStore.getAjustesByProveedor(proveedor.id)
+    .map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }));
+  isAjustesOpen.value = true;
+}
+
+function closeAjustes() {
+  isAjustesOpen.value = false;
+}
+
+async function handleAjustesSave() {
+  if (!proveedorAjustes.value || ajustesInvalidos.value)
+    return;
+  const error = await cotizacionStore.saveAjustesProveedor(proveedorAjustes.value.id, ajustesDraft.value);
+  if (error) {
+    toast.add({ title: 'Error', description: error, color: 'error' });
+    return;
+  }
+  toast.add({ title: 'Precios por tipo guardados', color: 'success' });
+  isAjustesOpen.value = false;
+  proveedorAjustes.value = null;
+}
+
+function openCortesia(proveedor: QuotationProvider) {
+  proveedorCortesia.value = proveedor;
+  isCortesiaOpen.value = true;
+}
+
+async function handleCortesiaSubmit(coordinatorsCourtesy: boolean) {
+  if (!proveedorCortesia.value)
+    return;
+  const result = await cotizacionStore.updateProveedorCortesia(proveedorCortesia.value.id, coordinatorsCourtesy);
+  if ('error' in result) {
+    toast.add({ title: 'Error', description: result.error, color: 'error' });
+    return;
+  }
+  toast.add({ title: 'Cortesía actualizada', color: 'success' });
+  isCortesiaOpen.value = false;
+  proveedorCortesia.value = null;
 }
 
 function openNewProveedor() {
@@ -127,11 +179,16 @@ function closeDeleteModal() {
   isDeleteModalOpen.value = false;
 }
 
-async function handleProveedorSubmit(data: QuotationProviderFormData) {
+async function handleProveedorSubmit(data: QuotationProviderFormData, ajustes: ProviderPriceAdjustmentDraft[]) {
+  let saved: QuotationProvider | undefined;
   if (selectedProveedor.value) {
-    const result = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
-    if (result) {
+    saved = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
+    if (saved) {
       toast.add({ title: 'Proveedor actualizado', color: 'success' });
+    }
+    else {
+      toast.add({ title: 'No se pudo actualizar el proveedor', description: cotizacionStore.error ?? undefined, color: 'error' });
+      return;
     }
   }
   else {
@@ -140,8 +197,15 @@ async function handleProveedorSubmit(data: QuotationProviderFormData) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
     else {
+      saved = result;
       toast.add({ title: 'Proveedor agregado', color: 'success' });
     }
+  }
+  // Los ajustes van aparte; en costo total se borran los que hubiera.
+  if (saved && (ajustes.length > 0 || cotizacionStore.getAjustesByProveedor(saved.id).length > 0)) {
+    const error = await cotizacionStore.saveAjustesProveedor(saved.id, ajustes);
+    if (error)
+      toast.add({ title: 'No se guardaron los precios por tipo', description: error, color: 'error' });
   }
   isProveedorFormOpen.value = false;
   selectedProveedor.value = null;
@@ -176,6 +240,19 @@ function getProveedorActions(proveedor: QuotationProvider) {
       disabled: cotizacionStore.getSaldoPendienteProveedor(proveedor.id) <= 0,
       onSelect: () => openRegistrarPago(proveedor),
     },
+    // La cortesía no cambia el precio del asiento, así que también se puede con la
+    // cotización confirmada.
+    ...(isPerPersonProvider(proveedor)
+      ? [{
+          label: 'Precios por tipo de persona',
+          icon: 'i-lucide-tags',
+          onSelect: () => openAjustes(proveedor),
+        }, {
+          label: 'Cortesía para coordinadores',
+          icon: 'i-lucide-gift',
+          onSelect: () => openCortesia(proveedor),
+        }]
+      : []),
   ];
 
   if (readonly)
@@ -267,6 +344,9 @@ function getProveedorActions(proveedor: QuotationProvider) {
               Costo Total
             </th>
             <th class="pb-2 pr-4 font-medium">
+              A pagar
+            </th>
+            <th class="pb-2 pr-4 font-medium">
               Costo/persona
             </th>
             <th class="pb-2 pr-4 font-medium">
@@ -311,34 +391,65 @@ function getProveedorActions(proveedor: QuotationProvider) {
             <!-- Servicio -->
             <td class="py-3 pr-4 max-w-40">
               <span class="truncate block">{{ proveedor.serviceDescription }}</span>
+              <UBadge
+                v-if="proveedor.coordinatorsCourtesy"
+                label="Cortesía coord."
+                icon="i-lucide-gift"
+                color="info"
+                variant="subtle"
+                class="mt-1"
+              />
             </td>
 
             <!-- División -->
             <td class="py-3 pr-4">
               <UBadge
+                v-if="isPerPersonProvider(proveedor)"
+                label="Por persona"
+                color="primary"
+                variant="subtle"
+              />
+              <UBadge
+                v-else
                 :label="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
                 :color="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
               />
             </td>
 
-            <!-- Costo Total -->
+            <!-- Costo Total: en un servicio por persona, con el autobús lleno -->
             <td class="py-3 pr-4">
               <p class="font-medium">
-                {{ formatCurrency(proveedor.totalCost) }}
+                {{ formatCurrency(getQuotedCost(proveedor)) }}
               </p>
               <p
-                v-if="proveedor.costType === 'per_person'"
-                class="text-xs text-muted flex items-center gap-1 whitespace-nowrap"
+                v-if="isPerPersonProvider(proveedor)"
+                class="text-xs text-muted whitespace-nowrap"
               >
-                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ proveedor.personCount }} pers.
-                <UIcon
-                  v-if="hasPersonCountDrift(proveedor)"
-                  name="i-lucide-alert-triangle"
-                  class="size-3.5 text-warning shrink-0"
-                  :title="`Calculado para ${proveedor.personCount} personas, pero el costo se reparte entre ${getDivisor(proveedor)}. Edita el servicio si debe recalcularse.`"
-                />
+                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ cotizacionStore.getAsientosVendibles(proveedor.quotationId) }} asientos
               </p>
+              <button
+                v-if="isPerPersonProvider(proveedor) && cotizacionStore.getAjustesByProveedor(proveedor.id).length > 0"
+                type="button"
+                class="text-xs text-primary hover:underline whitespace-nowrap"
+                @click="openAjustes(proveedor)"
+              >
+                {{ cotizacionStore.getAjustesByProveedor(proveedor.id).length }} precio{{ cotizacionStore.getAjustesByProveedor(proveedor.id).length === 1 ? '' : 's' }} por tipo
+              </button>
+            </td>
+
+            <!-- A pagar: en un opcional, solo por los viajeros que lo toman -->
+            <td class="py-3 pr-4">
+              <p class="font-medium">
+                {{ formatCurrency(proveedor.payableCost) }}
+              </p>
+              <ULink
+                v-if="isPerPersonProvider(proveedor) && travelId"
+                :to="{ name: 'travel-optional-services', params: { id: travelId } }"
+                class="text-xs text-primary whitespace-nowrap"
+              >
+                {{ getTakersCount(proveedor) }} lo toman
+              </ULink>
             </td>
 
             <!-- Costo/persona -->
@@ -356,6 +467,12 @@ function getProveedorActions(proveedor: QuotationProvider) {
               <span :class="cotizacionStore.getSaldoPendienteProveedor(proveedor.id) > 0 ? 'text-warning' : 'text-success'">
                 {{ formatCurrency(cotizacionStore.getSaldoPendienteProveedor(proveedor.id)) }}
               </span>
+              <p
+                v-if="cotizacionStore.getSobrepagoProveedor(proveedor.id) > 0"
+                class="text-xs text-error whitespace-nowrap"
+              >
+                Pagado de más: {{ formatCurrency(cotizacionStore.getSobrepagoProveedor(proveedor.id)) }}
+              </p>
             </td>
 
             <!-- Método -->
@@ -431,6 +548,53 @@ function getProveedorActions(proveedor: QuotationProvider) {
         :proveedor-cotizacion="selectedProveedor"
         @submit="handleProveedorSubmit"
         @cancel="isProveedorFormOpen = false"
+      />
+    </template>
+  </UModal>
+
+  <!-- Modal: precios por tipo de persona -->
+  <UModal
+    v-model:open="isAjustesOpen"
+    title="Precios por tipo de persona"
+    :description="proveedorAjustes ? `${getProviderName(proveedorAjustes.providerId)} · ${proveedorAjustes.serviceDescription} · base ${formatCurrency(proveedorAjustes.unitCost ?? 0)}` : undefined"
+    class="sm:max-w-2xl"
+  >
+    <template #body>
+      <CotizacionProveedorAjustesEditor
+        v-if="proveedorAjustes"
+        v-model="ajustesDraft"
+        :unit-cost="proveedorAjustes.unitCost"
+      />
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-3 w-full">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          label="Cancelar"
+          @click="closeAjustes"
+        />
+        <UButton
+          label="Guardar"
+          :disabled="ajustesInvalidos"
+          @click="handleAjustesSave"
+        />
+      </div>
+    </template>
+  </UModal>
+
+  <!-- Modal: cortesía para coordinadores -->
+  <UModal
+    v-model:open="isCortesiaOpen"
+    title="Cortesía para coordinadores"
+    description="Define si los coordinadores cuentan para el pago de este servicio"
+  >
+    <template #body>
+      <CotizacionProveedorCortesiaForm
+        v-if="proveedorCortesia"
+        :proveedor="proveedorCortesia"
+        @submit="handleCortesiaSubmit"
+        @cancel="isCortesiaOpen = false"
       />
     </template>
   </UModal>

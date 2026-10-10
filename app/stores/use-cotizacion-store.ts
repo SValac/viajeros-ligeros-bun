@@ -6,30 +6,37 @@ import type {
   BusPaymentFormData,
   BusPaymentStatus,
   CostSplitType,
+  ProviderOptOut,
   ProviderPayment,
   ProviderPaymentFormData,
   ProviderPaymentStatus,
+  ProviderPriceAdjustment,
+  ProviderPriceAdjustmentDraft,
   Quotation,
   QuotationAccommodation,
   QuotationAccommodationFormData,
   QuotationBus,
   QuotationBusFormData,
+  QuotationExpense,
+  QuotationExpenseFormData,
   QuotationFormData,
   QuotationProvider,
   QuotationProviderFilters,
   QuotationProviderFormData,
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
+  TravelerPriceAdjustment,
 } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 
 import {
-  buildDesiredRoomsMap,
   calculatePaymentStatus,
+  calculateProviderQuotedCost,
   calculateSeatPrice,
   calculateSellableSeats,
-  reconcileAccommodations,
-
+  countRoomsByType,
+  findRoomsOutsideQuotation,
+  isPerPersonProvider,
 } from '~/composables/quotation/use-quotation-domain';
 import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
 import { travelKeys } from '~/queries/travels';
@@ -50,11 +57,17 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const cotizaciones = ref<Quotation[]>([]);
   const proveedoresQuotation = ref<QuotationProvider[]>([]);
   const pagosProveedor = ref<ProviderPayment[]>([]);
+  const optOutsProveedor = ref<ProviderOptOut[]>([]);
+  const ajustesProveedor = ref<ProviderPriceAdjustment[]>([]);
+  const ajustesViajero = ref<TravelerPriceAdjustment[]>([]);
   const hospedajesQuotation = ref<QuotationAccommodation[]>([]);
   const pagosHospedaje = ref<AccommodationPayment[]>([]);
   const preciosPublicos = ref<QuotationPublicPrice[]>([]);
   const busesApartados = ref<QuotationBus[]>([]);
   const pagosBus = ref<BusPayment[]>([]);
+  const gastosAdicionales = ref<QuotationExpense[]>([]);
+  // Categorías que la agencia ya usó en sus gastos (se cargan al abrir el formulario).
+  const categoriasGasto = ref<string[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<QuotationProviderFilters>({});
@@ -79,27 +92,30 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const getCostoTotal = computed(() => {
-    return (quotationId: string): number => {
-      return proveedoresQuotation.value
-        .filter(p => p.quotationId === quotationId)
-        .reduce((sum, p) => sum + p.totalCost, 0);
-    };
-  });
-
+  // Servicios de costo total que se reparten entre los asientos mínimos objetivo.
   const getCostoTipoMinimo = computed(() => {
     return (quotationId: string): number => {
       return proveedoresQuotation.value
-        .filter(p => p.quotationId === quotationId && (p.splitType ?? 'minimum') === 'minimum')
+        .filter(p => p.quotationId === quotationId && !isPerPersonProvider(p) && (p.splitType ?? 'minimum') === 'minimum')
         .reduce((sum, p) => sum + p.totalCost, 0);
     };
   });
 
+  // Servicios de costo total que se reparten entre los asientos vendibles.
   const getCostoTipoTotal = computed(() => {
     return (quotationId: string): number => {
       return proveedoresQuotation.value
-        .filter(p => p.quotationId === quotationId && (p.splitType ?? 'minimum') === 'total')
+        .filter(p => p.quotationId === quotationId && !isPerPersonProvider(p) && (p.splitType ?? 'minimum') === 'total')
         .reduce((sum, p) => sum + p.totalCost, 0);
+    };
+  });
+
+  // Lo que suman al precio de cada asiento los servicios por persona.
+  const getCostoPorPersonaAsiento = computed(() => {
+    return (quotationId: string): number => {
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId && isPerPersonProvider(p))
+        .reduce((sum, p) => sum + (p.unitCost ?? 0), 0);
     };
   });
 
@@ -117,18 +133,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const getTotalHabitacionesPorTipo = computed(() => {
-    return (quotationId: string): { [tipoId: string]: number } => {
-      const resultado: { [tipoId: string]: number } = {};
-      const hospedajes = getHospedajesByQuotation.value(quotationId);
-
-      for (const hospedaje of hospedajes) {
-        for (const detalle of hospedaje.details) {
-          resultado[detalle.roomTypeId] = (resultado[detalle.roomTypeId] ?? 0) + detalle.quantity;
-        }
-      }
-
-      return resultado;
+  // Rooms the quotation's travel holds per hotel room type (key: roomTypeKey). The count
+  // lives on the travel: it's set on the rooms page and changes until the trip leaves.
+  const getRoomCountsByQuotation = computed(() => {
+    return (quotationId: string): Map<string, number> => {
+      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      if (!cotizacion)
+        return new Map();
+      return countRoomsByType(useTravelsStore().getAccommodationsByTravel(cotizacion.travelId));
     };
   });
 
@@ -243,6 +255,34 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
+  const getGastosByQuotation = computed(() => {
+    return (quotationId: string): QuotationExpense[] => {
+      return gastosAdicionales.value.filter(g => g.quotationId === quotationId);
+    };
+  });
+
+  const getTotalGastos = computed(() => {
+    return (quotationId: string): number => {
+      return getGastosByQuotation.value(quotationId).reduce((sum, g) => sum + g.totalCost, 0);
+    };
+  });
+
+  const getGastosTipoMinimo = computed(() => {
+    return (quotationId: string): number => {
+      return getGastosByQuotation.value(quotationId)
+        .filter(g => g.splitType === 'minimum')
+        .reduce((sum, g) => sum + g.totalCost, 0);
+    };
+  });
+
+  const getGastosTipoTotal = computed(() => {
+    return (quotationId: string): number => {
+      return getGastosByQuotation.value(quotationId)
+        .filter(g => g.splitType === 'total')
+        .reduce((sum, g) => sum + g.totalCost, 0);
+    };
+  });
+
   // Asientos que se pueden vender: el total menos los coordinadores del viaje cuando la
   // cotización dice que ocupan asiento. Es el divisor de los costos repartidos entre el
   // total y la base de la ganancia proyectada.
@@ -257,7 +297,18 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses.
+  // Costo de los servicios con el autobús lleno: los por persona cuentan su costo por
+  // persona × asientos vendibles.
+  const getCostoTotal = computed(() => {
+    return (quotationId: string): number => {
+      const asientosVendibles = getAsientosVendibles.value(quotationId);
+      return proveedoresQuotation.value
+        .filter(p => p.quotationId === quotationId)
+        .reduce((sum, p) => sum + calculateProviderQuotedCost(p, asientosVendibles), 0);
+    };
+  });
+
+  // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses + gastos.
   // El hospedaje queda fuera: cada viajero lo paga aparte según su habitación.
   // Devuelve 0 si aún no hay precio por asiento.
   const getAsientoConGanancia = computed(() => {
@@ -265,13 +316,19 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
       if (!cotizacion || cotizacion.seatPrice === 0)
         return 0;
-      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
-      return Math.floor(costoTotal / cotizacion.seatPrice) + 1;
+      // Los servicios por persona crecen con cada viajero: cada asiento deja precio − su costo
+      // por persona para cubrir los costos fijos (servicios de costo total + autobuses).
+      const costoPorAsiento = getCostoPorPersonaAsiento.value(quotationId);
+      const margenPorAsiento = cotizacion.seatPrice - costoPorAsiento;
+      if (margenPorAsiento <= 0)
+        return getAsientosVendibles.value(quotationId) + 1;
+      const costoFijo = getCostoTipoMinimo.value(quotationId) + getCostoTipoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId) + getTotalGastos.value(quotationId);
+      return Math.floor(costoFijo / margenPorAsiento) + 1;
     };
   });
 
   // Precio calculado a partir del asiento mínimo objetivo (seatPrice de la cotización)
-  // Incluye costos de proveedores y autobuses; el hospedaje se suma aparte en la matriz de precios de referencia
+  // Incluye costos de proveedores, autobuses y gastos adicionales; el hospedaje se suma aparte en la matriz de precios de referencia
   const getPrecioAsientoCalculado = computed(() => {
     return (quotationId: string): number => {
       const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
@@ -282,11 +339,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         { minimumSeatTarget: cotizacion.minimumSeatTarget, sellableSeats: getAsientosVendibles.value(quotationId) },
         proveedoresQuotation.value.filter(p => p.quotationId === quotationId),
         busesApartados.value.filter(b => b.quotationId === quotationId),
+        getGastosByQuotation.value(quotationId),
       );
     };
   });
 
-  // Ganancia con el autobús lleno: asientos vendibles × precio por asiento − (servicios + autobuses).
+  // Ganancia con el autobús lleno: asientos vendibles × precio por asiento − (servicios + autobuses + gastos).
   // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
   const getGananciaProyectada = computed(() => {
     return (quotationId: string): number => {
@@ -294,7 +352,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const asientosVendibles = getAsientosVendibles.value(quotationId);
       if (!cotizacion || asientosVendibles === 0)
         return 0;
-      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId);
+      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId) + getTotalGastos.value(quotationId);
       return (asientosVendibles * cotizacion.seatPrice) - costoTotal;
     };
   });
@@ -327,6 +385,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!proveedor)
         return 0;
 
+      // Un servicio por persona suma su costo por persona a cada asiento, sin reparto.
+      if (isPerPersonProvider(proveedor))
+        return proveedor.unitCost ?? 0;
+
       const divisor = getDivisorCosto.value(proveedor.quotationId, proveedor.splitType ?? 'minimum');
       if (divisor === 0)
         return 0;
@@ -339,8 +401,45 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
+      // Lo que se le debe es payableCost (en un servicio opcional, solo por quienes lo toman).
       const anticipado = getAnticipadoProveedor.value(quotationProviderId);
-      return proveedor.totalCost - anticipado;
+      return Math.max(0, proveedor.payableCost - anticipado);
+    };
+  });
+
+  // Lo pagado de más a un proveedor opcional cuando después se desmarcan o se borran viajeros.
+  const getSobrepagoProveedor = computed(() => {
+    return (quotationProviderId: string): number => {
+      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+      if (!proveedor)
+        return 0;
+      const anticipado = getAnticipadoProveedor.value(quotationProviderId);
+      return Math.max(0, anticipado - proveedor.payableCost);
+    };
+  });
+
+  // Ajustes de precio (Niño -10%, Adulto mayor -$50...) de un servicio por persona.
+  const getAjustesByProveedor = computed(() => {
+    return (quotationProviderId: string): ProviderPriceAdjustment[] =>
+      ajustesProveedor.value.filter(a => a.quotationProviderId === quotationProviderId);
+  });
+
+  // El ajuste que paga un viajero en un servicio; undefined = precio base.
+  const getAjusteDeViajero = computed(() => {
+    return (quotationProviderId: string, travelerId: string): ProviderPriceAdjustment | undefined => {
+      const choice = ajustesViajero.value.find(a => a.quotationProviderId === quotationProviderId && a.travelerId === travelerId);
+      return choice ? ajustesProveedor.value.find(a => a.id === choice.adjustmentId) : undefined;
+    };
+  });
+
+  // Viajeros (por id) que NO toman un servicio opcional. Todos los demás sí lo toman.
+  const getOptOutsByProveedor = computed(() => {
+    return (quotationProviderId: string): Set<string> => {
+      return new Set(
+        optOutsProveedor.value
+          .filter(o => o.quotationProviderId === quotationProviderId)
+          .map(o => o.travelerId),
+      );
     };
   });
 
@@ -350,7 +449,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!proveedor)
         return 'pending';
       const anticipado = getAnticipadoProveedor.value(quotationProviderId);
-      return calculatePaymentStatus(anticipado, proveedor.totalCost);
+      return calculatePaymentStatus(anticipado, proveedor.payableCost);
     };
   });
 
@@ -552,39 +651,46 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
   }
 
-  // Helper interno — sincroniza habitaciones de cotización hacia travel_accommodations
-  async function _syncHospedajeToTravel(quotationId: string): Promise<{ skippedOccupied: number }> {
+  /**
+   * Rooms the travel would keep for hotel room types the quotation no longer lists once
+   * `nextAccommodations` is saved. They'd cost nothing, so they're deleted after the save;
+   * while any of them has someone in it the change is refused instead.
+   * @param quotationId - The quotation being changed
+   * @param nextAccommodations - The quotation's hotels as they'll be after the change
+   * @returns The empty rooms to delete, or an error when some are occupied
+   */
+  async function _findRoomsToDrop(
+    quotationId: string,
+    nextAccommodations: Pick<QuotationAccommodation, 'providerId' | 'details'>[],
+  ): Promise<TravelAccommodation[] | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-    if (!cotizacion || cotizacion.status === 'confirmed')
-      return { skippedOccupied: 0 };
+    if (!cotizacion)
+      return [];
 
-    const travelStore = useTravelsStore();
-    const travelId = cotizacion.travelId;
+    const rooms = findRoomsOutsideQuotation(
+      nextAccommodations,
+      useTravelsStore().getAccommodationsByTravel(cotizacion.travelId),
+    );
+    if (rooms.length === 0)
+      return [];
 
-    // Build desired state: group by providerId:hotelRoomTypeId -> list of desired room slots
-    const desiredGroupMap = buildDesiredRoomsMap(hospedajesQuotation.value.filter(h => h.quotationId === quotationId));
-
-    // Get existing rooms for this travel
-    const existingAccommodations = travelStore.getAccommodationsByTravel(travelId);
-
-    // Get occupied room IDs from DB (travelers with a room in this travel)
-    const occupiedIds = await repository.getOccupiedAccommodationIds(travelId);
-
-    const { toDeleteIds, toInsert, skippedOccupied } = reconcileAccommodations(desiredGroupMap, existingAccommodations, occupiedIds);
-
-    // Execute DB changes
-    if (toDeleteIds.length > 0) {
-      await repository.deleteUnoccupiedAccommodations(toDeleteIds);
+    const occupiedIds = await repository.getOccupiedAccommodationIds(cotizacion.travelId);
+    const occupied = rooms.filter(room => occupiedIds.has(room.id)).length;
+    if (occupied > 0) {
+      return {
+        error: `${occupied} habitación(es) de lo que quitaste tienen viajeros. Sácalos en la pestaña Habitaciones del viaje y vuelve a intentarlo.`,
+      };
     }
+    return rooms;
+  }
 
-    let inserted: TravelAccommodation[] = [];
-    if (toInsert.length > 0) {
-      inserted = await repository.insertTravelAccommodations(travelId, toInsert);
-    }
-
-    // Update local state without nuking occupied assignments
-    travelStore.updateLocalAccommodations(travelId, new Set(toDeleteIds), inserted);
-    return { skippedOccupied };
+  async function _deleteRooms(quotationId: string, rooms: TravelAccommodation[]): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    if (!cotizacion || rooms.length === 0)
+      return;
+    const ids = rooms.map(room => room.id);
+    await repository.deleteUnoccupiedAccommodations(ids);
+    useTravelsStore().updateLocalAccommodations(cotizacion.travelId, new Set(ids), []);
   }
 
   // Actions
@@ -642,21 +748,24 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
             pagosBus.value = pagosBus.value.filter(p =>
               !busesApartados.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
             );
+            gastosAdicionales.value = gastosAdicionales.value.filter(g => g.quotationId !== qId);
           }
           travelFetchCache.add(travelId);
           return;
         }
-        const { quotation, providers, providerPayments, accommodations, accommodationPayments, publicPrices, buses, busPayments } = result;
+        const { quotation, providers, providerPayments, providerAdjustments, accommodations, accommodationPayments, publicPrices, buses, busPayments, expenses } = result;
         const quotationId = quotation.id;
 
         cotizaciones.value = [...cotizaciones.value.filter(c => c.travelId !== travelId), quotation];
         proveedoresQuotation.value = [...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId), ...providers];
         pagosProveedor.value = [...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...providerPayments];
+        ajustesProveedor.value = [...ajustesProveedor.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
         hospedajesQuotation.value = [...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId), ...accommodations];
         pagosHospedaje.value = [...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...accommodationPayments];
         preciosPublicos.value = [...preciosPublicos.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
         busesApartados.value = [...busesApartados.value.filter(b => b.quotationId !== quotationId), ...buses];
         pagosBus.value = [...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...busPayments];
+        gastosAdicionales.value = [...gastosAdicionales.value.filter(g => g.quotationId !== quotationId), ...expenses];
 
         travelFetchCache.add(travelId);
       }
@@ -855,6 +964,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
       pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
+      ajustesProveedor.value = ajustesProveedor.value.filter(a => a.quotationProviderId !== id);
+      ajustesViajero.value = ajustesViajero.value.filter(a => a.quotationProviderId !== id);
       await _syncSeatPrice(quotationId);
     }
     catch (e) {
@@ -862,6 +973,191 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
     finally {
       loading.value = false;
+    }
+  }
+
+  /**
+   * Cambia si el proveedor de un servicio por persona les da cortesía a los coordinadores.
+   * Se permite con la cotización confirmada porque no cambia el precio del asiento.
+   */
+  async function updateProveedorCortesia(
+    id: string,
+    coordinatorsCourtesy: boolean,
+  ): Promise<QuotationProvider | { error: string }> {
+    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
+    const existing = proveedoresQuotation.value[index];
+    if (!existing)
+      return { error: 'Proveedor no encontrado' };
+    if (!isPerPersonProvider(existing))
+      return { error: 'Solo un servicio cobrado por persona puede dar cortesía' };
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const updated = await repository.updateProviderCourtesy(id, coordinatorsCourtesy);
+      proveedoresQuotation.value[index] = updated;
+      return updated;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Re-lee lo que se le debe a cada proveedor de la cotización del viaje. La base de datos
+   * lo recalcula cuando se agregan, borran o desmarcan viajeros.
+   * @param travelId - El viaje cuyos viajeros cambiaron
+   */
+  async function refreshProviderPayableCosts(travelId: string): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    if (!cotizacion)
+      return;
+
+    try {
+      const costs = new Map(
+        (await repository.fetchProviderPayableCosts(cotizacion.id)).map(c => [c.id, c.payableCost]),
+      );
+      proveedoresQuotation.value = proveedoresQuotation.value.map(p =>
+        costs.has(p.id) ? { ...p, payableCost: costs.get(p.id)! } : p,
+      );
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  async function fetchProviderOptOuts(travelId: string): Promise<void> {
+    try {
+      const optOuts = await repository.fetchProviderOptOuts(travelId);
+      optOutsProveedor.value = [
+        ...optOutsProveedor.value.filter(o => o.travelId !== travelId),
+        ...optOuts,
+      ];
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  /**
+   * Marca si unos viajeros toman o no un servicio opcional y refresca lo que se le debe.
+   * Se permite con la cotización confirmada, igual que las habitaciones.
+   * @returns Un mensaje de error, o null si todo salió bien
+   */
+  async function setTomanServicio(
+    quotationProviderId: string,
+    travelId: string,
+    travelerIds: string[],
+    toman: boolean,
+  ): Promise<string | null> {
+    const optedOut = getOptOutsByProveedor.value(quotationProviderId);
+    const changed = travelerIds.filter(id => optedOut.has(id) === toman);
+    if (changed.length === 0)
+      return null;
+
+    error.value = null;
+    try {
+      if (toman) {
+        await repository.deleteProviderOptOuts(quotationProviderId, changed);
+        optOutsProveedor.value = optOutsProveedor.value.filter(o =>
+          !(o.quotationProviderId === quotationProviderId && changed.includes(o.travelerId)),
+        );
+      }
+      else {
+        const nuevos = changed.map(travelerId => ({ quotationProviderId, travelerId, travelId }));
+        await repository.insertProviderOptOuts(nuevos);
+        optOutsProveedor.value.push(...nuevos);
+      }
+      await refreshProviderPayableCosts(travelId);
+      return null;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return error.value;
+    }
+  }
+
+  /**
+   * Guarda los ajustes de precio de un servicio por persona y refresca lo que se le debe.
+   * Se permite con la cotización confirmada porque no cambian el precio del asiento.
+   * @returns Un mensaje de error, o null si todo salió bien
+   */
+  async function saveAjustesProveedor(
+    quotationProviderId: string,
+    drafts: ProviderPriceAdjustmentDraft[],
+  ): Promise<string | null> {
+    const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+    if (!proveedor)
+      return 'Proveedor no encontrado';
+    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+
+    error.value = null;
+    try {
+      const saved = await repository.saveProviderAdjustments(quotationProviderId, drafts);
+      ajustesProveedor.value = [
+        ...ajustesProveedor.value.filter(a => a.quotationProviderId !== quotationProviderId),
+        ...saved,
+      ];
+      // Un ajuste borrado regresa a sus viajeros al precio base (en la BD por cascada).
+      const savedIds = new Set(saved.map(a => a.id));
+      ajustesViajero.value = ajustesViajero.value.filter(a =>
+        a.quotationProviderId !== quotationProviderId || savedIds.has(a.adjustmentId),
+      );
+      if (cotizacion)
+        await refreshProviderPayableCosts(cotizacion.travelId);
+      return null;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return error.value;
+    }
+  }
+
+  async function fetchTravelerAdjustments(travelId: string): Promise<void> {
+    try {
+      const choices = await repository.fetchTravelerAdjustments(travelId);
+      ajustesViajero.value = [
+        ...ajustesViajero.value.filter(a => a.travelId !== travelId),
+        ...choices,
+      ];
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  /**
+   * Elige el ajuste que pagan unos viajeros en un servicio (null = precio base) y refresca
+   * lo que se le debe al proveedor.
+   * @returns Un mensaje de error, o null si todo salió bien
+   */
+  async function setAjusteViajero(
+    quotationProviderId: string,
+    travelId: string,
+    travelerIds: string[],
+    adjustmentId: string | null,
+  ): Promise<string | null> {
+    error.value = null;
+    try {
+      await repository.setTravelerAdjustment(quotationProviderId, travelId, travelerIds, adjustmentId);
+      ajustesViajero.value = [
+        ...ajustesViajero.value.filter(a =>
+          !(a.quotationProviderId === quotationProviderId && travelerIds.includes(a.travelerId)),
+        ),
+        ...(adjustmentId
+          ? travelerIds.map(travelerId => ({ quotationProviderId, travelerId, travelId, adjustmentId }))
+          : []),
+      ];
+      await refreshProviderPayableCosts(travelId);
+      return null;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return error.value;
     }
   }
 
@@ -977,7 +1273,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Hospedaje Actions
   // ============================================================================
 
-  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<(QuotationAccommodation & { skippedOccupied: number }) | { error: string }> {
+  async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
     const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
@@ -987,11 +1283,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
+      // No rooms are created here: they're added on the travel's rooms page.
       const newHospedaje = await repository.insertAccommodation(data);
       hospedajesQuotation.value.push(newHospedaje);
       await _syncSeatPrice(data.quotationId);
-      const addSyncResult = await _syncHospedajeToTravel(data.quotationId);
-      return { ...newHospedaje, skippedOccupied: addSyncResult.skippedOccupied };
+      return newHospedaje;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1005,64 +1301,100 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function updateHospedajeQuotation(
     id: string,
     data: Partial<QuotationAccommodationFormData>,
-  ): Promise<(QuotationAccommodation & { skippedOccupied: number }) | undefined> {
+  ): Promise<QuotationAccommodation | { error: string }> {
     const index = hospedajesQuotation.value.findIndex(h => h.id === id);
-    if (index === -1)
-      return undefined;
-
     const existing = hospedajesQuotation.value[index];
     if (!existing)
-      return undefined;
+      return { error: 'Hospedaje no encontrado' };
 
     const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
     if (cotizacion?.status === 'confirmed')
-      return undefined;
+      return { error: 'No se puede modificar una cotización confirmada' };
 
     loading.value = true;
     error.value = null;
     try {
-      const updated = await repository.updateAccommodation(id, data, existing.nightCount, existing.details);
+      const next = getHospedajesByQuotation.value(existing.quotationId)
+        .map(h => (h.id === id ? { ...h, details: data.details ?? h.details } : h));
+      const roomsToDrop = await _findRoomsToDrop(existing.quotationId, next);
+      if ('error' in roomsToDrop)
+        return roomsToDrop;
+
+      const updated = await repository.updateAccommodation(id, data, existing.details);
       hospedajesQuotation.value[index] = updated;
+      await _deleteRooms(existing.quotationId, roomsToDrop);
       await _syncSeatPrice(existing.quotationId);
-      const updateSyncResult = await _syncHospedajeToTravel(existing.quotationId);
-      return { ...updated, skippedOccupied: updateSyncResult.skippedOccupied };
+      return updated;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
+      return { error: error.value };
     }
     finally {
       loading.value = false;
     }
   }
 
-  async function deleteHospedajeQuotation(id: string): Promise<number> {
+  /**
+   * Removes a hotel from the quotation, along with its empty rooms on the travel.
+   * Refused while any of its rooms has someone in it.
+   * @returns An error message, or `null` when it was deleted
+   */
+  async function deleteHospedajeQuotation(id: string): Promise<string | null> {
     const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
     if (!hospedaje)
-      return 0;
+      return 'Hospedaje no encontrado';
 
     const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
     if (cotizacion?.status === 'confirmed')
-      return 0;
+      return 'No se puede modificar una cotización confirmada';
 
     const quotationId = hospedaje.quotationId;
     loading.value = true;
     error.value = null;
     try {
+      const next = getHospedajesByQuotation.value(quotationId).filter(h => h.id !== id);
+      const roomsToDrop = await _findRoomsToDrop(quotationId, next);
+      if ('error' in roomsToDrop)
+        return roomsToDrop.error;
+
       await repository.deleteAccommodation(id);
 
       hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
       pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
+      await _deleteRooms(quotationId, roomsToDrop);
       await _syncSeatPrice(quotationId);
-      const deleteSyncResult = await _syncHospedajeToTravel(quotationId);
-      return deleteSyncResult.skippedOccupied;
+      return null;
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return 0;
+      return error.value;
     }
     finally {
       loading.value = false;
+    }
+  }
+
+  /**
+   * Re-reads what's owed to each hotel of the travel's quotation. The database recomputes
+   * it whenever a room is added to or removed from the travel.
+   * @param travelId - The travel whose rooms changed
+   */
+  async function refreshHospedajeCosts(travelId: string): Promise<void> {
+    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    if (!cotizacion)
+      return;
+
+    try {
+      const costs = new Map(
+        (await repository.fetchAccommodationCosts(cotizacion.id)).map(c => [c.id, c.totalCost]),
+      );
+      hospedajesQuotation.value = hospedajesQuotation.value.map(h =>
+        costs.has(h.id) ? { ...h, totalCost: costs.get(h.id)! } : h,
+      );
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
   }
 
@@ -1224,6 +1556,103 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  // ============================================================================
+  // Gastos Adicionales Actions
+  // ============================================================================
+
+  async function fetchCategoriasGasto(): Promise<void> {
+    try {
+      categoriasGasto.value = await repository.fetchExpenseCategories();
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+  }
+
+  function _rememberCategoria(category: string): void {
+    if (!categoriasGasto.value.includes(category))
+      categoriasGasto.value = [...categoriasGasto.value, category];
+  }
+
+  async function addGasto(data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
+    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
+    if (!cotizacion)
+      return { error: 'Cotización no encontrada' };
+    if (cotizacion.status === 'confirmed')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const gasto = await repository.insertExpense(data);
+      gastosAdicionales.value.push(gasto);
+      _rememberCategoria(gasto.category);
+      await _syncSeatPrice(data.quotationId);
+      return gasto;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function updateGasto(id: string, data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
+    const index = gastosAdicionales.value.findIndex(g => g.id === id);
+    const existing = gastosAdicionales.value[index];
+    if (!existing)
+      return { error: 'Gasto no encontrado' };
+
+    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    if (cotizacion?.status === 'confirmed')
+      return { error: 'No se puede modificar una cotización confirmada' };
+
+    loading.value = true;
+    error.value = null;
+    try {
+      const gasto = await repository.updateExpense(id, data);
+      gastosAdicionales.value[index] = gasto;
+      _rememberCategoria(gasto.category);
+      await _syncSeatPrice(existing.quotationId);
+      return gasto;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return { error: error.value };
+    }
+    finally {
+      loading.value = false;
+    }
+  }
+
+  async function deleteGasto(id: string): Promise<boolean> {
+    const gasto = gastosAdicionales.value.find(g => g.id === id);
+    if (!gasto)
+      return false;
+
+    const cotizacion = cotizaciones.value.find(c => c.id === gasto.quotationId);
+    if (cotizacion?.status === 'confirmed')
+      return false;
+
+    loading.value = true;
+    error.value = null;
+    try {
+      await repository.deleteExpense(id);
+      gastosAdicionales.value = gastosAdicionales.value.filter(g => g.id !== id);
+      await _syncSeatPrice(gasto.quotationId);
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return false;
     }
     finally {
       loading.value = false;
@@ -1449,11 +1878,16 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     cotizaciones,
     proveedoresQuotation,
     pagosProveedor,
+    optOutsProveedor,
+    ajustesProveedor,
+    ajustesViajero,
     hospedajesQuotation,
     pagosHospedaje,
     preciosPublicos,
     busesApartados,
     pagosBus,
+    gastosAdicionales,
+    categoriasGasto,
     loading,
     error,
     filters,
@@ -1464,6 +1898,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getCostoTotal,
     getCostoTipoMinimo,
     getCostoTipoTotal,
+    getCostoPorPersonaAsiento,
     getAsientosVendibles,
     getAsientoConGanancia,
     getPrecioAsientoCalculado,
@@ -1472,6 +1907,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getCostoPerPersonaProveedor,
     getDivisorCosto,
     getSaldoPendienteProveedor,
+    getSobrepagoProveedor,
+    getOptOutsByProveedor,
+    getAjustesByProveedor,
+    getAjusteDeViajero,
     getProviderPaymentStatus,
     getSaldoTotalPendiente,
     getPagosByHospedaje,
@@ -1484,7 +1923,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     filteredProveedores,
     getHospedajesByQuotation,
     getTotalCostoHospedajes,
-    getTotalHabitacionesPorTipo,
+    getRoomCountsByQuotation,
     getPreciosPublicosByQuotation,
     getMatrizPreciosReferencia,
     getTotalCostoBuses,
@@ -1498,6 +1937,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getSaldoPendienteBus,
     getBusPaymentStatus,
     getCostoPerPersonaBus,
+    getGastosByQuotation,
+    getTotalGastos,
+    getGastosTipoMinimo,
+    getGastosTipoTotal,
     // Actions
     fetchAll,
     fetchByTravel,
@@ -1510,6 +1953,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     updateProveedorQuotation,
     deleteProveedorQuotation,
     toggleConfirmadoProveedor,
+    updateProveedorCortesia,
+    refreshProviderPayableCosts,
+    fetchProviderOptOuts,
+    setTomanServicio,
+    saveAjustesProveedor,
+    fetchTravelerAdjustments,
+    setAjusteViajero,
     addProviderPayment,
     updateProviderPayment,
     deleteProviderPayment,
@@ -1518,6 +1968,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addHospedajeQuotation,
     updateHospedajeQuotation,
     deleteHospedajeQuotation,
+    refreshHospedajeCosts,
     toggleConfirmadoHospedaje,
     addPagoHospedaje,
     updatePagoHospedaje,
@@ -1531,5 +1982,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     addBusPayment,
     updateBusPayment,
     deleteBusPayment,
+    fetchCategoriasGasto,
+    addGasto,
+    updateGasto,
+    deleteGasto,
   };
 });

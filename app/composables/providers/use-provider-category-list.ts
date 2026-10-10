@@ -2,6 +2,8 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData } from '~/types/provider';
 
+import { matchesProviderSearch } from '~/composables/providers/use-provider-domain';
+
 export function useProviderCategoryList(category: ProviderCategory, detailRoute?: (provider: Provider) => string) {
   const providerStore = useProviderStore();
   const toast = useToast();
@@ -27,13 +29,8 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
       );
     }
     if (localFilters.value.searchTerm) {
-      const term = localFilters.value.searchTerm.toLowerCase();
-      result = result.filter(
-        p =>
-          p.name.toLowerCase().includes(term)
-          || p.description?.toLowerCase().includes(term)
-          || p.contact.name?.toLowerCase().includes(term),
-      );
+      const term = localFilters.value.searchTerm;
+      result = result.filter(p => matchesProviderSearch(p, term));
     }
 
     return result;

@@ -10,18 +10,23 @@ import type {
   AccommodationPaymentFormData,
   BusPayment,
   BusPaymentFormData,
+  ProviderOptOut,
   ProviderPayment,
   ProviderPaymentFormData,
+  ProviderPriceAdjustment,
   Quotation,
   QuotationAccommodation,
   QuotationAccommodationDetail,
   QuotationBus,
   QuotationBusFormData,
+  QuotationExpense,
+  QuotationExpenseFormData,
   QuotationFormData,
   QuotationProvider,
   QuotationProviderFormData,
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
+  TravelerPriceAdjustment,
 } from '~/types/quotation';
 import type { MapLocation, Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
 import type { TravelAccessCode, TravelAccessCodeGenerated } from '~/types/travel-access';
@@ -494,14 +499,15 @@ export function mapQuotationProviderRowToDomain(row: Tables<'quotation_providers
     totalCost: row.total_cost,
     costType: row.cost_type,
     unitCost: row.unit_cost ?? undefined,
-    personCount: row.person_count ?? undefined,
     paymentMethod: row.payment_method,
     splitType: row.split_type,
     confirmed: row.confirmed,
+    coordinatorsCourtesy: row.coordinators_courtesy,
+    payableCost: row.payable_cost,
   };
 }
 
-export function mapQuotationProviderToInsert(data: QuotationProviderFormData): Omit<Tables<'quotation_providers'>, 'id'> {
+export function mapQuotationProviderToInsert(data: QuotationProviderFormData): TablesInsert<'quotation_providers'> {
   return {
     quotation_id: data.quotationId,
     provider_id: data.providerId,
@@ -515,13 +521,75 @@ export function mapQuotationProviderToInsert(data: QuotationProviderFormData): O
   };
 }
 
-// Las columnas de costo por persona van juntas: un costo total no lleva ninguna.
-export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'personCount'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'person_count'> {
+// Un costo total no lleva precio por persona ni cortesía.
+export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'coordinatorsCourtesy'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'coordinators_courtesy'> {
   const perPerson = data.costType === 'per_person';
   return {
     cost_type: data.costType,
     unit_cost: perPerson ? data.unitCost ?? null : null,
+    coordinators_courtesy: perPerson && data.coordinatorsCourtesy,
+  };
+}
+
+// ============================================================================
+// Quotation Expense
+// ============================================================================
+
+export function mapQuotationExpenseRowToDomain(row: Tables<'quotation_expenses'>): QuotationExpense {
+  return {
+    id: row.id,
+    quotationId: row.quotation_id,
+    category: row.category,
+    description: row.description ?? undefined,
+    costType: row.cost_type,
+    unitCost: row.unit_cost ?? undefined,
+    personCount: row.person_count ?? undefined,
+    totalCost: row.total_cost,
+    splitType: row.split_type,
+    createdAt: row.created_at,
+  };
+}
+
+// Un costo total no lleva precio por persona ni personas.
+export function mapQuotationExpenseToRow(data: QuotationExpenseFormData): TablesInsert<'quotation_expenses'> {
+  const perPerson = data.costType === 'per_person';
+  return {
+    quotation_id: data.quotationId,
+    category: data.category,
+    description: data.description || null,
+    cost_type: data.costType,
+    unit_cost: perPerson ? data.unitCost ?? null : null,
     person_count: perPerson ? data.personCount ?? null : null,
+    total_cost: data.totalCost,
+    split_type: data.splitType,
+  };
+}
+
+export function mapProviderPriceAdjustmentRowToDomain(row: Tables<'quotation_provider_price_adjustments'>): ProviderPriceAdjustment {
+  return {
+    id: row.id,
+    quotationProviderId: row.quotation_provider_id,
+    label: row.label,
+    kind: row.kind,
+    mode: row.mode,
+    value: row.value,
+  };
+}
+
+export function mapTravelerPriceAdjustmentRowToDomain(row: Tables<'quotation_provider_traveler_adjustments'>): TravelerPriceAdjustment {
+  return {
+    quotationProviderId: row.quotation_provider_id,
+    travelerId: row.traveler_id,
+    travelId: row.travel_id,
+    adjustmentId: row.adjustment_id,
+  };
+}
+
+export function mapProviderOptOutRowToDomain(row: Tables<'quotation_provider_opt_outs'>): ProviderOptOut {
+  return {
+    quotationProviderId: row.quotation_provider_id,
+    travelerId: row.traveler_id,
+    travelId: row.travel_id,
   };
 }
 
@@ -575,7 +643,6 @@ export function mapQuotationAccommodationDetailRowToDomain(row: Tables<'quotatio
   return {
     id: row.id,
     roomTypeId: row.hotel_room_type_id,
-    quantity: row.quantity,
     pricePerNight: row.price_per_night,
     maxOccupancy: row.max_occupancy,
   };

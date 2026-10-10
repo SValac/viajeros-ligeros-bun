@@ -3,7 +3,9 @@ import type { QuotationPublicPrice } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler } from '~/types/traveler';
 
+import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { formatCurrency } from '~/utils/currency';
 
 definePageMeta({
   name: 'travel-habitaciones',
@@ -29,27 +31,84 @@ const totalRooms = computed(() => accommodations.value.length);
 const occupiedRooms = computed(() =>
   accommodations.value.filter(a => travelerStore.getOccupantsByAccommodation(a.id).length > 0).length,
 );
-// Grouped by provider
-type AccommodationGroup = {
-  providerId: string;
-  providerName: string;
+// The quotation picks each hotel's room types; how many rooms of each the travel holds
+// is set here (it changes until the trip leaves), and the hotel's cost follows it.
+const hospedajes = computed(() => {
+  const cotizacion = cotizacionStore.getCotizacionByTravel(travelId.value);
+  return cotizacion ? cotizacionStore.getHospedajesByQuotation(cotizacion.id) : [];
+});
+
+type RoomTypeGroup = {
+  key: string;
+  roomTypeId?: string;
+  maxOccupancy?: number;
+  /** Rooms of this type the hotel's catalog has. */
+  catalogRoomCount?: number;
+  /** Rooms of types the quotation doesn't list (they don't count toward the hotel's cost). */
+  unquoted: boolean;
   accommodations: TravelAccommodation[];
 };
 
-const groupedAccommodations = computed((): AccommodationGroup[] => {
-  const map = new Map<string, AccommodationGroup>();
+type HotelGroup = {
+  providerId: string;
+  providerName: string;
+  nightCount?: number;
+  totalCost?: number;
+  roomTypes: RoomTypeGroup[];
+};
+
+const hotelGroups = computed((): HotelGroup[] => {
+  const roomsByType = new Map<string, TravelAccommodation[]>();
   for (const acc of accommodations.value) {
-    if (!map.has(acc.providerId)) {
-      const provider = providerStore.getProviderById(acc.providerId);
-      map.set(acc.providerId, {
-        providerId: acc.providerId,
-        providerName: provider?.name ?? 'Hotel desconocido',
-        accommodations: [],
-      });
-    }
-    map.get(acc.providerId)!.accommodations.push(acc);
+    const key = roomTypeKey(acc.providerId, acc.hotelRoomTypeId);
+    roomsByType.set(key, [...(roomsByType.get(key) ?? []), acc]);
   }
-  return Array.from(map.values());
+
+  const hotels = new Map<string, HotelGroup>();
+  const hotelFor = (providerId: string): HotelGroup => {
+    let hotel = hotels.get(providerId);
+    if (!hotel) {
+      hotel = {
+        providerId,
+        providerName: providerStore.getProviderById(providerId)?.name ?? 'Hotel desconocido',
+        roomTypes: [],
+      };
+      hotels.set(providerId, hotel);
+    }
+    return hotel;
+  };
+
+  for (const hospedaje of hospedajes.value) {
+    const hotel = hotelFor(hospedaje.providerId);
+    hotel.nightCount = hospedaje.nightCount;
+    hotel.totalCost = hospedaje.totalCost;
+    const catalogTypes = hotelRoomStore.getRoomDataByProviderId(hospedaje.providerId)?.roomTypes ?? [];
+    for (const detail of hospedaje.details) {
+      const key = roomTypeKey(hospedaje.providerId, detail.roomTypeId);
+      hotel.roomTypes.push({
+        key,
+        roomTypeId: detail.roomTypeId,
+        maxOccupancy: detail.maxOccupancy,
+        catalogRoomCount: catalogTypes.find(t => t.id === detail.roomTypeId)?.roomCount,
+        unquoted: false,
+        accommodations: roomsByType.get(key) ?? [],
+      });
+      roomsByType.delete(key);
+    }
+  }
+
+  // Whatever is left belongs to no quoted type; show it so those rooms aren't hidden.
+  for (const rooms of roomsByType.values()) {
+    const hotel = hotelFor(rooms[0]!.providerId);
+    let unquoted = hotel.roomTypes.find(group => group.unquoted);
+    if (!unquoted) {
+      unquoted = { key: `${hotel.providerId}:unquoted`, unquoted: true, accommodations: [] };
+      hotel.roomTypes.push(unquoted);
+    }
+    unquoted.accommodations.push(...rooms);
+  }
+
+  return Array.from(hotels.values());
 });
 
 // Companion id → representative's full name, for the group shown on each room card.
@@ -70,7 +129,7 @@ function hasRoomInHotel(travelerId: string, providerId: string): boolean {
 }
 
 const pendingByHotel = computed(() =>
-  groupedAccommodations.value.map(group => ({
+  hotelGroups.value.map(group => ({
     providerName: group.providerName,
     count: occupantsOfTravel.value.filter(t => !hasRoomInHotel(t.id, group.providerId)).length,
   })),
@@ -78,7 +137,7 @@ const pendingByHotel = computed(() =>
 
 const unassignedTravelers = computed(() =>
   occupantsOfTravel.value.filter(t =>
-    groupedAccommodations.value.some(group => !hasRoomInHotel(t.id, group.providerId)),
+    hotelGroups.value.some(group => !hasRoomInHotel(t.id, group.providerId)),
   ).length,
 );
 
@@ -103,36 +162,19 @@ function getRoomTypeInfo(hotelRoomTypeId?: string): RoomTypeInfo {
   return (hotelRoomTypeId && roomTypeInfoById.value.get(hotelRoomTypeId)) || {};
 }
 
-type OccupancyGroup = {
-  maxOccupancy: number;
-  accommodations: TravelAccommodation[];
-};
-
-function groupByOccupancy(accs: TravelAccommodation[]): OccupancyGroup[] {
-  const map = new Map<number, TravelAccommodation[]>();
-  for (const acc of accs) {
-    if (!map.has(acc.maxOccupancy))
-      map.set(acc.maxOccupancy, []);
-    map.get(acc.maxOccupancy)!.push(acc);
-  }
-  return Array.from(map.entries())
-    .sort(([a], [b]) => a - b)
-    .map(([maxOccupancy, accommodations]) => ({ maxOccupancy, accommodations }));
-}
-
 // Tabs — one per hotel
 type HotelTab = {
   label: string;
   icon: string;
   value: string;
   slot: string;
-  group: AccommodationGroup;
+  group: HotelGroup;
 };
 
 const activeTabValue = shallowRef<string | number>('');
 
 const tabs = computed((): HotelTab[] =>
-  groupedAccommodations.value.map((group, index) => ({
+  hotelGroups.value.map((group, index) => ({
     label: group.providerName,
     icon: 'i-lucide-hotel',
     value: `hotel-${group.providerId}-${index}`,
@@ -196,8 +238,8 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
   if (!accommodation)
     return [];
 
-  const hotelNames = groupedAccommodations.value.map(group => group.providerName);
-  const hotelName = groupedAccommodations.value.find(group => group.providerId === accommodation.providerId)?.providerName ?? '';
+  const hotelNames = hotelGroups.value.map(group => group.providerName);
+  const hotelName = hotelGroups.value.find(group => group.providerId === accommodation.providerId)?.providerName ?? '';
 
   return occupantsOfTravel.value
     .filter(t => !hasRoomInHotel(t.id, accommodation.providerId))
@@ -266,6 +308,36 @@ async function removeTraveler(travelerId: string, providerId: string): Promise<v
   }
 }
 
+const addingRoomKey = shallowRef<string | null>(null);
+
+async function addRoom(providerId: string, group: RoomTypeGroup): Promise<void> {
+  if (!group.roomTypeId || !group.maxOccupancy)
+    return;
+  addingRoomKey.value = group.key;
+  const ok = await travelStore.addTravelRooms(travelId.value, {
+    providerId,
+    hotelRoomTypeId: group.roomTypeId,
+    maxOccupancy: group.maxOccupancy,
+  });
+  addingRoomKey.value = null;
+  if (!ok) {
+    toast.add({ title: 'Error al agregar la habitación', description: travelStore.error ?? undefined, color: 'error' });
+    return;
+  }
+  await cotizacionStore.refreshHospedajeCosts(travelId.value);
+  toast.add({ title: 'Habitación agregada', color: 'success' });
+}
+
+async function deleteRoom(roomId: string): Promise<void> {
+  const ok = await travelStore.deleteTravelRoom(travelId.value, roomId);
+  if (!ok) {
+    toast.add({ title: 'No se pudo eliminar la habitación', description: travelStore.error ?? undefined, color: 'error' });
+    return;
+  }
+  await cotizacionStore.refreshHospedajeCosts(travelId.value);
+  toast.add({ title: 'Habitación eliminada', color: 'success' });
+}
+
 async function updateAccommodation(
   accommodation: TravelAccommodation,
   data: { roomNumber?: string | null; floor?: number | null },
@@ -327,12 +399,12 @@ async function updateAccommodation(
       </div>
 
       <!-- Tabs por hotel -->
-      <UCard v-if="accommodations.length === 0">
+      <UCard v-if="hotelGroups.length === 0">
         <div class="text-center py-8 text-muted">
           <UIcon name="i-lucide-bed-double" class="size-10 mx-auto mb-2 opacity-40" />
-          <p>No hay habitaciones sincronizadas.</p>
+          <p>Este viaje aún no tiene hospedaje.</p>
           <p class="text-sm mt-1">
-            Agrega hospedaje en la cotización para sincronizar habitaciones.
+            Agrega los hoteles y sus tipos de habitación en la cotización; aquí defines cuántas habitaciones se apartan.
           </p>
         </div>
       </UCard>
@@ -345,39 +417,39 @@ async function updateAccommodation(
       >
         <template #hotel="{ item }">
           <div class="space-y-6">
-            <div
-              v-for="og in groupByOccupancy(item.group.accommodations)"
-              :key="og.maxOccupancy"
-              class="space-y-3"
-            >
-              <div class="flex items-center gap-2">
-                <UIcon name="i-lucide-users" class="size-4 text-muted" />
-                <h3 class="font-semibold text-sm">
-                  Capacidad - {{ og.maxOccupancy }} persona{{ og.maxOccupancy === 1 ? '' : 's' }}
-                </h3>
-                <UBadge
-                  :label="`${og.accommodations.length} hab.`"
-                  variant="subtle"
-                  color="neutral"
-                />
-              </div>
+            <p v-if="item.group.totalCost !== undefined" class="text-sm text-muted">
+              Costo del hotel:
+              <span class="font-semibold text-highlighted">{{ formatCurrency(item.group.totalCost) }}</span>
+              · {{ item.group.nightCount }} noche{{ item.group.nightCount === 1 ? '' : 's' }} · se calcula con las habitaciones de abajo
+            </p>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                <TravelAccommodationCard
-                  v-for="acc in og.accommodations"
-                  :key="acc.id"
-                  :accommodation="acc"
-                  :occupants="travelerStore.getOccupantsByAccommodation(acc.id)"
-                  :provider-name="item.group.providerName"
-                  :room-type-details="getRoomTypeInfo(acc.hotelRoomTypeId).details"
-                  :room-type-beds="getRoomTypeInfo(acc.hotelRoomTypeId).beds"
-                  :representative-names="representativeNames"
-                  @add-traveler="openAddTravelerModal"
-                  @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
-                  @update="updateAccommodation"
-                />
-              </div>
-            </div>
+            <TravelRoomTypeGroup
+              v-for="roomType in item.group.roomTypes"
+              :key="roomType.key"
+              :details="getRoomTypeInfo(roomType.roomTypeId).details"
+              :beds="getRoomTypeInfo(roomType.roomTypeId).beds"
+              :max-occupancy="roomType.maxOccupancy"
+              :room-count="roomType.accommodations.length"
+              :catalog-room-count="roomType.catalogRoomCount"
+              :unquoted="roomType.unquoted"
+              :adding="addingRoomKey === roomType.key"
+              @add-room="addRoom(item.group.providerId, roomType)"
+            >
+              <TravelAccommodationCard
+                v-for="acc in roomType.accommodations"
+                :key="acc.id"
+                :accommodation="acc"
+                :occupants="travelerStore.getOccupantsByAccommodation(acc.id)"
+                :provider-name="item.group.providerName"
+                :room-type-details="roomType.unquoted ? getRoomTypeInfo(acc.hotelRoomTypeId).details : undefined"
+                :room-type-beds="roomType.unquoted ? getRoomTypeInfo(acc.hotelRoomTypeId).beds : undefined"
+                :representative-names="representativeNames"
+                @add-traveler="openAddTravelerModal"
+                @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
+                @update="updateAccommodation"
+                @delete="deleteRoom"
+              />
+            </TravelRoomTypeGroup>
           </div>
         </template>
       </UTabs>
