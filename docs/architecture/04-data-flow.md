@@ -74,6 +74,62 @@ La cotización (`fetchByTravel`) usa caché interno para evitar llamadas duplica
 
 ---
 
+## Carga de datos con Pinia Colada (en migración)
+
+> **Estado:** la app todavía carga todo al arrancar con `init-stores.client.ts` (ver arriba).
+> Pinia Colada se está introduciendo por fases; el plan está en
+> `docs/features/pending/on-demand-data-loading/`. Esta sección fija las convenciones.
+
+### Qué es cada cosa
+
+- **Query (Colada):** datos que vienen del servidor y se piden por pantalla y por alcance
+  (un viaje, un mes, una página). Colada guarda el resultado en caché por **clave**,
+  deduplica peticiones iguales y lo refresca cuando está viejo.
+- **Store (Pinia):** estado de cliente que no existe en el servidor (filtros de UI,
+  selección, borradores de formulario).
+
+Regla: si el dato se puede volver a pedir al servidor, es una query; si solo existe en el
+cliente, es un store.
+
+### Capas
+
+```
+Página / componente → useQuery(() => travelDetailQuery(id))
+                            │
+                      app/queries/<dominio>.ts      claves + defineQueryOptions
+                            │
+                      app/composables/<dominio>/use-*-repository.ts    Supabase
+```
+
+Las funciones de query llaman al **repositorio**, nunca a `supabase` directamente.
+
+### Claves
+
+Un archivo por dominio en `app/queries/` con una fábrica de claves de lo general a lo
+específico, para poder invalidar por prefijo:
+
+```ts
+export const travelKeys = {
+  root: ['travels'] as const,
+  detail: (id: string) => ['travels', 'detail', id] as const,
+};
+```
+
+- `as const` conserva la tupla literal.
+- Invalidar `travelKeys.root` refresca el detalle y los listados del dominio.
+- La misma fábrica se usa en `key:` de la query y al invalidar, para que no se desalineen.
+
+### Defaults (`colada.options.ts`)
+
+| Opción | Valor | Motivo |
+|---|---|---|
+| `staleTime` | 30 s | No repite la petición al cambiar de pestaña dentro de un viaje. |
+| `gcTime` | 5 min | Al volver a una pantalla se ve el dato anterior mientras se refresca. |
+| `refetchOnMount` / `WindowFocus` / `Reconnect` | `true` | Refresca solo si el dato está viejo; cubre datos desactualizados entre usuarios. |
+
+Los catálogos (proveedores, coordinadores…) sobrescriben `staleTime` con un valor largo por
+query.
+
 ## Mapeo BD ↔ Dominio
 
 `app/utils/mappers.ts` provee funciones bidireccionales:
