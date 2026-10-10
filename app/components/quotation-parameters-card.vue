@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Quotation } from '~/types/quotation';
 
+import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText } from '~/utils/form-validation';
 
 type Props = {
@@ -10,7 +11,6 @@ type Props = {
 const { quotation } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
-const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 const toast = useToast();
 
@@ -18,8 +18,10 @@ const editandoParametros = shallowRef(false);
 const confirmarQuitarAsientos = shallowRef(false);
 const guardando = shallowRef(false);
 
+const { data: travel } = useQuery(() => travelDetailQuery(quotation.travelId));
+
 const numCoordinadores = computed(() =>
-  travelStore.getTravelById(quotation.travelId)?.coordinatorIds.length ?? 0,
+  travel.value?.coordinatorIds.length ?? 0,
 );
 const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotation.id));
 const origenVendibles = computed(() => {
