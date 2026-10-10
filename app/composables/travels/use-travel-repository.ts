@@ -1,3 +1,5 @@
+import type { QueryData } from '@supabase/supabase-js';
+
 import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelUpdateData } from '~/types/travel';
 
@@ -14,34 +16,74 @@ export function useTravelRepository() {
   const authStore = useAuthStore();
 
   /**
+   * Builds (without running) the `travels` select with every related sub-table.
+   * Shared by `fetchAll` and `fetchById` so both read and map exactly the same shape;
+   * callers chain their own filters/ordering before awaiting.
+   * @returns Unexecuted PostgREST query builder
+   */
+  function selectTravelWithRelations() {
+    return supabase
+      .from('travels')
+      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id), travel_internals(*)');
+  }
+
+  type TravelWithRelationsRow = QueryData<ReturnType<typeof selectTravelWithRelations>>[number];
+
+  /**
+   * Maps a `travels` row with its embedded relations to a `Travel` domain object.
+   * Itinerary activities are sorted by day.
+   * @param row - Row returned by `selectTravelWithRelations()`
+   * @returns The travel with itinerary, services, buses, accommodations, and coordinator ids
+   */
+  function mapTravelWithRelations(row: TravelWithRelationsRow): Travel {
+    const activities: TravelActivity[] = (row.travel_activities ?? [])
+      .slice()
+      .sort((a: { day: number }, b: { day: number }) => a.day - b.day)
+      .map(mapTravelActivityRowToDomain);
+
+    const services: TravelService[] = (row.travel_services ?? []).map(mapTravelServiceRowToDomain);
+    const buses: TravelBus[] = (row.travel_buses ?? []).map(mapTravelBusRowToDomain);
+    const accommodations: TravelAccommodation[] = (row.travel_accommodations ?? []).map(mapTravelAccommodationRowToDomain);
+    const coordinatorIds: string[] = (row.travel_coordinators ?? []).map(
+      (tc: { coordinator_id: string }) => tc.coordinator_id,
+    );
+
+    return mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations });
+  }
+
+  /**
    * Fetches all travels with their related sub-entities, ordered by creation date descending.
    * @returns All travel records mapped to domain objects with itinerary, services, buses, accommodations, and coordinators
    * @throws {PostgrestError} on Supabase failure
    */
   async function fetchAll(): Promise<Travel[]> {
-    const { data, error } = await supabase
-      .from('travels')
-      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id), travel_internals(*)')
+    const { data, error } = await selectTravelWithRelations()
       .order('created_at', { ascending: false });
 
     if (error)
       throw error;
 
-    return data.map((row) => {
-      const activities: TravelActivity[] = (row.travel_activities ?? [])
-        .slice()
-        .sort((a: { day: number }, b: { day: number }) => a.day - b.day)
-        .map(mapTravelActivityRowToDomain);
+    return data.map(mapTravelWithRelations);
+  }
 
-      const services: TravelService[] = (row.travel_services ?? []).map(mapTravelServiceRowToDomain);
-      const buses: TravelBus[] = (row.travel_buses ?? []).map(mapTravelBusRowToDomain);
-      const accommodations: TravelAccommodation[] = (row.travel_accommodations ?? []).map(mapTravelAccommodationRowToDomain);
-      const coordinatorIds: string[] = (row.travel_coordinators ?? []).map(
-        (tc: { coordinator_id: string }) => tc.coordinator_id,
-      );
+  /**
+   * Fetches a single travel with its related sub-entities.
+   * @param id - UUID of the travel
+   * @returns The travel mapped to a domain object, or `null` if it doesn't exist or RLS hides it
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchById(id: string): Promise<Travel | null> {
+    const { data, error } = await selectTravelWithRelations()
+      .eq('id', id)
+      .maybeSingle();
 
-      return mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations });
-    });
+    if (error)
+      throw error;
+
+    if (data === null)
+      return null;
+
+    return mapTravelWithRelations(data);
   }
 
   /**
@@ -578,6 +620,7 @@ export function useTravelRepository() {
 
   return {
     fetchAll,
+    fetchById,
     updateTravel,
     updateTravelAccommodation,
     deleteEmptyAccommodation,

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Bus } from '~/types/bus';
 import type { CostSplitType, QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
+import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
@@ -25,7 +26,6 @@ const emit = defineEmits<Emits>();
 const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const busStore = useBusStore();
-const travelsStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 const toast = useToast();
 
@@ -102,10 +102,11 @@ const unidadesAgencia = computed<Bus[]>(() => {
 
 // Asiento más alto ocupado en el bus del viaje: al editar, no se puede cambiar a una unidad más chica
 const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId)?.travelId);
+const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const asientoMaximoOcupado = computed(() => {
   if (!props.bus || !travelId.value)
     return 0;
-  const travelBus = travelsStore.getTravelById(travelId.value)?.buses?.find(b => b.quotationBusId === props.bus!.id);
+  const travelBus = travel.value?.buses?.find(b => b.quotationBusId === props.bus!.id);
   if (!travelBus)
     return 0;
   return travelerStore.getOccupantsByTravel(travelId.value)

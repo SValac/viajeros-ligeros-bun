@@ -39,6 +39,7 @@ import {
   isPerPersonProvider,
 } from '~/composables/quotation/use-quotation-domain';
 import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
+import { travelKeys } from '~/queries/travels';
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
@@ -47,6 +48,7 @@ import {
 } from '~/utils/mappers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
+  const queryCache = useQueryCache();
   const repository = useQuotationRepository();
   const travelFetchCache = new Set<string>();
   const travelFetchInFlight = new Map<string, Promise<void>>();
@@ -1680,6 +1682,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const { quotationBus: newBus, travelBusRow } = await repository.insertBus(data, cotizacion.travelId);
+      queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
       busesApartados.value.push(newBus);
       const travelStore = useTravelsStore();
       const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
@@ -1730,6 +1733,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       // above; this just reflects that in the UI without a refetch.
       const travelStore = useTravelsStore();
       if (cotizacion) {
+        queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
         const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
         if (travelIndex !== -1) {
           travelStore.travels[travelIndex] = {
@@ -1782,6 +1786,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       // Actualizar estado local del travel
       const travelStore = useTravelsStore();
       if (cotizacion) {
+        queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
         const tIdx = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
         if (tIdx !== -1) {
           travelStore.travels[tIdx] = {

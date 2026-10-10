@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
+import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeName } from '~/utils/form-validation';
 
 type Props = {
@@ -26,7 +27,7 @@ type OperatorDraft = {
 
 const operatorDraft = reactive<Record<string, OperatorDraft>>({});
 
-const travel = computed(() => travelsStore.getTravelById(travelId));
+const { data: travel } = useQuery(() => travelDetailQuery(travelId));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId));
 const buses = computed(() => {
   if (!cotizacion.value)

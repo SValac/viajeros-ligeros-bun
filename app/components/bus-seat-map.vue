@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { DropdownMenuItem } from '@nuxt/ui';
+
 type OccupiedSeat = {
   travelerId: string;
   seatNumber: number;
@@ -10,7 +12,7 @@ type OccupiedSeat = {
   menuItems: {
     label: string;
     icon?: string;
-    color?: string;
+    color?: DropdownMenuItem['color'];
     onSelect: () => void;
   }[][];
 };
