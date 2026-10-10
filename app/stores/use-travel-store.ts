@@ -4,6 +4,7 @@ import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStat
 import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 import { useTravelRepository } from '~/composables/travels/use-travel-repository';
+import { travelKeys } from '~/queries/travels';
 
 type TravelStats = {
   total: number;
@@ -15,6 +16,8 @@ type TravelStats = {
 };
 
 export const useTravelsStore = defineStore('useTravelsStore', () => {
+  const queryCache = useQueryCache();
+
   const repository = useTravelRepository();
   const mediaRepository = useTravelMediaRepository();
 
@@ -207,6 +210,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
             }),
           };
 
+      queryCache.invalidateQueries({ key: travelKeys.detail(id), exact: true });
       return true;
     }
     catch (e) {
@@ -232,6 +236,9 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       // Files go first: once the row is gone, the bucket's RLS no longer lets us remove them.
       await mediaRepository.removeAllForTravel(id);
       await repository.removeTravel(id);
+      for (const entry of queryCache.getEntries({ key: travelKeys.detail(id), exact: true })) {
+        queryCache.remove(entry);
+      }
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al eliminar viaje';
@@ -284,6 +291,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         ...existingTravel,
         buses: updatedBuses,
       };
+
+      queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
       return true;
     }
     catch (e) {
@@ -322,6 +331,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         ...existingTravel,
         buses: (existingTravel.buses ?? []).filter(b => b.id !== busId),
       };
+
+      queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
       return true;
     }
     catch (e) {
@@ -371,6 +382,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         ...existingTravel,
         accommodations: updatedAccommodations,
       };
+
+      queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
       return true;
     }
     catch (e) {
@@ -382,11 +395,20 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     }
   }
 
+  /**
+   * Syncs a travel's accommodations after the quotation store rewrote `travel_accommodations`
+   * through its own repository. The DB already changed, so the travel detail query is
+   * invalidated here too: this is the only hook the travel side gets for that write.
+   * @param travelId - UUID of the travel
+   * @param deletedIds - Accommodation ids deleted from the DB
+   * @param added - Accommodations inserted in the DB
+   */
   function updateLocalAccommodations(
     travelId: string,
     deletedIds: Set<string>,
     added: TravelAccommodation[],
   ): void {
+    queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
     const index = travels.value.findIndex(t => t.id === travelId);
     if (index === -1)
       return;
