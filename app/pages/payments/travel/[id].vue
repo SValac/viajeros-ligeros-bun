@@ -1,17 +1,18 @@
 <script setup lang="ts">
+import { travelDetailQuery } from '~/queries/travels';
+
 definePageMeta({
   name: 'payments-travel',
 });
 
 const route = useRoute();
 const router = useRouter();
-const travelStore = useTravelsStore();
 
 const travelId = computed(() => route.params.id as string);
-const travel = computed(() => travelStore.getTravelById(travelId.value));
+const { data: travel, status } = useQuery(() => travelDetailQuery(travelId.value));
 
-watch(travel, (value) => {
-  if (!value && travelId.value)
+watch([status, travel], ([currentStatus, value]) => {
+  if (currentStatus === 'success' && value === null && travelId.value)
     router.push({ name: 'payments-index' });
 }, { immediate: true });
 </script>
