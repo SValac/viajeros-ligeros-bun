@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
@@ -7,15 +7,15 @@ import { h } from 'vue';
 import type { Traveler, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
 
 import BusSeatMap from '~/components/bus-seat-map.vue';
+import { useTravelRoute } from '~/composables/travels/use-travel-route';
 
 definePageMeta({
   name: 'travel-travelers',
 });
 
-const route = useRoute();
+const { travelId, travel } = useTravelRoute();
 const router = useRouter();
 const travelerStore = useTravelerStore();
-const travelStore = useTravelsStore();
 const providerStore = useProviderStore();
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
@@ -23,7 +23,7 @@ const toast = useToast();
 type TravelerActionItem = {
   label: string;
   icon?: string;
-  color?: string;
+  color?: DropdownMenuItem['color'];
   onSelect: () => void;
 };
 
@@ -57,9 +57,6 @@ type SeatSelectionPayload = {
   travelerId?: string;
   passengerName?: string;
 };
-
-const travelId = computed(() => route.params.id as string);
-const travel = computed(() => travelStore.getTravelById(travelId.value));
 
 // Estado local
 const isFormModalOpen = shallowRef(false);
@@ -105,7 +102,7 @@ const isCoordinatorSeatModalOpen = computed({
 });
 
 const allBuses = computed(() => travel.value?.buses ?? []);
-const allAccommodations = computed(() => travelStore.getAccommodationsByTravel(travelId.value));
+const allAccommodations = computed(() => travel.value?.accommodations ?? []);
 const tabs = computed(() => [
   {
     label: 'Todos los viajeros',

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { TravelService } from '~/types/travel';
 
+import { travelDetailQuery } from '~/queries/travels';
+
 type Props = {
   travelId: string;
 };
@@ -10,7 +12,7 @@ const { travelId } = defineProps<Props>();
 const travelsStore = useTravelsStore();
 const toast = useToast();
 
-const travel = computed(() => travelsStore.getTravelById(travelId));
+const { data: travel } = useQuery(() => travelDetailQuery(travelId));
 const services = computed(() => travel.value?.services ?? []);
 
 async function handleUpdate(newServices: TravelService[]) {
