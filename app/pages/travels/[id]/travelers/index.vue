@@ -7,12 +7,13 @@ import { h } from 'vue';
 import type { Traveler, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
 
 import BusSeatMap from '~/components/bus-seat-map.vue';
+import { useTravelRoute } from '~/composables/travels/use-travel-route';
 
 definePageMeta({
   name: 'travel-travelers',
 });
 
-const route = useRoute();
+const { travelId, travel } = useTravelRoute();
 const router = useRouter();
 const travelerStore = useTravelerStore();
 const travelStore = useTravelsStore();
@@ -57,9 +58,6 @@ type SeatSelectionPayload = {
   travelerId?: string;
   passengerName?: string;
 };
-
-const travelId = computed(() => route.params.id as string);
-const travel = computed(() => travelStore.getTravelById(travelId.value));
 
 // Estado local
 const isFormModalOpen = shallowRef(false);
