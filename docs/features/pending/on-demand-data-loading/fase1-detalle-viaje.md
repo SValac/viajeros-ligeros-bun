@@ -12,7 +12,10 @@
 - [x] 4a. Acciones de `use-travel-store.ts` invalidan `detail(id)`; `deleteTravel` quita la entrada
 - [x] 4b. `use-cotizacion-store.ts`: `addBusQuotation`, `updateBusQuotation`, `deleteBusQuotation`
   invalidan `detail(travelId)` (fuera del `if (travelIndex !== -1)`; `total_seats` cambia por trigger)
-- [ ] 5. Componentes que aún llaman `getTravelById`
+- [x] 5. Componentes y páginas que llamaban `getTravelById` → `travelDetailQuery`
+  (`enabled: !!id`, así que un id vacío no hace petición). Quedan con `getTravelById` a
+  propósito: `calendar.vue` y `payments/traveler/[id].vue` (Fase 2) y
+  `use-cotizacion-store.ts` `getAsientosVendibles` (Fase 4)
 - [ ] Verificación + punto de decisión
 
 > **Limitación conocida (Fase 4):** la pestaña Autobuses lista los buses desde

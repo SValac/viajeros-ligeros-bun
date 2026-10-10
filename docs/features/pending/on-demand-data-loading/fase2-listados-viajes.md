@@ -54,6 +54,12 @@ página es otra entrada de caché (volver atrás es instantáneo).
 
 ### 3. Pantallas
 
+> **Pendiente de la Fase 1:** `calendar.vue` (viaje seleccionado) y
+> `payments/traveler/[id].vue` (etiquetas de los viajes del viajero en `travelOptions` y
+> `getTravelName`) siguen con `travelsStore.getTravelById`. Necesitan **varios** viajes
+> (solo `label`), así que van con la lista resumida, no con `travelDetailQuery`. No
+> llamar `useQuery` dentro de un `computed` ni de una función del template.
+
 Migrar las 4 pantallas. El dashboard necesita UI de paginación y un control de filtro de
 estado (Nuxt UI `UPagination` + el patrón de filtros que ya usa el calendario).
 

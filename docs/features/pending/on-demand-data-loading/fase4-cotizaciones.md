@@ -28,6 +28,23 @@ store de viajes.
 - **Acoplamiento**: el store lee y escribe `travelStore.travels` (`:253`, `:566`, `:584`,
   `:1256`, `:1304`, `:1356`) para mantener alineados autobuses y alojamientos del viaje.
 
+### Pendientes que dejó la Fase 1
+
+- **`getAsientosVendibles` lee coordinadores de `travelStore.getTravelById`.** Es un
+  getter del store que también se llama desde acciones async (`_syncSeatPrice`, cálculo
+  del precio por asiento), así que **no puede usar `useQuery`**: no hay contexto de
+  componente y crearía una query por llamada. Opciones: recibir el número de
+  coordinadores como parámetro, o leerlo con `queryCache.getQueryData(travelKeys.detail(id))`
+  (no crea la entrada: solo sirve si alguien ya montó la query del viaje). Mientras
+  tanto, un viaje fuera de las 1000 filas cuenta 0 coordinadores.
+- **La pestaña Autobuses del viaje lista los buses desde `cotizacionStore`**
+  (`travel-buses-section.vue`), cargado una vez por viaje con `travelFetchCache`. Un
+  camión agregado en otra pestaña del navegador o por otro usuario no aparece hasta
+  recargar. Se resuelve con el paso 1 (query `byTravel` con `refetchOnWindowFocus`).
+- `addBusQuotation` / `updateBusQuotation` / `deleteBusQuotation` ya invalidan
+  `travelKeys.detail(travelId)` (Fase 1, paso 4b); el paso 4 solo tiene que quitar las
+  escrituras a `travelStore.travels[...]` que quedan junto a esa invalidación.
+
 ---
 
 ## Pasos
