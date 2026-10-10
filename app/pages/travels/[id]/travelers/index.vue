@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
@@ -23,7 +23,7 @@ const toast = useToast();
 type TravelerActionItem = {
   label: string;
   icon?: string;
-  color?: string;
+  color?: DropdownMenuItem['color'];
   onSelect: () => void;
 };
 
