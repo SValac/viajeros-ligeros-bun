@@ -1,8 +1,23 @@
 # Fase 1 — Piloto: detalle de viaje por id
 
-**Estado:** Pendiente
+**Estado:** En progreso
 **Dependencia:** Fase 0
 **Migración:** No
+
+## Avance
+
+- [x] 1. `fetchById` en el repositorio
+- [x] 2. `travelDetailQuery`
+- [x] 3. `useTravelRoute()` + redirect y estado de error en `[id].vue`
+- [x] 4a. Acciones de `use-travel-store.ts` invalidan `detail(id)`; `deleteTravel` quita la entrada
+- [ ] 4b. `use-cotizacion-store.ts`: `addBusQuotation`, `updateBusQuotation`, `deleteBusQuotation`
+  invalidan `detail(travelId)` (fuera del `if (travelIndex !== -1)`; `total_seats` cambia por trigger)
+- [ ] 5. Componentes que aún llaman `getTravelById`
+- [ ] Verificación + punto de decisión
+
+> **Limitación conocida (se resuelve en Fases 2 y 4):** las acciones de `use-travel-store.ts`
+> empiezan con `findIndex` sobre `travels.value`. Un viaje fuera de las 1000 filas ya **se ve**
+> en el detalle, pero todavía **no se puede editar** ("Viaje no encontrado").
 
 ---
 
