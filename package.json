@@ -25,19 +25,20 @@
   },
   "dependencies": {
     "@formkit/auto-animate": "^0.10.0",
-    "@nuxt/ui": "^4.3.0",
+    "@nuxt/ui": "^4.11.3",
+    "@pinia/colada": "^1.4.8",
+    "@pinia/colada-nuxt": "^1.2.0",
     "@supabase/supabase-js": "^2.104.1",
-    "@tiptap/extension-link": "^3.22.3",
-    "@tiptap/extension-placeholder": "^3.22.3",
-    "@tiptap/extension-text-style": "^3.22.3",
-    "@tiptap/extension-underline": "^3.22.3",
-    "@tiptap/starter-kit": "^3.22.3",
-    "@tiptap/vue-3": "^3.22.3",
+    "@tiptap/extension-link": "^3.31.4",
+    "@tiptap/extension-placeholder": "^3.31.4",
+    "@tiptap/extension-text-style": "^3.31.4",
+    "@tiptap/extension-underline": "^3.31.4",
+    "@tiptap/starter-kit": "^3.31.4",
+    "@tiptap/vue-3": "^3.31.4",
     "@vueuse/core": "^14.1.0",
     "dompurify": "^3.3.3",
-    "nuxt": "^4.2.2",
-    "vue": "^3.5.25",
-    "vue-router": "^4.6.3",
+    "nuxt": "^4.6.1",
+    "vue": "3.5.43",
     "vue3-emoji-picker": "^1.1.8",
     "zod": "^4.2.1"
   },
@@ -46,6 +47,7 @@
     "@iconify-json/lucide": "^1.2.98",
     "@iconify-json/simple-icons": "^1.2.92",
     "@nuxt/eslint": "^1.12.1",
+    "@pinia/colada-devtools": "^2.0.1",
     "@pinia/nuxt": "^0.11.3",
     "@types/dompurify": "^3.2.0",
     "eslint": "^9.39.1",
@@ -55,7 +57,9 @@
     "typescript": "^5.9.3"
   },
   "overrides": {
-    "@tiptap/core": "3.22.3"
+    "@tiptap/core": "3.31.4",
+    "vue": "3.5.43",
+    "vue-router": "5.4.0"
   },
   "lint-staged": {
     "*.{js,mjs,cjs,ts,vue}": "eslint --fix"

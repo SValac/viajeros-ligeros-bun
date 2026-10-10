@@ -12,7 +12,7 @@ const toast = useToast();
 const travelsStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 
-const { travelId, travel } = useTravelRoute();
+const { travelId, travel, status, refetch } = useTravelRoute();
 
 // The edit page renders inside this layout; no "Editar" button while on it
 const isEditing = computed(() => route.name === 'travel-edit');
@@ -23,9 +23,10 @@ const isDeleting = shallowRef(false);
 // Redirect to dashboard if travel not found.
 // `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
 // y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
-// Espera a `loaded`: al abrir el link directo los viajes todavía se están cargando.
-watch([travel, () => travelsStore.loaded], ([value, loaded]) => {
-  if (loaded && !value && travelId.value && !isDeleting.value) {
+// Solo con la query resuelta y `null` estricto: `undefined` es "todavía cargando" (link
+// directo) o "falló la petición", y ninguno de los dos significa que el viaje no exista.
+watch([status, travel], ([currentStatus, value]) => {
+  if (currentStatus === 'success' && value === null && travelId.value && !isDeleting.value) {
     toast.add({
       title: 'Viaje no encontrado',
       description: 'El viaje que buscas no existe',
@@ -122,7 +123,7 @@ async function deleteTravel() {
           />
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-2xl font-bold break-words">
+              <h1 class="text-2xl font-bold wrap-break-word">
                 {{ travel.label }}
               </h1>
               <UBadge
@@ -199,6 +200,20 @@ async function deleteTravel() {
         </div>
       </template>
     </UModal>
+  </div>
+
+  <div
+    v-else-if="status === 'error'"
+    class="flex h-full items-center justify-center flex-col gap-4"
+  >
+    <p class="text-muted">
+      No se pudo cargar el viaje
+    </p>
+    <UButton
+      label="Reintentar"
+      icon="i-lucide-refresh-cw"
+      @click="refetch()"
+    />
   </div>
 
   <div v-else class="flex h-full items-center justify-center">

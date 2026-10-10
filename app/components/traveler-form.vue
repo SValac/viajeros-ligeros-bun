@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { Travel, TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFormData } from '~/types/traveler';
 
+import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, nameSchema, phoneSchema, sanitizeBusinessName, sanitizeName } from '~/utils/form-validation';
 
 type Props = {
@@ -29,7 +30,6 @@ const emit = defineEmits<{
   submit: [data: TravelerFormData];
   cancel: [];
 }>();
-const travelsStore = useTravelsStore();
 const providerStore = useProviderStore();
 
 // Estado inicial del formulario
@@ -104,9 +104,7 @@ const travelOptions = computed(() =>
 );
 
 // Viaje seleccionado — fuente de verdad para los buses (FK a travel_buses.id)
-const selectedTravel = computed(() =>
-  state.value.travelId ? travelsStore.getTravelById(state.value.travelId) : undefined,
-);
+const { data: selectedTravel } = useQuery(() => travelDetailQuery(state.value.travelId));
 
 // Opciones de camiones: vienen de travel.buses (id de travel_buses)
 const busOptions = computed(() => {

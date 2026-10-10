@@ -333,7 +333,6 @@ function onCancel() {
                       <UAvatar
                         icon="i-lucide-user-star"
                         size="sm"
-                        color="violet"
                         variant="soft"
                       />
                       <div class="min-w-0">

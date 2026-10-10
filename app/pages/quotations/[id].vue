@@ -4,6 +4,7 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 import { z } from 'zod';
 
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
+import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 // Padre de las pestañas de la cotización (app/pages/quotations/[id]/*). Muestra el
@@ -13,7 +14,6 @@ import { sanitizeText, textSchema } from '~/utils/form-validation';
 const router = useRouter();
 const toast = useToast();
 
-const travelStore = useTravelsStore();
 const cotizacionStore = useCotizacionStore();
 
 const { travelId, quotation: cotizacion, readonly } = useQuotationRoute();
@@ -24,14 +24,14 @@ onMounted(async () => {
   await cotizacionStore.refreshProviderPayableCosts(travelId.value);
 });
 
-const travel = computed(() => travelStore.getTravelById(travelId.value));
+const { data: travel, status } = useQuery(() => travelDetailQuery(travelId.value));
 
 // Redirect if travel not found.
 // `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
 // y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
-// Espera a `loaded`: al abrir el link directo los viajes todavía se están cargando.
-watch([travel, () => travelStore.loaded], ([value, loaded]) => {
-  if (loaded && !value && travelId.value) {
+// Espera a que la query resuelva: `undefined` = cargando, `null` = no existe o RLS lo oculta.
+watch([status, travel], ([currentStatus, value]) => {
+  if (currentStatus === 'success' && value === null && travelId.value) {
     toast.add({
       title: 'Viaje no encontrado',
       description: 'El viaje que buscas no existe',

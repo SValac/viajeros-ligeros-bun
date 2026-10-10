@@ -7,6 +7,7 @@ import { h } from 'vue';
 import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
+import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 
 // Payments of a travel's travelers: cash summary, account configs and payments. Used by the
@@ -18,13 +19,12 @@ const props = defineProps<{
 const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
-const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 
 const cotizacionStore = useCotizacionStore();
 
 const travelId = computed(() => props.travelId);
-const travel = computed(() => travelStore.getTravelById(travelId.value));
+const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 const preciosPublicos = computed(() =>
   cotizacion.value
