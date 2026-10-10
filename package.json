@@ -26,6 +26,8 @@
   "dependencies": {
     "@formkit/auto-animate": "^0.10.0",
     "@nuxt/ui": "^4.11.3",
+    "@pinia/colada": "^1.4.8",
+    "@pinia/colada-nuxt": "^1.2.0",
     "@supabase/supabase-js": "^2.104.1",
     "@tiptap/extension-link": "^3.31.4",
     "@tiptap/extension-placeholder": "^3.31.4",
