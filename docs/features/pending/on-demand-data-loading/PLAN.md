@@ -10,7 +10,7 @@ primera vez que se necesitan. La capa de caché la pone **Pinia Colada**.
 fases y la app funciona entre una fase y otra. Sin migraciones previstas (ver
 "Base de datos").
 
-**Estado:** Pendiente — planificada el 2026-10-07, es la **siguiente feature**.
+**Estado:** En progreso — Fases 0 y 1 completadas; piloto aprobado el 2026-10-10, se sigue con Colada en las Fases 2-6.
 
 ---
 
@@ -114,7 +114,7 @@ de [Production data safety](../../../claude/05-git-workflow.md#production-data-s
 | Documento | Contenido | Dependencia | Estado |
 |---|---|---|---|
 | [fase0-setup.md](fase0-setup.md) | Subir Vue, instalar Colada + módulo Nuxt, defaults, convención de claves | Ninguna | Completada ✅ |
-| [fase1-detalle-viaje.md](fase1-detalle-viaje.md) | **Piloto**: viaje por id con `useQuery`; corrige el "no encontrado" tras 1000 viajes · punto de decisión | Fase 0 | Pendiente |
+| [fase1-detalle-viaje.md](fase1-detalle-viaje.md) | **Piloto**: viaje por id con `useQuery`; corrige el "no encontrado" tras 1000 viajes · punto de decisión | Fase 0 | Completada ✅ |
 | [fase2-listados-viajes.md](fase2-listados-viajes.md) | Listados ligeros + conteos en servidor: dashboard, calendario, `/quotations`, `/payments`; adiós `travelsStore.travels` | Fase 1 | Pendiente |
 | [fase3-viajeros.md](fase3-viajeros.md) | Viajeros y asignaciones de habitación por viaje; adiós `travelerStore.fetchAll()` | Fase 2 | Pendiente |
 | [fase4-cotizaciones.md](fase4-cotizaciones.md) | Cotizaciones por viaje; el caché manual pasa a Colada; desacoplar cotización ↔ viaje | Fase 1 | Pendiente |

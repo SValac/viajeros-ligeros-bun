@@ -1,6 +1,6 @@
 # Fase 1 — Piloto: detalle de viaje por id
 
-**Estado:** En progreso
+**Estado:** Completada ✅
 **Dependencia:** Fase 0
 **Migración:** No
 
@@ -20,7 +20,11 @@
   la lista de abajo pasan, incluido el refresco al volver a la pestaña tras un cambio externo.
   Encontró que Habitaciones y Viajeros leían alojamientos de `getAccommodationsByTravel`;
   ya leen `travel.accommodations` de la query
-- [ ] Punto de decisión
+- [x] Punto de decisión (2026-10-10): **seguir con Colada** en las Fases 2-6. Páginas más
+  simples (`useTravelRoute()` en vez de `loaded` + arreglo global), dedupe y refresco al
+  volver a la pestaña sin código propio, sin bugs de sincronización en la verificación.
+  Regla aprendida: `useQuery` solo en el nivel superior del setup (nunca en `computed`,
+  funciones del template ni getters del store)
 
 > **Limitación conocida (Fase 4):** la pestaña Autobuses lista los buses desde
 > `cotizacionStore` (se carga una vez por viaje, `travelFetchCache`), no desde la query del
