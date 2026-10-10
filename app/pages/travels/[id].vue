@@ -122,7 +122,7 @@ async function deleteTravel() {
           />
           <div class="min-w-0">
             <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-2xl font-bold wrap-break-words">
+              <h1 class="text-2xl font-bold wrap-break-word">
                 {{ travel.label }}
               </h1>
               <UBadge
