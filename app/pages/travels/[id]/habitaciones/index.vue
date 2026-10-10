@@ -3,11 +3,12 @@ import type { QuotationPublicPrice } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler } from '~/types/traveler';
 
+import { useTravelRoute } from '~/composables/travels/use-travel-route';
+
 definePageMeta({
   name: 'travel-habitaciones',
 });
 
-const route = useRoute();
 const toast = useToast();
 const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
@@ -16,9 +17,9 @@ const hotelRoomStore = useHotelRoomStore();
 const paymentStore = usePaymentStore();
 const cotizacionStore = useCotizacionStore();
 
-const travelId = computed(() => route.params.id as string);
+const { travelId, travel } = useTravelRoute();
 
-const accommodations = computed(() => travelStore.getAccommodationsByTravel(travelId.value));
+const accommodations = computed(() => travel.value?.accommodations ?? []);
 const travelersOfTravel = computed(() => travelerStore.getTravelersByTravel(travelId.value));
 // Coordinators need a room too, so room counts and the add modal include them.
 const occupantsOfTravel = computed(() => travelerStore.getOccupantsByTravel(travelId.value));

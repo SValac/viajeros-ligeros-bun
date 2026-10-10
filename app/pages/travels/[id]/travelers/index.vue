@@ -16,7 +16,6 @@ definePageMeta({
 const { travelId, travel } = useTravelRoute();
 const router = useRouter();
 const travelerStore = useTravelerStore();
-const travelStore = useTravelsStore();
 const providerStore = useProviderStore();
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
@@ -103,7 +102,7 @@ const isCoordinatorSeatModalOpen = computed({
 });
 
 const allBuses = computed(() => travel.value?.buses ?? []);
-const allAccommodations = computed(() => travelStore.getAccommodationsByTravel(travelId.value));
+const allAccommodations = computed(() => travel.value?.accommodations ?? []);
 const tabs = computed(() => [
   {
     label: 'Todos los viajeros',
