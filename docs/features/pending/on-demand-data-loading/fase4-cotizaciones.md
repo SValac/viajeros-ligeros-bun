@@ -25,8 +25,12 @@ store de viajes.
   `cotizacion-header-actions`, `cotizacion-bus-form`. Funcionan porque el arreglo global
   tiene todo; con carga por viaje necesitan la query del viaje (o una por id).
 - `/quotations` (listado) ya se resolvió en Fase 2 con `quotations(id, status)` embebido.
-- **Acoplamiento**: el store lee y escribe `travelStore.travels` (`:253`, `:566`, `:584`,
-  `:1256`, `:1304`, `:1356`) para mantener alineados autobuses y alojamientos del viaje.
+- **Acoplamiento**: el store lee y escribe `travelStore.travels` para mantener alineados
+  autobuses y alojamientos del viaje. Lecturas (al 2026-10-10): `getTravelById` en
+  `getAsientosVendibles`, y `getAccommodationsByTravel` en el conteo de habitaciones por tipo
+  y en `_syncHospedajeToTravel`. Escrituras: `updateLocalAccommodations` y las tres acciones
+  de autobús (`add/update/deleteBusQuotation`). Buscar por nombre: los números de línea
+  cambian.
 
 ### Pendientes que dejó la Fase 1
 

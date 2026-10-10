@@ -1,6 +1,6 @@
 # Fase 2 — Listados de viajes ligeros y conteos en el servidor
 
-**Estado:** Pendiente
+**Estado:** En progreso — rama `feature/on-demand-loading-phase-2` (desde `main` 571d805)
 **Dependencia:** Fase 1
 **Migración:** No prevista (plan B: vista `security_invoker`, expand-only)
 

@@ -1,6 +1,6 @@
 # Fase 0 — Setup de Pinia Colada
 
-**Estado:** Completada ✅
+**Estado:** Completada ✅ — PR #122 (con Fase 1)
 **Dependencia:** Ninguna
 **Migración:** No
 
