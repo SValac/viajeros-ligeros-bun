@@ -10,10 +10,14 @@
 - [x] 2. `travelDetailQuery`
 - [x] 3. `useTravelRoute()` + redirect y estado de error en `[id].vue`
 - [x] 4a. Acciones de `use-travel-store.ts` invalidan `detail(id)`; `deleteTravel` quita la entrada
-- [ ] 4b. `use-cotizacion-store.ts`: `addBusQuotation`, `updateBusQuotation`, `deleteBusQuotation`
+- [x] 4b. `use-cotizacion-store.ts`: `addBusQuotation`, `updateBusQuotation`, `deleteBusQuotation`
   invalidan `detail(travelId)` (fuera del `if (travelIndex !== -1)`; `total_seats` cambia por trigger)
 - [ ] 5. Componentes que aún llaman `getTravelById`
 - [ ] Verificación + punto de decisión
+
+> **Limitación conocida (Fase 4):** la pestaña Autobuses lista los buses desde
+> `cotizacionStore` (se carga una vez por viaje, `travelFetchCache`), no desde la query del
+> viaje. Un camión agregado en otra pestaña o por otro usuario no aparece hasta recargar.
 
 > **Limitación conocida (se resuelve en Fases 2 y 4):** las acciones de `use-travel-store.ts`
 > empiezan con `findIndex` sobre `travels.value`. Un viaje fuera de las 1000 filas ya **se ve**
