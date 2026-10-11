@@ -4,7 +4,7 @@ import type { TabsItem } from '@nuxt/ui';
 
 import { getLocalTimeZone, isSameMonth, parseDate, today } from '@internationalized/date';
 
-import type { Travel, TravelStatus } from '~/types/travel';
+import type { TravelStatus, TravelSummary } from '~/types/travel';
 import type { MexicanHoliday } from '~/utils/mexican-holidays';
 
 import { useTravelCalendar } from '~/composables/travels/use-travel-calendar';
@@ -38,7 +38,7 @@ const visibleStatuses = computed<TravelStatus[]>(() => [
   ...(showCancelled.value ? ['cancelled' as const] : []),
 ]);
 
-const { loaded, visibleTravels, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses);
+const { status: travelStatus, refetch, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses, placeholder);
 
 // El viaje elegido vive en `?viaje=`: recargar o compartir el link conserva la selección.
 // `replace`: elegir viajes no llena el historial del navegador.
@@ -67,7 +67,8 @@ const monthHolidays = computed(() =>
     : [],
 );
 
-const selectedTravel = computed(() => visibleTravels.value.find(travel => travel.id === selectedTravelId.value));
+// Temporal hasta el sub-paso c (panel con TravelSummary + detalle)
+const selectedTravel = computed(() => selectedTravelId.value ? travelsStore.getTravelById(selectedTravelId.value) : undefined);
 const dayTravels = computed(() => (selectedDay.value ? getTravelsOnDay(selectedDay.value) : []));
 const monthTravels = computed(() => getTravelsInMonth(placeholder.value));
 
@@ -92,12 +93,12 @@ function selectDay(day: DateValue | undefined) {
 }
 
 // Desde la lista del mes: el día elegido antes ya no aplica
-function selectTravelFromMonth(travel: Travel) {
+function selectTravelFromMonth(travel: TravelSummary) {
   selectedDay.value = undefined;
   selectedTravelId.value = travel.id;
 }
 
-function selectTravelFromDay(travel: Travel) {
+function selectTravelFromDay(travel: TravelSummary) {
   selectedTravelId.value = travel.id;
 }
 
@@ -113,6 +114,9 @@ watch(visibleStatuses, (statuses) => {
   if (selected && !statuses.includes(selected.status))
     selectedTravelId.value = undefined;
 });
+
+// Temporal hasta el sub-paso d (link directo con travelDetailQuery)
+const { loaded } = storeToRefs(travelsStore);
 
 // Link directo con `?viaje=`: al terminar de cargar los viajes, abrir el mes de ese viaje.
 // `loaded` solo pasa de false a true una vez, así que esto corre una sola vez.
@@ -193,10 +197,22 @@ watch(loaded, (isLoaded) => {
         </div>
       </div>
 
-      <div v-if="!loaded" class="flex justify-center py-24">
+      <div v-if="travelStatus === 'pending'" class="flex justify-center py-24">
         <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
       </div>
-
+      <div
+        v-else-if="travelStatus === 'error'"
+        class="flex h-full items-center justify-center flex-col gap-4"
+      >
+        <p class="text-muted">
+          No se pudieron cargar los viajes
+        </p>
+        <UButton
+          label="Reintentar"
+          icon="i-lucide-refresh-cw"
+          @click="refetch()"
+        />
+      </div>
       <div v-else class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <!-- Calendario -->
         <UCard class="lg:col-span-2">
