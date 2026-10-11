@@ -28,10 +28,21 @@
       viaje ya en caché el callback corre antes de que `watch()` devuelva y `stop` lanza
       `ReferenceError` (pasaba al volver con "atrás").
     - El calendario ya no usa `travelsStore` ni `travelerStore`.
-  - [ ] `/travels/dashboard`: paginación (`UPagination` + `total`), filtro de estado en el
-    servidor (sí va en la clave: con paginación no se puede filtrar en el cliente; ordenar
-    `statuses` antes de armar la clave, Colada no ordena arreglos), totales por estado con
-    `head: true`.
+  - [x] `/travels/dashboard` en 4 sub-pasos:
+    - a (d6c9320) `fetchStatusCounts()`: una consulta `head: true` por estado en paralelo
+      (solo vuelve el `count`, sin el límite de 1000) + `travelStatsQuery` bajo
+      `['travels', 'stats']`. `TravelStats` pasa a `types/travel.ts`.
+    - b (47e88f9) Tabla paginada (`UPagination`, 20 por página) con el filtro de estado
+      **en la clave** (con paginación no se puede filtrar en el cliente). `statuses` se
+      ordena antes de armar la clave (Colada no ordena arreglos), cambiar el filtro vuelve a
+      la página 1, y sin estados marcados la query se desactiva y se muestra un aviso (un
+      arreglo vacío traería todos los viajes). `TRAVEL_STATUSES` en `utils/travel-status.ts`.
+    - c (31ffcc4) Tarjetas desde `travelStatsQuery`. El estado vacío distingue "no hay
+      viajes" (`total === 0`) de "ningún viaje con estos estatus" (con Restablecer filtros).
+    - d (27b29e5) `deleteTravel` quita el detalle y después invalida `travelKeys.root`
+      (lista + totales). Si el viaje borrado era el único de la última página, se va a la
+      última que existe.
+    - Queda `travelsStore` solo para `deleteTravel` (paso 4).
   - [ ] `/payments`
   - [ ] `payments/traveler/[id].vue` (etiquetas de varios viajes, pendiente de la Fase 1)
 - [ ] 4. Escrituras invalidan `['travels']`
