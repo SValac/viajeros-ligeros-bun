@@ -1,8 +1,11 @@
+import type { TravelSummaryFilters } from '~/types/travel';
+
 import { useTravelRepository } from '~/composables/travels/use-travel-repository';
 
 export const travelKeys = {
   root: ['travels'] as const,
   detail: (id: string) => ['travels', 'detail', id] as const,
+  list: (filters: TravelSummaryFilters) => ['travels', 'list', filters] as const,
 };
 
 /**
@@ -17,4 +20,14 @@ export const travelDetailQuery = defineQueryOptions((id: string | undefined) => 
   // `enabled` keeps the query from running without an id
   query: () => useTravelRepository().fetchById(id!),
   enabled: !!id,
+}));
+
+/**
+ * Travel summaries for list screens. Each filter combination is its own cache entry,
+ * so going back to a page or month already seen is instant (within `staleTime`).
+ * Usage: `useQuery(() => travelListQuery(filters.value))`.
+ */
+export const travelListQuery = defineQueryOptions((filters: TravelSummaryFilters) => ({
+  key: travelKeys.list(filters),
+  query: () => useTravelRepository().fetchSummaries(filters),
 }));
