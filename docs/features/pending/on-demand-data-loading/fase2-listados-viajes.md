@@ -2,9 +2,40 @@
 
 **Estado:** En progreso — rama `feature/on-demand-loading-phase-2` (desde `main` 571d805)
 **Dependencia:** Fase 1
-**Migración:** No prevista (plan B: vista `security_invoker`, expand-only)
+**Migración:** Ninguna (el conteo embebido con filtro funciona; plan B de la vista descartado)
 
 ---
+
+## Avance
+
+- [x] 1. `fetchSummaries(filters)` en el repositorio (29bf911)
+- [x] 2. `travelKeys.list(filters)` + `travelListQuery` (3d666a5)
+- [ ] 3. Pantallas
+  - [x] `/quotations` (ea516a9): una petición, estados de carga y error con Reintentar. Los
+    totales se cuentan en el cliente porque esta pantalla no pagina.
+  - [x] `/calendar` en 4 sub-pasos:
+    - a (c154ab7) `getCalendarGridRange(month)` en `utils/travel-calendar.ts`.
+    - b (a2bc43f) `useTravelCalendar` pide el rango de la cuadrícula de 42 días (incluye los
+      días grises). Los estados se filtran en el cliente, no van en la clave, así que marcarlos
+      no hace petición. `placeholderData` evita que la cuadrícula se vacíe al cambiar de mes.
+    - c (11f7f89) El panel recibe solo `travelId` y lee `travelDetailQuery`: **sigue abierto
+      al cambiar de mes** (decisión del usuario). Tipo nuevo `TravelDetail = Travel &
+      { travelerCount }`; el select del detalle cuenta viajeros `kind = traveler`.
+      `sellableSeats` sigue con `cotizacionStore` (Fase 4).
+    - d (8ccf8ed) La página usa la misma `travelDetailQuery` (misma clave que el panel: una
+      petición) para el link `?viaje=` y para deseleccionar al filtrar. El link corre una sola
+      vez con una **bandera**, no con `const stop = watch(..., { immediate: true })`: con el
+      viaje ya en caché el callback corre antes de que `watch()` devuelva y `stop` lanza
+      `ReferenceError` (pasaba al volver con "atrás").
+    - El calendario ya no usa `travelsStore` ni `travelerStore`.
+  - [ ] `/travels/dashboard`: paginación (`UPagination` + `total`), filtro de estado en el
+    servidor (sí va en la clave: con paginación no se puede filtrar en el cliente; ordenar
+    `statuses` antes de armar la clave, Colada no ordena arreglos), totales por estado con
+    `head: true`.
+  - [ ] `/payments`
+  - [ ] `payments/traveler/[id].vue` (etiquetas de varios viajes, pendiente de la Fase 1)
+- [ ] 4. Escrituras invalidan `['travels']`
+- [ ] 5. Quitar `travelsStore.fetchAll()` del arranque
 
 ## Objetivo
 
