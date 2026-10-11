@@ -4,7 +4,8 @@ import { formatDate } from '~/utils/format-date';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
-// Resumen del viaje elegido en el calendario (app/pages/calendar.vue)
+// Resumen del viaje elegido en el calendario (app/pages/calendar.vue). Recibe solo el id y lee
+// travelDetailQuery, así sigue abierto aunque el viaje no esté en el mes visible.
 
 const props = defineProps<{
   travelId: string;
