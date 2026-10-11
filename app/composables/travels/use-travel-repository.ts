@@ -1,7 +1,7 @@
 import type { QueryData } from '@supabase/supabase-js';
 
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelUpdateData } from '~/types/travel';
+import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
 
 import { validateAndMapItinerary } from './use-travel-domain';
 
@@ -84,6 +84,80 @@ export function useTravelRepository() {
       return null;
 
     return mapTravelWithRelations(data);
+  }
+
+  /**
+   * Builds (without running) the lightweight `travels` select used by list screens.
+   * `travelers` needs the FK hint: `traveler_account_configs` is a second path to it.
+   * @returns Unexecuted PostgREST query builder
+   */
+  function selectTravelSummary() {
+    return supabase
+      .from('travels')
+      .select(
+        'id, label, destination, start_date, end_date, status, image_url, featured, created_at, travel_coordinators(coordinator_id), travelers!travelers_travel_id_fkey(count), quotations(id,status)',
+        { count: 'exact' },
+      );
+  }
+
+  type TravelSummaryRow = QueryData<ReturnType<typeof selectTravelSummary>>[number];
+
+  /**
+   * Maps a row from `selectTravelSummary()` to a `TravelSummary`.
+   * @param row - Row returned by `selectTravelSummary()`
+   * @returns The travel summary with traveler count and quotation (if any)
+   */
+  function mapTravelSummary(row: TravelSummaryRow): TravelSummary {
+    return {
+      id: row.id,
+      label: row.label,
+      destination: row.destination ?? undefined,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      status: row.status,
+      imageUrl: row.image_url ?? undefined,
+      featured: row.featured,
+      createdAt: row.created_at,
+      coordinatorIds: row.travel_coordinators.map(tc => tc.coordinator_id),
+      travelerCount: row.travelers[0]?.count ?? 0,
+      quotation: row.quotations[0],
+    };
+  }
+
+  /**
+   * Fetches travel summaries for list screens, filtered and paginated on the server.
+   * Traveler counts exclude coordinators (`kind = 'traveler'`).
+   * @param filters - Optional statuses, date overlap range and page
+   * @returns The page of summaries and the total matching rows
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchSummaries(filters: TravelSummaryFilters = {}): Promise<{ items: TravelSummary[]; total: number }> {
+    const query = selectTravelSummary()
+      .eq('travelers.kind', 'traveler')
+      .order('created_at', { ascending: false })
+      .order('id');
+
+    if (filters.statuses && filters.statuses.length > 0) {
+      query.in('status', filters.statuses);
+    }
+    if (filters.overlapsFrom) {
+      query.gte('end_date', filters.overlapsFrom);
+    }
+    if (filters.overlapsTo) {
+      query.lte('start_date', filters.overlapsTo);
+    }
+    if (filters.page) {
+      const size = filters.pageSize ?? 20;
+      const from = (filters.page - 1) * size;
+      query.range(from, from + size - 1);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error)
+      throw error;
+
+    return { items: data.map(mapTravelSummary), total: count ?? 0 };
   }
 
   /**
@@ -621,6 +695,7 @@ export function useTravelRepository() {
   return {
     fetchAll,
     fetchById,
+    fetchSummaries,
     updateTravel,
     updateTravelAccommodation,
     deleteEmptyAccommodation,

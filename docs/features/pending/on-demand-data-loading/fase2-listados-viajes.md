@@ -47,6 +47,19 @@ para igualar `payingTravelers` de `use-traveler-store.ts:45`. Verificar que Post
 aplique el filtro al conteo; si no, plan B = vista `travel_traveler_counts`
 (`security_invoker = true`, expand-only).
 
+**Hecho:** una sola función `fetchSummaries(filters)` → `{ items, total }`, con
+`selectTravelSummary()` + `mapTravelSummary()` en el repositorio (el tipo de la fila sale
+del `select` con `QueryData`, por eso no va en `mappers.ts`). Verificado contra la base
+local:
+
+- `travelers` necesita la pista de FK (`travelers!travelers_travel_id_fkey(count)`): hay un
+  segundo camino vía `traveler_account_configs` y sin ella PostgREST responde `PGRST201`.
+- El filtro `travelers.kind = traveler` **sí** se aplica al conteo embebido (coordinadores
+  quedan fuera). Plan B de la vista descartado.
+- `created_at` puede empatar (filas del seed insertadas en la misma transacción): se
+  desempata con `.order('id')` para que la paginación no repita ni salte viajes.
+- Rango de fechas = solapamiento: `end_date >= desde AND start_date <= hasta`.
+
 ### 2. Queries
 
 `travelKeys.list(filters)` — los filtros forman parte de la clave, así cambiar de mes o de

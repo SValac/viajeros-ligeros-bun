@@ -88,8 +88,15 @@ export type TravelFormData = Omit<Travel, 'id' | 'createdAt' | 'updatedAt' | 'ac
 
 export type TravelUpdateData = Omit<Travel, 'id' | 'createdAt' | 'updatedAt'>;
 
-export type TravelFilters = {
-  status?: TravelStatus;
-  dateFrom?: string;
-  dateTo?: string;
+export type TravelSummary = Pick<Travel, 'id' | 'label' | 'destination' | 'startDate' | 'endDate' | 'status' | 'imageUrl' | 'featured' | 'coordinatorIds' | 'createdAt'> & {
+  travelerCount: number;
+  quotation?: { id: string; status: QuotationStatus };
+};
+
+export type TravelSummaryFilters = {
+  statuses?: TravelStatus[];
+  overlapsFrom?: string; // YYYY-MM-DD, calendar
+  overlapsTo?: string;
+  page?: number; // 1-based; no page = no pagination
+  pageSize?: number;
 };
