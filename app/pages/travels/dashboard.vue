@@ -5,7 +5,7 @@ import { h } from 'vue';
 
 import type { TravelStatus, TravelSummary } from '~/types/travel';
 
-import { travelListQuery } from '~/queries/travels';
+import { travelListQuery, travelStatsQuery } from '~/queries/travels';
 import { parseDisplayDate } from '~/utils/format-date';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
@@ -24,8 +24,7 @@ const toast = useToast();
 const router = useRouter();
 
 // Computed
-// Temporal hasta el sub-paso c
-const stats = computed(() => travelsStore.stats);
+const { data: stats } = useQuery(() => travelStatsQuery());
 
 const page = shallowRef(1);
 const statuses = ref<TravelStatus[]>([...DASHBOARD_DEFAULT_STATUSES]);
@@ -64,6 +63,10 @@ function formatDate(dateString: string): string {
 
 function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} - ${formatDate(end)}`;
+}
+
+function resetStatuses() {
+  statuses.value = [...DASHBOARD_DEFAULT_STATUSES];
 }
 
 // Navegación
@@ -225,7 +228,7 @@ const columns: TableColumn<TravelSummary>[] = [
               Total Viajes
             </p>
             <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats.total }}
+              {{ stats?.total ?? '—' }}
             </p>
           </div>
           <UIcon
@@ -243,7 +246,7 @@ const columns: TableColumn<TravelSummary>[] = [
               Publicados
             </p>
             <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats.published }}
+              {{ stats?.published ?? '—' }}
             </p>
           </div>
           <UIcon
@@ -261,7 +264,7 @@ const columns: TableColumn<TravelSummary>[] = [
               En Curso
             </p>
             <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats.inProgress }}
+              {{ stats?.inProgress ?? '—' }}
             </p>
           </div>
           <UIcon
@@ -293,7 +296,8 @@ const columns: TableColumn<TravelSummary>[] = [
           @click="refetch()"
         />
       </div>
-      <div v-else-if="travels.length === 0" class="text-center py-12">
+      <!-- La agencia no tiene ningún viaje -->
+      <div v-else-if="travels.length === 0 && stats?.total === 0" class="text-center py-12">
         <UIcon
           name="i-lucide-inbox"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
@@ -310,6 +314,22 @@ const columns: TableColumn<TravelSummary>[] = [
         >
           Crear Primer Viaje
         </UButton>
+      </div>
+      <!-- Hay viajes, pero ninguno con los estatus marcados -->
+      <div v-else-if="travels.length === 0" class="text-center py-12">
+        <UIcon
+          name="i-lucide-search-x"
+          class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
+        />
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          Ningún viaje con estos estatus
+        </h3>
+        <UButton
+          label="Restablecer filtros"
+          variant="outline"
+          color="neutral"
+          @click="resetStatuses"
+        />
       </div>
       <template v-else>
         <UTable
