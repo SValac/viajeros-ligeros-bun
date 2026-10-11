@@ -1,19 +1,10 @@
 import type { Tables } from '~/types/database.types';
-import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStatus, TravelUpdateData } from '~/types/travel';
+import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStats, TravelStatus, TravelUpdateData } from '~/types/travel';
 
 import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 import { useTravelRepository } from '~/composables/travels/use-travel-repository';
 import { travelKeys } from '~/queries/travels';
-
-type TravelStats = {
-  total: number;
-  pending: number;
-  published: number;
-  inProgress: number;
-  completed: number;
-  cancelled: number;
-};
 
 export const useTravelsStore = defineStore('useTravelsStore', () => {
   const queryCache = useQueryCache();

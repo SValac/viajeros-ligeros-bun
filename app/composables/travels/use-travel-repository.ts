@@ -1,7 +1,7 @@
 import type { QueryData } from '@supabase/supabase-js';
 
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
+import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelStats, TravelStatus, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
 
 import { validateAndMapItinerary } from './use-travel-domain';
 
@@ -164,6 +164,37 @@ export function useTravelRepository() {
       throw error;
 
     return { items: data.map(mapTravelSummary), total: count ?? 0 };
+  }
+
+  /**
+   * Counts travels per status on the server, one `head: true` request per status in parallel
+   * (only the `count` comes back, no rows), so totals aren't capped by `max_rows`.
+   * @returns The count of each status and their sum as `total`
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchStatusCounts(): Promise<TravelStats> {
+    const countByStatus = (status: TravelStatus) => supabase.from('travels').select('*', { count: 'exact', head: true }).eq('status', status);
+
+    const results = await Promise.all((
+      ['pending', 'published', 'in_progress', 'completed', 'cancelled'] as const).map(countByStatus),
+    );
+
+    const failed = results.find(r => r.error);
+    if (failed)
+      throw failed.error;
+
+    const [pending, published, inProgress, completed, cancelled] = results.map(r => r.count ?? 0) as [number, number, number, number, number];
+
+    const total = pending + published + inProgress + completed + cancelled;
+
+    return {
+      pending,
+      published,
+      inProgress,
+      completed,
+      cancelled,
+      total,
+    };
   }
 
   /**
@@ -702,6 +733,7 @@ export function useTravelRepository() {
     fetchAll,
     fetchById,
     fetchSummaries,
+    fetchStatusCounts,
     updateTravel,
     updateTravelAccommodation,
     deleteEmptyAccommodation,

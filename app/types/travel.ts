@@ -57,6 +57,15 @@ export type TravelAccommodation = {
   updatedAt: string;
 };
 
+export type TravelStats = {
+  total: number;
+  pending: number;
+  published: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
+};
+
 export type Travel = {
   id: string;
   label: string;

@@ -4,6 +4,7 @@ import { useTravelRepository } from '~/composables/travels/use-travel-repository
 
 export const travelKeys = {
   root: ['travels'] as const,
+  stats: () => ['travels', 'stats'] as const,
   detail: (id: string) => ['travels', 'detail', id] as const,
   list: (filters: TravelSummaryFilters) => ['travels', 'list', filters] as const,
 };
@@ -30,4 +31,14 @@ export const travelDetailQuery = defineQueryOptions((id: string | undefined) => 
 export const travelListQuery = defineQueryOptions((filters: TravelSummaryFilters) => ({
   key: travelKeys.list(filters),
   query: () => useTravelRepository().fetchSummaries(filters),
+}));
+
+/**
+ * Travel totals per status for the dashboard cards. Lives under `travelKeys.root`, so
+ * invalidating `['travels']` after a write refreshes it along with lists and details.
+ * Usage: `useQuery(() => travelStatsQuery())`.
+ */
+export const travelStatsQuery = defineQueryOptions(() => ({
+  key: travelKeys.stats(),
+  query: () => useTravelRepository().fetchStatusCounts(),
 }));
