@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import type { DateValue } from '@internationalized/date';
 
-import { getLocalTimeZone, isSameMonth, isToday, startOfMonth, startOfWeek } from '@internationalized/date';
+import { getLocalTimeZone, isSameMonth, isToday } from '@internationalized/date';
 
 import type { Travel } from '~/types/travel';
 import type { MexicanHoliday } from '~/utils/mexican-holidays';
 
 import { HOLIDAY_KIND_TEXT_CLASSES } from '~/utils/mexican-holidays';
 import {
-  CALENDAR_LOCALE,
+  getCalendarGridRange,
   getTravelBarShape,
+  GRID_DAYS,
   TRAVEL_BAR_SHAPE_CLASSES,
   TRAVEL_STATUS_BAR_CLASSES,
   TRAVEL_STATUS_BAR_SELECTED_CLASSES,
@@ -31,8 +32,6 @@ const placeholder = defineModel<DateValue>('placeholder', { required: true });
 
 // Barras por día; el resto se resume en "+N más"
 const MAX_BARS = 2;
-// `fixed-weeks`: el mes siempre se dibuja en 6 semanas
-const GRID_DAYS = 42;
 
 type DayBars = {
   bars: (Travel | null)[];
@@ -81,7 +80,7 @@ function getDayBars(day: DateValue): DayBars {
 // Barras (y festivo) de los 42 días visibles, por `YYYY-MM-DD`: una vez por mes/datos, no por render de celda
 const barsByDay = computed(() => {
   const days: [string, DayBars][] = [];
-  let day = startOfWeek(startOfMonth(placeholder.value), CALENDAR_LOCALE);
+  let day = getCalendarGridRange(placeholder.value).start;
   for (let i = 0; i < GRID_DAYS; i++, day = day.add({ days: 1 }))
     days.push([day.toString(), getDayBars(day)]);
 

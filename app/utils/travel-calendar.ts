@@ -1,6 +1,6 @@
 import type { CalendarDate, DateValue } from '@internationalized/date';
 
-import { isSameDay, parseDate } from '@internationalized/date';
+import { isSameDay, parseDate, startOfMonth, startOfWeek } from '@internationalized/date';
 
 import type { Travel, TravelStatus } from '~/types/travel';
 
@@ -11,6 +11,9 @@ export const CALENDAR_DEFAULT_STATUSES: TravelStatus[] = ['pending', 'published'
 
 // Mismo locale que UApp (app/app.vue): la semana empieza en domingo
 export const CALENDAR_LOCALE = 'es-MX';
+
+// `fixed-weeks`: el mes siempre se dibuja en 6 semanas
+export const GRID_DAYS = 42;
 
 export type TravelBarShape = 'single' | 'start' | 'middle' | 'end';
 
@@ -126,4 +129,17 @@ export function assignTravelLanes(travels: Pick<Travel, 'id' | 'startDate' | 'en
   }
 
   return lanes;
+}
+
+/**
+ * Días que dibuja el calendario para un mes: 6 semanas completas, desde el inicio de la
+ * semana del día 1 (incluye días grises de los meses vecinos).
+ * @param month - Cualquier día del mes visible
+ * @returns Primer y último día de la cuadrícula
+ */
+export function getCalendarGridRange(month: DateValue): { start: DateValue; end: DateValue } {
+  const start = startOfWeek(startOfMonth(month), CALENDAR_LOCALE);
+  const end = start.add({ days: GRID_DAYS - 1 });
+
+  return { start, end };
 }
