@@ -230,6 +230,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       for (const entry of queryCache.getEntries({ key: travelKeys.detail(id), exact: true })) {
         queryCache.remove(entry);
       }
+      // After removing the detail (so it isn't refetched): every list page/filter and the totals
+      queryCache.invalidateQueries({ key: travelKeys.root });
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al eliminar viaje';

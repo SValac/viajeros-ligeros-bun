@@ -49,6 +49,13 @@ const { data, status, refetch } = useQuery(() => ({
   enabled: statuses.value.length > 0,
 }));
 
+// Al borrar el único viaje de la última página, esa página deja de existir: ir a la última que sí
+watch(data, (list) => {
+  if (list && list.items.length === 0 && page.value > 1) {
+    page.value = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
+  }
+});
+
 const travels = computed(() => data.value?.items ?? []);
 
 // Funciones auxiliares
