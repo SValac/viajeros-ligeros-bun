@@ -67,8 +67,6 @@ const monthHolidays = computed(() =>
     : [],
 );
 
-// Temporal hasta el sub-paso c (panel con TravelSummary + detalle)
-const selectedTravel = computed(() => selectedTravelId.value ? travelsStore.getTravelById(selectedTravelId.value) : undefined);
 const dayTravels = computed(() => (selectedDay.value ? getTravelsOnDay(selectedDay.value) : []));
 const monthTravels = computed(() => getTravelsInMonth(placeholder.value));
 
@@ -221,7 +219,7 @@ watch(loaded, (isLoaded) => {
             :model-value="selectedDay"
             :get-travels-on-day="getTravelsOnDay"
             :travel-lanes="travelLanes"
-            :selected-travel-id="selectedTravel?.id"
+            :selected-travel-id="selectedTravelId"
             :get-holiday-on-day="getHolidayOnDay"
             @update:model-value="selectDay"
           />
@@ -266,7 +264,7 @@ watch(loaded, (isLoaded) => {
                 <TravelCalendarList
                   v-if="dayTravels.length > 0"
                   :travels="dayTravels"
-                  :selected-travel-id="selectedTravel?.id"
+                  :selected-travel-id="selectedTravelId"
                   @select="selectTravelFromDay"
                 />
                 <p v-else class="text-sm text-muted">
@@ -315,7 +313,7 @@ watch(loaded, (isLoaded) => {
               <TravelCalendarList
                 v-if="monthTravels.length > 0"
                 :travels="monthTravels"
-                :selected-travel-id="selectedTravel?.id"
+                :selected-travel-id="selectedTravelId"
                 @select="selectTravelFromMonth"
               />
               <p v-else class="text-sm text-muted">
@@ -324,7 +322,7 @@ watch(loaded, (isLoaded) => {
             </template>
           </UCard>
 
-          <TravelCalendarSummary v-if="selectedTravel" :travel="selectedTravel" />
+          <TravelCalendarSummary v-if="selectedTravelId" :travel-id="selectedTravelId" />
 
           <UCard v-else>
             <div class="flex flex-col items-center gap-3 py-6 text-center">

@@ -16,7 +16,8 @@ export function useTravelRepository() {
   const authStore = useAuthStore();
 
   /**
-   * Builds (without running) the `travels` select with every related sub-table.
+   * Builds (without running) the `travels` select with every related sub-table plus the
+   * traveler count (coordinators excluded; `travelers` needs the FK hint, see `selectTravelSummary`).
    * Shared by `fetchAll` and `fetchById` so both read and map exactly the same shape;
    * callers chain their own filters/ordering before awaiting.
    * @returns Unexecuted PostgREST query builder
@@ -24,18 +25,19 @@ export function useTravelRepository() {
   function selectTravelWithRelations() {
     return supabase
       .from('travels')
-      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id), travel_internals(*)');
+      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id), travel_internals(*), travelers!travelers_travel_id_fkey(count)')
+      .eq('travelers.kind', 'traveler');
   }
 
   type TravelWithRelationsRow = QueryData<ReturnType<typeof selectTravelWithRelations>>[number];
 
   /**
-   * Maps a `travels` row with its embedded relations to a `Travel` domain object.
+   * Maps a `travels` row with its embedded relations to a `TravelDetail` domain object.
    * Itinerary activities are sorted by day.
    * @param row - Row returned by `selectTravelWithRelations()`
-   * @returns The travel with itinerary, services, buses, accommodations, and coordinator ids
+   * @returns The travel with itinerary, services, buses, accommodations, coordinator ids and traveler count
    */
-  function mapTravelWithRelations(row: TravelWithRelationsRow): Travel {
+  function mapTravelWithRelations(row: TravelWithRelationsRow): TravelDetail {
     const activities: TravelActivity[] = (row.travel_activities ?? [])
       .slice()
       .sort((a: { day: number }, b: { day: number }) => a.day - b.day)
@@ -47,8 +49,12 @@ export function useTravelRepository() {
     const coordinatorIds: string[] = (row.travel_coordinators ?? []).map(
       (tc: { coordinator_id: string }) => tc.coordinator_id,
     );
+    const travelerCount: number = row.travelers[0]?.count ?? 0;
 
-    return mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations });
+    return {
+      ...mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations }),
+      travelerCount,
+    };
   }
 
   /**
@@ -67,12 +73,12 @@ export function useTravelRepository() {
   }
 
   /**
-   * Fetches a single travel with its related sub-entities.
+   * Fetches a single travel with its related sub-entities and traveler count.
    * @param id - UUID of the travel
-   * @returns The travel mapped to a domain object, or `null` if it doesn't exist or RLS hides it
+   * @returns The travel mapped to a `TravelDetail`, or `null` if it doesn't exist or RLS hides it
    * @throws {PostgrestError} on Supabase failure
    */
-  async function fetchById(id: string): Promise<Travel | null> {
+  async function fetchById(id: string): Promise<TravelDetail | null> {
     const { data, error } = await selectTravelWithRelations()
       .eq('id', id)
       .maybeSingle();

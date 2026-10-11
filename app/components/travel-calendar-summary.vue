@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { Travel } from '~/types/travel';
-
+import { travelDetailQuery } from '~/queries/travels';
 import { formatDate } from '~/utils/format-date';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
@@ -8,52 +7,60 @@ import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-statu
 // Resumen del viaje elegido en el calendario (app/pages/calendar.vue)
 
 const props = defineProps<{
-  travel: Travel;
+  travelId: string;
 }>();
 
 const coordinatorStore = useCoordinatorStore();
-const travelerStore = useTravelerStore();
 const cotizacionStore = useCotizacionStore();
+
+const { data: travel, status } = useQuery(() => travelDetailQuery(props.travelId));
 
 const MAX_HIGHLIGHTS = 3;
 
 const coordinatorNames = computed(() =>
-  props.travel.coordinatorIds
+  travel.value?.coordinatorIds
     .map(id => coordinatorStore.getCoordinatorById(id)?.name)
     .filter(name => name !== undefined)
     .join(', '),
 );
 
-const travelerCount = computed(() => travelerStore.getTravelersByTravel(props.travel.id).length);
+const travelerCount = computed (() => travel.value?.travelerCount ?? 0);
 
 // Lugares a la venta según la cotización; 0 si aún no hay cotización o autobuses
 const sellableSeats = computed(() => {
-  const cotizacion = cotizacionStore.getCotizacionByTravel(props.travel.id);
+  const cotizacion = cotizacionStore.getCotizacionByTravel(props.travelId);
   return cotizacion ? cotizacionStore.getAsientosVendibles(cotizacion.id) : 0;
 });
 
 type Detail = { icon: string; label: string; value: string };
 
 const details = computed<Detail[]>(() => {
-  const days = getTravelDurationDays(props.travel);
+  if (!travel.value) {
+    return [];
+  }
+
+  const days = getTravelDurationDays(travel.value);
   return [
-    { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(props.travel.startDate) },
-    { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(props.travel.endDate) },
+    { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(travel.value.startDate) },
+    { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(travel.value.endDate) },
     { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
-    { icon: 'i-lucide-map-pin', label: 'Sale desde', value: props.travel.departureFrom || '—' },
+    { icon: 'i-lucide-map-pin', label: 'Sale desde', value: travel.value?.departureFrom || '—' },
     { icon: 'i-lucide-user-star', label: 'Coordinadores', value: coordinatorNames.value || 'Sin asignar' },
   ];
 });
 
-const highlights = computed(() => props.travel.highlights.slice(0, MAX_HIGHLIGHTS));
+const highlights = computed(() => travel.value?.highlights.slice(0, MAX_HIGHLIGHTS) ?? []);
 </script>
 
 <template>
-  <UCard :ui="{ body: 'space-y-4' }">
+  <UCard
+    v-if="travel"
+    :ui="{ body: 'space-y-4' }"
+  >
     <template #header>
       <div class="space-y-1">
         <div class="flex items-start justify-between gap-2">
-          <h2 class="font-semibold text-highlighted break-words">
+          <h2 class="font-semibold text-highlighted wrap-break-word">
             {{ travel.label }}
           </h2>
           <UBadge
@@ -145,4 +152,10 @@ const highlights = computed(() => props.travel.highlights.slice(0, MAX_HIGHLIGHT
       </div>
     </template>
   </UCard>
+  <div
+    v-else-if="status === 'pending'"
+    class="flex h-full items-center justify-center"
+  >
+    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+  </div>
 </template>

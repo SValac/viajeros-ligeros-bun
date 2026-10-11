@@ -100,3 +100,7 @@ export type TravelSummaryFilters = {
   page?: number; // 1-based; no page = no pagination
   pageSize?: number;
 };
+
+// What `travelDetailQuery` returns: a `Travel` plus its traveler count (coordinators excluded).
+// Separate from `Travel` so code that builds a `Travel` by hand doesn't have to invent the count.
+export type TravelDetail = Travel & { travelerCount: number };

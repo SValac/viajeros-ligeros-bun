@@ -9,7 +9,7 @@ export const travelKeys = {
 };
 
 /**
- * A single travel with its relations. `data` is `undefined` while loading (or on error)
+ * A single travel with its relations and traveler count. `data` is `undefined` while loading (or on error)
  * and `null` once resolved if the travel doesn't exist or RLS hides it.
  * An empty or missing `id` (e.g. no travel picked yet in a form) disables the query: no
  * request is made and `data` stays `undefined`.
