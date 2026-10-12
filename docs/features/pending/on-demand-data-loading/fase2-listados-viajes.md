@@ -65,7 +65,24 @@
     - b (a434731) la página pide los resúmenes de los viajes del viajero (ids ordenados para
       que la key de caché sea estable) y arma un `Map` id → label. `enabled` revisa
       `ids.length`: el objeto de filtros siempre es truthy.
-- [ ] 4. Escrituras invalidan `['travels']`
+- [x] 4. Escrituras invalidan `['travels']`
+  - a (40c3026) `addTravel` y `updateTravel` (y con él `updateTravelStatus`) invalidan
+    `travelKeys.root`: viaje nuevo, cambio de estado o de nombre se ven en listas, conteos
+    y etiquetas de pagos. Las acciones de buses y habitaciones siguen invalidando solo el
+    detalle (no cambian columnas de `TravelSummary`).
+  - b (060571f) las escrituras ya no dependen de `travels.value`: sin `findIndex`, sin
+    guards de "no encontrado" y sin rearmar la copia local. Solo escriben e invalidan, así
+    que editar funciona aunque `fetchAll` no haya cargado el viaje. `addTravel` sigue
+    devolviendo el `Travel` (lo usa `new.vue`) sin el `push`. Se borró
+    `removeBusFromTravel` (sin llamadores) y `removeTravelBus` del repositorio.
+    Cuidado al quitar la copia local: `replaceActivities`/`Services`/`Buses`/
+    `Accommodations`/`Coordinators` **son las escrituras**, solo se quita la asignación.
+  - Verificado en el navegador: actividad nueva persiste tras el refetch; cambio de estado
+    actualiza las tarjetas del dashboard a los 17 s (dentro del `staleTime`, así que es la
+    invalidación y no la caducidad).
+  - Pendiente para el paso 5: `cotizacion-store:295` cuenta coordinadores con
+    `travelStore.getTravelById` para los asientos vendibles; sin `fetchAll` daría 0 sin
+    error. Resolverlo antes de quitar `fetchAll`.
 - [ ] 5. Quitar `travelsStore.fetchAll()` del arranque
 
 ## Objetivo
