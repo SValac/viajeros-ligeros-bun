@@ -1,6 +1,6 @@
 # Fase 2 — Listados de viajes ligeros y conteos en el servidor
 
-**Estado:** En progreso — rama `feature/on-demand-loading-phase-2` (desde `main` 571d805)
+**Estado:** Pasos 1-5 completos, falta abrir el PR — rama `feature/on-demand-loading-phase-2` (desde `main` 571d805)
 **Dependencia:** Fase 1
 **Migración:** Ninguna (el conteo embebido con filtro funciona; plan B de la vista descartado)
 
@@ -80,10 +80,26 @@
   - Verificado en el navegador: actividad nueva persiste tras el refetch; cambio de estado
     actualiza las tarjetas del dashboard a los 17 s (dentro del `staleTime`, así que es la
     invalidación y no la caducidad).
-  - Pendiente para el paso 5: `cotizacion-store:295` cuenta coordinadores con
-    `travelStore.getTravelById` para los asientos vendibles; sin `fetchAll` daría 0 sin
-    error. Resolverlo antes de quitar `fetchAll`.
-- [ ] 5. Quitar `travelsStore.fetchAll()` del arranque
+- [x] 5. Quitar `travelsStore.fetchAll()` del arranque. `cotizacionStore` leía el arreglo
+  global en **3** sitios (no solo `:295`); sin `fetchAll` los tres daban vacío sin error:
+  - a (433d752) `_findRoomsToDrop` decide qué habitaciones se borran, así que pide el viaje
+    fresco: `queryCache.fetch(queryCache.ensure(travelDetailQuery(id)))`. `fetch` ignora el
+    `staleTime` (`refresh` no) y lanza si falla: el `catch` de quien llama corta la acción
+    antes de escribir. Sin viaje (`null`) rechaza el cambio.
+  - b (4acab32) `getAsientosVendibles` y `getRoomCountsByQuotation` leen con
+    `queryCache.getQueryData(travelKeys.detail(id))`, marcado "Temporal hasta Fase 4". Es
+    reactivo (`caches` es un `shallowRef` con `triggerRef` al crear entradas): verificado
+    con recarga dura. Depende de que la pantalla monte `travelDetailQuery`; todas lo hacen.
+  - (d3fcf96) De paso, el estado interno de `use-cotizacion-store` pasó a inglés; el
+    `return` mantiene los nombres en español con alias. Ojo: la desestructuración del
+    resultado en `fetchByTravel` tapaba los refs renombrados (`fetched*` ahora).
+  - c (6e055a8) `add/update/deleteBusQuotation` ya no copian buses a `travelStore.travels`;
+    solo invalidan el detalle. La pestaña Autobuses lista desde `cotizacionStore`, pero
+    operadores, opciones de camión del viajero y la lista de viajeros leen `travel.buses`
+    del detalle. Verificado: agregar, editar y borrar se reflejan sin recargar.
+  - d (91ac521) Fuera `travelsStore.fetchAll()` del plugin, el arreglo `travels`, `loaded`,
+    los getters, `stats` y `fetchAll` del repositorio. Al arrancar ya solo se piden los
+    conteos `head` y el resumen de la pantalla.
 
 ## Objetivo
 

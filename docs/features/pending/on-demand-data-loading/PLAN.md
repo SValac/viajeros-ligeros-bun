@@ -10,7 +10,7 @@ primera vez que se necesitan. La capa de caché la pone **Pinia Colada**.
 fases y la app funciona entre una fase y otra. Sin migraciones previstas (ver
 "Base de datos").
 
-**Estado:** En progreso — Fases 0 y 1 completadas y en producción (PR #122, 2026-10-10); piloto aprobado, se sigue con Colada. Fase 2 en la rama `feature/on-demand-loading-phase-2`: pasos 1-2 hechos, `/quotations` y `/calendar` migrados; sigue el dashboard.
+**Estado:** En progreso — Fases 0 y 1 completadas y en producción (PR #122, 2026-10-10); piloto aprobado, se sigue con Colada. Fase 2 completa en la rama `feature/on-demand-loading-phase-2` (sin PR todavía): ningún listado usa `travelsStore.travels` y `fetchAll` de viajes ya no corre al arrancar.
 
 ---
 
@@ -115,7 +115,7 @@ de [Production data safety](../../../claude/05-git-workflow.md#production-data-s
 |---|---|---|---|
 | [fase0-setup.md](fase0-setup.md) | Subir Vue, instalar Colada + módulo Nuxt, defaults, convención de claves | Ninguna | Completada ✅ |
 | [fase1-detalle-viaje.md](fase1-detalle-viaje.md) | **Piloto**: viaje por id con `useQuery`; corrige el "no encontrado" tras 1000 viajes · punto de decisión | Fase 0 | Completada ✅ |
-| [fase2-listados-viajes.md](fase2-listados-viajes.md) | Listados ligeros + conteos en servidor: dashboard, calendario, `/quotations`, `/payments`; adiós `travelsStore.travels` | Fase 1 | En progreso (`/quotations` y `/calendar` listos) |
+| [fase2-listados-viajes.md](fase2-listados-viajes.md) | Listados ligeros + conteos en servidor: dashboard, calendario, `/quotations`, `/payments`; adiós `travelsStore.travels` | Fase 1 | Completa, falta PR |
 | [fase3-viajeros.md](fase3-viajeros.md) | Viajeros y asignaciones de habitación por viaje; adiós `travelerStore.fetchAll()` | Fase 2 | Pendiente |
 | [fase4-cotizaciones.md](fase4-cotizaciones.md) | Cotizaciones por viaje; el caché manual pasa a Colada; desacoplar cotización ↔ viaje | Fase 1 | Pendiente |
 | [fase5-catalogos.md](fase5-catalogos.md) | Proveedores, coordinadores, autobuses, habitaciones bajo demanda; borrar `init-stores.client.ts` | Fases 2-4 | Pendiente |
