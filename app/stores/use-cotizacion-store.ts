@@ -54,20 +54,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const travelFetchInFlight = new Map<string, Promise<void>>();
 
   // State
-  const cotizaciones = ref<Quotation[]>([]);
-  const proveedoresQuotation = ref<QuotationProvider[]>([]);
-  const pagosProveedor = ref<ProviderPayment[]>([]);
-  const optOutsProveedor = ref<ProviderOptOut[]>([]);
-  const ajustesProveedor = ref<ProviderPriceAdjustment[]>([]);
-  const ajustesViajero = ref<TravelerPriceAdjustment[]>([]);
-  const hospedajesQuotation = ref<QuotationAccommodation[]>([]);
-  const pagosHospedaje = ref<AccommodationPayment[]>([]);
-  const preciosPublicos = ref<QuotationPublicPrice[]>([]);
-  const busesApartados = ref<QuotationBus[]>([]);
-  const pagosBus = ref<BusPayment[]>([]);
-  const gastosAdicionales = ref<QuotationExpense[]>([]);
+  const quotations = ref<Quotation[]>([]);
+  const quotationProviders = ref<QuotationProvider[]>([]);
+  const providerPayments = ref<ProviderPayment[]>([]);
+  const providerOptOuts = ref<ProviderOptOut[]>([]);
+  const providerPriceAdjustments = ref<ProviderPriceAdjustment[]>([]);
+  const travelerPriceAdjustments = ref<TravelerPriceAdjustment[]>([]);
+  const quotationAccommodations = ref<QuotationAccommodation[]>([]);
+  const accommodationPayments = ref<AccommodationPayment[]>([]);
+  const quotationPublicPrices = ref<QuotationPublicPrice[]>([]);
+  const quotationBuses = ref<QuotationBus[]>([]);
+  const busPayments = ref<BusPayment[]>([]);
+  const quotationExpenses = ref<QuotationExpense[]>([]);
   // Categorías que la agencia ya usó en sus gastos (se cargan al abrir el formulario).
-  const categoriasGasto = ref<string[]>([]);
+  const expenseCategories = ref<string[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const filters = ref<QuotationProviderFilters>({});
@@ -75,19 +75,19 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Getters
   const getCotizacionByTravel = computed(() => {
     return (travelId: string): Quotation | undefined => {
-      return cotizaciones.value.find(c => c.travelId === travelId);
+      return quotations.value.find(c => c.travelId === travelId);
     };
   });
 
   const getProveedoresByQuotation = computed(() => {
     return (quotationId: string): QuotationProvider[] => {
-      return proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
+      return quotationProviders.value.filter(p => p.quotationId === quotationId);
     };
   });
 
   const getPagosByProveedor = computed(() => {
     return (quotationProviderId: string): ProviderPayment[] => {
-      return [...pagosProveedor.value.filter(p => p.quotationProviderId === quotationProviderId)]
+      return [...providerPayments.value.filter(p => p.quotationProviderId === quotationProviderId)]
         .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
@@ -95,7 +95,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Servicios de costo total que se reparten entre los asientos mínimos objetivo.
   const getCostoTipoMinimo = computed(() => {
     return (quotationId: string): number => {
-      return proveedoresQuotation.value
+      return quotationProviders.value
         .filter(p => p.quotationId === quotationId && !isPerPersonProvider(p) && (p.splitType ?? 'minimum') === 'minimum')
         .reduce((sum, p) => sum + p.totalCost, 0);
     };
@@ -104,7 +104,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Servicios de costo total que se reparten entre los asientos vendibles.
   const getCostoTipoTotal = computed(() => {
     return (quotationId: string): number => {
-      return proveedoresQuotation.value
+      return quotationProviders.value
         .filter(p => p.quotationId === quotationId && !isPerPersonProvider(p) && (p.splitType ?? 'minimum') === 'total')
         .reduce((sum, p) => sum + p.totalCost, 0);
     };
@@ -113,7 +113,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Lo que suman al precio de cada asiento los servicios por persona.
   const getCostoPorPersonaAsiento = computed(() => {
     return (quotationId: string): number => {
-      return proveedoresQuotation.value
+      return quotationProviders.value
         .filter(p => p.quotationId === quotationId && isPerPersonProvider(p))
         .reduce((sum, p) => sum + (p.unitCost ?? 0), 0);
     };
@@ -121,13 +121,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getHospedajesByQuotation = computed(() => {
     return (quotationId: string): QuotationAccommodation[] => {
-      return hospedajesQuotation.value.filter(h => h.quotationId === quotationId);
+      return quotationAccommodations.value.filter(h => h.quotationId === quotationId);
     };
   });
 
   const getTotalCostoHospedajes = computed(() => {
     return (quotationId: string): number => {
-      return hospedajesQuotation.value
+      return quotationAccommodations.value
         .filter(h => h.quotationId === quotationId)
         .reduce((sum, h) => sum + h.totalCost, 0);
     };
@@ -137,16 +137,17 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // lives on the travel: it's set on the rooms page and changes until the trip leaves.
   const getRoomCountsByQuotation = computed(() => {
     return (quotationId: string): Map<string, number> => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-      if (!cotizacion)
+      const quote = quotations.value.find(q => q.id === quotationId);
+      if (!quote)
         return new Map();
-      return countRoomsByType(useTravelsStore().getAccommodationsByTravel(cotizacion.travelId));
+
+      return countRoomsByType(useTravelsStore().getAccommodationsByTravel(quote.travelId));
     };
   });
 
   const getPreciosPublicosByQuotation = computed(() => {
     return (quotationId: string): QuotationPublicPrice[] => {
-      return preciosPublicos.value.filter(p => p.quotationId === quotationId);
+      return quotationPublicPrices.value.filter(p => p.quotationId === quotationId);
     };
   });
 
@@ -167,7 +168,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         totalAccommodation: number;
       };
     }> => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      const cotizacion = quotations.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return [];
 
@@ -233,7 +234,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getTotalCostoBuses = computed(() => {
     return (quotationId: string): number => {
-      return busesApartados.value
+      return quotationBuses.value
         .filter(b => b.quotationId === quotationId)
         .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
@@ -241,7 +242,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getCostoBusesTipoMinimo = computed(() => {
     return (quotationId: string): number => {
-      return busesApartados.value
+      return quotationBuses.value
         .filter(b => b.quotationId === quotationId && (b.splitType ?? 'minimum') === 'minimum')
         .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
@@ -249,7 +250,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getCostoBusesTipoTotal = computed(() => {
     return (quotationId: string): number => {
-      return busesApartados.value
+      return quotationBuses.value
         .filter(b => b.quotationId === quotationId && (b.splitType ?? 'minimum') === 'total')
         .reduce((sum, b) => sum + (b.totalCost ?? 0), 0);
     };
@@ -257,7 +258,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getGastosByQuotation = computed(() => {
     return (quotationId: string): QuotationExpense[] => {
-      return gastosAdicionales.value.filter(g => g.quotationId === quotationId);
+      return quotationExpenses.value.filter(g => g.quotationId === quotationId);
     };
   });
 
@@ -288,12 +289,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // total y la base de la ganancia proyectada.
   const getAsientosVendibles = computed(() => {
     return (quotationId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
-      if (!cotizacion)
+      const quote = quotations.value.find(c => c.id === quotationId);
+      if (!quote)
         return 0;
+
       const travelStore = useTravelsStore();
-      const coordinadores = travelStore.getTravelById(cotizacion.travelId)?.coordinatorIds.length ?? 0;
-      return calculateSellableSeats(cotizacion, coordinadores);
+      const coordinators = travelStore.getTravelById(quote.travelId)?.coordinatorIds.length ?? 0;
+      return calculateSellableSeats(quote, coordinators);
     };
   });
 
@@ -302,7 +304,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getCostoTotal = computed(() => {
     return (quotationId: string): number => {
       const asientosVendibles = getAsientosVendibles.value(quotationId);
-      return proveedoresQuotation.value
+      return quotationProviders.value
         .filter(p => p.quotationId === quotationId)
         .reduce((sum, p) => sum + calculateProviderQuotedCost(p, asientosVendibles), 0);
     };
@@ -313,7 +315,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Devuelve 0 si aún no hay precio por asiento.
   const getAsientoConGanancia = computed(() => {
     return (quotationId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      const cotizacion = quotations.value.find(c => c.id === quotationId);
       if (!cotizacion || cotizacion.seatPrice === 0)
         return 0;
       // Los servicios por persona crecen con cada viajero: cada asiento deja precio − su costo
@@ -331,14 +333,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Incluye costos de proveedores, autobuses y gastos adicionales; el hospedaje se suma aparte en la matriz de precios de referencia
   const getPrecioAsientoCalculado = computed(() => {
     return (quotationId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      const cotizacion = quotations.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return 0;
 
       return calculateSeatPrice(
         { minimumSeatTarget: cotizacion.minimumSeatTarget, sellableSeats: getAsientosVendibles.value(quotationId) },
-        proveedoresQuotation.value.filter(p => p.quotationId === quotationId),
-        busesApartados.value.filter(b => b.quotationId === quotationId),
+        quotationProviders.value.filter(p => p.quotationId === quotationId),
+        quotationBuses.value.filter(b => b.quotationId === quotationId),
         getGastosByQuotation.value(quotationId),
       );
     };
@@ -348,7 +350,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
   const getGananciaProyectada = computed(() => {
     return (quotationId: string): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      const cotizacion = quotations.value.find(c => c.id === quotationId);
       const asientosVendibles = getAsientosVendibles.value(quotationId);
       if (!cotizacion || asientosVendibles === 0)
         return 0;
@@ -359,7 +361,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getAnticipadoProveedor = computed(() => {
     return (quotationProviderId: string): number => {
-      return pagosProveedor.value
+      return providerPayments.value
         .filter(p => p.quotationProviderId === quotationProviderId)
         .reduce((sum, p) => sum + p.amount, 0);
     };
@@ -370,7 +372,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // servicio cobrado por persona.
   const getDivisorCosto = computed(() => {
     return (quotationId: string, splitType: CostSplitType): number => {
-      const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+      const cotizacion = quotations.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return 0;
       return splitType === 'total'
@@ -381,7 +383,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getCostoPerPersonaProveedor = computed(() => {
     return (quotationProviderId: string): number => {
-      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+      const proveedor = quotationProviders.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
 
@@ -398,7 +400,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getSaldoPendienteProveedor = computed(() => {
     return (quotationProviderId: string): number => {
-      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+      const proveedor = quotationProviders.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
       // Lo que se le debe es payableCost (en un servicio opcional, solo por quienes lo toman).
@@ -410,7 +412,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Lo pagado de más a un proveedor opcional cuando después se desmarcan o se borran viajeros.
   const getSobrepagoProveedor = computed(() => {
     return (quotationProviderId: string): number => {
-      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+      const proveedor = quotationProviders.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
       const anticipado = getAnticipadoProveedor.value(quotationProviderId);
@@ -421,14 +423,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Ajustes de precio (Niño -10%, Adulto mayor -$50...) de un servicio por persona.
   const getAjustesByProveedor = computed(() => {
     return (quotationProviderId: string): ProviderPriceAdjustment[] =>
-      ajustesProveedor.value.filter(a => a.quotationProviderId === quotationProviderId);
+      providerPriceAdjustments.value.filter(a => a.quotationProviderId === quotationProviderId);
   });
 
   // El ajuste que paga un viajero en un servicio; undefined = precio base.
   const getAjusteDeViajero = computed(() => {
     return (quotationProviderId: string, travelerId: string): ProviderPriceAdjustment | undefined => {
-      const choice = ajustesViajero.value.find(a => a.quotationProviderId === quotationProviderId && a.travelerId === travelerId);
-      return choice ? ajustesProveedor.value.find(a => a.id === choice.adjustmentId) : undefined;
+      const choice = travelerPriceAdjustments.value.find(a => a.quotationProviderId === quotationProviderId && a.travelerId === travelerId);
+      return choice ? providerPriceAdjustments.value.find(a => a.id === choice.adjustmentId) : undefined;
     };
   });
 
@@ -436,7 +438,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const getOptOutsByProveedor = computed(() => {
     return (quotationProviderId: string): Set<string> => {
       return new Set(
-        optOutsProveedor.value
+        providerOptOuts.value
           .filter(o => o.quotationProviderId === quotationProviderId)
           .map(o => o.travelerId),
       );
@@ -445,7 +447,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getProviderPaymentStatus = computed(() => {
     return (quotationProviderId: string): ProviderPaymentStatus => {
-      const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+      const proveedor = quotationProviders.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 'pending';
       const anticipado = getAnticipadoProveedor.value(quotationProviderId);
@@ -455,7 +457,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getSaldoTotalPendiente = computed(() => {
     return (quotationId: string): number => {
-      return proveedoresQuotation.value
+      return quotationProviders.value
         .filter(p => p.quotationId === quotationId)
         .reduce((sum, p) => sum + getSaldoPendienteProveedor.value(p.id), 0);
     };
@@ -463,14 +465,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getPagosByHospedaje = computed(() => {
     return (quotationAccommodationId: string): AccommodationPayment[] => {
-      return [...pagosHospedaje.value.filter(p => p.quotationAccommodationId === quotationAccommodationId)]
+      return [...accommodationPayments.value.filter(p => p.quotationAccommodationId === quotationAccommodationId)]
         .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getAnticipadoHospedaje = computed(() => {
     return (quotationAccommodationId: string): number => {
-      return pagosHospedaje.value
+      return accommodationPayments.value
         .filter(p => p.quotationAccommodationId === quotationAccommodationId)
         .reduce((sum, p) => sum + p.amount, 0);
     };
@@ -478,7 +480,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getSaldoPendienteHospedaje = computed(() => {
     return (quotationAccommodationId: string): number => {
-      const hospedaje = hospedajesQuotation.value.find(h => h.id === quotationAccommodationId);
+      const hospedaje = quotationAccommodations.value.find(h => h.id === quotationAccommodationId);
       if (!hospedaje)
         return 0;
       return hospedaje.totalCost - getAnticipadoHospedaje.value(quotationAccommodationId);
@@ -487,7 +489,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getAccommodationPaymentStatus = computed(() => {
     return (quotationAccommodationId: string): AccommodationPaymentStatus => {
-      const hospedaje = hospedajesQuotation.value.find(h => h.id === quotationAccommodationId);
+      const hospedaje = quotationAccommodations.value.find(h => h.id === quotationAccommodationId);
       if (!hospedaje)
         return 'pending';
       const anticipado = getAnticipadoHospedaje.value(quotationAccommodationId);
@@ -497,7 +499,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getSaldoTotalPendienteHospedajes = computed(() => {
     return (quotationId: string): number => {
-      return hospedajesQuotation.value
+      return quotationAccommodations.value
         .filter(h => h.quotationId === quotationId)
         .reduce((sum, h) => sum + getSaldoPendienteHospedaje.value(h.id), 0);
     };
@@ -505,7 +507,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const puedeConfirmar = computed(() => {
     return (quotationId: string): boolean => {
-      const proveedores = proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
+      const proveedores = quotationProviders.value.filter(p => p.quotationId === quotationId);
       if (proveedores.length === 0)
         return false;
       return proveedores.every(p => p.confirmed === true);
@@ -514,13 +516,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const hasQuotation = computed(() => {
     return (travelId: string): boolean => {
-      return cotizaciones.value.some(c => c.travelId === travelId);
+      return quotations.value.some(c => c.travelId === travelId);
     };
   });
 
   const filteredProveedores = computed(() => {
     return (quotationId: string): QuotationProvider[] => {
-      let result = proveedoresQuotation.value.filter(p => p.quotationId === quotationId);
+      let result = quotationProviders.value.filter(p => p.quotationId === quotationId);
 
       const f = filters.value;
 
@@ -542,13 +544,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getBusesByQuotation = computed(() => {
     return (quotationId: string): QuotationBus[] => {
-      return busesApartados.value.filter(b => b.quotationId === quotationId);
+      return quotationBuses.value.filter(b => b.quotationId === quotationId);
     };
   });
 
   const getBusesByProveedorEnQuotation = computed(() => {
     return (quotationId: string, providerId: string): QuotationBus[] => {
-      return busesApartados.value.filter(
+      return quotationBuses.value.filter(
         b => b.quotationId === quotationId && b.providerId === providerId,
       );
     };
@@ -556,14 +558,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getPagosByBus = computed(() => {
     return (quotationBusId: string): BusPayment[] => {
-      return [...pagosBus.value.filter(p => p.quotationBusId === quotationBusId)]
+      return [...busPayments.value.filter(p => p.quotationBusId === quotationBusId)]
         .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
     };
   });
 
   const getAnticipadoBus = computed(() => {
     return (quotationBusId: string): number => {
-      return pagosBus.value
+      return busPayments.value
         .filter(p => p.quotationBusId === quotationBusId)
         .reduce((sum, p) => sum + p.amount, 0);
     };
@@ -571,7 +573,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getSaldoPendienteBus = computed(() => {
     return (quotationBusId: string): number => {
-      const bus = busesApartados.value.find(b => b.id === quotationBusId);
+      const bus = quotationBuses.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 0;
       return bus.totalCost - getAnticipadoBus.value(quotationBusId);
@@ -580,7 +582,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getSaldoTotalPendienteBuses = computed(() => {
     return (quotationId: string): number => {
-      return busesApartados.value
+      return quotationBuses.value
         .filter(b => b.quotationId === quotationId)
         .reduce((sum, b) => sum + getSaldoPendienteBus.value(b.id), 0);
     };
@@ -588,7 +590,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getBusPaymentStatus = computed(() => {
     return (quotationBusId: string): BusPaymentStatus => {
-      const bus = busesApartados.value.find(b => b.id === quotationBusId);
+      const bus = quotationBuses.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 'pending';
       const anticipado = getAnticipadoBus.value(quotationBusId);
@@ -598,10 +600,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   const getCostoPerPersonaBus = computed(() => {
     return (quotationBusId: string): number => {
-      const bus = busesApartados.value.find(b => b.id === quotationBusId);
+      const bus = quotationBuses.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 0;
-      const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
+      const cotizacion = quotations.value.find(c => c.id === bus.quotationId);
       if (!cotizacion)
         return 0;
       const divisor = bus.splitType === 'total'
@@ -617,21 +619,21 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // quotations.total_seats is kept by a DB trigger as the sum of the quotation's bus
   // capacities; mirror it in the cache so the seat price, profit and break-even use it.
   function _refreshTotalSeats(quotationId: string): void {
-    const index = cotizaciones.value.findIndex(c => c.id === quotationId);
-    const cotizacion = cotizaciones.value[index];
+    const index = quotations.value.findIndex(c => c.id === quotationId);
+    const cotizacion = quotations.value[index];
     if (!cotizacion)
       return;
-    const totalSeats = busesApartados.value
+    const totalSeats = quotationBuses.value
       .filter(b => b.quotationId === quotationId)
       .reduce((sum, b) => sum + b.capacity, 0);
     if (totalSeats !== cotizacion.totalSeats)
-      cotizaciones.value[index] = { ...cotizacion, totalSeats };
+      quotations.value[index] = { ...cotizacion, totalSeats };
   }
 
   async function _syncSeatPrice(quotationId: string): Promise<void> {
     _refreshTotalSeats(quotationId);
 
-    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    const cotizacion = quotations.value.find(c => c.id === quotationId);
     if (!cotizacion || cotizacion.status === 'confirmed')
       return;
     if (cotizacion.minimumSeatTarget === 0)
@@ -641,10 +643,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
     await repository.updateSeatPrice(quotationId, nuevoPrecio);
 
-    const index = cotizaciones.value.findIndex(c => c.id === quotationId);
-    if (index !== -1 && cotizaciones.value[index]) {
-      cotizaciones.value[index] = {
-        ...cotizaciones.value[index]!,
+    const index = quotations.value.findIndex(c => c.id === quotationId);
+    if (index !== -1 && quotations.value[index]) {
+      quotations.value[index] = {
+        ...quotations.value[index]!,
         seatPrice: nuevoPrecio,
         updatedAt: new Date().toISOString(),
       };
@@ -663,7 +665,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     quotationId: string,
     nextAccommodations: Pick<QuotationAccommodation, 'providerId' | 'details'>[],
   ): Promise<TravelAccommodation[] | { error: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    const cotizacion = quotations.value.find(c => c.id === quotationId);
     if (!cotizacion)
       return [];
 
@@ -694,7 +696,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function _deleteRooms(quotationId: string, rooms: TravelAccommodation[]): Promise<void> {
-    const cotizacion = cotizaciones.value.find(c => c.id === quotationId);
+    const cotizacion = quotations.value.find(c => c.id === quotationId);
     if (!cotizacion || rooms.length === 0)
       return;
     const ids = rooms.map(room => room.id);
@@ -708,7 +710,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      cotizaciones.value = await repository.fetchAll();
+      quotations.value = await repository.fetchAll();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -740,41 +742,52 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         const result = await repository.fetchByTravel(travelId);
 
         if (!result) {
-          const existing = cotizaciones.value.find(c => c.travelId === travelId);
+          const existing = quotations.value.find(c => c.travelId === travelId);
           if (existing) {
             const qId = existing.id;
-            cotizaciones.value = cotizaciones.value.filter(c => c.id !== qId);
-            proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.quotationId !== qId);
-            pagosProveedor.value = pagosProveedor.value.filter(p =>
-              !proveedoresQuotation.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
+            quotations.value = quotations.value.filter(c => c.id !== qId);
+            quotationProviders.value = quotationProviders.value.filter(p => p.quotationId !== qId);
+            providerPayments.value = providerPayments.value.filter(p =>
+              !quotationProviders.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
             );
-            hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.quotationId !== qId);
-            pagosHospedaje.value = pagosHospedaje.value.filter(p =>
-              !hospedajesQuotation.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
+            quotationAccommodations.value = quotationAccommodations.value.filter(h => h.quotationId !== qId);
+            accommodationPayments.value = accommodationPayments.value.filter(p =>
+              !quotationAccommodations.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
             );
-            preciosPublicos.value = preciosPublicos.value.filter(p => p.quotationId !== qId);
-            busesApartados.value = busesApartados.value.filter(b => b.quotationId !== qId);
-            pagosBus.value = pagosBus.value.filter(p =>
-              !busesApartados.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
+            quotationPublicPrices.value = quotationPublicPrices.value.filter(p => p.quotationId !== qId);
+            quotationBuses.value = quotationBuses.value.filter(b => b.quotationId !== qId);
+            busPayments.value = busPayments.value.filter(p =>
+              !quotationBuses.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
             );
-            gastosAdicionales.value = gastosAdicionales.value.filter(g => g.quotationId !== qId);
+            quotationExpenses.value = quotationExpenses.value.filter(g => g.quotationId !== qId);
           }
           travelFetchCache.add(travelId);
           return;
         }
-        const { quotation, providers, providerPayments, providerAdjustments, accommodations, accommodationPayments, publicPrices, buses, busPayments, expenses } = result;
+        const {
+          quotation,
+          providers,
+          providerPayments: fetchedProviderPayments,
+          providerAdjustments,
+          accommodations,
+          accommodationPayments: fetchedAccommodationPayments,
+          publicPrices,
+          buses,
+          busPayments: fetchedBusPayments,
+          expenses,
+        } = result;
         const quotationId = quotation.id;
 
-        cotizaciones.value = [...cotizaciones.value.filter(c => c.travelId !== travelId), quotation];
-        proveedoresQuotation.value = [...proveedoresQuotation.value.filter(p => p.quotationId !== quotationId), ...providers];
-        pagosProveedor.value = [...pagosProveedor.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...providerPayments];
-        ajustesProveedor.value = [...ajustesProveedor.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
-        hospedajesQuotation.value = [...hospedajesQuotation.value.filter(h => h.quotationId !== quotationId), ...accommodations];
-        pagosHospedaje.value = [...pagosHospedaje.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...accommodationPayments];
-        preciosPublicos.value = [...preciosPublicos.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
-        busesApartados.value = [...busesApartados.value.filter(b => b.quotationId !== quotationId), ...buses];
-        pagosBus.value = [...pagosBus.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...busPayments];
-        gastosAdicionales.value = [...gastosAdicionales.value.filter(g => g.quotationId !== quotationId), ...expenses];
+        quotations.value = [...quotations.value.filter(c => c.travelId !== travelId), quotation];
+        quotationProviders.value = [...quotationProviders.value.filter(p => p.quotationId !== quotationId), ...providers];
+        providerPayments.value = [...providerPayments.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...fetchedProviderPayments];
+        providerPriceAdjustments.value = [...providerPriceAdjustments.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
+        quotationAccommodations.value = [...quotationAccommodations.value.filter(h => h.quotationId !== quotationId), ...accommodations];
+        accommodationPayments.value = [...accommodationPayments.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...fetchedAccommodationPayments];
+        quotationPublicPrices.value = [...quotationPublicPrices.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
+        quotationBuses.value = [...quotationBuses.value.filter(b => b.quotationId !== quotationId), ...buses];
+        busPayments.value = [...busPayments.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...fetchedBusPayments];
+        quotationExpenses.value = [...quotationExpenses.value.filter(g => g.quotationId !== quotationId), ...expenses];
 
         travelFetchCache.add(travelId);
       }
@@ -799,13 +812,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    */
   async function syncSeatPriceForTravel(travelId: string): Promise<void> {
     await fetchByTravel(travelId);
-    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    const cotizacion = quotations.value.find(c => c.travelId === travelId);
     if (cotizacion?.coordinatorsTakeSeats)
       await _syncSeatPrice(cotizacion.id);
   }
 
   async function createQuotation(data: QuotationFormData): Promise<Quotation> {
-    const existing = cotizaciones.value.find(c => c.travelId === data.travelId);
+    const existing = quotations.value.find(c => c.travelId === data.travelId);
     if (existing)
       return existing;
 
@@ -813,7 +826,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const quotation = await repository.insertQuotation(data);
-      cotizaciones.value.push(quotation);
+      quotations.value.push(quotation);
       travelFetchCache.add(data.travelId);
       return quotation;
     }
@@ -827,13 +840,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function updateQuotation(id: string, data: Partial<QuotationFormData>): Promise<Quotation | undefined> {
-    const index = cotizaciones.value.findIndex(c => c.id === id);
+    const index = quotations.value.findIndex(c => c.id === id);
     if (index === -1) {
       error.value = 'Cotización no encontrada';
       return undefined;
     }
 
-    const existing = cotizaciones.value[index];
+    const existing = quotations.value[index];
     if (!existing)
       return undefined;
 
@@ -841,7 +854,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updateQuotation(id, data);
-      cotizaciones.value[index] = updated;
+      quotations.value[index] = updated;
 
       if ('minimumSeatTarget' in data || 'coordinatorsTakeSeats' in data) {
         await _syncSeatPrice(id);
@@ -866,7 +879,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
    */
   async function confirmarQuotation(id: string): Promise<{ success: boolean; error?: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === id);
+    const cotizacion = quotations.value.find(c => c.id === id);
     if (!cotizacion)
       return { success: false, error: 'Cotización no encontrada' };
 
@@ -887,7 +900,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
    */
   async function reabrirQuotation(id: string): Promise<{ success: boolean; error?: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === id);
+    const cotizacion = quotations.value.find(c => c.id === id);
     if (!cotizacion)
       return { success: false, error: 'Cotización no encontrada' };
     if (cotizacion.status !== 'confirmed')
@@ -900,7 +913,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function addProveedorQuotation(data: QuotationProviderFormData): Promise<QuotationProvider | { error: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
     if (cotizacion.status === 'confirmed')
@@ -910,7 +923,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const newProveedor = await repository.insertProvider(data);
-      proveedoresQuotation.value.push(newProveedor);
+      quotationProviders.value.push(newProveedor);
       await _syncSeatPrice(data.quotationId);
       return newProveedor;
     }
@@ -927,15 +940,15 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     id: string,
     data: Partial<QuotationProviderFormData>,
   ): Promise<QuotationProvider | undefined> {
-    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
+    const index = quotationProviders.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = proveedoresQuotation.value[index];
+    const existing = quotationProviders.value[index];
     if (!existing)
       return undefined;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === existing.quotationId);
     if (cotizacion?.status === 'confirmed')
       return undefined;
 
@@ -943,7 +956,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updateProvider(id, data);
-      proveedoresQuotation.value[index] = updated;
+      quotationProviders.value[index] = updated;
       await _syncSeatPrice(existing.quotationId);
       return updated;
     }
@@ -957,11 +970,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function deleteProveedorQuotation(id: string): Promise<void> {
-    const proveedor = proveedoresQuotation.value.find(p => p.id === id);
+    const proveedor = quotationProviders.value.find(p => p.id === id);
     if (!proveedor)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === proveedor.quotationId);
     if (cotizacion?.status === 'confirmed')
       return;
 
@@ -971,10 +984,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       await repository.deleteProvider(id);
 
-      proveedoresQuotation.value = proveedoresQuotation.value.filter(p => p.id !== id);
-      pagosProveedor.value = pagosProveedor.value.filter(p => p.quotationProviderId !== id);
-      ajustesProveedor.value = ajustesProveedor.value.filter(a => a.quotationProviderId !== id);
-      ajustesViajero.value = ajustesViajero.value.filter(a => a.quotationProviderId !== id);
+      quotationProviders.value = quotationProviders.value.filter(p => p.id !== id);
+      providerPayments.value = providerPayments.value.filter(p => p.quotationProviderId !== id);
+      providerPriceAdjustments.value = providerPriceAdjustments.value.filter(a => a.quotationProviderId !== id);
+      travelerPriceAdjustments.value = travelerPriceAdjustments.value.filter(a => a.quotationProviderId !== id);
       await _syncSeatPrice(quotationId);
     }
     catch (e) {
@@ -993,8 +1006,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     id: string,
     coordinatorsCourtesy: boolean,
   ): Promise<QuotationProvider | { error: string }> {
-    const index = proveedoresQuotation.value.findIndex(p => p.id === id);
-    const existing = proveedoresQuotation.value[index];
+    const index = quotationProviders.value.findIndex(p => p.id === id);
+    const existing = quotationProviders.value[index];
     if (!existing)
       return { error: 'Proveedor no encontrado' };
     if (!isPerPersonProvider(existing))
@@ -1004,7 +1017,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updateProviderCourtesy(id, coordinatorsCourtesy);
-      proveedoresQuotation.value[index] = updated;
+      quotationProviders.value[index] = updated;
       return updated;
     }
     catch (e) {
@@ -1022,7 +1035,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    * @param travelId - El viaje cuyos viajeros cambiaron
    */
   async function refreshProviderPayableCosts(travelId: string): Promise<void> {
-    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    const cotizacion = quotations.value.find(c => c.travelId === travelId);
     if (!cotizacion)
       return;
 
@@ -1030,7 +1043,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const costs = new Map(
         (await repository.fetchProviderPayableCosts(cotizacion.id)).map(c => [c.id, c.payableCost]),
       );
-      proveedoresQuotation.value = proveedoresQuotation.value.map(p =>
+      quotationProviders.value = quotationProviders.value.map(p =>
         costs.has(p.id) ? { ...p, payableCost: costs.get(p.id)! } : p,
       );
     }
@@ -1042,8 +1055,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function fetchProviderOptOuts(travelId: string): Promise<void> {
     try {
       const optOuts = await repository.fetchProviderOptOuts(travelId);
-      optOutsProveedor.value = [
-        ...optOutsProveedor.value.filter(o => o.travelId !== travelId),
+      providerOptOuts.value = [
+        ...providerOptOuts.value.filter(o => o.travelId !== travelId),
         ...optOuts,
       ];
     }
@@ -1072,14 +1085,14 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       if (toman) {
         await repository.deleteProviderOptOuts(quotationProviderId, changed);
-        optOutsProveedor.value = optOutsProveedor.value.filter(o =>
+        providerOptOuts.value = providerOptOuts.value.filter(o =>
           !(o.quotationProviderId === quotationProviderId && changed.includes(o.travelerId)),
         );
       }
       else {
         const nuevos = changed.map(travelerId => ({ quotationProviderId, travelerId, travelId }));
         await repository.insertProviderOptOuts(nuevos);
-        optOutsProveedor.value.push(...nuevos);
+        providerOptOuts.value.push(...nuevos);
       }
       await refreshProviderPayableCosts(travelId);
       return null;
@@ -1099,21 +1112,21 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     quotationProviderId: string,
     drafts: ProviderPriceAdjustmentDraft[],
   ): Promise<string | null> {
-    const proveedor = proveedoresQuotation.value.find(p => p.id === quotationProviderId);
+    const proveedor = quotationProviders.value.find(p => p.id === quotationProviderId);
     if (!proveedor)
       return 'Proveedor no encontrado';
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === proveedor.quotationId);
 
     error.value = null;
     try {
       const saved = await repository.saveProviderAdjustments(quotationProviderId, drafts);
-      ajustesProveedor.value = [
-        ...ajustesProveedor.value.filter(a => a.quotationProviderId !== quotationProviderId),
+      providerPriceAdjustments.value = [
+        ...providerPriceAdjustments.value.filter(a => a.quotationProviderId !== quotationProviderId),
         ...saved,
       ];
       // Un ajuste borrado regresa a sus viajeros al precio base (en la BD por cascada).
       const savedIds = new Set(saved.map(a => a.id));
-      ajustesViajero.value = ajustesViajero.value.filter(a =>
+      travelerPriceAdjustments.value = travelerPriceAdjustments.value.filter(a =>
         a.quotationProviderId !== quotationProviderId || savedIds.has(a.adjustmentId),
       );
       if (cotizacion)
@@ -1129,8 +1142,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   async function fetchTravelerAdjustments(travelId: string): Promise<void> {
     try {
       const choices = await repository.fetchTravelerAdjustments(travelId);
-      ajustesViajero.value = [
-        ...ajustesViajero.value.filter(a => a.travelId !== travelId),
+      travelerPriceAdjustments.value = [
+        ...travelerPriceAdjustments.value.filter(a => a.travelId !== travelId),
         ...choices,
       ];
     }
@@ -1153,8 +1166,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       await repository.setTravelerAdjustment(quotationProviderId, travelId, travelerIds, adjustmentId);
-      ajustesViajero.value = [
-        ...ajustesViajero.value.filter(a =>
+      travelerPriceAdjustments.value = [
+        ...travelerPriceAdjustments.value.filter(a =>
           !(a.quotationProviderId === quotationProviderId && travelerIds.includes(a.travelerId)),
         ),
         ...(adjustmentId
@@ -1171,11 +1184,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function toggleConfirmadoProveedor(id: string): Promise<void> {
-    const proveedor = proveedoresQuotation.value.find(p => p.id === id);
+    const proveedor = quotationProviders.value.find(p => p.id === id);
     if (!proveedor)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === proveedor.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === proveedor.quotationId);
     if (cotizacion?.status === 'confirmed')
       return;
 
@@ -1184,9 +1197,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       await repository.toggleProviderConfirmado(id, !proveedor.confirmed);
 
-      const index = proveedoresQuotation.value.findIndex(p => p.id === id);
-      if (index !== -1 && proveedoresQuotation.value[index]) {
-        proveedoresQuotation.value[index] = { ...proveedoresQuotation.value[index]!, confirmed: !proveedor.confirmed };
+      const index = quotationProviders.value.findIndex(p => p.id === id);
+      if (index !== -1 && quotationProviders.value[index]) {
+        quotationProviders.value[index] = { ...quotationProviders.value[index]!, confirmed: !proveedor.confirmed };
       }
     }
     catch (e) {
@@ -1198,7 +1211,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function addProviderPayment(data: ProviderPaymentFormData): Promise<ProviderPayment | { error: string }> {
-    const proveedor = proveedoresQuotation.value.find(p => p.id === data.quotationProviderId);
+    const proveedor = quotationProviders.value.find(p => p.id === data.quotationProviderId);
     if (!proveedor)
       return { error: 'Proveedor no encontrado' };
 
@@ -1214,7 +1227,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const newPago = await repository.insertProviderPayment(data);
-      pagosProveedor.value.push(newPago);
+      providerPayments.value.push(newPago);
       return newPago;
     }
     catch (e) {
@@ -1227,11 +1240,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function updateProviderPayment(id: string, data: Partial<ProviderPaymentFormData>): Promise<ProviderPayment | undefined> {
-    const index = pagosProveedor.value.findIndex(p => p.id === id);
+    const index = providerPayments.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = pagosProveedor.value[index];
+    const existing = providerPayments.value[index];
     if (!existing)
       return undefined;
 
@@ -1239,7 +1252,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updateProviderPayment(id, data);
-      pagosProveedor.value[index] = updated;
+      providerPayments.value[index] = updated;
       return updated;
     }
     catch (e) {
@@ -1252,7 +1265,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function deleteProviderPayment(id: string): Promise<void> {
-    const pago = pagosProveedor.value.find(p => p.id === id);
+    const pago = providerPayments.value.find(p => p.id === id);
     if (!pago)
       return;
 
@@ -1260,7 +1273,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       await repository.deleteProviderPayment(id);
-      pagosProveedor.value = pagosProveedor.value.filter(p => p.id !== id);
+      providerPayments.value = providerPayments.value.filter(p => p.id !== id);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1283,7 +1296,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // ============================================================================
 
   async function addHospedajeQuotation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
     if (cotizacion.status === 'confirmed')
@@ -1294,7 +1307,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       // No rooms are created here: they're added on the travel's rooms page.
       const newHospedaje = await repository.insertAccommodation(data);
-      hospedajesQuotation.value.push(newHospedaje);
+      quotationAccommodations.value.push(newHospedaje);
       await _syncSeatPrice(data.quotationId);
       return newHospedaje;
     }
@@ -1311,12 +1324,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     id: string,
     data: Partial<QuotationAccommodationFormData>,
   ): Promise<QuotationAccommodation | { error: string }> {
-    const index = hospedajesQuotation.value.findIndex(h => h.id === id);
-    const existing = hospedajesQuotation.value[index];
+    const index = quotationAccommodations.value.findIndex(h => h.id === id);
+    const existing = quotationAccommodations.value[index];
     if (!existing)
       return { error: 'Hospedaje no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === existing.quotationId);
     if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
@@ -1330,7 +1343,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
         return roomsToDrop;
 
       const updated = await repository.updateAccommodation(id, data, existing.details);
-      hospedajesQuotation.value[index] = updated;
+      quotationAccommodations.value[index] = updated;
       await _deleteRooms(existing.quotationId, roomsToDrop);
       await _syncSeatPrice(existing.quotationId);
       return updated;
@@ -1350,11 +1363,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    * @returns An error message, or `null` when it was deleted
    */
   async function deleteHospedajeQuotation(id: string): Promise<string | null> {
-    const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
+    const hospedaje = quotationAccommodations.value.find(h => h.id === id);
     if (!hospedaje)
       return 'Hospedaje no encontrado';
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === hospedaje.quotationId);
     if (cotizacion?.status === 'confirmed')
       return 'No se puede modificar una cotización confirmada';
 
@@ -1369,8 +1382,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
       await repository.deleteAccommodation(id);
 
-      hospedajesQuotation.value = hospedajesQuotation.value.filter(h => h.id !== id);
-      pagosHospedaje.value = pagosHospedaje.value.filter(p => p.quotationAccommodationId !== id);
+      quotationAccommodations.value = quotationAccommodations.value.filter(h => h.id !== id);
+      accommodationPayments.value = accommodationPayments.value.filter(p => p.quotationAccommodationId !== id);
       await _deleteRooms(quotationId, roomsToDrop);
       await _syncSeatPrice(quotationId);
       return null;
@@ -1390,7 +1403,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    * @param travelId - The travel whose rooms changed
    */
   async function refreshHospedajeCosts(travelId: string): Promise<void> {
-    const cotizacion = cotizaciones.value.find(c => c.travelId === travelId);
+    const cotizacion = quotations.value.find(c => c.travelId === travelId);
     if (!cotizacion)
       return;
 
@@ -1398,7 +1411,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const costs = new Map(
         (await repository.fetchAccommodationCosts(cotizacion.id)).map(c => [c.id, c.totalCost]),
       );
-      hospedajesQuotation.value = hospedajesQuotation.value.map(h =>
+      quotationAccommodations.value = quotationAccommodations.value.map(h =>
         costs.has(h.id) ? { ...h, totalCost: costs.get(h.id)! } : h,
       );
     }
@@ -1408,11 +1421,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function toggleConfirmadoHospedaje(id: string): Promise<void> {
-    const hospedaje = hospedajesQuotation.value.find(h => h.id === id);
+    const hospedaje = quotationAccommodations.value.find(h => h.id === id);
     if (!hospedaje)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === hospedaje.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === hospedaje.quotationId);
     if (cotizacion?.status === 'confirmed')
       return;
 
@@ -1421,9 +1434,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       await repository.toggleConfirmAccommodation(id, !hospedaje.confirmed);
 
-      const index = hospedajesQuotation.value.findIndex(h => h.id === id);
-      if (index !== -1 && hospedajesQuotation.value[index]) {
-        hospedajesQuotation.value[index] = { ...hospedajesQuotation.value[index]!, confirmed: !hospedaje.confirmed };
+      const index = quotationAccommodations.value.findIndex(h => h.id === id);
+      if (index !== -1 && quotationAccommodations.value[index]) {
+        quotationAccommodations.value[index] = { ...quotationAccommodations.value[index]!, confirmed: !hospedaje.confirmed };
       }
     }
     catch (e) {
@@ -1435,7 +1448,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function addPagoHospedaje(data: AccommodationPaymentFormData): Promise<AccommodationPayment | { error: string }> {
-    const hospedaje = hospedajesQuotation.value.find(h => h.id === data.quotationAccommodationId);
+    const hospedaje = quotationAccommodations.value.find(h => h.id === data.quotationAccommodationId);
     if (!hospedaje)
       return { error: 'Hospedaje no encontrado' };
 
@@ -1450,7 +1463,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const newPago = await repository.insertAccommodationPayment(data);
-      pagosHospedaje.value.push(newPago);
+      accommodationPayments.value.push(newPago);
       return newPago;
     }
     catch (e) {
@@ -1463,11 +1476,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function updatePagoHospedaje(id: string, data: Partial<AccommodationPaymentFormData>): Promise<AccommodationPayment | undefined> {
-    const index = pagosHospedaje.value.findIndex(p => p.id === id);
+    const index = accommodationPayments.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = pagosHospedaje.value[index];
+    const existing = accommodationPayments.value[index];
     if (!existing)
       return undefined;
 
@@ -1475,7 +1488,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updateAccommodationPayment(id, data);
-      pagosHospedaje.value[index] = updated;
+      accommodationPayments.value[index] = updated;
       return updated;
     }
     catch (e) {
@@ -1488,7 +1501,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function deletePagoHospedaje(id: string): Promise<void> {
-    const pago = pagosHospedaje.value.find(p => p.id === id);
+    const pago = accommodationPayments.value.find(p => p.id === id);
     if (!pago)
       return;
 
@@ -1496,7 +1509,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       await repository.deleteAccommodationPayment(id);
-      pagosHospedaje.value = pagosHospedaje.value.filter(p => p.id !== id);
+      accommodationPayments.value = accommodationPayments.value.filter(p => p.id !== id);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1511,7 +1524,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // ============================================================================
 
   async function addPrecioPublico(data: QuotationPublicPriceFormData): Promise<QuotationPublicPrice | { error: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
 
@@ -1519,7 +1532,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const newPrecio = await repository.insertPublicPrice(data);
-      preciosPublicos.value.push(newPrecio);
+      quotationPublicPrices.value.push(newPrecio);
       return newPrecio;
     }
     catch (e) {
@@ -1532,11 +1545,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function updatePrecioPublico(id: string, data: Partial<QuotationPublicPriceFormData>): Promise<QuotationPublicPrice | undefined> {
-    const index = preciosPublicos.value.findIndex(p => p.id === id);
+    const index = quotationPublicPrices.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = preciosPublicos.value[index];
+    const existing = quotationPublicPrices.value[index];
     if (!existing)
       return undefined;
 
@@ -1544,7 +1557,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updatePublicPrice(id, data);
-      preciosPublicos.value[index] = updated;
+      quotationPublicPrices.value[index] = updated;
       return updated;
     }
     catch (e) {
@@ -1561,7 +1574,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       await repository.deletePublicPrice(id);
-      preciosPublicos.value = preciosPublicos.value.filter(p => p.id !== id);
+      quotationPublicPrices.value = quotationPublicPrices.value.filter(p => p.id !== id);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1577,7 +1590,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   async function fetchCategoriasGasto(): Promise<void> {
     try {
-      categoriasGasto.value = await repository.fetchExpenseCategories();
+      expenseCategories.value = await repository.fetchExpenseCategories();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1585,12 +1598,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   function _rememberCategoria(category: string): void {
-    if (!categoriasGasto.value.includes(category))
-      categoriasGasto.value = [...categoriasGasto.value, category];
+    if (!expenseCategories.value.includes(category))
+      expenseCategories.value = [...expenseCategories.value, category];
   }
 
   async function addGasto(data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
     if (cotizacion.status === 'confirmed')
@@ -1600,7 +1613,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const gasto = await repository.insertExpense(data);
-      gastosAdicionales.value.push(gasto);
+      quotationExpenses.value.push(gasto);
       _rememberCategoria(gasto.category);
       await _syncSeatPrice(data.quotationId);
       return gasto;
@@ -1615,12 +1628,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function updateGasto(id: string, data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
-    const index = gastosAdicionales.value.findIndex(g => g.id === id);
-    const existing = gastosAdicionales.value[index];
+    const index = quotationExpenses.value.findIndex(g => g.id === id);
+    const existing = quotationExpenses.value[index];
     if (!existing)
       return { error: 'Gasto no encontrado' };
 
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === existing.quotationId);
     if (cotizacion?.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
@@ -1628,7 +1641,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const gasto = await repository.updateExpense(id, data);
-      gastosAdicionales.value[index] = gasto;
+      quotationExpenses.value[index] = gasto;
       _rememberCategoria(gasto.category);
       await _syncSeatPrice(existing.quotationId);
       return gasto;
@@ -1643,11 +1656,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function deleteGasto(id: string): Promise<boolean> {
-    const gasto = gastosAdicionales.value.find(g => g.id === id);
+    const gasto = quotationExpenses.value.find(g => g.id === id);
     if (!gasto)
       return false;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === gasto.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === gasto.quotationId);
     if (cotizacion?.status === 'confirmed')
       return false;
 
@@ -1655,7 +1668,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       await repository.deleteExpense(id);
-      gastosAdicionales.value = gastosAdicionales.value.filter(g => g.id !== id);
+      quotationExpenses.value = quotationExpenses.value.filter(g => g.id !== id);
       await _syncSeatPrice(gasto.quotationId);
       return true;
     }
@@ -1673,13 +1686,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // ============================================================================
 
   async function addBusQuotation(data: QuotationBusFormData): Promise<QuotationBus | { error: string }> {
-    const cotizacion = cotizaciones.value.find(c => c.id === data.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === data.quotationId);
     if (!cotizacion)
       return { error: 'Cotización no encontrada' };
     if (cotizacion.status === 'confirmed')
       return { error: 'No se puede modificar una cotización confirmada' };
 
-    const duplicado = busesApartados.value.find(
+    const duplicado = quotationBuses.value.find(
       b => b.quotationId === data.quotationId
         && b.providerId === data.providerId
         && b.unitNumber === data.unitNumber,
@@ -1692,7 +1705,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const { quotationBus: newBus, travelBusRow } = await repository.insertBus(data, cotizacion.travelId);
       queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
-      busesApartados.value.push(newBus);
+      quotationBuses.value.push(newBus);
       const travelStore = useTravelsStore();
       const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
       if (travelIndex !== -1) {
@@ -1714,17 +1727,17 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function updateBusQuotation(id: string, data: Partial<QuotationBusFormData>): Promise<QuotationBus | undefined> {
-    const index = busesApartados.value.findIndex(b => b.id === id);
+    const index = quotationBuses.value.findIndex(b => b.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = busesApartados.value[index];
+    const existing = quotationBuses.value[index];
     if (!existing)
       return undefined;
 
     // Confirmed quotations lock the bus structure and costs, but coordinators are assigned
     // on the travel side at any time, so a coordinator-only change still goes through.
-    const cotizacion = cotizaciones.value.find(c => c.id === existing.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === existing.quotationId);
     const onlyCoordinators = Object.keys(data).every(key => key === 'coordinatorIds');
     if (cotizacion?.status === 'confirmed' && !onlyCoordinators) {
       error.value = 'No se puede modificar una cotización confirmada';
@@ -1735,7 +1748,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updateBus(id, data);
-      busesApartados.value[index] = updated;
+      quotationBuses.value[index] = updated;
 
       // Mirror provider/unit/capacity into the travel's cached buses — travel_buses is
       // the operational projection coordinators see, kept in sync by the repository call
@@ -1774,11 +1787,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function deleteBusQuotation(id: string): Promise<void> {
-    const bus = busesApartados.value.find(b => b.id === id);
+    const bus = quotationBuses.value.find(b => b.id === id);
     if (!bus)
       return;
 
-    const cotizacion = cotizaciones.value.find(c => c.id === bus.quotationId);
+    const cotizacion = quotations.value.find(c => c.id === bus.quotationId);
     if (cotizacion?.status === 'confirmed')
       return;
 
@@ -1788,8 +1801,8 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       await repository.deleteBus(id);
 
-      busesApartados.value = busesApartados.value.filter(b => b.id !== id);
-      pagosBus.value = pagosBus.value.filter(p => p.quotationBusId !== id);
+      quotationBuses.value = quotationBuses.value.filter(b => b.id !== id);
+      busPayments.value = busPayments.value.filter(p => p.quotationBusId !== id);
       // El travel_bus vinculado se elimina por CASCADE en DB (quotation_bus_id FK ON DELETE CASCADE)
       // y travelers.travel_bus_id se limpia por ON DELETE SET NULL
       // Actualizar estado local del travel
@@ -1815,7 +1828,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function addBusPayment(data: BusPaymentFormData): Promise<BusPayment | { error: string }> {
-    const bus = busesApartados.value.find(b => b.id === data.quotationBusId);
+    const bus = quotationBuses.value.find(b => b.id === data.quotationBusId);
     if (!bus)
       return { error: 'Autobús no encontrado' };
 
@@ -1830,7 +1843,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const newPago = await repository.insertBusPayment(data);
-      pagosBus.value.push(newPago);
+      busPayments.value.push(newPago);
       return newPago;
     }
     catch (e) {
@@ -1843,11 +1856,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   async function updateBusPayment(id: string, data: Partial<BusPaymentFormData>): Promise<BusPayment | undefined> {
-    const index = pagosBus.value.findIndex(p => p.id === id);
+    const index = busPayments.value.findIndex(p => p.id === id);
     if (index === -1)
       return undefined;
 
-    const existing = pagosBus.value[index];
+    const existing = busPayments.value[index];
     if (!existing)
       return undefined;
 
@@ -1855,7 +1868,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       const updated = await repository.updateBusPayment(id, data);
-      pagosBus.value[index] = updated;
+      busPayments.value[index] = updated;
       return updated;
     }
     catch (e) {
@@ -1872,7 +1885,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     error.value = null;
     try {
       await repository.deleteBusPayment(id);
-      pagosBus.value = pagosBus.value.filter(p => p.id !== id);
+      busPayments.value = busPayments.value.filter(p => p.id !== id);
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
@@ -1884,19 +1897,19 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
 
   return {
     // State
-    cotizaciones,
-    proveedoresQuotation,
-    pagosProveedor,
-    optOutsProveedor,
-    ajustesProveedor,
-    ajustesViajero,
-    hospedajesQuotation,
-    pagosHospedaje,
-    preciosPublicos,
-    busesApartados,
-    pagosBus,
-    gastosAdicionales,
-    categoriasGasto,
+    cotizaciones: quotations,
+    proveedoresQuotation: quotationProviders,
+    pagosProveedor: providerPayments,
+    optOutsProveedor: providerOptOuts,
+    ajustesProveedor: providerPriceAdjustments,
+    ajustesViajero: travelerPriceAdjustments,
+    hospedajesQuotation: quotationAccommodations,
+    pagosHospedaje: accommodationPayments,
+    preciosPublicos: quotationPublicPrices,
+    busesApartados: quotationBuses,
+    pagosBus: busPayments,
+    gastosAdicionales: quotationExpenses,
+    categoriasGasto: expenseCategories,
     loading,
     error,
     filters,
