@@ -1,7 +1,7 @@
 import type { QueryData } from '@supabase/supabase-js';
 
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelStats, TravelStatus, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
+import type { TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelStats, TravelStatus, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
 
 import { validateAndMapItinerary } from './use-travel-domain';
 
@@ -18,8 +18,8 @@ export function useTravelRepository() {
   /**
    * Builds (without running) the `travels` select with every related sub-table plus the
    * traveler count (coordinators excluded; `travelers` needs the FK hint, see `selectTravelSummary`).
-   * Shared by `fetchAll` and `fetchById` so both read and map exactly the same shape;
-   * callers chain their own filters/ordering before awaiting.
+   * Used by `fetchById`, which chains its own filter before awaiting; the select and its
+   * `QueryData` row type stay separate so `mapTravelWithRelations` can be typed from them.
    * @returns Unexecuted PostgREST query builder
    */
   function selectTravelWithRelations() {
@@ -55,21 +55,6 @@ export function useTravelRepository() {
       ...mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations }),
       travelerCount,
     };
-  }
-
-  /**
-   * Fetches all travels with their related sub-entities, ordered by creation date descending.
-   * @returns All travel records mapped to domain objects with itinerary, services, buses, accommodations, and coordinators
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function fetchAll(): Promise<Travel[]> {
-    const { data, error } = await selectTravelWithRelations()
-      .order('created_at', { ascending: false });
-
-    if (error)
-      throw error;
-
-    return data.map(mapTravelWithRelations);
   }
 
   /**
@@ -718,7 +703,6 @@ export function useTravelRepository() {
   }
 
   return {
-    fetchAll,
     fetchById,
     fetchSummaries,
     fetchStatusCounts,

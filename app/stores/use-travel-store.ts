@@ -1,4 +1,4 @@
-import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStats, TravelStatus, TravelUpdateData } from '~/types/travel';
+import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStatus, TravelUpdateData } from '~/types/travel';
 
 import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
@@ -12,64 +12,10 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   const mediaRepository = useTravelMediaRepository();
 
   // State
-  const travels = ref<Travel[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
-  // True once the first fetchAll() succeeds; until then an empty list means "not loaded yet", not "no travels".
-  const loaded = ref(false);
-
-  // Getters (computed)
-  const allTravels = computed((): Travel[] => {
-    return [...travels.value].sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  });
-
-  const getTravelById = computed(() => {
-    return (id: string): Travel | undefined => {
-      return travels.value.find(travel => travel.id === id);
-    };
-  });
-
-  const getTravelsByStatus = computed(() => {
-    return (status: TravelStatus): Travel[] => {
-      return travels.value.filter(travel => travel.status === status);
-    };
-  });
-
-  const getAccommodationsByTravel = computed(() => {
-    return (travelId: string): TravelAccommodation[] => {
-      return travels.value.find(t => t.id === travelId)?.accommodations ?? [];
-    };
-  });
-
-  const stats = computed((): TravelStats => {
-    return {
-      total: travels.value.length,
-      pending: travels.value.filter(t => t.status === 'pending').length,
-      published: travels.value.filter(t => t.status === 'published').length,
-      inProgress: travels.value.filter(t => t.status === 'in_progress').length,
-      completed: travels.value.filter(t => t.status === 'completed').length,
-      cancelled: travels.value.filter(t => t.status === 'cancelled').length,
-    };
-  });
 
   // Actions
-  async function fetchAll(): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      travels.value = await repository.fetchAll();
-      loaded.value = true;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al cargar viajes';
-    }
-    finally {
-      loading.value = false;
-    }
-  }
-
   async function addTravel(data: TravelFormData): Promise<Travel> {
     loading.value = true;
     error.value = null;
@@ -191,7 +137,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       loading.value = false;
     }
 
-    travels.value = travels.value.filter(t => t.id !== id);
     error.value = null;
     return true;
   }
@@ -302,18 +247,9 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
   return {
     // State
-    travels,
     loading,
     error,
-    loaded,
-    // Getters
-    allTravels,
-    getTravelById,
-    getTravelsByStatus,
-    getAccommodationsByTravel,
-    stats,
     // Actions
-    fetchAll,
     addTravel,
     updateTravel,
     deleteTravel,
