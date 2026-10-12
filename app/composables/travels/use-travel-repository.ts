@@ -717,21 +717,6 @@ export function useTravelRepository() {
       throw error;
   }
 
-  /**
-   * Deletes a single bus record from a travel.
-   * @param busId - UUID of the `travel_buses` record to delete
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function removeTravelBus(busId: string): Promise<void> {
-    const { error } = await supabase
-      .from('travel_buses')
-      .delete()
-      .eq('id', busId);
-
-    if (error)
-      throw error;
-  }
-
   return {
     fetchAll,
     fetchById,
@@ -743,7 +728,6 @@ export function useTravelRepository() {
     updateTravelBus,
     isOwnedByCurrentUser,
     removeTravel,
-    removeTravelBus,
     insertTravel,
     upsertTravelInternals,
     insertActivities,

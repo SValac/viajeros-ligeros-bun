@@ -1,4 +1,3 @@
-import type { Tables } from '~/types/database.types';
 import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStats, TravelStatus, TravelUpdateData } from '~/types/travel';
 
 import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
@@ -97,7 +96,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
 
       const newTravel = mapTravelRowToDomain(travel, extras);
 
-      travels.value.push(newTravel);
       // The new travel shows up in every list page/filter and in the totals
       queryCache.invalidateQueries({ key: travelKeys.root });
       error.value = null;
@@ -113,21 +111,9 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   }
 
   async function updateTravel(id: string, data: Partial<TravelUpdateData>): Promise<boolean> {
-    const index = travels.value.findIndex(t => t.id === id);
-    if (index === -1) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-    const existingTravel = travels.value[index];
-    if (!existingTravel) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-
     loading.value = true;
     error.value = null;
     try {
-      let travelRow: Tables<'travels'> | null = null;
       const travelRootKeys: (keyof TravelUpdateData)[] = [
         'label',
         'destination',
@@ -149,59 +135,20 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       const haveTravelFields = travelRootKeys.some(key => key in data);
       const haveInternalFields = travelInternalKeys.some(key => key in data);
 
-      if (haveTravelFields) {
-        travelRow = await repository.updateTravel(id, data);
-      }
-
-      let internals: Tables<'travel_internals'> | null = null;
+      if (haveTravelFields)
+        await repository.updateTravel(id, data);
       if (haveInternalFields)
-        internals = await repository.upsertTravelInternals(id, data);
-
-      let itinerary = travels.value[index]?.itinerary ?? [];
-      let services = travels.value[index]?.services ?? [];
-      let buses = travels.value[index]?.buses ?? [];
-      let accommodations = travels.value[index]?.accommodations ?? [];
-      let coordinatorIds = travels.value[index]?.coordinatorIds ?? [];
-
+        await repository.upsertTravelInternals(id, data);
       if (data.itinerary !== undefined)
-        itinerary = await repository.replaceActivities(id, data.itinerary);
+        await repository.replaceActivities(id, data.itinerary);
       if (data.services !== undefined)
-        services = await repository.replaceServices(id, data.services);
+        await repository.replaceServices(id, data.services);
       if (data.buses !== undefined)
-        buses = await repository.replaceBuses(id, data.buses);
+        await repository.replaceBuses(id, data.buses);
       if (data.accommodations !== undefined)
-        accommodations = await repository.replaceAccommodations(id, data.accommodations);
-      if (data.coordinatorIds !== undefined) {
+        await repository.replaceAccommodations(id, data.accommodations);
+      if (data.coordinatorIds !== undefined)
         await repository.replaceCoordinators(id, data.coordinatorIds);
-        coordinatorIds = data.coordinatorIds;
-      }
-
-      travels.value[index] = travelRow
-        ? mapTravelRowToDomain(travelRow, {
-            coordinatorIds,
-            itinerary,
-            services,
-            buses,
-            accommodations,
-            internals: internals ?? {
-              internal_notes: existingTravel.internalNotes ?? null,
-              total_operation_cost: existingTravel.totalOperationCost ?? null,
-              projected_profit: existingTravel.projectedProfit ?? null,
-            },
-          })
-        : {
-            ...existingTravel,
-            coordinatorIds,
-            itinerary,
-            services,
-            buses,
-            accommodations,
-            ...(internals && {
-              internalNotes: internals.internal_notes ?? undefined,
-              totalOperationCost: internals.total_operation_cost ?? undefined,
-              projectedProfit: internals.projected_profit ?? undefined,
-            }),
-          };
 
       // Not just the detail: status and label also show in lists, totals and payment labels
       queryCache.invalidateQueries({ key: travelKeys.root });
@@ -254,40 +201,10 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   }
 
   async function updateTravelBus(travelId: string, busId: string, data: Partial<Omit<TravelBus, 'id'>>): Promise<boolean> {
-    const travelIndex = travels.value.findIndex(t => t.id === travelId);
-    if (travelIndex === -1) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-
-    const existingTravel = travels.value[travelIndex];
-    if (!existingTravel) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-
-    const busIndex = (existingTravel.buses ?? []).findIndex(b => b.id === busId);
-    if (busIndex === -1) {
-      error.value = 'Autobús no encontrado en el viaje';
-      return false;
-    }
-
     loading.value = true;
     error.value = null;
     try {
-      const updatedBus = await repository.updateTravelBus(busId, data);
-      const currentBuses = existingTravel.buses ?? [];
-      const updatedBuses = [
-        ...currentBuses.slice(0, busIndex),
-        updatedBus,
-        ...currentBuses.slice(busIndex + 1),
-      ];
-
-      travels.value[travelIndex] = {
-        ...existingTravel,
-        buses: updatedBuses,
-      };
-
+      await repository.updateTravelBus(busId, data);
       queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
       return true;
     }
@@ -300,85 +217,15 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     }
   }
 
-  async function removeBusFromTravel(travelId: string, busId: string): Promise<boolean> {
-    const travelIndex = travels.value.findIndex(t => t.id === travelId);
-    if (travelIndex === -1) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-
-    const existingTravel = travels.value[travelIndex];
-    if (!existingTravel) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-
-    const busExists = (existingTravel.buses ?? []).some(b => b.id === busId);
-    if (!busExists) {
-      error.value = 'Autobús no encontrado en el viaje';
-      return false;
-    }
-
-    loading.value = true;
-    error.value = null;
-    try {
-      await repository.removeTravelBus(busId);
-      travels.value[travelIndex] = {
-        ...existingTravel,
-        buses: (existingTravel.buses ?? []).filter(b => b.id !== busId),
-      };
-
-      queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
-      return true;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al eliminar autobús del viaje';
-      return false;
-    }
-    finally {
-      loading.value = false;
-    }
-  }
-
   async function updateTravelAccommodation(
     travelId: string,
     accommodationId: string,
     data: { roomNumber?: string | null; floor?: number | null },
   ): Promise<boolean> {
-    const travelIndex = travels.value.findIndex(t => t.id === travelId);
-    if (travelIndex === -1) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-
-    const existingTravel = travels.value[travelIndex];
-    if (!existingTravel) {
-      error.value = 'Viaje no encontrado';
-      return false;
-    }
-
-    const accIndex = (existingTravel.accommodations ?? []).findIndex(a => a.id === accommodationId);
-    if (accIndex === -1) {
-      error.value = 'Habitación no encontrada en el viaje';
-      return false;
-    }
-
     loading.value = true;
     error.value = null;
     try {
-      const updatedAcc = await repository.updateTravelAccommodation(accommodationId, data);
-      const currentAccommodations = existingTravel.accommodations ?? [];
-      const updatedAccommodations = [
-        ...currentAccommodations.slice(0, accIndex),
-        updatedAcc,
-        ...currentAccommodations.slice(accIndex + 1),
-      ];
-
-      travels.value[travelIndex] = {
-        ...existingTravel,
-        accommodations: updatedAccommodations,
-      };
-
+      await repository.updateTravelAccommodation(accommodationId, data);
       queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
       return true;
     }
@@ -407,8 +254,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const added = await repository.insertAccommodations(travelId, Array.from({ length: count }, () => ({ ...room })));
-      updateLocalAccommodations(travelId, new Set(), added);
+      await repository.insertAccommodations(travelId, Array.from({ length: count }, () => ({ ...room })));
+      updateLocalAccommodations(travelId);
       return true;
     }
     catch (e) {
@@ -432,7 +279,7 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     error.value = null;
     try {
       await repository.deleteEmptyAccommodation(roomId);
-      updateLocalAccommodations(travelId, new Set([roomId]), []);
+      updateLocalAccommodations(travelId);
       return true;
     }
     catch (e) {
@@ -445,28 +292,12 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   }
 
   /**
-   * Syncs a travel's accommodations after a write to `travel_accommodations` (the room
-   * actions above, or the quotation store through its own repository). The DB already
-   * changed, so the travel detail query is invalidated here too.
+   * Refreshes a travel's detail after a write to `travel_accommodations` (the room
+   * actions above, or the quotation store through its own repository).
    * @param travelId - UUID of the travel
-   * @param deletedIds - Accommodation ids deleted from the DB
-   * @param added - Accommodations inserted in the DB
    */
-  function updateLocalAccommodations(
-    travelId: string,
-    deletedIds: Set<string>,
-    added: TravelAccommodation[],
-  ): void {
+  function updateLocalAccommodations(travelId: string): void {
     queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
-    const index = travels.value.findIndex(t => t.id === travelId);
-    if (index === -1)
-      return;
-    const existing = travels.value[index]?.accommodations ?? [];
-    const kept = existing.filter(a => !deletedIds.has(a.id));
-    travels.value[index] = {
-      ...travels.value[index]!,
-      accommodations: [...kept, ...added],
-    };
   }
 
   return {
@@ -488,7 +319,6 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     deleteTravel,
     updateTravelStatus,
     updateTravelBus,
-    removeBusFromTravel,
     updateTravelAccommodation,
     addTravelRooms,
     deleteTravelRoom,

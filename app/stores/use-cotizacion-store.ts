@@ -690,7 +690,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
     const ids = rooms.map(room => room.id);
     await repository.deleteUnoccupiedAccommodations(ids);
-    useTravelsStore().updateLocalAccommodations(cotizacion.travelId, new Set(ids), []);
+    useTravelsStore().updateLocalAccommodations(cotizacion.travelId);
   }
 
   // Actions
