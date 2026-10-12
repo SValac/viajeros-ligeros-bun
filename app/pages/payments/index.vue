@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { TravelStatus } from '~/types/travel';
 
+import { travelPaymentTotalsQuery } from '~/queries/payments';
+import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 
 definePageMeta({
@@ -18,10 +20,39 @@ const travelerStore = useTravelerStore();
 
 // Travelers pay before, during and after the trip, so a travel stays here once published
 // (not while pending, nor once cancelled).
-const PAYABLE_STATUSES = new Set<TravelStatus>(['published', 'in_progress', 'completed']);
+const PAYABLE_STATUSES: TravelStatus[] = ['completed', 'in_progress', 'published'];
+const PAGE_SIZE = 20;
+const EMPTY_TOTALS: TravelPaymentTotals = { totalExpected: 0, totalCollected: 0, balance: 0, percent: 0 };
 
+const page = shallowRef(1);
+
+const { data: list, status: listStatus, refetch: refetchList } = useQuery(() => ({
+  ...travelListQuery({ statuses: PAYABLE_STATUSES, page: page.value, pageSize: PAGE_SIZE }),
+  placeholderData: previousList => previousList,
+}));
+
+const pageTravelIds = computed(() => (list.value?.items ?? []).map(travel => travel.id).sort());
+
+const { data: totals, status: totalStatus, refetch: refetchTotals } = useQuery(() => ({
+  ...travelPaymentTotalsQuery(pageTravelIds.value),
+  placeholderData: previousPayments => previousPayments,
+}));
+
+const pageRows = computed(() => (list.value?.items ?? []).map(travel => ({
+  travel,
+  travelerCount: travel.travelerCount,
+  ...(totals.value?.[travel.id] ?? EMPTY_TOTALS),
+})));
+
+// Si falló la lista, los totales están desactivados (sin ids): se disparan solos cuando vuelva
+function retry() {
+  refetchList();
+  refetchTotals();
+}
+
+// Temporal hasta el sub-paso d: las tarjetas siguen sumando todos los viajes desde los stores
 const payableTravels = computed(() =>
-  travelStore.allTravels.filter(travel => PAYABLE_STATUSES.has(travel.status)),
+  travelStore.allTravels.filter(travel => PAYABLE_STATUSES.includes(travel.status)),
 );
 
 // Los viajes llegan de forma asíncrona (init-stores); se cargan pagos y configuraciones
@@ -70,7 +101,7 @@ function goToTravelsDashboard() {
   router.push({ name: 'travels-dashboard' });
 }
 
-type TravelSummaryRow = (typeof travelSummaries.value)[number];
+type TravelSummaryRow = (typeof pageRows.value)[number];
 
 const columns: TableColumn<TravelSummaryRow>[] = [
   {
@@ -232,7 +263,26 @@ const columns: TableColumn<TravelSummaryRow>[] = [
         </h2>
       </template>
 
-      <div v-if="travelSummaries.length === 0" class="text-center py-12">
+      <div
+        v-if="(listStatus === 'pending' && !list) || (totalStatus === 'pending' && !totals)"
+        class="flex justify-center py-12"
+      >
+        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+      </div>
+      <div
+        v-else-if="listStatus === 'error' || totalStatus === 'error'"
+        class="flex flex-col items-center justify-center gap-4 py-12"
+      >
+        <p class="text-muted">
+          No se pudieron cargar los viajes
+        </p>
+        <UButton
+          label="Reintentar"
+          icon="i-lucide-refresh-cw"
+          @click="retry"
+        />
+      </div>
+      <div v-else-if="pageRows.length === 0" class="text-center py-12">
         <UIcon name="i-lucide-inbox" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <h3 class="text-lg font-medium mb-2">
           No hay viajes con pagos
@@ -245,11 +295,16 @@ const columns: TableColumn<TravelSummaryRow>[] = [
         </UButton>
       </div>
 
-      <UTable
-        v-else
-        :columns="columns"
-        :data="travelSummaries"
-      />
+      <template v-else>
+        <UTable :columns="columns" :data="pageRows" />
+        <div v-if="list && list.total > PAGE_SIZE" class="flex justify-end border-t border-default pt-4">
+          <UPagination
+            v-model:page="page"
+            :total="list.total"
+            :items-per-page="PAGE_SIZE"
+          />
+        </div>
+      </template>
     </UCard>
   </div>
 </template>
