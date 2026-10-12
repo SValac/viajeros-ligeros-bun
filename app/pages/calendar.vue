@@ -4,10 +4,11 @@ import type { TabsItem } from '@nuxt/ui';
 
 import { getLocalTimeZone, isSameMonth, parseDate, today } from '@internationalized/date';
 
-import type { Travel, TravelStatus } from '~/types/travel';
+import type { TravelStatus, TravelSummary } from '~/types/travel';
 import type { MexicanHoliday } from '~/utils/mexican-holidays';
 
 import { useTravelCalendar } from '~/composables/travels/use-travel-calendar';
+import { travelDetailQuery } from '~/queries/travels';
 import { getMexicanHolidaysByDay, HOLIDAY_KIND_LABELS, HOLIDAY_KIND_TEXT_CLASSES } from '~/utils/mexican-holidays';
 import { CALENDAR_DEFAULT_STATUSES, CALENDAR_LOCALE } from '~/utils/travel-calendar';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
@@ -18,7 +19,6 @@ definePageMeta({
 
 const route = useRoute();
 const router = useRouter();
-const travelsStore = useTravelsStore();
 
 const timeZone = getLocalTimeZone();
 
@@ -38,7 +38,7 @@ const visibleStatuses = computed<TravelStatus[]>(() => [
   ...(showCancelled.value ? ['cancelled' as const] : []),
 ]);
 
-const { loaded, visibleTravels, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses);
+const { status: travelStatus, refetch, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses, placeholder);
 
 // El viaje elegido vive en `?viaje=`: recargar o compartir el link conserva la selección.
 // `replace`: elegir viajes no llena el historial del navegador.
@@ -67,7 +67,6 @@ const monthHolidays = computed(() =>
     : [],
 );
 
-const selectedTravel = computed(() => visibleTravels.value.find(travel => travel.id === selectedTravelId.value));
 const dayTravels = computed(() => (selectedDay.value ? getTravelsOnDay(selectedDay.value) : []));
 const monthTravels = computed(() => getTravelsInMonth(placeholder.value));
 
@@ -92,12 +91,12 @@ function selectDay(day: DateValue | undefined) {
 }
 
 // Desde la lista del mes: el día elegido antes ya no aplica
-function selectTravelFromMonth(travel: Travel) {
+function selectTravelFromMonth(travel: TravelSummary) {
   selectedDay.value = undefined;
   selectedTravelId.value = travel.id;
 }
 
-function selectTravelFromDay(travel: Travel) {
+function selectTravelFromDay(travel: TravelSummary) {
   selectedTravelId.value = travel.id;
 }
 
@@ -107,30 +106,39 @@ function goToToday() {
   selectDay(date);
 }
 
+// Viaje elegido, sin importar el mes visible. Misma clave que el panel (TravelCalendarSummary):
+// Colada hace una sola petición para los dos. Sin `?viaje=` no pide nada (`enabled`).
+const { data: selectedTravel } = useQuery(() => travelDetailQuery(selectedTravelId.value));
+
 // Si un filtro oculta el viaje elegido, se deselecciona (y sale del query)
 watch(visibleStatuses, (statuses) => {
-  const selected = selectedTravelId.value ? travelsStore.getTravelById(selectedTravelId.value) : undefined;
+  const selected = selectedTravel.value;
   if (selected && !statuses.includes(selected.status))
     selectedTravelId.value = undefined;
 });
 
-// Link directo con `?viaje=`: al terminar de cargar los viajes, abrir el mes de ese viaje.
-// `loaded` solo pasa de false a true una vez, así que esto corre una sola vez.
-watch(loaded, (isLoaded) => {
-  const id = selectedTravelId.value;
-  if (!isLoaded || !id)
+// Link directo con `?viaje=`: cuando llega ese viaje, abrir su mes y que los filtros no lo oculten.
+// Solo una vez, para el id con el que se entró: elegir viajes después no mueve el calendario.
+// Bandera en vez de `stop()`: con `immediate` y el viaje ya en caché, el callback corre antes
+// de que `watch()` devuelva su handle.
+let linkHandled = !selectedTravelId.value;
+watch(selectedTravel, (travel) => {
+  if (linkHandled || travel === undefined) { // ya resuelto, o el viaje todavía está cargando
     return;
-
-  const travel = travelsStore.getTravelById(id);
-  if (!travel) {
+  }
+  linkHandled = true;
+  // No existe o RLS lo oculta: se limpia `?viaje=` y el panel muestra su estado vacío
+  if (travel === null) {
     selectedTravelId.value = undefined;
     return;
   }
   // Que los filtros no oculten el viaje del link
-  if (travel.status === 'cancelled')
+  if (travel.status === 'cancelled') {
     showCancelled.value = true;
-  else if (!selectedStatuses.value.includes(travel.status))
+  }
+  else if (!selectedStatuses.value.includes(travel.status)) {
     selectedStatuses.value = [...selectedStatuses.value, travel.status];
+  }
   placeholder.value = parseDate(travel.startDate);
 }, { immediate: true });
 </script>
@@ -193,10 +201,22 @@ watch(loaded, (isLoaded) => {
         </div>
       </div>
 
-      <div v-if="!loaded" class="flex justify-center py-24">
+      <div v-if="travelStatus === 'pending'" class="flex justify-center py-24">
         <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
       </div>
-
+      <div
+        v-else-if="travelStatus === 'error'"
+        class="flex h-full items-center justify-center flex-col gap-4"
+      >
+        <p class="text-muted">
+          No se pudieron cargar los viajes
+        </p>
+        <UButton
+          label="Reintentar"
+          icon="i-lucide-refresh-cw"
+          @click="refetch()"
+        />
+      </div>
       <div v-else class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         <!-- Calendario -->
         <UCard class="lg:col-span-2">
@@ -205,7 +225,7 @@ watch(loaded, (isLoaded) => {
             :model-value="selectedDay"
             :get-travels-on-day="getTravelsOnDay"
             :travel-lanes="travelLanes"
-            :selected-travel-id="selectedTravel?.id"
+            :selected-travel-id="selectedTravelId"
             :get-holiday-on-day="getHolidayOnDay"
             @update:model-value="selectDay"
           />
@@ -250,7 +270,7 @@ watch(loaded, (isLoaded) => {
                 <TravelCalendarList
                   v-if="dayTravels.length > 0"
                   :travels="dayTravels"
-                  :selected-travel-id="selectedTravel?.id"
+                  :selected-travel-id="selectedTravelId"
                   @select="selectTravelFromDay"
                 />
                 <p v-else class="text-sm text-muted">
@@ -299,7 +319,7 @@ watch(loaded, (isLoaded) => {
               <TravelCalendarList
                 v-if="monthTravels.length > 0"
                 :travels="monthTravels"
-                :selected-travel-id="selectedTravel?.id"
+                :selected-travel-id="selectedTravelId"
                 @select="selectTravelFromMonth"
               />
               <p v-else class="text-sm text-muted">
@@ -308,7 +328,7 @@ watch(loaded, (isLoaded) => {
             </template>
           </UCard>
 
-          <TravelCalendarSummary v-if="selectedTravel" :travel="selectedTravel" />
+          <TravelCalendarSummary v-if="selectedTravelId" :travel-id="selectedTravelId" />
 
           <UCard v-else>
             <div class="flex flex-col items-center gap-3 py-6 text-center">

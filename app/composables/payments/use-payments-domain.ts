@@ -1,4 +1,4 @@
-import type { AdjustmentItem, Payment, PaymentCalculation, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
+import type { AdjustmentItem, Payment, PaymentCalculation, PaymentStatus, TravelerAccountConfig, TravelPaymentTotals } from '~/types/payment';
 
 /**
  * Calculates the monetary value of a single discount or surcharge item.
@@ -84,4 +84,56 @@ export function validatePaymentAmount(amount: number, balance: number, appliedPr
     return 'El monto debe ser mayor a cero.';
   }
   return null;
+}
+
+/**
+ * Sums each travel's per-traveler payment summaries (`calculatePaymentSummary`) into travel totals.
+ * Travelers are the union of those with an account config or a payment: one who paid without a
+ * config still adds to the collected amount (with a zero expected cost).
+ * @param travelIds - Travels to summarize; each gets an entry, zeros if it has no configs or payments
+ * @param configs - Account configs of those travels
+ * @param payments - Payments of those travels
+ * @returns Totals keyed by travel id. `balance` isn't clamped: overpayment makes it negative
+ */
+export function summarizeTravelPayments(
+  travelIds: string[],
+  configs: TravelerAccountConfig[],
+  payments: Payment[],
+): Record<string, TravelPaymentTotals> {
+  const result: Record<string, TravelPaymentTotals> = {};
+
+  for (const travelId of travelIds) {
+    const travelConfigs = configs.filter(config => config.travelId === travelId);
+    const travelPayments = payments.filter(payment => payment.travelId === travelId);
+
+    const travelerIds = new Set([
+      ...travelConfigs.map(travelConfig => travelConfig.travelerId),
+      ...travelPayments.map(travelPayment => travelPayment.travelerId),
+    ]);
+
+    let totalExpected = 0;
+    let totalCollected = 0;
+
+    for (const travelerId of travelerIds) {
+      const travelerConfig = travelConfigs.find(travelConfig => travelConfig.travelerId === travelerId);
+      const travelerPayments = travelPayments.filter(travelPayment => travelPayment.travelerId === travelerId);
+
+      const summary = calculatePaymentSummary(travelerConfig, travelerPayments);
+
+      totalExpected += summary.finalCost;
+      totalCollected += summary.totalPaid;
+    }
+
+    const balance = totalExpected - totalCollected;
+    const percent = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
+
+    result[travelId] = {
+      totalExpected,
+      totalCollected,
+      balance,
+      percent,
+    };
+  }
+
+  return result;
 }

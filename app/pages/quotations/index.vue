@@ -3,25 +3,22 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { QuotationStatus } from '~/types/quotation';
+import type { TravelSummary } from '~/types/travel';
+
+import { travelListQuery } from '~/queries/travels';
 
 definePageMeta({
   name: 'quotations-index',
 });
 
 const router = useRouter();
-const travelStore = useTravelsStore();
-const cotizacionStore = useCotizacionStore();
 
-const quotationRows = computed(() =>
-  travelStore.allTravels.map(travel => ({
-    travel,
-    quotation: cotizacionStore.getCotizacionByTravel(travel.id),
-  })),
-);
+const { data, status, refetch } = useQuery(() => travelListQuery({}));
+
+const travels = computed(() => data.value?.items ?? []);
 
 const stats = computed(() => {
-  const rows = quotationRows.value;
+  const rows = travels.value;
   return {
     totalTravels: rows.length,
     withQuotation: rows.filter(r => r.quotation).length,
@@ -46,25 +43,23 @@ function goToTravelsDashboard() {
   router.push({ name: 'travels-dashboard' });
 }
 
-type QuotationRow = (typeof quotationRows.value)[number];
-
-const columns: TableColumn<QuotationRow>[] = [
+const columns: TableColumn<TravelSummary>[] = [
   {
     id: 'label',
     header: 'Viaje',
     cell: ({ row }) => h(resolveComponent('NuxtLink'), {
-      to: { name: 'quotation-detail', params: { id: row.original.travel.id } },
+      to: { name: 'quotation-detail', params: { id: row.original.id } },
       class: 'flex items-center gap-2 hover:text-primary transition-colors group',
     }, () => [
       h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
-      h('span', { class: 'font-medium' }, row.original.travel.label),
+      h('span', { class: 'font-medium' }, row.original.label),
     ]),
   },
   {
     id: 'dates',
     header: 'Fechas',
     cell: ({ row }) => {
-      const { startDate, endDate } = row.original.travel;
+      const { startDate, endDate } = row.original;
       return h('span', { class: 'text-sm text-muted' }, `${formatDate(startDate)} - ${formatDate(endDate)}`);
     },
   },
@@ -72,7 +67,7 @@ const columns: TableColumn<QuotationRow>[] = [
     id: 'travelStatus',
     header: 'Estado del viaje',
     cell: ({ row }) => {
-      const { status } = row.original.travel;
+      const { status } = row.original;
       return h(resolveComponent('UBadge'), {
         color: getTravelStatusColor(status),
         variant: 'subtle',
@@ -104,7 +99,7 @@ const columns: TableColumn<QuotationRow>[] = [
           variant: 'outline',
           color: hasQuotation ? 'primary' : 'neutral',
           icon: hasQuotation ? 'i-lucide-file-check' : 'i-lucide-file-plus',
-          onClick: () => goToQuotation(row.original.travel.id),
+          onClick: () => goToQuotation(row.original.id),
         },
         () => hasQuotation ? 'Ver cotización' : 'Crear cotización',
       );
@@ -114,7 +109,10 @@ const columns: TableColumn<QuotationRow>[] = [
 </script>
 
 <template>
-  <div class="space-y-6">
+  <div
+    v-if="status === 'success'"
+    class="space-y-6"
+  >
     <!-- Header -->
     <div>
       <h1 class="text-3xl font-bold">
@@ -186,7 +184,7 @@ const columns: TableColumn<QuotationRow>[] = [
 
     <!-- Quotations table -->
     <UCard>
-      <div v-if="quotationRows.length === 0" class="text-center py-12">
+      <div v-if="travels.length === 0" class="text-center py-12">
         <UIcon name="i-lucide-inbox" class="w-16 h-16 text-muted mx-auto mb-4" />
         <h3 class="text-lg font-medium mb-2">
           No hay viajes registrados
@@ -202,8 +200,25 @@ const columns: TableColumn<QuotationRow>[] = [
       <UTable
         v-else
         :columns="columns"
-        :data="quotationRows"
+        :data="travels"
       />
     </UCard>
+  </div>
+  <div
+    v-else-if="status === 'error'"
+    class="flex h-full items-center justify-center flex-col gap-4"
+  >
+    <p class="text-muted">
+      No se pudieron cargar los viajes
+    </p>
+    <UButton
+      label="Reintentar"
+      icon="i-lucide-refresh-cw"
+      @click="refetch()"
+    />
+  </div>
+
+  <div v-else class="flex h-full items-center justify-center">
+    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
   </div>
 </template>
