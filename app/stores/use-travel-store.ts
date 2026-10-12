@@ -98,6 +98,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
       const newTravel = mapTravelRowToDomain(travel, extras);
 
       travels.value.push(newTravel);
+      // The new travel shows up in every list page/filter and in the totals
+      queryCache.invalidateQueries({ key: travelKeys.root });
       error.value = null;
       return newTravel;
     }
@@ -201,7 +203,8 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
             }),
           };
 
-      queryCache.invalidateQueries({ key: travelKeys.detail(id), exact: true });
+      // Not just the detail: status and label also show in lists, totals and payment labels
+      queryCache.invalidateQueries({ key: travelKeys.root });
       return true;
     }
     catch (e) {
