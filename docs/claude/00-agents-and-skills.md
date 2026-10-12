@@ -20,27 +20,22 @@ Los skills están instalados en `.claude/skills/` y `.agents/skills/`. Se invoca
 | `vitest` | Escribir tests con Vitest: mocking, coverage, fixtures, configuración |
 | `vue-testing-best-practices` | Testing de componentes Vue con Vue Test Utils, Playwright E2E |
 | `web-design-guidelines` | Auditar UI para accesibilidad, UX y buenas prácticas web |
-| `supabase` | Cualquier tarea con Supabase: Auth, RLS, Storage, migraciones, CLI |
-| `supabase-postgres-best-practices` | Escribir o revisar SQL, esquemas, índices y políticas RLS |
+| `supabase:supabase` | Cualquier tarea con Supabase: Auth, RLS, Storage, migraciones, CLI |
+| `supabase:supabase-postgres-best-practices` | Escribir o revisar SQL, esquemas, índices y políticas RLS |
+
+> Los dos skills de Supabase vienen del plugin oficial `supabase@claude-plugins-official`, activado solo en este proyecto desde `.claude/settings.json` (se actualiza con el plugin; no hay copia en el repo).
 
 ### Diseño
-
-Skills de diseño instalados directamente en `.claude/skills/` (no son symlinks a `.agents/skills/`).
 
 | Skill | Cuándo usarlo |
 | --- | --- |
 | `ui-ux-pro-max` | Diseñar o revisar pantallas: paletas, tipografías, guías UX, accesibilidad, layouts. El más útil para el CRM y la web |
-| `design-system` | Arquitectura de tokens (primitivo → semántico → componente), escalas de espaciado y tipografía, specs de componentes |
-| `ui-styling` | Patrones de Tailwind y accesibilidad. Está escrito para shadcn/ui: en este proyecto usar los componentes de Nuxt UI |
-| `brand` | Voz de marca, identidad visual, guías de estilo |
-| `design` | Logos, identidad corporativa, iconos, mockups, imágenes para redes |
-| `banner-design` | Banners para redes, anuncios, hero de la web, impresión |
-| `slides` | Presentaciones HTML con Chart.js |
 
-> La generación de imágenes (logos, iconos, banners) usa Gemini y necesita `GEMINI_API_KEY`. `banner-design` menciona skills que no están instalados (`ai-artist`, `ai-multimodal`, `frontend-design`).
+> Los skills de marketing y branding (`banner-design`, `brand`, `design`, `design-system`, `slides`, `ui-styling`) ya no viven en este repo: están en `~/.claude/skill-library/design/` y se enlazan solo en el sitio público (`viajeros-ligeros-web`). Para usarlos aquí: `ln -s ~/.claude/skill-library/design/<skill> .claude/skills/`.
 
 ### Herramientas a nivel usuario
 
+- **Plugins `supabase` y `vercel`**: activados solo en este proyecto desde `.claude/settings.json`; en tu configuración global están apagados.
 - **`playwright-cli`**: automatización de navegador desde la terminal para probar flujos contra `bun run dev`. Está instalado globalmente (no en el repo). Ejecutarlo fuera del repo: escribe una carpeta `.playwright-cli/` en el directorio actual, y no está en `.gitignore`.
 
 ---
