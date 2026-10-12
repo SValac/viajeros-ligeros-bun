@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
 
+import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
 
@@ -16,7 +17,6 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
-const travelStore = useTravelsStore();
 const travelerStore = useTravelerStore();
 const cotizacionStore = useCotizacionStore();
 
@@ -59,6 +59,19 @@ const travelerTravelIds = computed((): string[] => {
   return [...new Set([...configuredTravelIds, ...paymentTravelIds, ...(enrolledTravelId ? [enrolledTravelId] : [])])];
 });
 
+const travelSummaryFilters = computed(() => ({
+  ids: [...travelerTravelIds.value].sort(),
+}));
+
+const { data: travelSummaries } = useQuery(() => ({
+  ...travelListQuery(travelSummaryFilters.value),
+  enabled: travelSummaryFilters.value.ids.length > 0,
+}));
+
+const travelLabels = computed(() => new Map(
+  (travelSummaries.value?.items ?? []).map(t => [t.id, t.label]),
+));
+
 // Filters
 const dateFrom = ref('');
 const dateTo = ref('');
@@ -67,13 +80,12 @@ const travelFilter = ref<string>('all');
 const travelOptions = computed(() => [
   { label: 'Todos los viajes', value: 'all' },
   ...travelerTravelIds.value.map((id) => {
-    const t = travelStore.getTravelById(id);
-    return { label: t?.label ?? id, value: id };
+    return { label: travelLabels.value.get(id) ?? id, value: id };
   }),
 ]);
 
 function getTravelName(id: string) {
-  return travelStore.getTravelById(id)?.label ?? id;
+  return travelLabels.value.get(id) ?? id;
 }
 
 const filteredPayments = computed(() => {

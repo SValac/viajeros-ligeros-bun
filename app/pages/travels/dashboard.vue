@@ -1,11 +1,17 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
+import type { CheckboxGroupItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Travel, TravelStatus } from '~/types/travel';
+import type { TravelStatus, TravelSummary } from '~/types/travel';
 
+import { travelListQuery, travelStatsQuery } from '~/queries/travels';
 import { parseDisplayDate } from '~/utils/format-date';
+import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
+
+const PAGE_SIZE = 20;
+// Por defecto solo los viajes activos
+const DASHBOARD_DEFAULT_STATUSES: TravelStatus[] = ['pending', 'published', 'in_progress'];
 
 definePageMeta({
   name: 'travels-dashboard',
@@ -18,8 +24,39 @@ const toast = useToast();
 const router = useRouter();
 
 // Computed
-const travels = computed(() => travelsStore.allTravels);
-const stats = computed(() => travelsStore.stats);
+const { data: stats } = useQuery(() => travelStatsQuery());
+
+const page = shallowRef(1);
+const statuses = ref<TravelStatus[]>([...DASHBOARD_DEFAULT_STATUSES]);
+
+const statusItems: CheckboxGroupItem[] = TRAVEL_STATUSES.map(status => ({
+  label: getTravelStatusLabel(status),
+  value: status,
+}));
+
+// Con otro filtro la página actual puede no existir
+watch(statuses, () => {
+  page.value = 1;
+});
+
+const { data, status, refetch } = useQuery(() => ({
+  ...travelListQuery({
+    statuses: [...statuses.value].sort(),
+    page: page.value,
+    pageSize: PAGE_SIZE,
+  }),
+  placeholderData: previousList => previousList,
+  enabled: statuses.value.length > 0,
+}));
+
+// Al borrar el único viaje de la última página, esa página deja de existir: ir a la última que sí
+watch(data, (list) => {
+  if (list && list.items.length === 0 && page.value > 1) {
+    page.value = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
+  }
+});
+
+const travels = computed(() => data.value?.items ?? []);
 
 // Funciones auxiliares
 function formatDate(dateString: string): string {
@@ -35,6 +72,10 @@ function formatDateRange(start: string, end: string): string {
   return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
+function resetStatuses() {
+  statuses.value = [...DASHBOARD_DEFAULT_STATUSES];
+}
+
 // Navegación
 function navigateToCreate() {
   router.push('/travels/new');
@@ -44,7 +85,7 @@ function navigateToEdit(travelId: string) {
   router.push(`/travels/${travelId}/edit`);
 }
 
-async function handleDelete(travel: Travel) {
+async function handleDelete(travel: TravelSummary) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar el viaje ${travel.label}?`)) {
     const success = await travelsStore.deleteTravel(travel.id);
@@ -66,7 +107,7 @@ async function handleDelete(travel: Travel) {
 }
 
 // Acciones de la fila
-function getRowActions(travel: Travel) {
+function getRowActions(travel: TravelSummary) {
   return [
     [
       {
@@ -91,7 +132,7 @@ function getRowActions(travel: Travel) {
 }
 
 // Columnas de la tabla
-const columns: TableColumn<Travel>[] = [
+const columns: TableColumn<TravelSummary>[] = [
   {
     accessorKey: 'label',
     header: 'Nombre',
@@ -169,6 +210,12 @@ const columns: TableColumn<Travel>[] = [
           Administra todos los viajes de la agencia
         </p>
       </div>
+      <UCheckboxGroup
+        v-model="statuses"
+        :items="statusItems"
+        legend="Estatus del viaje"
+        orientation="horizontal"
+      />
       <UButton
         icon="i-lucide-plus"
         size="lg"
@@ -188,7 +235,7 @@ const columns: TableColumn<Travel>[] = [
               Total Viajes
             </p>
             <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats.total }}
+              {{ stats?.total ?? '—' }}
             </p>
           </div>
           <UIcon
@@ -206,7 +253,7 @@ const columns: TableColumn<Travel>[] = [
               Publicados
             </p>
             <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats.published }}
+              {{ stats?.published ?? '—' }}
             </p>
           </div>
           <UIcon
@@ -224,7 +271,7 @@ const columns: TableColumn<Travel>[] = [
               En Curso
             </p>
             <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats.inProgress }}
+              {{ stats?.inProgress ?? '—' }}
             </p>
           </div>
           <UIcon
@@ -237,7 +284,27 @@ const columns: TableColumn<Travel>[] = [
 
     <!-- Tabla de viajes -->
     <UCard>
-      <div v-if="travels.length === 0" class="text-center py-12">
+      <div v-if="statuses.length === 0" class="py-12 text-center text-muted">
+        Elegí al menos un estatus para ver viajes
+      </div>
+      <div v-else-if="status === 'pending' && !data" class="flex justify-center py-12">
+        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+      </div>
+      <div
+        v-else-if="status === 'error'"
+        class="flex flex-col items-center justify-center gap-4 py-12"
+      >
+        <p class="text-muted">
+          No se pudieron cargar los viajes
+        </p>
+        <UButton
+          label="Reintentar"
+          icon="i-lucide-refresh-cw"
+          @click="refetch()"
+        />
+      </div>
+      <!-- La agencia no tiene ningún viaje -->
+      <div v-else-if="travels.length === 0 && stats?.total === 0" class="text-center py-12">
         <UIcon
           name="i-lucide-inbox"
           class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
@@ -255,11 +322,35 @@ const columns: TableColumn<Travel>[] = [
           Crear Primer Viaje
         </UButton>
       </div>
-      <UTable
-        v-else
-        :columns="columns"
-        :data="travels"
-      />
+      <!-- Hay viajes, pero ninguno con los estatus marcados -->
+      <div v-else-if="travels.length === 0" class="text-center py-12">
+        <UIcon
+          name="i-lucide-search-x"
+          class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
+        />
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+          Ningún viaje con estos estatus
+        </h3>
+        <UButton
+          label="Restablecer filtros"
+          variant="outline"
+          color="neutral"
+          @click="resetStatuses"
+        />
+      </div>
+      <template v-else>
+        <UTable
+          :columns="columns"
+          :data="travels"
+        />
+        <div v-if="data && data.total > PAGE_SIZE" class="flex justify-end border-t border-default pt-4">
+          <UPagination
+            v-model:page="page"
+            :total="data.total"
+            :items-per-page="PAGE_SIZE"
+          />
+        </div>
+      </template>
     </UCard>
   </div>
 </template>

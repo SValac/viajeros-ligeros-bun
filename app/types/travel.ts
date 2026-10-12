@@ -57,6 +57,15 @@ export type TravelAccommodation = {
   updatedAt: string;
 };
 
+export type TravelStats = {
+  total: number;
+  pending: number;
+  published: number;
+  inProgress: number;
+  completed: number;
+  cancelled: number;
+};
+
 export type Travel = {
   id: string;
   label: string;
@@ -88,8 +97,20 @@ export type TravelFormData = Omit<Travel, 'id' | 'createdAt' | 'updatedAt' | 'ac
 
 export type TravelUpdateData = Omit<Travel, 'id' | 'createdAt' | 'updatedAt'>;
 
-export type TravelFilters = {
-  status?: TravelStatus;
-  dateFrom?: string;
-  dateTo?: string;
+export type TravelSummary = Pick<Travel, 'id' | 'label' | 'destination' | 'startDate' | 'endDate' | 'status' | 'imageUrl' | 'featured' | 'coordinatorIds' | 'createdAt'> & {
+  travelerCount: number;
+  quotation?: { id: string; status: QuotationStatus };
 };
+
+export type TravelSummaryFilters = {
+  ids?: string[]; // only these travels, e.g. the travels of one traveler
+  statuses?: TravelStatus[];
+  overlapsFrom?: string; // YYYY-MM-DD, calendar
+  overlapsTo?: string;
+  page?: number; // 1-based; no page = no pagination
+  pageSize?: number;
+};
+
+// What `travelDetailQuery` returns: a `Travel` plus its traveler count (coordinators excluded).
+// Separate from `Travel` so code that builds a `Travel` by hand doesn't have to invent the count.
+export type TravelDetail = Travel & { travelerCount: number };

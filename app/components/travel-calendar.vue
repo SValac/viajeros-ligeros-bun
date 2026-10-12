@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import type { DateValue } from '@internationalized/date';
 
-import { getLocalTimeZone, isSameMonth, isToday, startOfMonth, startOfWeek } from '@internationalized/date';
+import { getLocalTimeZone, isSameMonth, isToday } from '@internationalized/date';
 
-import type { Travel } from '~/types/travel';
+import type { TravelSummary } from '~/types/travel';
 import type { MexicanHoliday } from '~/utils/mexican-holidays';
 
 import { HOLIDAY_KIND_TEXT_CLASSES } from '~/utils/mexican-holidays';
 import {
-  CALENDAR_LOCALE,
+  getCalendarGridRange,
   getTravelBarShape,
+  GRID_DAYS,
   TRAVEL_BAR_SHAPE_CLASSES,
   TRAVEL_STATUS_BAR_CLASSES,
   TRAVEL_STATUS_BAR_SELECTED_CLASSES,
@@ -20,7 +21,7 @@ import { getTravelStatusColor } from '~/utils/travel-status';
 // Las barras son <span>: el día ya es el elemento clicable (role="button"), sin botones anidados.
 
 const props = defineProps<{
-  getTravelsOnDay: (day: DateValue) => Travel[];
+  getTravelsOnDay: (day: DateValue) => TravelSummary[];
   travelLanes: Map<string, number>;
   selectedTravelId?: string;
   getHolidayOnDay?: (day: DateValue) => MexicanHoliday | undefined;
@@ -31,11 +32,9 @@ const placeholder = defineModel<DateValue>('placeholder', { required: true });
 
 // Barras por día; el resto se resume en "+N más"
 const MAX_BARS = 2;
-// `fixed-weeks`: el mes siempre se dibuja en 6 semanas
-const GRID_DAYS = 42;
 
 type DayBars = {
-  bars: (Travel | null)[];
+  bars: (TravelSummary | null)[];
   // Por carril: cuántos días ocupa el nombre desde aquí (0 = sin nombre, lo lleva un día anterior)
   labelSpans: number[];
   hiddenCount: number;
@@ -46,8 +45,8 @@ type DayBars = {
 // no desalinear; si un viaje de un carril alto no cabe y hay hueco, lo ocupa.
 function getDayBars(day: DateValue): DayBars {
   const travels = props.getTravelsOnDay(day);
-  const bars: (Travel | null)[] = Array.from({ length: MAX_BARS }, () => null);
-  const overflow: Travel[] = [];
+  const bars: (TravelSummary | null)[] = Array.from({ length: MAX_BARS }, () => null);
+  const overflow: TravelSummary[] = [];
 
   for (const travel of travels) {
     const lane = props.travelLanes.get(travel.id) ?? MAX_BARS;
@@ -81,7 +80,7 @@ function getDayBars(day: DateValue): DayBars {
 // Barras (y festivo) de los 42 días visibles, por `YYYY-MM-DD`: una vez por mes/datos, no por render de celda
 const barsByDay = computed(() => {
   const days: [string, DayBars][] = [];
-  let day = startOfWeek(startOfMonth(placeholder.value), CALENDAR_LOCALE);
+  let day = getCalendarGridRange(placeholder.value).start;
   for (let i = 0; i < GRID_DAYS; i++, day = day.add({ days: 1 }))
     days.push([day.toString(), getDayBars(day)]);
 
@@ -113,7 +112,7 @@ function getDayHolidays(day: DateValue): MexicanHoliday[] {
   return holiday ? [holiday] : [];
 }
 
-function getBarClasses(travel: Travel, day: DateValue): string[] {
+function getBarClasses(travel: TravelSummary, day: DateValue): string[] {
   const color = getTravelStatusColor(travel.status);
   return [
     travel.id === props.selectedTravelId ? TRAVEL_STATUS_BAR_SELECTED_CLASSES[color] : TRAVEL_STATUS_BAR_CLASSES[color],

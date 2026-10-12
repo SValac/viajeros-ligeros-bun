@@ -9,9 +9,11 @@ import type {
 
 import { calculatePaymentSummary, validatePaymentAmount } from '~/composables/payments/use-payments-domain';
 import { usePaymentsRepository } from '~/composables/payments/use-payments-repository';
+import { paymentKeys } from '~/queries/payments';
 
 export const usePaymentStore = defineStore('usePaymentStore', () => {
   const repository = usePaymentsRepository();
+  const queryCache = useQueryCache();
 
   // State
   const payments = ref<Payment[]>([]);
@@ -176,6 +178,7 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     error.value = null;
     try {
       const payment = await repository.insertPayment(data);
+      queryCache.invalidateQueries({ key: paymentKeys.root });
       payments.value.push(payment);
       return payment;
     }
@@ -193,6 +196,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     error.value = null;
     try {
       const payment = await repository.updatePayment(id, data);
+      queryCache.invalidateQueries({ key: paymentKeys.root });
+
       const index = payments.value.findIndex(p => p.id === id);
       if (index !== -1) {
         payments.value[index] = payment;
@@ -213,6 +218,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     error.value = null;
     try {
       await repository.removePayment(id);
+      queryCache.invalidateQueries({ key: paymentKeys.root });
+
       payments.value = payments.value.filter(p => p.id !== id);
     }
     catch (e) {
@@ -228,6 +235,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     error.value = null;
     try {
       await repository.upsertAccountConfig(config);
+      queryCache.invalidateQueries({ key: paymentKeys.root });
+
       const index = accountConfigs.value.findIndex(
         c => c.travelerId === config.travelerId && c.travelId === config.travelId,
       );

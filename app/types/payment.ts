@@ -72,3 +72,10 @@ export type PaymentCalculation = {
   balance: number;
   status: PaymentStatus;
 };
+
+export type TravelPaymentTotals = {
+  totalExpected: number;
+  totalCollected: number;
+  balance: number;
+  percent: number;
+};

@@ -3,7 +3,6 @@ export default defineNuxtPlugin(() => {
   const coordinatorStore = useCoordinatorStore();
   const busStore = useBusStore();
   const hotelRoomStore = useHotelRoomStore();
-  const travelsStore = useTravelsStore();
   const travelerStore = useTravelerStore();
   const cotizacionStore = useCotizacionStore();
 
@@ -12,7 +11,6 @@ export default defineNuxtPlugin(() => {
     coordinatorStore.fetchAll(),
     busStore.fetchAll(),
     hotelRoomStore.fetchAll(),
-    travelsStore.fetchAll(),
     travelerStore.fetchAll(),
     cotizacionStore.fetchAll(),
   ]);

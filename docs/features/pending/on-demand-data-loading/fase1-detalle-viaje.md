@@ -1,6 +1,6 @@
 # Fase 1 — Piloto: detalle de viaje por id
 
-**Estado:** Completada ✅
+**Estado:** Completada ✅ — PR #122 (con Fase 0), en producción y en qa/stage desde el 2026-10-10
 **Dependencia:** Fase 0
 **Migración:** No
 
