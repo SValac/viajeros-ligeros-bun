@@ -3,6 +3,7 @@ import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStat
 import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 import { useTravelRepository } from '~/composables/travels/use-travel-repository';
+import { travelerKeys } from '~/queries/travelers';
 import { travelKeys } from '~/queries/travels';
 
 export const useTravelsStore = defineStore('useTravelsStore', () => {
@@ -37,8 +38,10 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         extras.services = await repository.insertServices(travel.id, data.services);
       if (data.buses.length > 0)
         extras.buses = await repository.insertBuses(travel.id, data.buses);
-      if (data.coordinatorIds.length > 0)
+      if (data.coordinatorIds.length > 0) {
         await repository.insertCoordinators(travel.id, data.coordinatorIds);
+        queryCache.invalidateQueries({ key: travelerKeys.root });
+      }
 
       const newTravel = mapTravelRowToDomain(travel, extras);
 
@@ -93,8 +96,10 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
         await repository.replaceBuses(id, data.buses);
       if (data.accommodations !== undefined)
         await repository.replaceAccommodations(id, data.accommodations);
-      if (data.coordinatorIds !== undefined)
+      if (data.coordinatorIds !== undefined) {
         await repository.replaceCoordinators(id, data.coordinatorIds);
+        queryCache.invalidateQueries({ key: travelerKeys.root });
+      }
 
       // Not just the detail: status and label also show in lists, totals and payment labels
       queryCache.invalidateQueries({ key: travelKeys.root });

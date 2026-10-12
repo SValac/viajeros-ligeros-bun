@@ -4,6 +4,8 @@ import type { Traveler, TravelerFilters, TravelerFormData, TravelerRoomAssignmen
 import { filterTravelers, groupTravelersByRepresentative, isTravelerSeatChangeResult, toRoomAssignmentErrorMessage, toTravelerSeatChangeError } from '~/composables/travelers/use-traveler-domain';
 import { useTravelerRepository } from '~/composables/travelers/use-traveler-repository';
 import { paymentKeys } from '~/queries/payments';
+import { travelerKeys } from '~/queries/travelers';
+import { travelKeys } from '~/queries/travels';
 import { TravelerSeatChangeError } from '~/types/traveler';
 
 /**
@@ -163,6 +165,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     error.value = null;
     try {
       const traveler = await repository.insert(data);
+      queryCache.invalidateQueries({ key: travelerKeys.root }); // traveler list changed
+      queryCache.invalidateQueries({ key: travelKeys.root }); // traveler count
       travelers.value.push(traveler);
       return traveler;
     }
@@ -188,6 +192,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     error.value = null;
     try {
       const traveler = await repository.update(id, data);
+      queryCache.invalidateQueries({ key: travelerKeys.root });
       // vue detects the change in this specific position without re-evaluating the entire list, so it's more efficient than replacing the whole array
       const index = travelers.value.findIndex(t => t.id === id);
       if (index !== -1) {
@@ -227,8 +232,9 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
       await repository.remove(id);
       // The DB cascades the traveler's payments and account config, so payment totals change.
-      // (Travel lists' traveler counts change too: phase 3.)
       queryCache.invalidateQueries({ key: paymentKeys.root });
+      queryCache.invalidateQueries({ key: travelKeys.root }); // traveler count
+      queryCache.invalidateQueries({ key: travelerKeys.root }); // traveler list changed
 
       travelers.value = travelers.value.filter(t => t.id !== id);
       // The DB cascades the traveler's room assignments.
@@ -262,6 +268,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
 
     try {
       const data = await repository.changeSeat(params);
+      queryCache.invalidateQueries({ key: travelerKeys.root });
 
       if (!isTravelerSeatChangeResult(data)) {
         throw new TravelerSeatChangeError('unknown-error', 'La respuesta del servidor para cambiar asiento es inválida.');
@@ -310,6 +317,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     error.value = null;
     try {
       const traveler = await repository.setCoordinatorSeat(travelerId, seat);
+      queryCache.invalidateQueries({ key: travelerKeys.root });
+
       const index = travelers.value.findIndex(t => t.id === travelerId);
       if (index !== -1)
         travelers.value[index] = traveler;
@@ -334,6 +343,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     error.value = null;
     try {
       await repository.clearCoordinatorSeats(travelId);
+      queryCache.invalidateQueries({ key: travelerKeys.root });
+
       travelers.value = travelers.value.map(t =>
         t.travelId === travelId && t.kind === 'coordinator'
           ? { ...t, travelBusId: '', seat: null }
@@ -363,6 +374,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     error.value = null;
     try {
       const assignment = await repository.assignRoom(travelerId, accommodation);
+      queryCache.invalidateQueries({ key: travelerKeys.root });
+
       roomAssignments.value.push(assignment);
     }
     catch (e) {
@@ -385,6 +398,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     error.value = null;
     try {
       await repository.removeFromRoom(travelerId, providerId);
+      queryCache.invalidateQueries({ key: travelerKeys.root });
+
       roomAssignments.value = roomAssignments.value.filter(
         a => !(a.travelerId === travelerId && a.providerId === providerId),
       );
