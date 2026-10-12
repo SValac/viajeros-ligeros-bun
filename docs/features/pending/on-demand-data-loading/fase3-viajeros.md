@@ -1,6 +1,6 @@
 # Fase 3 — Viajeros y asignaciones de habitación por viaje
 
-**Estado:** Pendiente
+**Estado:** Siguiente — rama `feature/on-demand-loading-phase-3` (desde `main` 55c76df), sin empezar
 **Dependencia:** Fase 2 (los conteos de los listados ya no usan el store)
 **Migración:** No
 

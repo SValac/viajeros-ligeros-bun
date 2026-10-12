@@ -1,6 +1,6 @@
 # Fase 2 — Listados de viajes ligeros y conteos en el servidor
 
-**Estado:** Pasos 1-5 completos, falta abrir el PR — rama `feature/on-demand-loading-phase-2` (desde `main` 571d805)
+**Estado:** Completa — PR #125 (merge 55c76df, 2026-10-12), en producción; `qa` y `stage` sincronizados
 **Dependencia:** Fase 1
 **Migración:** Ninguna (el conteo embebido con filtro funciona; plan B de la vista descartado)
 
