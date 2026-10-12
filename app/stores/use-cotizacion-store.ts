@@ -39,7 +39,7 @@ import {
   isPerPersonProvider,
 } from '~/composables/quotation/use-quotation-domain';
 import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
-import { travelKeys } from '~/queries/travels';
+import { travelDetailQuery, travelKeys } from '~/queries/travels';
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
@@ -667,9 +667,18 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (!cotizacion)
       return [];
 
+    // The rooms decide what gets deleted, so they come fresh from the server: `fetch`
+    // ignores `staleTime` (`refresh` wouldn't). A failed request throws and the caller's
+    // catch aborts the change before anything is written.
+    const travelEntry = queryCache.ensure(travelDetailQuery(cotizacion.travelId));
+    const { data } = await queryCache.fetch(travelEntry);
+    if (!data) {
+      return { error: 'No se encontró el viaje de esta cotización. Recarga la página e intenta de nuevo.' };
+    }
+
     const rooms = findRoomsOutsideQuotation(
       nextAccommodations,
-      useTravelsStore().getAccommodationsByTravel(cotizacion.travelId),
+      data.accommodations,
     );
     if (rooms.length === 0)
       return [];
