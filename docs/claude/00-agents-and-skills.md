@@ -25,6 +25,15 @@ Los skills están instalados en `.claude/skills/` y `.agents/skills/`. Se invoca
 
 > Los dos skills de Supabase vienen del plugin oficial `supabase@claude-plugins-official`, activado solo en este proyecto desde `.claude/settings.json` (se actualiza con el plugin; no hay copia en el repo).
 
+### Flujos del proyecto
+
+Skills propios del repo, escritos para el flujo de trabajo de Viajeros Ligeros (`.claude/skills/`).
+
+| Skill | Cuándo usarlo |
+| --- | --- |
+| `db-migration` | Crear, verificar y publicar una migración sin perder datos de producción: expand/contract, guards en los drops, `db:types` + prettier, push a stage y luego a prod (`! bun run db:push:prod` lo corre el usuario) |
+| `post-merge-sync` | Cuando un PR ya se mergeó a `main`: actualizar `main`, mergearlo a `qa` y `stage`, revisar migraciones en cada base y deploys de Vercel, y mover el item del project #3 a Done |
+
 ### Diseño
 
 | Skill | Cuándo usarlo |
