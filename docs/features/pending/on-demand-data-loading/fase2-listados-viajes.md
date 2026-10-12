@@ -43,7 +43,22 @@
       (lista + totales). Si el viaje borrado era el único de la última página, se va a la
       última que existe.
     - Queda `travelsStore` solo para `deleteTravel` (paso 4).
-  - [ ] `/payments`
+  - [x] `/payments` en 5 sub-pasos. Decisión del usuario: las **tarjetas suman solo los
+    viajes activos** (publicados y en curso); los completados crecen para siempre y sus
+    saldos se ven en la tabla. Sin migración.
+    - a (d1a9f1e) `fetchInBatches` (`utils/fetch-in-batches.ts`): pagos y configuraciones
+      por viaje en tandas de `max_rows` con orden estable (`traveler_account_configs` no
+      tiene `id`: su clave es `(travel_id, traveler_id)`).
+    - b (4a35c96) `summarizeTravelPayments` (pura, en el dominio): suma los resúmenes por
+      viajero de cada viaje; viajeros = unión de los que tienen config o pagos, así que no
+      hace falta pedir viajeros. `travelPaymentTotalsQuery(ids)` en `queries/payments.ts`.
+    - c (06d08b7) Tabla paginada: `travelListQuery` con los 3 estados cobrables + los
+      totales de los ids de la página (la segunda query se activa sola al llegar la lista).
+    - d (7452470) Tarjetas: misma pareja de queries con los activos y sin página. Sin
+      activos la query de totales no corre: la guarda muestra 0, no "—" para siempre.
+      `/payments` ya no usa stores.
+    - e (0bfb25f) `add/update/deletePayment`, `setAccountConfig` y `deleteTraveler`
+      (cascada) invalidan `paymentKeys.root`.
   - [ ] `payments/traveler/[id].vue` (etiquetas de varios viajes, pendiente de la Fase 1)
 - [ ] 4. Escrituras invalidan `['travels']`
 - [ ] 5. Quitar `travelsStore.fetchAll()` del arranque
