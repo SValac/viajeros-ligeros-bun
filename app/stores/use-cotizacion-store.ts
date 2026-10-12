@@ -43,9 +43,6 @@ import { travelDetailQuery, travelKeys } from '~/queries/travels';
 import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
-import {
-  mapTravelBusRowToDomain,
-} from '~/utils/mappers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const queryCache = useQueryCache();
@@ -1708,17 +1705,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     loading.value = true;
     error.value = null;
     try {
-      const { quotationBus: newBus, travelBusRow } = await repository.insertBus(data, cotizacion.travelId);
+      const { quotationBus: newBus } = await repository.insertBus(data, cotizacion.travelId);
+      // The repository also creates the linked travel_bus; refetching the travel detail
+      // brings it (and the new total_seats) to the traveler bus options and operators.
       queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
       quotationBuses.value.push(newBus);
-      const travelStore = useTravelsStore();
-      const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
-      if (travelIndex !== -1) {
-        travelStore.travels[travelIndex] = {
-          ...travelStore.travels[travelIndex]!,
-          buses: [...(travelStore.travels[travelIndex]!.buses ?? []), mapTravelBusRowToDomain(travelBusRow)],
-        };
-      }
       await _syncSeatPrice(data.quotationId);
       return newBus;
     }
@@ -1755,28 +1746,11 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const updated = await repository.updateBus(id, data);
       quotationBuses.value[index] = updated;
 
-      // Mirror provider/unit/capacity into the travel's cached buses — travel_buses is
-      // the operational projection coordinators see, kept in sync by the repository call
-      // above; this just reflects that in the UI without a refetch.
-      const travelStore = useTravelsStore();
+      // travel_buses is the operational projection coordinators see; the repository call
+      // above keeps it in sync, and refetching the travel detail brings the new provider,
+      // unit and capacity to the traveler bus options and operators.
       if (cotizacion) {
         queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
-        const travelIndex = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
-        if (travelIndex !== -1) {
-          travelStore.travels[travelIndex] = {
-            ...travelStore.travels[travelIndex]!,
-            buses: (travelStore.travels[travelIndex]!.buses ?? []).map(b =>
-              b.quotationBusId === id
-                ? {
-                    ...b,
-                    ...(data.providerId !== undefined && { providerId: updated.providerId }),
-                    ...(data.unitNumber !== undefined && { model: updated.unitNumber }),
-                    ...(data.capacity !== undefined && { seatCount: updated.capacity }),
-                  }
-                : b,
-            ),
-          };
-        }
       }
 
       await _syncSeatPrice(existing.quotationId);
@@ -1809,18 +1783,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       quotationBuses.value = quotationBuses.value.filter(b => b.id !== id);
       busPayments.value = busPayments.value.filter(p => p.quotationBusId !== id);
       // El travel_bus vinculado se elimina por CASCADE en DB (quotation_bus_id FK ON DELETE CASCADE)
-      // y travelers.travel_bus_id se limpia por ON DELETE SET NULL
-      // Actualizar estado local del travel
-      const travelStore = useTravelsStore();
+      // y travelers.travel_bus_id se limpia por ON DELETE SET NULL. Volver a pedir el detalle
+      // del viaje lo quita de las opciones de camión de los viajeros.
       if (cotizacion) {
         queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
-        const tIdx = travelStore.travels.findIndex(t => t.id === cotizacion.travelId);
-        if (tIdx !== -1) {
-          travelStore.travels[tIdx] = {
-            ...travelStore.travels[tIdx]!,
-            buses: (travelStore.travels[tIdx]!.buses ?? []).filter(b => b.quotationBusId !== id),
-          };
-        }
       }
       await _syncSeatPrice(quotationId);
     }
