@@ -100,6 +100,12 @@
   - d (91ac521) Fuera `travelsStore.fetchAll()` del plugin, el arreglo `travels`, `loaded`,
     los getters, `stats` y `fetchAll` del repositorio. Al arrancar ya solo se piden los
     conteos `head` y el resumen de la pantalla.
+- [x] Verificación completa (2026-10-12, playwright-cli, después de quitar `fetchAll`):
+  crear viaje (total 9 → 10), editarlo (nombre + Publicado: tarjeta 2 → 3), agregar una
+  actividad, borrarlo (10 → 9) — listas y tarjetas se actualizan sin recargar. Calendario:
+  mes siguiente = 1 petición con el rango de la cuadrícula; regresar = 0 (caché).
+  Etiquetas de `payments/traveler/[id]` desde el resumen por id. Conteo de viajeros sin
+  coordinadores (3, con 1 coordinador). Tarjetas de `/payments` = suma en la base ($7,300).
 
 ## Objetivo
 
