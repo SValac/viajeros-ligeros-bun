@@ -7,6 +7,8 @@ import { h } from 'vue';
 import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
+import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 
@@ -19,11 +21,11 @@ const props = defineProps<{
 const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
-const travelerStore = useTravelerStore();
 
 const cotizacionStore = useCotizacionStore();
 
 const travelId = computed(() => props.travelId);
+const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 const preciosPublicos = computed(() =>
@@ -33,7 +35,7 @@ const preciosPublicos = computed(() =>
 );
 
 const enrolledTravelers = computed(() =>
-  travelerStore.getTravelersByTravel(travelId.value),
+  selectPayingTravelers(travelerData.value?.travelers ?? []),
 );
 
 const expanded = ref<ExpandedStateList>({});
@@ -411,7 +413,24 @@ watch(travelId, async (id) => {
 
     <!-- Travelers table -->
     <UCard>
-      <div v-if="groupedFilteredTravelers.length === 0" class="text-center py-12">
+      <!-- Until the travelers load (or if they fail), "no travelers" would be a lie -->
+      <div v-if="travelersStatus === 'pending' && !travelerData" class="flex justify-center py-12">
+        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+      </div>
+      <div
+        v-else-if="travelersStatus === 'error'"
+        class="flex flex-col items-center justify-center gap-4 py-12"
+      >
+        <p class="text-muted">
+          No se pudieron cargar los viajeros
+        </p>
+        <UButton
+          label="Reintentar"
+          icon="i-lucide-refresh-cw"
+          @click="refetchTravelers()"
+        />
+      </div>
+      <div v-else-if="groupedFilteredTravelers.length === 0" class="text-center py-12">
         <UIcon name="i-lucide-users" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
         <template v-if="enrolledTravelers.length === 0">
           <h3 class="text-lg font-medium mb-2">
