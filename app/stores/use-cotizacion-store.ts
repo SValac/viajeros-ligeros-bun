@@ -27,7 +27,7 @@ import type {
   QuotationPublicPriceFormData,
   TravelerPriceAdjustment,
 } from '~/types/quotation';
-import type { TravelAccommodation } from '~/types/travel';
+import type { TravelAccommodation, TravelDetail } from '~/types/travel';
 
 import {
   calculatePaymentStatus,
@@ -141,7 +141,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!quote)
         return new Map();
 
-      return countRoomsByType(useTravelsStore().getAccommodationsByTravel(quote.travelId));
+      // Temporal hasta Fase 4: lee el viaje de la caché, así que depende de que la
+      // pantalla haya montado travelDetailQuery. Sin entrada cuenta 0 habitaciones.
+      const travelData = queryCache.getQueryData<TravelDetail | null>(travelKeys.detail(quote.travelId));
+      return countRoomsByType(travelData?.accommodations ?? []);
     };
   });
 
@@ -293,8 +296,10 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!quote)
         return 0;
 
-      const travelStore = useTravelsStore();
-      const coordinators = travelStore.getTravelById(quote.travelId)?.coordinatorIds.length ?? 0;
+      // Temporal hasta Fase 4: lee el viaje de la caché, así que depende de que la
+      // pantalla haya montado travelDetailQuery. Sin entrada cuenta 0 coordinadores.
+      const travelData = queryCache.getQueryData<TravelDetail | null>(travelKeys.detail(quote.travelId));
+      const coordinators = travelData?.coordinatorIds.length ?? 0;
       return calculateSellableSeats(quote, coordinators);
     };
   });
