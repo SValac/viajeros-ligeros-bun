@@ -14,7 +14,6 @@ definePageMeta({
 
 const router = useRouter();
 const travelsStore = useTravelsStore();
-const travelerStore = useTravelerStore();
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 const { uploadBanner, removeFile } = useTravelMediaRepository();
@@ -57,13 +56,11 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   if (unusedBannerPath)
     await removeFile(unusedBannerPath).catch(() => {});
 
-  // Linking or unlinking a coordinator adds or drops their travelers row in the DB, and when
-  // the quotation counts coordinators as passengers it changes the sellable seats too.
+  // Linking or unlinking a coordinator adds or drops their travelers row in the DB (the store
+  // already invalidated the travelers query), and when the quotation counts coordinators as
+  // passengers it changes the sellable seats, so the seat price is recomputed.
   if (success && !sameIds(previousCoordinatorIds, data.coordinatorIds)) {
-    await Promise.all([
-      travelerStore.fetchByTravel(travelId.value),
-      cotizacionStore.syncSeatPriceForTravel(travelId.value),
-    ]);
+    await cotizacionStore.syncSeatPriceForTravel(travelId.value);
   }
 
   if (success) {
