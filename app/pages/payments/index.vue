@@ -14,13 +14,12 @@ definePageMeta({
 });
 
 const router = useRouter();
-const paymentStore = usePaymentStore();
-const travelStore = useTravelsStore();
-const travelerStore = useTravelerStore();
 
 // Travelers pay before, during and after the trip, so a travel stays here once published
 // (not while pending, nor once cancelled).
 const PAYABLE_STATUSES: TravelStatus[] = ['completed', 'in_progress', 'published'];
+// Las tarjetas suman solo los activos: los completados crecen para siempre (sus saldos se ven en la tabla)
+const ACTIVE_STATUSES: TravelStatus[] = ['in_progress', 'published'];
 const PAGE_SIZE = 20;
 const EMPTY_TOTALS: TravelPaymentTotals = { totalExpected: 0, totalCollected: 0, balance: 0, percent: 0 };
 
@@ -30,13 +29,15 @@ const { data: list, status: listStatus, refetch: refetchList } = useQuery(() => 
   ...travelListQuery({ statuses: PAYABLE_STATUSES, page: page.value, pageSize: PAGE_SIZE }),
   placeholderData: previousList => previousList,
 }));
-
 const pageTravelIds = computed(() => (list.value?.items ?? []).map(travel => travel.id).sort());
-
 const { data: totals, status: totalStatus, refetch: refetchTotals } = useQuery(() => ({
   ...travelPaymentTotalsQuery(pageTravelIds.value),
   placeholderData: previousPayments => previousPayments,
 }));
+
+const { data: activeList } = useQuery(() => travelListQuery({ statuses: ACTIVE_STATUSES }));
+const activeTravelIds = computed(() => (activeList.value?.items ?? []).map(travel => travel.id).sort());
+const { data: activeTotals } = useQuery(() => travelPaymentTotalsQuery(activeTravelIds.value));
 
 const pageRows = computed(() => (list.value?.items ?? []).map(travel => ({
   travel,
@@ -50,50 +51,20 @@ function retry() {
   refetchTotals();
 }
 
-// Temporal hasta el sub-paso d: las tarjetas siguen sumando todos los viajes desde los stores
-const payableTravels = computed(() =>
-  travelStore.allTravels.filter(travel => PAYABLE_STATUSES.includes(travel.status)),
-);
-
-// Los viajes llegan de forma asíncrona (init-stores); se cargan pagos y configuraciones
-// cuando cambia el conjunto de viajes con pagos.
-const payableTravelIds = computed(() => payableTravels.value.map(travel => travel.id).join(','));
-
-watch(payableTravelIds, (ids) => {
-  if (ids)
-    paymentStore.fetchByTravels(ids.split(','));
-}, { immediate: true });
-
-const travelSummaries = computed(() => {
-  return payableTravels.value.map((travel) => {
-    const travelers = travelerStore.getTravelersByTravel(travel.id);
-    const summaries = travelers.map(t =>
-      paymentStore.getTravelerPaymentSummary(t.id, travel.id),
-    );
-
-    const totalExpected = summaries.reduce((sum: number, s) => sum + s.finalCost, 0);
-    const totalCollected = summaries.reduce((sum: number, s) => sum + s.totalPaid, 0);
-    const balance = totalExpected - totalCollected;
-    const percent = totalExpected > 0 ? Math.round((totalCollected / totalExpected) * 100) : 0;
-
-    return {
-      travel,
-      travelerCount: travelers.length,
-      totalExpected,
-      totalCollected,
-      balance,
-      percent,
-    };
-  });
-});
-
 const globalStats = computed(() => {
-  const totals = travelSummaries.value;
+  // Todavía no llegó la lista de activos
+  if (!activeList.value)
+    return undefined;
+  // Hay activos, pero todavía no llegaron sus totales (sin activos la query no corre: todo en 0)
+  if (activeTravelIds.value.length > 0 && !activeTotals.value)
+    return undefined;
+
+  const travelTotals = Object.values(activeTotals.value ?? {});
   return {
-    travelsWithPayments: totals.filter(t => t.totalCollected > 0).length,
-    totalCollected: totals.reduce((sum, t) => sum + t.totalCollected, 0),
-    totalBalance: totals.reduce((sum, t) => sum + t.balance, 0),
-    settledTravels: totals.filter(t => t.percent >= 100).length,
+    travelsWithPayments: travelTotals.filter(t => t.totalCollected > 0).length,
+    totalCollected: travelTotals.reduce((sum, t) => sum + t.totalCollected, 0),
+    totalBalance: travelTotals.reduce((sum, t) => sum + t.balance, 0),
+    settledTravels: travelTotals.filter(t => t.percent >= 100).length,
   };
 });
 
@@ -189,7 +160,10 @@ const columns: TableColumn<TravelSummaryRow>[] = [
       </p>
     </div>
 
-    <!-- Stats cards -->
+    <!-- Stats cards: solo viajes activos -->
+    <p class="text-sm text-muted -mb-2">
+      Viajes publicados y en curso
+    </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
       <UCard>
         <div class="flex items-center justify-between">
@@ -198,7 +172,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
               Viajes con pagos
             </p>
             <p class="text-2xl font-bold mt-1">
-              {{ globalStats.travelsWithPayments }}
+              {{ globalStats?.travelsWithPayments ?? '—' }}
             </p>
           </div>
           <UIcon name="i-lucide-map" class="w-10 h-10 text-muted" />
@@ -212,7 +186,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
               Total recaudado
             </p>
             <p class="text-2xl font-bold mt-1">
-              {{ formatCurrency(globalStats.totalCollected) }}
+              {{ globalStats ? formatCurrency(globalStats.totalCollected) : '—' }}
             </p>
           </div>
           <UIcon name="i-lucide-trending-up" class="w-10 h-10 text-muted" />
@@ -227,15 +201,15 @@ const columns: TableColumn<TravelSummaryRow>[] = [
             </p>
             <p
               class="text-2xl font-bold mt-1"
-              :class="globalStats.totalBalance > 0 ? 'text-warning' : 'text-success'"
+              :class="(globalStats?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success'"
             >
-              {{ formatCurrency(globalStats.totalBalance) }}
+              {{ globalStats ? formatCurrency(globalStats.totalBalance) : '—' }}
             </p>
           </div>
           <UIcon
             name="i-lucide-clock"
             class="w-10 h-10 opacity-60"
-            :class="globalStats.totalBalance > 0 ? 'text-warning' : 'text-success'"
+            :class="(globalStats?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success'"
           />
         </div>
       </UCard>
@@ -247,7 +221,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
               Viajes liquidados
             </p>
             <p class="text-2xl font-bold mt-1">
-              {{ globalStats.settledTravels }}
+              {{ globalStats?.settledTravels ?? '—' }}
             </p>
           </div>
           <UIcon name="i-lucide-check-circle" class="w-10 h-10 text-muted" />
