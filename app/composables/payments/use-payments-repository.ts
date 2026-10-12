@@ -1,9 +1,12 @@
 import type { TablesUpdate } from '~/types/database.types';
 import type { Payment, PaymentFormData, PaymentUpdateData, TravelerAccountConfig } from '~/types/payment';
 
+import { fetchInBatches } from '~/utils/fetch-in-batches';
+
 /**
  * Data access layer for the `payments` and `traveler_account_configs` tables.
- * Each function performs a single Supabase operation and either returns domain data
+ * Each function performs a single Supabase operation (list reads by travel may take several
+ * batches, see `fetchInBatches`) and either returns domain data
  * or throws — it never touches reactive state. Cache management is the store's responsibility.
  * @returns Object with all repository methods
  */
@@ -17,15 +20,16 @@ export function usePaymentsRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function fetchPaymentsByTravels(travelIds: string[]): Promise<Payment[]> {
-    const { data, error } = await supabase
+    const rows = await fetchInBatches((from, to) => supabase
       .from('payments')
       .select('*')
       .in('travel_id', travelIds)
-      .order('payment_date', { ascending: false });
-    if (error)
-      throw error;
+      .order('payment_date', { ascending: false })
+      .order('id')
+      .range(from, to),
+    );
 
-    return data.map(mapPaymentRowToDomain);
+    return rows.map(mapPaymentRowToDomain);
   };
 
   /**
@@ -54,15 +58,17 @@ export function usePaymentsRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function fetchConfigsByTravels(travelIds: string[]): Promise<TravelerAccountConfig[]> {
-    const { data, error } = await supabase
+    const rows = await fetchInBatches((from, to) => supabase
       .from('traveler_account_configs')
       .select('*')
-      .in('travel_id', travelIds);
+      .in('travel_id', travelIds)
+      // The primary key (travel_id, traveler_id) is the stable order the batches need
+      .order('travel_id')
+      .order('traveler_id')
+      .range(from, to),
+    );
 
-    if (error)
-      throw error;
-
-    return data.map(mapTravelerAccountConfigRowToDomain);
+    return rows.map(mapTravelerAccountConfigRowToDomain);
   };
 
   /**

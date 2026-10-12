@@ -11,6 +11,9 @@ const TRAVEL_STATUS_COLORS: Record<TravelStatus, TravelStatusColor> = {
   cancelled: 'error',
 };
 
+// Todos los estatus, en el orden del ciclo de vida del viaje
+export const TRAVEL_STATUSES: TravelStatus[] = ['pending', 'published', 'in_progress', 'completed', 'cancelled'];
+
 const TRAVEL_STATUS_LABELS: Record<TravelStatus, string> = {
   pending: 'Pendiente',
   published: 'Publicado',

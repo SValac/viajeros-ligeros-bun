@@ -3,6 +3,7 @@ import type { Traveler, TravelerFilters, TravelerFormData, TravelerRoomAssignmen
 
 import { filterTravelers, groupTravelersByRepresentative, isTravelerSeatChangeResult, toRoomAssignmentErrorMessage, toTravelerSeatChangeError } from '~/composables/travelers/use-traveler-domain';
 import { useTravelerRepository } from '~/composables/travelers/use-traveler-repository';
+import { paymentKeys } from '~/queries/payments';
 import { TravelerSeatChangeError } from '~/types/traveler';
 
 /**
@@ -13,6 +14,7 @@ import { TravelerSeatChangeError } from '~/types/traveler';
  */
 export const useTravelerStore = defineStore('useTravelerStore', () => {
   const repository = useTravelerRepository();
+  const queryCache = useQueryCache();
 
   // State
   const travelers = ref<Traveler[]>([]);
@@ -224,6 +226,10 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       }
 
       await repository.remove(id);
+      // The DB cascades the traveler's payments and account config, so payment totals change.
+      // (Travel lists' traveler counts change too: phase 3.)
+      queryCache.invalidateQueries({ key: paymentKeys.root });
+
       travelers.value = travelers.value.filter(t => t.id !== id);
       // The DB cascades the traveler's room assignments.
       roomAssignments.value = roomAssignments.value.filter(a => a.travelerId !== id);

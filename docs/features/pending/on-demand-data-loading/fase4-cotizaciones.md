@@ -25,25 +25,28 @@ store de viajes.
   `cotizacion-header-actions`, `cotizacion-bus-form`. Funcionan porque el arreglo global
   tiene todo; con carga por viaje necesitan la query del viaje (o una por id).
 - `/quotations` (listado) ya se resolvió en Fase 2 con `quotations(id, status)` embebido.
-- **Acoplamiento**: el store lee y escribe `travelStore.travels` (`:253`, `:566`, `:584`,
-  `:1256`, `:1304`, `:1356`) para mantener alineados autobuses y alojamientos del viaje.
+- **Acoplamiento** (resuelto a medias en Fase 2, paso 5): `travelStore.travels` ya no
+  existe. `_findRoomsToDrop` pide el viaje fresco con `queryCache.fetch`; las acciones de
+  autobús solo invalidan el detalle. **Puentes que quedan**: `getAsientosVendibles` y
+  `getRoomCountsByQuotation` leen el viaje con `queryCache.getQueryData` (marcados
+  "Temporal hasta Fase 4"): si la pantalla no montó `travelDetailQuery` cuentan 0. Aquí
+  deben pasar a funciones puras con coordinadores y habitaciones como parámetro.
+  `_deleteRooms` sigue llamando `updateLocalAccommodations` (solo invalida el detalle).
 
 ### Pendientes que dejó la Fase 1
 
-- **`getAsientosVendibles` lee coordinadores de `travelStore.getTravelById`.** Es un
-  getter del store que también se llama desde acciones async (`_syncSeatPrice`, cálculo
-  del precio por asiento), así que **no puede usar `useQuery`**: no hay contexto de
-  componente y crearía una query por llamada. Opciones: recibir el número de
-  coordinadores como parámetro, o leerlo con `queryCache.getQueryData(travelKeys.detail(id))`
-  (no crea la entrada: solo sirve si alguien ya montó la query del viaje). Mientras
-  tanto, un viaje fuera de las 1000 filas cuenta 0 coordinadores.
+- **`getAsientosVendibles` y `getRoomCountsByQuotation`** leen el viaje con
+  `queryCache.getQueryData` desde la Fase 2 (puente). Son getters que también se llaman
+  desde acciones async (`_syncSeatPrice`, cálculo del precio por asiento), así que **no
+  pueden usar `useQuery`**. Aquí pasan a recibir coordinadores y habitaciones como
+  parámetro; es una cadena larga (`getCostoTotal`, `getAsientoConGanancia`, ~27 llamadas).
 - **La pestaña Autobuses del viaje lista los buses desde `cotizacionStore`**
   (`travel-buses-section.vue`), cargado una vez por viaje con `travelFetchCache`. Un
   camión agregado en otra pestaña del navegador o por otro usuario no aparece hasta
   recargar. Se resuelve con el paso 1 (query `byTravel` con `refetchOnWindowFocus`).
-- `addBusQuotation` / `updateBusQuotation` / `deleteBusQuotation` ya invalidan
-  `travelKeys.detail(travelId)` (Fase 1, paso 4b); el paso 4 solo tiene que quitar las
-  escrituras a `travelStore.travels[...]` que quedan junto a esa invalidación.
+- `addBusQuotation` / `updateBusQuotation` / `deleteBusQuotation` ya solo invalidan
+  `travelKeys.detail(travelId)`: las escrituras a `travelStore.travels[...]` se quitaron
+  en la Fase 2 (6e055a8).
 
 ---
 
@@ -57,10 +60,9 @@ store de viajes.
    (dedupe), o agregar `quotationKeys.detail(id)` si alguna pantalla no conoce el viaje.
 3. Escrituras de cotización (proveedores, alojamientos, autobuses, precios públicos,
    parámetros, estado) → invalidar `byTravel(travelId)`.
-4. **Desacoplar del viaje**: donde hoy escribe `travelStore.travels[...]` o llama
-   `updateLocalAccommodations`, invalidar `['travels', 'detail', travelId]` en su lugar.
-   Lo que lee del viaje (coordinadores `:253`, alojamientos `:566`) lo recibe como
-   parámetro o lo lee del caché con `queryCache.getQueryData`.
+4. **Desacoplar del viaje**: `_deleteRooms` llama `updateLocalAccommodations` (que solo
+   invalida el detalle): invalidar directo. Los dos getters puente (coordinadores y
+   habitaciones por tipo) pasan a recibir el dato como parámetro desde la query del viaje.
 5. Precios públicos usados en `/payments` (`cotizacion-precio-publico-section`): confirmar
    que invalidar la cotización también refresca lo que depende de ella en pagos.
 6. Quitar `cotizacionStore.fetchAll()` del plugin.

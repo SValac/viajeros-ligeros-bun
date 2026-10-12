@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Travel } from '~/types/travel';
+import type { TravelSummary } from '~/types/travel';
 
 import { parseDisplayDate } from '~/utils/format-date';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
@@ -9,12 +9,12 @@ import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-statu
 // para que el resumen de abajo no se empuje fuera de la pantalla.
 
 const props = defineProps<{
-  travels: Travel[];
+  travels: TravelSummary[];
   selectedTravelId?: string;
 }>();
 
 const emit = defineEmits<{
-  select: [travel: Travel];
+  select: [travel: TravelSummary];
 }>();
 
 const DOT_CLASSES = {
@@ -37,7 +37,7 @@ function formatShortDate(date: string): string {
 </script>
 
 <template>
-  <ul ref="list" class="max-h-[8.75rem] space-y-1 overflow-y-auto">
+  <ul ref="list" class="max-h-35 space-y-1 overflow-y-auto">
     <li v-for="travel in travels" :key="travel.id">
       <button
         type="button"

@@ -1,7 +1,7 @@
 import type { QueryData } from '@supabase/supabase-js';
 
 import type { Tables, TablesUpdate } from '~/types/database.types';
-import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelUpdateData } from '~/types/travel';
+import type { TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelStats, TravelStatus, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
 
 import { validateAndMapItinerary } from './use-travel-domain';
 
@@ -16,26 +16,28 @@ export function useTravelRepository() {
   const authStore = useAuthStore();
 
   /**
-   * Builds (without running) the `travels` select with every related sub-table.
-   * Shared by `fetchAll` and `fetchById` so both read and map exactly the same shape;
-   * callers chain their own filters/ordering before awaiting.
+   * Builds (without running) the `travels` select with every related sub-table plus the
+   * traveler count (coordinators excluded; `travelers` needs the FK hint, see `selectTravelSummary`).
+   * Used by `fetchById`, which chains its own filter before awaiting; the select and its
+   * `QueryData` row type stay separate so `mapTravelWithRelations` can be typed from them.
    * @returns Unexecuted PostgREST query builder
    */
   function selectTravelWithRelations() {
     return supabase
       .from('travels')
-      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id), travel_internals(*)');
+      .select('*, travel_activities(*), travel_services(*), travel_buses(*), travel_accommodations(*), travel_coordinators(coordinator_id), travel_internals(*), travelers!travelers_travel_id_fkey(count)')
+      .eq('travelers.kind', 'traveler');
   }
 
   type TravelWithRelationsRow = QueryData<ReturnType<typeof selectTravelWithRelations>>[number];
 
   /**
-   * Maps a `travels` row with its embedded relations to a `Travel` domain object.
+   * Maps a `travels` row with its embedded relations to a `TravelDetail` domain object.
    * Itinerary activities are sorted by day.
    * @param row - Row returned by `selectTravelWithRelations()`
-   * @returns The travel with itinerary, services, buses, accommodations, and coordinator ids
+   * @returns The travel with itinerary, services, buses, accommodations, coordinator ids and traveler count
    */
-  function mapTravelWithRelations(row: TravelWithRelationsRow): Travel {
+  function mapTravelWithRelations(row: TravelWithRelationsRow): TravelDetail {
     const activities: TravelActivity[] = (row.travel_activities ?? [])
       .slice()
       .sort((a: { day: number }, b: { day: number }) => a.day - b.day)
@@ -47,32 +49,21 @@ export function useTravelRepository() {
     const coordinatorIds: string[] = (row.travel_coordinators ?? []).map(
       (tc: { coordinator_id: string }) => tc.coordinator_id,
     );
+    const travelerCount: number = row.travelers[0]?.count ?? 0;
 
-    return mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations });
+    return {
+      ...mapTravelRowToDomain(row, { coordinatorIds, itinerary: activities, services, buses, accommodations }),
+      travelerCount,
+    };
   }
 
   /**
-   * Fetches all travels with their related sub-entities, ordered by creation date descending.
-   * @returns All travel records mapped to domain objects with itinerary, services, buses, accommodations, and coordinators
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function fetchAll(): Promise<Travel[]> {
-    const { data, error } = await selectTravelWithRelations()
-      .order('created_at', { ascending: false });
-
-    if (error)
-      throw error;
-
-    return data.map(mapTravelWithRelations);
-  }
-
-  /**
-   * Fetches a single travel with its related sub-entities.
+   * Fetches a single travel with its related sub-entities and traveler count.
    * @param id - UUID of the travel
-   * @returns The travel mapped to a domain object, or `null` if it doesn't exist or RLS hides it
+   * @returns The travel mapped to a `TravelDetail`, or `null` if it doesn't exist or RLS hides it
    * @throws {PostgrestError} on Supabase failure
    */
-  async function fetchById(id: string): Promise<Travel | null> {
+  async function fetchById(id: string): Promise<TravelDetail | null> {
     const { data, error } = await selectTravelWithRelations()
       .eq('id', id)
       .maybeSingle();
@@ -84,6 +75,114 @@ export function useTravelRepository() {
       return null;
 
     return mapTravelWithRelations(data);
+  }
+
+  /**
+   * Builds (without running) the lightweight `travels` select used by list screens.
+   * `travelers` needs the FK hint: `traveler_account_configs` is a second path to it.
+   * @returns Unexecuted PostgREST query builder
+   */
+  function selectTravelSummary() {
+    return supabase
+      .from('travels')
+      .select(
+        'id, label, destination, start_date, end_date, status, image_url, featured, created_at, travel_coordinators(coordinator_id), travelers!travelers_travel_id_fkey(count), quotations(id,status)',
+        { count: 'exact' },
+      );
+  }
+
+  type TravelSummaryRow = QueryData<ReturnType<typeof selectTravelSummary>>[number];
+
+  /**
+   * Maps a row from `selectTravelSummary()` to a `TravelSummary`.
+   * @param row - Row returned by `selectTravelSummary()`
+   * @returns The travel summary with traveler count and quotation (if any)
+   */
+  function mapTravelSummary(row: TravelSummaryRow): TravelSummary {
+    return {
+      id: row.id,
+      label: row.label,
+      destination: row.destination ?? undefined,
+      startDate: row.start_date,
+      endDate: row.end_date,
+      status: row.status,
+      imageUrl: row.image_url ?? undefined,
+      featured: row.featured,
+      createdAt: row.created_at,
+      coordinatorIds: row.travel_coordinators.map(tc => tc.coordinator_id),
+      travelerCount: row.travelers[0]?.count ?? 0,
+      quotation: row.quotations[0],
+    };
+  }
+
+  /**
+   * Fetches travel summaries for list screens, filtered and paginated on the server.
+   * Traveler counts exclude coordinators (`kind = 'traveler'`).
+   * @param filters - Optional statuses, date overlap range and page
+   * @returns The page of summaries and the total matching rows
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchSummaries(filters: TravelSummaryFilters = {}): Promise<{ items: TravelSummary[]; total: number }> {
+    const query = selectTravelSummary()
+      .eq('travelers.kind', 'traveler')
+      .order('created_at', { ascending: false })
+      .order('id');
+
+    if (filters.ids) {
+      query.in('id', filters.ids);
+    }
+    if (filters.statuses && filters.statuses.length > 0) {
+      query.in('status', filters.statuses);
+    }
+    if (filters.overlapsFrom) {
+      query.gte('end_date', filters.overlapsFrom);
+    }
+    if (filters.overlapsTo) {
+      query.lte('start_date', filters.overlapsTo);
+    }
+    if (filters.page) {
+      const size = filters.pageSize ?? 20;
+      const from = (filters.page - 1) * size;
+      query.range(from, from + size - 1);
+    }
+
+    const { data, error, count } = await query;
+
+    if (error)
+      throw error;
+
+    return { items: data.map(mapTravelSummary), total: count ?? 0 };
+  }
+
+  /**
+   * Counts travels per status on the server, one `head: true` request per status in parallel
+   * (only the `count` comes back, no rows), so totals aren't capped by `max_rows`.
+   * @returns The count of each status and their sum as `total`
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchStatusCounts(): Promise<TravelStats> {
+    const countByStatus = (status: TravelStatus) => supabase.from('travels').select('*', { count: 'exact', head: true }).eq('status', status);
+
+    const results = await Promise.all((
+      ['pending', 'published', 'in_progress', 'completed', 'cancelled'] as const).map(countByStatus),
+    );
+
+    const failed = results.find(r => r.error);
+    if (failed)
+      throw failed.error;
+
+    const [pending, published, inProgress, completed, cancelled] = results.map(r => r.count ?? 0) as [number, number, number, number, number];
+
+    const total = pending + published + inProgress + completed + cancelled;
+
+    return {
+      pending,
+      published,
+      inProgress,
+      completed,
+      cancelled,
+      total,
+    };
   }
 
   /**
@@ -603,31 +702,16 @@ export function useTravelRepository() {
       throw error;
   }
 
-  /**
-   * Deletes a single bus record from a travel.
-   * @param busId - UUID of the `travel_buses` record to delete
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function removeTravelBus(busId: string): Promise<void> {
-    const { error } = await supabase
-      .from('travel_buses')
-      .delete()
-      .eq('id', busId);
-
-    if (error)
-      throw error;
-  }
-
   return {
-    fetchAll,
     fetchById,
+    fetchSummaries,
+    fetchStatusCounts,
     updateTravel,
     updateTravelAccommodation,
     deleteEmptyAccommodation,
     updateTravelBus,
     isOwnedByCurrentUser,
     removeTravel,
-    removeTravelBus,
     insertTravel,
     upsertTravelInternals,
     insertActivities,
