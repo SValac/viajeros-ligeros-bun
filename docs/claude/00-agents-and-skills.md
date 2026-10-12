@@ -20,8 +20,10 @@ Los skills están instalados en `.claude/skills/` y `.agents/skills/`. Se invoca
 | `vitest` | Escribir tests con Vitest: mocking, coverage, fixtures, configuración |
 | `vue-testing-best-practices` | Testing de componentes Vue con Vue Test Utils, Playwright E2E |
 | `web-design-guidelines` | Auditar UI para accesibilidad, UX y buenas prácticas web |
-| `supabase` | Cualquier tarea con Supabase: Auth, RLS, Storage, migraciones, CLI |
-| `supabase-postgres-best-practices` | Escribir o revisar SQL, esquemas, índices y políticas RLS |
+| `supabase:supabase` | Cualquier tarea con Supabase: Auth, RLS, Storage, migraciones, CLI |
+| `supabase:supabase-postgres-best-practices` | Escribir o revisar SQL, esquemas, índices y políticas RLS |
+
+> Los dos skills de Supabase vienen del plugin oficial `supabase@claude-plugins-official`, activado solo en este proyecto desde `.claude/settings.json` (se actualiza con el plugin; no hay copia en el repo).
 
 ### Diseño
 
