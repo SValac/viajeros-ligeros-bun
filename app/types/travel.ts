@@ -103,6 +103,7 @@ export type TravelSummary = Pick<Travel, 'id' | 'label' | 'destination' | 'start
 };
 
 export type TravelSummaryFilters = {
+  ids?: string[]; // only these travels, e.g. the travels of one traveler
   statuses?: TravelStatus[];
   overlapsFrom?: string; // YYYY-MM-DD, calendar
   overlapsTo?: string;

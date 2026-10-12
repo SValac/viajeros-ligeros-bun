@@ -143,6 +143,9 @@ export function useTravelRepository() {
       .order('created_at', { ascending: false })
       .order('id');
 
+    if (filters.ids) {
+      query.in('id', filters.ids);
+    }
     if (filters.statuses && filters.statuses.length > 0) {
       query.in('status', filters.statuses);
     }
