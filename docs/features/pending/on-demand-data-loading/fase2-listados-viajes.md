@@ -10,7 +10,7 @@
 
 - [x] 1. `fetchSummaries(filters)` en el repositorio (29bf911)
 - [x] 2. `travelKeys.list(filters)` + `travelListQuery` (3d666a5)
-- [ ] 3. Pantallas
+- [x] 3. Pantallas
   - [x] `/quotations` (ea516a9): una petición, estados de carga y error con Reintentar. Los
     totales se cuentan en el cliente porque esta pantalla no pagina.
   - [x] `/calendar` en 4 sub-pasos:
@@ -59,7 +59,12 @@
       `/payments` ya no usa stores.
     - e (0bfb25f) `add/update/deletePayment`, `setAccountConfig` y `deleteTraveler`
       (cascada) invalidan `paymentKeys.root`.
-  - [ ] `payments/traveler/[id].vue` (etiquetas de varios viajes, pendiente de la Fase 1)
+  - [x] `payments/traveler/[id].vue` en 2 sub-pasos:
+    - a (292ec18) filtro `ids` en `fetchSummaries`. Un arreglo vacío devuelve **ningún**
+      viaje (no se ignora el filtro, a diferencia de `statuses`).
+    - b (a434731) la página pide los resúmenes de los viajes del viajero (ids ordenados para
+      que la key de caché sea estable) y arma un `Map` id → label. `enabled` revisa
+      `ids.length`: el objeto de filtros siempre es truthy.
 - [ ] 4. Escrituras invalidan `['travels']`
 - [ ] 5. Quitar `travelsStore.fetchAll()` del arranque
 
