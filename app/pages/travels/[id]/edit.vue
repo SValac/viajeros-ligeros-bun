@@ -60,7 +60,15 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   // already invalidated the travelers query), and when the quotation counts coordinators as
   // passengers it changes the sellable seats, so the seat price is recomputed.
   if (success && !sameIds(previousCoordinatorIds, data.coordinatorIds)) {
-    await cotizacionStore.syncSeatPriceForTravel(travelId.value);
+    const priceSynced = await cotizacionStore.syncSeatPriceForTravel(travelId.value);
+    if (!priceSynced) {
+      toast.add({
+        title: 'Precio por asiento sin recalcular',
+        description: 'El viaje se guardó, pero no se pudo recalcular el precio por asiento. Guarda de nuevo los parámetros de la cotización para actualizarlo.',
+        color: 'warning',
+        icon: 'i-lucide-triangle-alert',
+      });
+    }
   }
 
   if (success) {

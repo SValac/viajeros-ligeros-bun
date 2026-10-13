@@ -22,18 +22,6 @@ import {
 export function useQuotationRepository() {
   const supabase = useSupabase();
 
-  async function fetchAll(): Promise<Quotation[]> {
-    const { data, error } = await supabase
-      .from('quotations')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error)
-      throw error;
-
-    return (data ?? []).map(mapQuotationRowToDomain);
-  }
-
   async function fetchByTravel(travelId: string): Promise<QuotationFetchResult | null> {
     const { data: quotRow, error: quotErr } = await supabase
       .from('quotations')
@@ -984,7 +972,6 @@ export function useQuotationRepository() {
   }
 
   return {
-    fetchAll,
     fetchByTravel,
     insertQuotation,
     updateQuotation,
