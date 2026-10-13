@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui';
+
+import { h } from 'vue';
+
 import type { SupplierPaymentKind } from '~/composables/quotation/use-supplier-payments';
 import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 
@@ -78,6 +82,61 @@ async function confirmDelete() {
   isDeleteModalOpen.value = false;
   paymentToDelete.value = null;
 }
+
+const columns: TableColumn<SupplierPayment>[] = [
+  {
+    accessorKey: 'paymentDate',
+    header: 'Fecha',
+    cell: ({ row }) => formatDate(row.original.paymentDate),
+  },
+  {
+    accessorKey: 'concept',
+    header: 'Concepto',
+    cell: ({ row }) => row.original.concept || '—',
+  },
+  {
+    accessorKey: 'paymentType',
+    header: 'Tipo',
+    cell: ({ row }) => h(resolveComponent('UBadge'), {
+      label: row.original.paymentType === 'cash' ? 'Efectivo' : 'Transferencia',
+      color: row.original.paymentType === 'cash' ? 'success' : 'info',
+      variant: 'subtle',
+    }),
+  },
+  {
+    accessorKey: 'amount',
+    header: 'Monto',
+    cell: ({ row }) => h('span', { class: 'font-medium' }, formatCurrency(row.original.amount)),
+  },
+  {
+    accessorKey: 'notes',
+    header: 'Notas',
+    meta: { class: { td: 'text-muted text-xs max-w-32 truncate' } },
+    cell: ({ row }) => row.original.notes || '—',
+  },
+  {
+    id: 'actions',
+    header: 'Acciones',
+    cell: ({ row }) => h('div', { class: 'flex items-center gap-1' }, [
+      h(resolveComponent('UButton'), {
+        'icon': 'i-lucide-pencil',
+        'size': 'xs',
+        'variant': 'ghost',
+        'color': 'neutral',
+        'aria-label': 'Editar pago',
+        'onClick': () => openEditPayment(row.original),
+      }),
+      h(resolveComponent('UButton'), {
+        'icon': 'i-lucide-trash-2',
+        'size': 'xs',
+        'variant': 'ghost',
+        'color': 'error',
+        'aria-label': 'Eliminar pago',
+        'onClick': () => openDeleteConfirm(row.original),
+      }),
+    ]),
+  },
+];
 </script>
 
 <template>
@@ -99,77 +158,11 @@ async function confirmDelete() {
     </div>
 
     <!-- Payments table -->
-    <div v-if="payments.length > 0" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-default text-left text-muted">
-            <th class="pb-2 pr-4 font-medium">
-              Fecha
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Concepto
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Tipo
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Monto
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Notas
-            </th>
-            <th class="pb-2 font-medium">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="payment in payments"
-            :key="payment.id"
-            class="border-b border-default/50 hover:bg-elevated/50"
-          >
-            <td class="py-2 pr-4">
-              {{ formatDate(payment.paymentDate) }}
-            </td>
-            <td class="py-2 pr-4">
-              {{ payment.concept || '—' }}
-            </td>
-            <td class="py-2 pr-4">
-              <UBadge
-                :label="payment.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="payment.paymentType === 'cash' ? 'success' : 'info'"
-                variant="subtle"
-              />
-            </td>
-            <td class="py-2 pr-4 font-medium">
-              {{ formatCurrency(payment.amount) }}
-            </td>
-            <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
-              {{ payment.notes || '—' }}
-            </td>
-            <td class="py-2">
-              <div class="flex items-center gap-1">
-                <UButton
-                  icon="i-lucide-pencil"
-                  size="xs"
-                  variant="ghost"
-                  color="neutral"
-                  @click="openEditPayment(payment)"
-                />
-                <UButton
-                  icon="i-lucide-trash-2"
-                  size="xs"
-                  variant="ghost"
-                  color="error"
-                  @click="openDeleteConfirm(payment)"
-                />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <UTable
+      v-if="payments.length > 0"
+      :data="payments"
+      :columns="columns"
+    />
 
     <!-- Empty state -->
     <EmptyState

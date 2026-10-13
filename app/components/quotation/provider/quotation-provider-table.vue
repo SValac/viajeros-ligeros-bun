@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui';
+
+import { h } from 'vue';
+
 import type { ProviderPaymentStatus, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
@@ -284,6 +288,161 @@ function getProviderActions(provider: QuotationProvider) {
 
   return [paymentActions, writeActions, destructiveActions];
 }
+
+const columns: TableColumn<QuotationProvider>[] = [
+  {
+    accessorKey: 'providerId',
+    header: 'Proveedor',
+    cell: ({ row }) => h('div', { class: 'flex items-center gap-1.5' }, [
+      isProviderInactive(row.original.providerId)
+        ? h(resolveComponent('UIcon'), {
+            name: 'i-lucide-triangle-alert',
+            class: 'w-4 h-4 text-warning shrink-0',
+            title: 'Proveedor inactivo en el catálogo',
+          })
+        : null,
+      h('span', { class: 'font-medium' }, getProviderName(row.original.providerId)),
+    ]),
+  },
+  {
+    accessorKey: 'serviceDescription',
+    header: 'Servicio',
+    meta: { class: { td: 'max-w-40' } },
+    cell: ({ row }) => h('div', [
+      h('span', { class: 'truncate block' }, row.original.serviceDescription),
+      row.original.coordinatorsCourtesy
+        ? h(resolveComponent('UBadge'), {
+            label: 'Cortesía coord.',
+            icon: 'i-lucide-gift',
+            color: 'info',
+            variant: 'subtle',
+            class: 'mt-1',
+          })
+        : null,
+    ]),
+  },
+  {
+    id: 'split',
+    header: 'División',
+    cell: ({ row }) => {
+      if (isPerPersonProvider(row.original))
+        return h(resolveComponent('UBadge'), { label: 'Por persona', color: 'primary', variant: 'subtle' });
+      const isMinimum = (row.original.splitType ?? 'minimum') === 'minimum';
+      return h(resolveComponent('UBadge'), {
+        label: isMinimum ? 'Asientos min.' : 'Asientos vend.',
+        color: isMinimum ? 'info' : 'neutral',
+        variant: 'subtle',
+      });
+    },
+  },
+  {
+    // For a per-person service, with a full bus
+    id: 'quotedCost',
+    header: 'Costo Total',
+    cell: ({ row }) => {
+      const provider = row.original;
+      const perPerson = isPerPersonProvider(provider);
+      const adjustmentCount = perPerson ? quotationStore.getAdjustmentsByProvider(provider.id).length : 0;
+      return h('div', [
+        h('p', { class: 'font-medium' }, formatCurrency(getQuotedCost(provider))),
+        perPerson
+          ? h('p', { class: 'text-xs text-muted whitespace-nowrap' }, `${formatCurrency(provider.unitCost ?? 0)} × ${quotationStore.getSellableSeats(provider.quotationId, coordinatorCount.value)} asientos`)
+          : null,
+        adjustmentCount > 0
+          ? h('button', {
+              type: 'button',
+              class: 'text-xs text-primary hover:underline whitespace-nowrap',
+              onClick: () => openAdjustments(provider),
+            }, `${adjustmentCount} precio${adjustmentCount === 1 ? '' : 's'} por tipo`)
+          : null,
+      ]);
+    },
+  },
+  {
+    // For an optional one, only for the travelers who take it
+    accessorKey: 'payableCost',
+    header: 'A pagar',
+    cell: ({ row }) => {
+      const provider = row.original;
+      return h('div', [
+        h('p', { class: 'font-medium' }, formatCurrency(provider.payableCost)),
+        isPerPersonProvider(provider) && travelId.value
+          ? h(resolveComponent('ULink'), {
+              to: { name: 'travel-optional-services', params: { id: travelId.value } },
+              class: 'text-xs text-primary whitespace-nowrap',
+            }, () => `${getTakersCount(provider)} lo toman`)
+          : null,
+      ]);
+    },
+  },
+  {
+    id: 'costPerPerson',
+    header: 'Costo/persona',
+    cell: ({ row }) => formatCurrency(quotationStore.getProviderCostPerPerson(row.original.id, coordinatorCount.value)),
+  },
+  {
+    id: 'paid',
+    header: 'Pagado',
+    cell: ({ row }) => formatCurrency(quotationStore.getPaidByProvider(row.original.id)),
+  },
+  {
+    id: 'pending',
+    header: 'Pendiente',
+    cell: ({ row }) => {
+      const balance = quotationStore.getPendingBalanceByProvider(row.original.id);
+      const overpayment = quotationStore.getProviderOverpayment(row.original.id);
+      return h('div', [
+        h('span', { class: balance > 0 ? 'text-warning' : 'text-success' }, formatCurrency(balance)),
+        overpayment > 0
+          ? h('p', { class: 'text-xs text-error whitespace-nowrap' }, `Pagado de más: ${formatCurrency(overpayment)}`)
+          : null,
+      ]);
+    },
+  },
+  {
+    accessorKey: 'paymentMethod',
+    header: 'Método',
+    cell: ({ row }) => h(resolveComponent('UBadge'), {
+      label: row.original.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+      color: 'neutral',
+      variant: 'subtle',
+    }),
+  },
+  {
+    id: 'paymentStatus',
+    header: 'Estado Pago',
+    cell: ({ row }) => {
+      const status = quotationStore.getProviderPaymentStatus(row.original.id);
+      return h(resolveComponent('UBadge'), {
+        label: getPaymentStatusLabel(status),
+        color: getPaymentStatusColor(status),
+        variant: 'subtle',
+      });
+    },
+  },
+  {
+    accessorKey: 'confirmed',
+    header: 'Confirmado',
+    cell: ({ row }) => h(resolveComponent('UBadge'), {
+      label: row.original.confirmed ? 'Sí' : 'No',
+      color: row.original.confirmed ? 'success' : 'neutral',
+      variant: 'subtle',
+    }),
+  },
+  {
+    id: 'actions',
+    header: 'Acciones',
+    cell: ({ row }) => h(resolveComponent('UDropdownMenu'), {
+      items: getProviderActions(row.original),
+    }, () => h(resolveComponent('UButton'), {
+      'icon': 'i-lucide-more-vertical',
+      'variant': 'ghost',
+      'color': 'neutral',
+      'size': 'xs',
+      'aria-label': 'Acciones del proveedor',
+    })),
+  },
+];
 </script>
 
 <template>
@@ -329,196 +488,11 @@ function getProviderActions(provider: QuotationProvider) {
     </div>
 
     <!-- Table -->
-    <div v-if="providers.length > 0" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-default text-left text-muted">
-            <th class="pb-2 pr-4 font-medium">
-              Proveedor
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Servicio
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              División
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Costo Total
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              A pagar
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Costo/persona
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Pagado
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Pendiente
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Método
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Estado Pago
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Confirmado
-            </th>
-            <th class="pb-2 font-medium">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="provider in providers"
-            :key="provider.id"
-            class="border-b border-default/50 hover:bg-elevated/50"
-          >
-            <!-- Provider -->
-            <td class="py-3 pr-4">
-              <div class="flex items-center gap-1.5">
-                <UIcon
-                  v-if="isProviderInactive(provider.providerId)"
-                  name="i-lucide-triangle-alert"
-                  class="w-4 h-4 text-warning shrink-0"
-                  title="Proveedor inactivo en el catálogo"
-                />
-                <span class="font-medium">{{ getProviderName(provider.providerId) }}</span>
-              </div>
-            </td>
-
-            <!-- Service -->
-            <td class="py-3 pr-4 max-w-40">
-              <span class="truncate block">{{ provider.serviceDescription }}</span>
-              <UBadge
-                v-if="provider.coordinatorsCourtesy"
-                label="Cortesía coord."
-                icon="i-lucide-gift"
-                color="info"
-                variant="subtle"
-                class="mt-1"
-              />
-            </td>
-
-            <!-- Split -->
-            <td class="py-3 pr-4">
-              <UBadge
-                v-if="isPerPersonProvider(provider)"
-                label="Por persona"
-                color="primary"
-                variant="subtle"
-              />
-              <UBadge
-                v-else
-                :label="(provider.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
-                :color="(provider.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Total Cost: for a per-person service, with a full bus -->
-            <td class="py-3 pr-4">
-              <p class="font-medium">
-                {{ formatCurrency(getQuotedCost(provider)) }}
-              </p>
-              <p
-                v-if="isPerPersonProvider(provider)"
-                class="text-xs text-muted whitespace-nowrap"
-              >
-                {{ formatCurrency(provider.unitCost ?? 0) }} × {{ quotationStore.getSellableSeats(provider.quotationId, coordinatorCount) }} asientos
-              </p>
-              <button
-                v-if="isPerPersonProvider(provider) && quotationStore.getAdjustmentsByProvider(provider.id).length > 0"
-                type="button"
-                class="text-xs text-primary hover:underline whitespace-nowrap"
-                @click="openAdjustments(provider)"
-              >
-                {{ quotationStore.getAdjustmentsByProvider(provider.id).length }} precio{{ quotationStore.getAdjustmentsByProvider(provider.id).length === 1 ? '' : 's' }} por tipo
-              </button>
-            </td>
-
-            <!-- To pay: for an optional one, only for the travelers who take it -->
-            <td class="py-3 pr-4">
-              <p class="font-medium">
-                {{ formatCurrency(provider.payableCost) }}
-              </p>
-              <ULink
-                v-if="isPerPersonProvider(provider) && travelId"
-                :to="{ name: 'travel-optional-services', params: { id: travelId } }"
-                class="text-xs text-primary whitespace-nowrap"
-              >
-                {{ getTakersCount(provider) }} lo toman
-              </ULink>
-            </td>
-
-            <!-- Cost/person -->
-            <td class="py-3 pr-4">
-              {{ formatCurrency(quotationStore.getProviderCostPerPerson(provider.id, coordinatorCount)) }}
-            </td>
-
-            <!-- Paid -->
-            <td class="py-3 pr-4">
-              {{ formatCurrency(quotationStore.getPaidByProvider(provider.id)) }}
-            </td>
-
-            <!-- Pending -->
-            <td class="py-3 pr-4">
-              <span :class="quotationStore.getPendingBalanceByProvider(provider.id) > 0 ? 'text-warning' : 'text-success'">
-                {{ formatCurrency(quotationStore.getPendingBalanceByProvider(provider.id)) }}
-              </span>
-              <p
-                v-if="quotationStore.getProviderOverpayment(provider.id) > 0"
-                class="text-xs text-error whitespace-nowrap"
-              >
-                Pagado de más: {{ formatCurrency(quotationStore.getProviderOverpayment(provider.id)) }}
-              </p>
-            </td>
-
-            <!-- Method -->
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="provider.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
-                color="neutral"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Payment Status -->
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="getPaymentStatusLabel(quotationStore.getProviderPaymentStatus(provider.id))"
-                :color="getPaymentStatusColor(quotationStore.getProviderPaymentStatus(provider.id))"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Confirmed -->
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="provider.confirmed ? 'Sí' : 'No'"
-                :color="provider.confirmed ? 'success' : 'neutral'"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Actions -->
-            <td class="py-3">
-              <UDropdownMenu :items="getProviderActions(provider)">
-                <UButton
-                  icon="i-lucide-more-vertical"
-                  variant="ghost"
-                  color="neutral"
-                  size="xs"
-                />
-              </UDropdownMenu>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <UTable
+      v-if="providers.length > 0"
+      :data="providers"
+      :columns="columns"
+    />
 
     <!-- Empty state -->
     <EmptyState

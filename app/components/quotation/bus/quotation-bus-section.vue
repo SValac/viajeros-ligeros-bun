@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui';
+
+import { h } from 'vue';
+
 import type { BusPaymentStatus, QuotationBus } from '~/types/quotation';
 
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
@@ -128,6 +132,101 @@ function getBusActions(bus: QuotationBus) {
     ],
   ];
 }
+
+const columns: TableColumn<QuotationBus>[] = [
+  {
+    accessorKey: 'providerId',
+    header: 'Agencia',
+    cell: ({ row }) => h('span', { class: 'font-medium' }, getAgencyName(row.original.providerId)),
+  },
+  {
+    accessorKey: 'unitNumber',
+    header: 'Unidad',
+    cell: ({ row }) => h('span', { class: 'font-mono' }, row.original.unitNumber),
+  },
+  {
+    accessorKey: 'capacity',
+    header: 'Asientos',
+  },
+  {
+    id: 'split',
+    header: 'División',
+    cell: ({ row }) => {
+      const isMinimum = (row.original.splitType ?? 'minimum') === 'minimum';
+      return h(resolveComponent('UBadge'), {
+        label: isMinimum ? 'Asientos min.' : 'Asientos vend.',
+        color: isMinimum ? 'info' : 'neutral',
+        variant: 'subtle',
+      });
+    },
+  },
+  {
+    accessorKey: 'totalCost',
+    header: 'Costo Total',
+    cell: ({ row }) => h('span', { class: 'font-medium' }, formatCurrency(row.original.totalCost ?? 0)),
+  },
+  {
+    id: 'costPerPerson',
+    header: 'Costo/persona',
+    cell: ({ row }) => formatCurrency(quotationStore.getBusCostPerPerson(row.original.id, coordinatorCount.value)),
+  },
+  {
+    id: 'paid',
+    header: 'Pagado',
+    cell: ({ row }) => formatCurrency(quotationStore.getPaidByBus(row.original.id)),
+  },
+  {
+    id: 'pending',
+    header: 'Pendiente',
+    cell: ({ row }) => {
+      const balance = quotationStore.getPendingBalanceByBus(row.original.id);
+      return h('span', { class: balance > 0 ? 'text-warning' : 'text-success' }, formatCurrency(balance));
+    },
+  },
+  {
+    accessorKey: 'paymentMethod',
+    header: 'Método',
+    cell: ({ row }) => h(resolveComponent('UBadge'), {
+      label: row.original.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+      color: 'neutral',
+      variant: 'subtle',
+    }),
+  },
+  {
+    id: 'paymentStatus',
+    header: 'Estado Pago',
+    cell: ({ row }) => {
+      const status = quotationStore.getBusPaymentStatus(row.original.id);
+      return h(resolveComponent('UBadge'), {
+        label: getPaymentStatusLabel(status),
+        color: getPaymentStatusColor(status),
+        variant: 'subtle',
+      });
+    },
+  },
+  {
+    accessorKey: 'confirmed',
+    header: 'Confirmado',
+    cell: ({ row }) => h(resolveComponent('UBadge'), {
+      label: row.original.confirmed ? 'Sí' : 'No',
+      color: row.original.confirmed ? 'success' : 'neutral',
+      variant: 'subtle',
+    }),
+  },
+  {
+    id: 'actions',
+    header: 'Acciones',
+    cell: ({ row }) => h(resolveComponent('UDropdownMenu'), {
+      items: getBusActions(row.original),
+    }, () => h(resolveComponent('UButton'), {
+      'icon': 'i-lucide-more-vertical',
+      'variant': 'ghost',
+      'color': 'neutral',
+      'size': 'xs',
+      'aria-label': 'Acciones del autobús',
+    })),
+  },
+];
 </script>
 
 <template>
@@ -149,137 +248,11 @@ function getBusActions(bus: QuotationBus) {
     </template>
 
     <!-- Table -->
-    <div v-if="buses.length > 0" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-default text-left text-muted">
-            <th class="pb-2 pr-4 font-medium">
-              Agencia
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Unidad
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Asientos
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              División
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Costo Total
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Costo/persona
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Pagado
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Pendiente
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Método
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Estado Pago
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Confirmado
-            </th>
-            <th class="pb-2 font-medium">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="bus in buses"
-            :key="bus.id"
-            class="border-b border-default/50 hover:bg-elevated/50"
-          >
-            <td class="py-3 pr-4 font-medium">
-              {{ getAgencyName(bus.providerId) }}
-            </td>
-            <td class="py-3 pr-4 font-mono">
-              {{ bus.unitNumber }}
-            </td>
-            <td class="py-3 pr-4">
-              {{ bus.capacity }}
-            </td>
-
-            <!-- Split -->
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
-                :color="(bus.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Total Cost -->
-            <td class="py-3 pr-4 font-medium">
-              {{ formatCurrency(bus.totalCost ?? 0) }}
-            </td>
-
-            <!-- Cost/person -->
-            <td class="py-3 pr-4">
-              {{ formatCurrency(quotationStore.getBusCostPerPerson(bus.id, coordinatorCount)) }}
-            </td>
-
-            <!-- Paid -->
-            <td class="py-3 pr-4">
-              {{ formatCurrency(quotationStore.getPaidByBus(bus.id)) }}
-            </td>
-
-            <!-- Pending -->
-            <td class="py-3 pr-4">
-              <span :class="quotationStore.getPendingBalanceByBus(bus.id) > 0 ? 'text-warning' : 'text-success'">
-                {{ formatCurrency(quotationStore.getPendingBalanceByBus(bus.id)) }}
-              </span>
-            </td>
-
-            <!-- Method -->
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="bus.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
-                color="neutral"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Payment Status -->
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="getPaymentStatusLabel(quotationStore.getBusPaymentStatus(bus.id))"
-                :color="getPaymentStatusColor(quotationStore.getBusPaymentStatus(bus.id))"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Confirmed -->
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="bus.confirmed ? 'Sí' : 'No'"
-                :color="bus.confirmed ? 'success' : 'neutral'"
-                variant="subtle"
-              />
-            </td>
-
-            <!-- Actions -->
-            <td class="py-3">
-              <UDropdownMenu :items="getBusActions(bus)">
-                <UButton
-                  icon="i-lucide-more-vertical"
-                  variant="ghost"
-                  color="neutral"
-                  size="xs"
-                />
-              </UDropdownMenu>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <UTable
+      v-if="buses.length > 0"
+      :data="buses"
+      :columns="columns"
+    />
 
     <!-- Empty state -->
     <EmptyState

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import type { TableColumn } from '@nuxt/ui';
+
+import { h } from 'vue';
+
 import type { QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
@@ -81,6 +85,75 @@ function getActions(expense: QuotationExpense) {
     [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => openDeleteConfirm(expense) }],
   ];
 }
+
+const amountClass = { th: 'text-right', td: 'text-right tabular-nums' };
+
+const columns = computed<TableColumn<QuotationExpense>[]>(() => {
+  const cols: TableColumn<QuotationExpense>[] = [
+    {
+      accessorKey: 'category',
+      header: 'Categoría',
+      cell: ({ row }) => h(resolveComponent('UBadge'), { label: row.original.category, color: 'neutral', variant: 'subtle' }),
+      footer: 'Total',
+    },
+    {
+      accessorKey: 'description',
+      header: 'Descripción',
+      meta: { class: { td: 'max-w-60' } },
+      cell: ({ row }) => h('span', { class: ['truncate block', { 'text-muted': !row.original.description }] }, row.original.description ?? '—'),
+    },
+    {
+      accessorKey: 'splitType',
+      header: 'División',
+      cell: ({ row }) => h(resolveComponent('UBadge'), {
+        label: row.original.splitType === 'minimum' ? 'Asientos min.' : 'Asientos vend.',
+        color: row.original.splitType === 'minimum' ? 'info' : 'neutral',
+        variant: 'subtle',
+      }),
+    },
+    {
+      accessorKey: 'totalCost',
+      header: 'Costo total',
+      meta: { class: amountClass },
+      cell: ({ row }) => {
+        const expense = row.original;
+        return h('div', [
+          h('p', { class: 'font-medium' }, formatCurrency(expense.totalCost)),
+          expense.costType === 'per_person'
+            ? h('p', { class: 'text-xs text-muted whitespace-nowrap' }, `${formatCurrency(expense.unitCost ?? 0)} × ${expense.personCount} pers.`)
+            : null,
+        ]);
+      },
+      footer: () => formatCurrency(expensesTotal.value),
+    },
+    {
+      id: 'costPerSeat',
+      header: 'Por asiento',
+      meta: { class: amountClass },
+      cell: ({ row }) => formatCurrency(getCostPerSeat(row.original)),
+      footer: () => formatCurrency(totalPerSeat.value),
+    },
+  ];
+
+  if (!readonly) {
+    cols.push({
+      id: 'actions',
+      header: () => h('span', { class: 'sr-only' }, 'Acciones'),
+      meta: { class: { td: 'text-right' } },
+      cell: ({ row }) => h(resolveComponent('UDropdownMenu'), {
+        items: getActions(row.original),
+      }, () => h(resolveComponent('UButton'), {
+        'icon': 'i-lucide-ellipsis-vertical',
+        'variant': 'ghost',
+        'color': 'neutral',
+        'size': 'sm',
+        'aria-label': 'Acciones del gasto',
+      })),
+    });
+  }
+
+  return cols;
+});
 </script>
 
 <template>
@@ -105,98 +178,12 @@ function getActions(expense: QuotationExpense) {
       </div>
     </template>
 
-    <div v-if="expenses.length > 0" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-default text-left text-muted">
-            <th class="pb-2 pr-4 font-medium">
-              Categoría
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Descripción
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              División
-            </th>
-            <th class="pb-2 pr-4 font-medium text-right">
-              Costo total
-            </th>
-            <th class="pb-2 pr-4 font-medium text-right">
-              Por asiento
-            </th>
-            <th v-if="!readonly" class="pb-2 font-medium">
-              <span class="sr-only">Acciones</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="expense in expenses"
-            :key="expense.id"
-            class="border-b border-default/50 hover:bg-elevated/50"
-          >
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="expense.category"
-                color="neutral"
-                variant="subtle"
-              />
-            </td>
-            <td class="py-3 pr-4 max-w-60">
-              <span class="truncate block" :class="{ 'text-muted': !expense.description }">
-                {{ expense.description ?? '—' }}
-              </span>
-            </td>
-            <td class="py-3 pr-4">
-              <UBadge
-                :label="expense.splitType === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
-                :color="expense.splitType === 'minimum' ? 'info' : 'neutral'"
-                variant="subtle"
-              />
-            </td>
-            <td class="py-3 pr-4 text-right tabular-nums">
-              <p class="font-medium">
-                {{ formatCurrency(expense.totalCost) }}
-              </p>
-              <p
-                v-if="expense.costType === 'per_person'"
-                class="text-xs text-muted whitespace-nowrap"
-              >
-                {{ formatCurrency(expense.unitCost ?? 0) }} × {{ expense.personCount }} pers.
-              </p>
-            </td>
-            <td class="py-3 pr-4 text-right tabular-nums">
-              {{ formatCurrency(getCostPerSeat(expense)) }}
-            </td>
-            <td v-if="!readonly" class="py-3 text-right">
-              <UDropdownMenu :items="getActions(expense)">
-                <UButton
-                  icon="i-lucide-ellipsis-vertical"
-                  variant="ghost"
-                  color="neutral"
-                  size="sm"
-                  aria-label="Acciones del gasto"
-                />
-              </UDropdownMenu>
-            </td>
-          </tr>
-        </tbody>
-        <tfoot>
-          <tr class="font-semibold">
-            <td colspan="3" class="pt-3 pr-4">
-              Total
-            </td>
-            <td class="pt-3 pr-4 text-right tabular-nums">
-              {{ formatCurrency(expensesTotal) }}
-            </td>
-            <td class="pt-3 pr-4 text-right tabular-nums">
-              {{ formatCurrency(totalPerSeat) }}
-            </td>
-            <td v-if="!readonly" />
-          </tr>
-        </tfoot>
-      </table>
-    </div>
+    <UTable
+      v-if="expenses.length > 0"
+      :data="expenses"
+      :columns="columns"
+      :ui="{ tfoot: 'font-semibold' }"
+    />
 
     <!-- Empty state -->
     <EmptyState
