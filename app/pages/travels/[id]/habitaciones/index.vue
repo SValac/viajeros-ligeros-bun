@@ -6,6 +6,7 @@ import type { Traveler } from '~/types/traveler';
 import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 
@@ -25,6 +26,12 @@ const { travelId, travel } = useTravelRoute();
 
 const accommodations = computed(() => travel.value?.accommodations ?? []);
 const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
+// The quoted hotels and room types group the rooms; the public prices say who goes where.
+const {
+  data: quotationData,
+  status: quotationStatus,
+  refetch: refetchQuotation,
+} = useQuery(() => quotationByTravelQuery(travelId.value));
 // Coordinators need a room too, so room counts and the add modal include them.
 const occupantsOfTravel = computed(() => travelerData.value?.travelers ?? []);
 const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel.value));
@@ -275,10 +282,7 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
 watch(travelId, async (id) => {
   if (!id)
     return;
-  await Promise.all([
-    paymentStore.fetchByTravel(id),
-    cotizacionStore.fetchByTravel(id),
-  ]);
+  await paymentStore.fetchByTravel(id);
 }, { immediate: true });
 
 function getTravelerIcon(traveler: Traveler): { name: string; class: string } {
@@ -373,8 +377,12 @@ async function updateAccommodation(
   <div>
     <!-- El encabezado y la navegación los pone app/pages/travels/[id].vue -->
     <div class="space-y-6">
-      <!-- Until the travelers load (or if they fail), the stats and rooms would show nobody -->
-      <div v-if="travelersStatus === 'pending' && !travelerData" class="flex justify-center py-12">
+      <!-- Until the travelers load (or if they fail), the stats and rooms would show nobody;
+           until the quotation loads, every room would look unquoted -->
+      <div
+        v-if="(travelersStatus === 'pending' && !travelerData) || (quotationStatus === 'pending' && quotationData === undefined)"
+        class="flex justify-center py-12"
+      >
         <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
       </div>
       <UCard v-else-if="travelersStatus === 'error'">
@@ -386,6 +394,18 @@ async function updateAccommodation(
             label="Reintentar"
             icon="i-lucide-refresh-cw"
             @click="refetchTravelers()"
+          />
+        </div>
+      </UCard>
+      <UCard v-else-if="quotationStatus === 'error' && quotationData === undefined">
+        <div class="flex flex-col items-center justify-center gap-4 py-12">
+          <p class="text-muted">
+            No se pudo cargar la cotización
+          </p>
+          <UButton
+            label="Reintentar"
+            icon="i-lucide-refresh-cw"
+            @click="refetchQuotation()"
           />
         </div>
       </UCard>

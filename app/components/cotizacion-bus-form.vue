@@ -116,7 +116,7 @@ const asientoMaximoOcupado = computed(() => {
 });
 
 // Entre cuántas personas se reparte el costo: asientos mínimos objetivo o asientos vendibles
-const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(props.quotationId, formState.splitType ?? 'minimum'));
+const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(props.quotationId, formState.splitType ?? 'minimum', travel.value?.coordinatorIds.length ?? 0));
 
 // Llenar el formulario al abrir (agregar: vacío; editar: datos del bus)
 watch(() => props.open, (open) => {

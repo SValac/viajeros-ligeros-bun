@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -13,8 +14,9 @@ const cotizacionStore = useCotizacionStore();
 const cotizacion = computed(() =>
   cotizacionStore.cotizaciones.find(c => c.id === quotationId),
 );
+const coordinatorCount = useTravelCoordinatorCount(() => cotizacion.value?.travelId);
 
-const costoProveedores = computed(() => cotizacionStore.getCostoTotal(quotationId));
+const costoProveedores = computed(() => cotizacionStore.getCostoTotal(quotationId, coordinatorCount.value));
 const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(quotationId));
 const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(quotationId));
 const costoPorPersonaAsiento = computed(() => cotizacionStore.getCostoPorPersonaAsiento(quotationId));
@@ -26,10 +28,10 @@ const costoGastos = computed(() => cotizacionStore.getTotalGastos(quotationId));
 const costoTotal = computed(() => costoProveedores.value + costoBuses.value + costoGastos.value);
 const costoMinimoConBuses = computed(() => costoTipoMinimo.value + costoBusesTipoMinimo.value + cotizacionStore.getGastosTipoMinimo(quotationId));
 const costoCapacidadConBuses = computed(() => costoTipoTotal.value + costoBusesTipoTotal.value + cotizacionStore.getGastosTipoTotal(quotationId));
-const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(quotationId));
-const asientoConGanancia = computed(() => cotizacionStore.getAsientoConGanancia(quotationId));
+const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(quotationId, coordinatorCount.value));
+const asientoConGanancia = computed(() => cotizacionStore.getAsientoConGanancia(quotationId, coordinatorCount.value));
 // Total seats minus the coordinators when they take passenger seats.
-const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId));
+const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId, coordinatorCount.value));
 const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(quotationId));
 const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(quotationId));
 const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(quotationId));

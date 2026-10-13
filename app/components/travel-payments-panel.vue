@@ -8,6 +8,7 @@ import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/ty
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
@@ -27,6 +28,8 @@ const cotizacionStore = useCotizacionStore();
 const travelId = computed(() => props.travelId);
 const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
+// The public prices (what each traveler is charged) live in the quotation.
+useQuery(() => quotationByTravelQuery(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 const preciosPublicos = computed(() =>
   cotizacion.value
@@ -331,21 +334,11 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   },
 ];
 
-onMounted(async () => {
-  await Promise.all([
-    paymentStore.fetchByTravel(travelId.value),
-    cotizacionStore.fetchByTravel(travelId.value),
-  ]);
-});
-
 watch(travelId, async (id) => {
   if (!id)
     return;
-  await Promise.all([
-    paymentStore.fetchByTravel(id),
-    cotizacionStore.fetchByTravel(id),
-  ]);
-});
+  await paymentStore.fetchByTravel(id);
+}, { immediate: true });
 </script>
 
 <template>

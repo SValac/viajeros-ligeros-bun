@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { quotationByTravelQuery } from '~/queries/quotations';
 
 definePageMeta({
   name: 'travel-detail',
@@ -11,7 +12,7 @@ const cotizacionStore = useCotizacionStore();
 const { travelId, travel } = useTravelRoute();
 
 // The seat figures live in the quotation (they drive its seat price)
-watch(travelId, id => cotizacionStore.fetchByTravel(id), { immediate: true });
+useQuery(() => quotationByTravelQuery(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 
 const coordinadores = computed(() =>
@@ -42,7 +43,7 @@ const details = computed<Detail[]>(() => {
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
     { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(cotizacion.value?.minimumSeatTarget) },
     { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(cotizacion.value?.totalSeats) },
-    { icon: 'i-lucide-ticket', label: 'Asientos vendibles', value: seats(cotizacion.value && cotizacionStore.getAsientosVendibles(cotizacion.value.id)) },
+    { icon: 'i-lucide-ticket', label: 'Asientos vendibles', value: seats(cotizacion.value && cotizacionStore.getAsientosVendibles(cotizacion.value.id, t.coordinatorIds.length)) },
     { icon: 'i-lucide-star', label: 'Destacado en la web', value: t.featured ? 'Sí' : 'No' },
   ];
 });

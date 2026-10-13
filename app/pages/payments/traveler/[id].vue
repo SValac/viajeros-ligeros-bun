@@ -34,20 +34,10 @@ const travelerName = computed(() =>
   traveler.value ? `${traveler.value.firstName} ${traveler.value.lastName}` : '',
 );
 
-const loadedCotizacionTravelIds = shallowRef(new Set<string>());
-
+// One quotation per travel the traveler is in (for its public prices). The quotation query
+// skips the request when that travel's quotation is cached and fresh.
 async function ensureCotizacionesLoaded(travelIds: string[]) {
-  const pending = travelIds.filter((id) => {
-    return !!id && !loadedCotizacionTravelIds.value.has(id);
-  });
-
-  if (pending.length === 0)
-    return;
-
-  await Promise.all(pending.map(async (id) => {
-    await cotizacionStore.fetchByTravel(id);
-    loadedCotizacionTravelIds.value.add(id);
-  }));
+  await Promise.all(travelIds.filter(Boolean).map(id => cotizacionStore.fetchByTravel(id)));
 }
 
 // All travel IDs this traveler has account configs or payments for
