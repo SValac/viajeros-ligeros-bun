@@ -3,22 +3,32 @@ import { defineStore } from 'pinia';
 import type { Bus, BusFormData, BusUpdateData } from '~/types/bus';
 
 import { useBusRepository } from '~/composables/buses/use-bus-repository';
+import { catalogKeys, useBusesCatalog } from '~/queries/catalogs';
 
 /**
- * Global cache and orchestrator for bus data.
- * Delegates all Supabase I/O to `useBusRepository`.
- * Owns the reactive `buses` array — no other layer mutates it.
+ * Bus catalog and its writes.
+ * `buses` reads the catalog query (`useBusesCatalog`); writes go through `useBusRepository`
+ * and then refetch it.
  * @returns Store state, getters and actions
  */
 export const useBusStore = defineStore('buses', () => {
   const repository = useBusRepository();
+  const queryCache = useQueryCache();
+  // A defined query, not `useQuery`: inside a store, `useQuery` would bind to the component that
+  // happened to create the store and go inactive when it unmounts. Here the query stays active
+  // while the store lives, so writes refetch it from any screen.
+  const query = useBusesCatalog();
 
-  // State
-  const buses = ref<Bus[]>([]);
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+  // State (writes only; the catalog's own load state comes from the query)
+  const loading = shallowRef(false);
+  const error = shallowRef<string | null>(null);
 
   // Getters
+  const buses = computed(() => query.data.value ?? []);
+  /** `false` until the first load resolves: an empty `buses` before that is not "no buses". */
+  const isLoaded = computed(() => query.data.value !== undefined);
+  const loadError = computed(() => query.error.value);
+
   const activeBuses = computed(() => buses.value.filter(b => b.active));
 
   const getBusById = computed(() => {
@@ -39,26 +49,21 @@ export const useBusStore = defineStore('buses', () => {
   const totalBuses = computed(() => buses.value.filter(b => b.active).length);
 
   // Actions
-  /**
-   * Loads all buses from the repository into the cache.
-   * Errors are stored in `error` state — they do not propagate to the caller.
-   */
-  async function fetchAll(): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      buses.value = await repository.fetchAll();
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al cargar autobuses';
-    }
-    finally {
-      loading.value = false;
-    }
+  /** Retries the catalog load (e.g. from an error state's "Reintentar"). */
+  function refetch() {
+    return query.refetch();
   }
 
   /**
-   * Creates a new bus and appends it to the cache.
+   * Refetches the catalog after a write, so the action resolves with fresh data.
+   * A failed refetch keeps the previous data: the write itself succeeded.
+   */
+  async function refreshCatalog(): Promise<void> {
+    await queryCache.invalidateQueries({ key: catalogKeys.buses }).catch(() => {});
+  }
+
+  /**
+   * Creates a new bus.
    * @param data - Form data for the new bus
    * @returns The created bus
    * @throws Re-throws repository errors so the caller can react (e.g. show a toast)
@@ -68,7 +73,7 @@ export const useBusStore = defineStore('buses', () => {
     error.value = null;
     try {
       const bus = await repository.insert(data);
-      buses.value.push(bus);
+      await refreshCatalog();
       return bus;
     }
     catch (e) {
@@ -81,7 +86,7 @@ export const useBusStore = defineStore('buses', () => {
   }
 
   /**
-   * Updates a bus and patches the cache entry by index for minimal re-renders.
+   * Updates a bus.
    * @param id - UUID of the bus to update
    * @param data - Partial update data
    * @returns `true` on success, `false` on failure (error is stored in `error` state)
@@ -90,11 +95,8 @@ export const useBusStore = defineStore('buses', () => {
     loading.value = true;
     error.value = null;
     try {
-      const bus = await repository.update(id, data);
-      const index = buses.value.findIndex(b => b.id === id);
-      if (index !== -1) {
-        buses.value[index] = bus;
-      }
+      await repository.update(id, data);
+      await refreshCatalog();
       return true;
     }
     catch (e) {
@@ -107,7 +109,7 @@ export const useBusStore = defineStore('buses', () => {
   }
 
   /**
-   * Removes a bus from the repository and from the cache.
+   * Deletes a bus.
    * @param id - UUID of the bus to delete
    * @returns `true` on success, `false` on failure (error is stored in `error` state)
    */
@@ -116,7 +118,7 @@ export const useBusStore = defineStore('buses', () => {
     error.value = null;
     try {
       await repository.remove(id);
-      buses.value = buses.value.filter(b => b.id !== id);
+      await refreshCatalog();
       return true;
     }
     catch (e) {
@@ -144,16 +146,18 @@ export const useBusStore = defineStore('buses', () => {
 
   return {
     // State
-    buses,
     loading,
     error,
     // Getters
+    buses,
+    isLoaded,
+    loadError,
     activeBuses,
     getBusById,
     getBusesByProvider,
     totalBuses,
     // Actions
-    fetchAll,
+    refetch,
     addBus,
     updateBus,
     deleteBus,

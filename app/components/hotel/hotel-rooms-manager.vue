@@ -42,15 +42,21 @@ const groupedByOccupancy = computed((): RoomTypesByOccupancy[] => {
   return [...map.values()].sort((a, b) => a.occupancy - b.occupancy);
 });
 
-onMounted(() => {
-  if (!store.hasRoomData(props.provider.id)) {
-    store.initRoomData(props.provider.id, 0);
-  }
-  totalRoomsInput.value = store.getTotalRoomsByProvider(props.provider.id);
-});
+// Creates the provider's room data if it has none. The store waits for the catalog before
+// checking, so a provider whose data hasn't loaded yet doesn't get a second record.
+onMounted(() => store.initRoomData(props.provider.id, 0));
 
-function updateTotalRooms() {
-  const ok = store.updateTotalRooms(props.provider.id, totalRoomsInput.value);
+// Follows the saved total: it arrives with the catalog, after mount.
+watch(
+  () => store.getTotalRoomsByProvider(props.provider.id),
+  (total) => {
+    totalRoomsInput.value = total;
+  },
+  { immediate: true },
+);
+
+async function updateTotalRooms() {
+  const ok = await store.updateTotalRooms(props.provider.id, totalRoomsInput.value);
   if (!ok) {
     toast.add({ title: 'Error', description: store.error ?? 'No se pudo actualizar el total', color: 'error' });
     totalRoomsInput.value = store.getTotalRoomsByProvider(props.provider.id);
@@ -72,121 +78,141 @@ function closeFormModal() {
   editingRoomType.value = null;
 }
 
-function handleFormSubmit(data: HotelRoomTypeFormData) {
-  if (isEditing.value && editingRoomType.value) {
-    store.updateRoomType(props.provider.id, editingRoomType.value.id, data);
-    toast.add({ title: 'Habitación actualizada', color: 'primary' });
+async function handleFormSubmit(data: HotelRoomTypeFormData) {
+  const roomTypeId = editingRoomType.value?.id;
+  closeFormModal();
+
+  if (roomTypeId) {
+    const ok = await store.updateRoomType(roomTypeId, data);
+    if (ok)
+      toast.add({ title: 'Habitación actualizada', color: 'primary' });
+    else
+      toast.add({ title: 'Error', description: store.error ?? 'No se pudo actualizar la habitación', color: 'error' });
+    return;
   }
-  else {
-    store.addRoomType(props.provider.id, data);
+
+  try {
+    await store.addRoomType(props.provider.id, data);
     toast.add({ title: 'Habitación agregada', color: 'primary' });
   }
-  closeFormModal();
+  catch {
+    toast.add({ title: 'Error', description: store.error ?? 'No se pudo agregar la habitación', color: 'error' });
+  }
 }
 
-function handleDelete(rt: HotelRoomType) {
+async function handleDelete(rt: HotelRoomType) {
   // eslint-disable-next-line no-alert
-  if (confirm('¿Eliminar este tipo de habitación?')) {
-    store.deleteRoomType(props.provider.id, rt.id);
+  if (!confirm('¿Eliminar este tipo de habitación?'))
+    return;
+
+  if (await store.deleteRoomType(rt.id))
     toast.add({ title: 'Habitación eliminada', color: 'warning' });
-  }
+  else
+    toast.add({ title: 'Error', description: store.error ?? 'No se pudo eliminar la habitación', color: 'error' });
 }
 </script>
 
 <template>
   <UCard>
-    <div class="space-y-6">
-      <!-- Header -->
-      <div class="flex flex-wrap justify-between items-start gap-4">
-        <div>
-          <h2 class="text-xl font-bold text-gray-900 dark:text-white">
-            Habitaciones
-          </h2>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Gestiona los tipos de habitación del hotel
-          </p>
+    <CatalogLoadState
+      :is-loaded="store.isLoaded"
+      :load-error="store.loadError"
+      label="las habitaciones"
+      @retry="store.refetch()"
+    >
+      <div class="space-y-6">
+        <!-- Header -->
+        <div class="flex flex-wrap justify-between items-start gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-gray-900 dark:text-white">
+              Habitaciones
+            </h2>
+            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Gestiona los tipos de habitación del hotel
+            </p>
+          </div>
+          <div class="flex items-center gap-3">
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Total habitaciones:
+            </label>
+            <UInput
+              v-model.number="totalRoomsInput"
+              type="number"
+              :min="0"
+              class="w-24"
+              @blur="updateTotalRooms"
+            />
+            <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Disponibles: {{ totalRoomsInput - usedRooms }}
+            </label>
+            <UButton icon="i-lucide-plus" @click="openCreateForm">
+              Agregar tipo
+            </UButton>
+          </div>
         </div>
-        <div class="flex items-center gap-3">
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Total habitaciones:
-          </label>
-          <UInput
-            v-model.number="totalRoomsInput"
-            type="number"
-            :min="0"
-            class="w-24"
-            @blur="updateTotalRooms"
+
+        <!-- Overflow warning -->
+        <UAlert
+          v-if="hasOverflow"
+          icon="i-lucide-alert-triangle"
+          color="warning"
+          variant="subtle"
+          title="Exceso de habitaciones"
+          :description="`La suma de habitaciones configuradas (${usedRooms}) supera el total declarado (${totalRoomsInput}).`"
+        />
+
+        <!-- Empty state -->
+        <div v-if="roomTypes.length === 0" class="text-center py-12">
+          <UIcon
+            name="i-lucide-bed-single"
+            class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3"
           />
-          <label class="text-sm font-medium text-gray-700 dark:text-gray-300">
-            Disponibles: {{ totalRoomsInput - usedRooms }}
-          </label>
-          <UButton icon="i-lucide-plus" @click="openCreateForm">
+          <p class="font-medium text-gray-900 dark:text-white">
+            Sin habitaciones configuradas
+          </p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Agrega el primer tipo de habitación
+          </p>
+          <UButton
+            icon="i-lucide-plus"
+            variant="outline"
+            class="mt-4"
+            @click="openCreateForm"
+          >
             Agregar tipo
           </UButton>
         </div>
-      </div>
 
-      <!-- Overflow warning -->
-      <UAlert
-        v-if="hasOverflow"
-        icon="i-lucide-alert-triangle"
-        color="warning"
-        variant="subtle"
-        title="Exceso de habitaciones"
-        :description="`La suma de habitaciones configuradas (${usedRooms}) supera el total declarado (${totalRoomsInput}).`"
-      />
+        <!-- Grupos por ocupación -->
+        <div v-else class="space-y-6">
+          <div
+            v-for="group in groupedByOccupancy"
+            :key="group.occupancy"
+            class="space-y-3"
+          >
+            <div class="flex items-center gap-2">
+              <UIcon name="i-lucide-users" class="w-4 h-4 text-gray-400" />
+              <span class="font-semibold text-gray-900 dark:text-white">
+                {{ group.occupancy }} {{ group.occupancy === 1 ? 'persona' : 'personas' }}
+              </span>
+              <UBadge variant="subtle">
+                {{ group.totalRooms }} hab
+              </UBadge>
+            </div>
 
-      <!-- Empty state -->
-      <div v-if="roomTypes.length === 0" class="text-center py-12">
-        <UIcon
-          name="i-lucide-bed-single"
-          class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3"
-        />
-        <p class="font-medium text-gray-900 dark:text-white">
-          Sin habitaciones configuradas
-        </p>
-        <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Agrega el primer tipo de habitación
-        </p>
-        <UButton
-          icon="i-lucide-plus"
-          variant="outline"
-          class="mt-4"
-          @click="openCreateForm"
-        >
-          Agregar tipo
-        </UButton>
-      </div>
-
-      <!-- Grupos por ocupación -->
-      <div v-else class="space-y-6">
-        <div
-          v-for="group in groupedByOccupancy"
-          :key="group.occupancy"
-          class="space-y-3"
-        >
-          <div class="flex items-center gap-2">
-            <UIcon name="i-lucide-users" class="w-4 h-4 text-gray-400" />
-            <span class="font-semibold text-gray-900 dark:text-white">
-              {{ group.occupancy }} {{ group.occupancy === 1 ? 'persona' : 'personas' }}
-            </span>
-            <UBadge variant="subtle">
-              {{ group.totalRooms }} hab
-            </UBadge>
-          </div>
-
-          <div class="space-y-2">
-            <HotelRoomTypeCard
-              v-for="rt in group.types"
-              :key="rt.id"
-              :room-type="rt"
-              @edit="openEditForm(rt)"
-              @delete="handleDelete(rt)"
-            />
+            <div class="space-y-2">
+              <HotelRoomTypeCard
+                v-for="rt in group.types"
+                :key="rt.id"
+                :room-type="rt"
+                @edit="openEditForm(rt)"
+                @delete="handleDelete(rt)"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </CatalogLoadState>
 
     <!-- Modal de formulario -->
     <UModal

@@ -19,6 +19,7 @@ const user = computed(() => ({
 
 async function handleLogout() {
   await signOut();
+  // Full reload: empties every store and the query cache, so the next user starts clean.
   window.location.href = '/login';
 }
 
