@@ -28,3 +28,5 @@ Guidance for Claude Code when working in this repository.
 **⚠️ Production has real data (since 2026-10-02)**: never lose it. Use expand/contract migrations, guard every drop, and never `db reset --linked` against prod. See [Production data safety](docs/claude/05-git-workflow.md#production-data-safety).
 
 **Style**: 2 spaces · semicolons · single quotes · kebab-case files · `type` not `interface`
+
+**Language**: file names, functions, variables, comments and documentation (`docs/`, feature plans) in **English**. Only text the user sees in the app stays in Spanish. See [Language](docs/claude/04-code-style.md#language).

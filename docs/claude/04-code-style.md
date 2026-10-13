@@ -16,7 +16,7 @@ Uses **@antfu/eslint-config** with the following rules:
 
 ## Language
 
-Code is in English: file names, identifiers (variables, functions, types, props, emits) and comments. Text the user sees (labels, toasts, error messages, `aria-label`) stays in Spanish, and so do data values stored in Spanish. When a comment quotes UI text, quote it as is. Use the glossary in [english-names/PLAN.md](../features/completed/english-names/PLAN.md) for domain terms (cotización → quotation, hospedaje → accommodation, saldo pendiente → pending balance…).
+Everything written for developers is in English: file names, identifiers (variables, functions, types, props, emits), comments and documentation (`docs/`, feature plans). Text the user sees (labels, toasts, error messages, `aria-label`) stays in Spanish, and so do data values stored in Spanish. When a comment quotes UI text, quote it as is. Use the glossary in [english-names/PLAN.md](../features/completed/english-names/PLAN.md) for domain terms (cotización → quotation, hospedaje → accommodation, saldo pendiente → pending balance…).
 
 ## Components
 
