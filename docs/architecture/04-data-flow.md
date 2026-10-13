@@ -149,8 +149,14 @@ en selects por toda la app), la primera vez que una pantalla usa su store. Cada 
 ### Más de 1000 filas
 
 PostgREST corta en `max_rows = 1000` sin error. Lo que puede pasar de ahí se pide en tandas con
-`fetchInBatches` (`app/utils/fetch-in-batches.ts`): pagos y configuraciones de cuenta por viaje,
-viajeros y asignaciones de habitación de un viaje. Los listados de viajes se paginan.
+`fetchInBatches` (`app/utils/fetch-in-batches.ts`), ordenado por una llave única: pagos y
+configuraciones de cuenta por viaje; viajeros, asignaciones de habitación, opt-outs y ajustes de
+precio por viajero de un viaje (estos crecen con viajeros × servicios). Los listados de viajes se
+paginan. Una lectura nueva por viaje que pueda pasar de 1000 filas tiene que ir en tandas.
+
+Límite conocido: las tandas usan `offset`, así que si alguien agrega o borra filas del mismo viaje
+justo entre dos tandas, una fila puede repetirse o faltar hasta el siguiente refetch. Solo pasa en
+viajes de más de 1000 filas y con una escritura en esos milisegundos.
 
 ## Mapeo BD ↔ Dominio
 

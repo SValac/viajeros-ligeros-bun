@@ -89,6 +89,19 @@ viajeros no iba en tandas, a diferencia de pagos y configuraciones. Ahora viajer
 habitación del viaje usan `fetchInBatches` (dos peticiones, `offset=0` y `offset=1000`) y el panel
 muestra los 1100 y los totales de SQL.
 
+La revisión de código encontró tres lecturas más por viaje que crecen con los viajeros y no iban
+en tandas; ahora sí, ordenadas por su llave primaria:
+
+- `getOccupiedAccommodationIds` — **destructiva**: con más de 1000 asignaciones, una habitación
+  ocupada podía contar como vacía y la reconciliación de la cotización la borraba (y con ella las
+  asignaciones). Verificado: quitar de la cotización un tipo con 2 habitaciones ocupadas sigue
+  bloqueado ("2 habitación(es) de lo que quitaste tienen viajeros") y la lectura sale en tanda.
+- `fetchProviderOptOuts` y `fetchTravelerAdjustments` (una fila por viajero y servicio).
+  Verificado: Servicios opcionales del viaje de prueba carga igual.
+
+Límite conocido (documentado en `04-data-flow.md`): las tandas van por `offset`; una escritura en
+el mismo viaje justo entre dos tandas puede repetir o saltar una fila hasta el siguiente refetch.
+
 ### Pendientes de la Fase 4
 
 - [x] Borrar habitaciones vacías (`_deleteRooms`): quitar de la cotización el tipo "Suite junior"

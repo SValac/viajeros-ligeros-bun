@@ -63,7 +63,6 @@ app/
 ├── middleware/
 │   └── auth.global.ts              # Guard global de autenticación
 │
-│
 ├── layouts/
 │   └── default.vue                 # Dashboard layout (UDashboardGroup)
 │
