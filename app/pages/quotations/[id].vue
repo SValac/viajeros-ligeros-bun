@@ -117,10 +117,6 @@ async function handleCreateQuotation() {
   toast.add({ title: 'Cotización creada', color: 'success' });
   isCreateModalOpen.value = false;
 }
-
-function handleQuotationConfirmed() {
-  toast.add({ title: 'Cotización confirmada exitosamente', color: 'success' });
-}
 </script>
 
 <template>
@@ -179,7 +175,6 @@ function handleQuotationConfirmed() {
             <QuotationHeaderActions
               :quotation-id="quotation.id"
               :readonly="readonly"
-              @confirmed="handleQuotationConfirmed"
             />
 
             <UNavigationMenu
