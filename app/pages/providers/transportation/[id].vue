@@ -1,26 +1,12 @@
 <script setup lang="ts">
+import { useProviderDetail } from '~/composables/providers/use-provider-detail';
 import { PROVIDER_CATEGORY } from '~/types/provider';
 
 definePageMeta({
   name: 'providers-transportation-detail',
 });
 
-const route = useRoute();
-const router = useRouter();
-const providerStore = useProviderStore();
-
-const provider = computed(() => providerStore.getProviderById(route.params.id as string));
-
-// Back to the list if the provider doesn't exist or belongs to another category. Only once the
-// catalog has loaded: before that, every provider looks missing.
-watch(
-  () => [providerStore.isLoaded, provider.value] as const,
-  ([isLoaded, current]) => {
-    if (isLoaded && current?.category !== PROVIDER_CATEGORY.TRANSPORTATION)
-      router.replace('/providers/transportation');
-  },
-  { immediate: true },
-);
+const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.TRANSPORTATION);
 </script>
 
 <template>
