@@ -3,6 +3,7 @@ import { useTravelerRepository } from '~/composables/travelers/use-traveler-repo
 export const travelerKeys = {
   root: ['travelers'] as const,
   byTravel: (travelId: string) => ['travelers', 'by-travel', travelId] as const,
+  detail: (id: string) => ['travelers', 'detail', id] as const,
 };
 
 /**
@@ -27,4 +28,15 @@ export const travelersByTravelQuery = defineQueryOptions((travelId: string | und
     return { travelers, roomAssignments };
   },
   enabled: !!travelId,
+}));
+
+/**
+ * A single traveler (paying traveler or coordinator). `data` is `undefined` while loading (or
+ * on error) and `null` once resolved if the traveler doesn't exist or RLS hides it.
+ * Lives under `travelerKeys.root`, so traveler writes refresh it too.
+ * Usage: `useQuery(() => travelerDetailQuery(id.value))`.
+ */
+export const travelerDetailQuery = defineQueryOptions((id: string) => ({
+  key: travelerKeys.detail(id),
+  query: () => useTravelerRepository().fetchById(id),
 }));

@@ -49,6 +49,25 @@ export function useTravelerRepository() {
   }
 
   /**
+   * Fetches a single traveler.
+   * @param id - UUID of the traveler
+   * @returns The traveler, or `null` if it doesn't exist or RLS hides it
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchById(id: string): Promise<Traveler | null> {
+    const { data, error } = await supabase
+      .from('travelers')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error)
+      throw error;
+
+    return data === null ? null : mapTravelerRowToDomain(data);
+  }
+
+  /**
    * Inserts a new traveler record.
    * @param data - Form data for the new traveler
    * @returns The created traveler mapped to a domain object
@@ -291,6 +310,7 @@ export function useTravelerRepository() {
   return {
     fetchAll,
     fetchByTravel,
+    fetchById,
     insert,
     update,
     unlinkCompanions,
