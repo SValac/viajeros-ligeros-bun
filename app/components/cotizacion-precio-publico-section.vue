@@ -6,6 +6,7 @@ import { computed, h, reactive, ref, shallowRef } from 'vue';
 import type { PrecioPublicoAvisoAccion, ViajeroConPrecio } from '~/components/cotizacion-precio-publico-aviso-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
+import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 
@@ -211,7 +212,10 @@ function abrirEdicion(price: QuotationPublicPrice) {
 // ============================================================================
 
 const paymentStore = usePaymentStore();
-const travelerStore = useTravelerStore();
+
+// Only for the travelers' names in the warning; until they load the modal says "Viajero".
+const { data: travelerData } = useQuery(() => travelersByTravelQuery(cotizacion.value?.travelId));
+const travelersById = computed(() => new Map((travelerData.value?.travelers ?? []).map(t => [t.id, t])));
 
 // Account configs aren't loaded on the quotation pages otherwise.
 watch(() => cotizacion.value?.travelId, (travelId) => {
@@ -225,7 +229,7 @@ const viajerosPorPrecio = computed(() => {
   for (const config of paymentStore.accountConfigs) {
     if (config.travelId !== travelId || !config.publicPriceId)
       continue;
-    const traveler = travelerStore.getTravelerById(config.travelerId);
+    const traveler = travelersById.value.get(config.travelerId);
     const viajero: ViajeroConPrecio = {
       id: config.travelerId,
       name: traveler ? `${traveler.firstName} ${traveler.lastName}` : 'Viajero',

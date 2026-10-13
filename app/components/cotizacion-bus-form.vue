@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Bus } from '~/types/bus';
 import type { CostSplitType, QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
+import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -26,7 +27,6 @@ const emit = defineEmits<Emits>();
 const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const busStore = useBusStore();
-const travelerStore = useTravelerStore();
 const toast = useToast();
 
 const isEditing = computed(() => !!props.bus);
@@ -103,13 +103,14 @@ const unidadesAgencia = computed<Bus[]>(() => {
 // Asiento más alto ocupado en el bus del viaje: al editar, no se puede cambiar a una unidad más chica
 const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId)?.travelId);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
+const { data: travelerData, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
 const asientoMaximoOcupado = computed(() => {
   if (!props.bus || !travelId.value)
     return 0;
   const travelBus = travel.value?.buses?.find(b => b.quotationBusId === props.bus!.id);
   if (!travelBus)
     return 0;
-  return travelerStore.getOccupantsByTravel(travelId.value)
+  return (travelerData.value?.travelers ?? [])
     .filter(t => t.travelBusId === travelBus.id)
     .reduce((max, t) => Math.max(max, t.seat ?? 0), 0);
 });
@@ -134,8 +135,6 @@ watch(() => props.open, (open) => {
     formState.confirmed = props.bus.confirmed ?? false;
     formState.notes = props.bus.notes ?? '';
     conservaUnidadActual.value = true;
-    if (travelId.value)
-      travelerStore.fetchByTravel(travelId.value);
   }
 }, { immediate: true });
 
@@ -226,6 +225,18 @@ async function submitEdit(bus: QuotationBus, data: BusSchema) {
   );
   if (duplicado) {
     toast.add({ title: 'Error', description: 'Este número de unidad ya existe para este proveedor en la cotización', color: 'error' });
+    return;
+  }
+
+  // Without the travelers `asientoMaximoOcupado` is 0 and the smaller-unit check below would
+  // let anything through. Still loading or the fetch failed: ask again so the next click has them.
+  if (props.bus && !travelerData.value) {
+    toast.add({
+      title: 'Viajeros sin cargar',
+      description: 'No se han cargado los viajeros del viaje. Intenta guardar de nuevo en un momento.',
+      color: 'warning',
+    });
+    refetchTravelers();
     return;
   }
 

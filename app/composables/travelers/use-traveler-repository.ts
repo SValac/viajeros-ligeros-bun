@@ -5,32 +5,14 @@ import type { Traveler, TravelerFormData, TravelerRoomAssignment, TravelerUpdate
 /**
  * Data access layer for the `travelers` table and their room assignments.
  * Each function performs a single Supabase operation and either returns domain data
- * or throws — it never touches reactive state. Cache management is the store's responsibility.
+ * or throws — it never touches reactive state. Caching is Pinia Colada's (see `~/queries/travelers`).
  * @returns Object with all repository methods
  */
 export function useTravelerRepository() {
   const supabase = useSupabase();
 
   /**
-   * Fetches all travelers ordered by creation date descending.
-   * @returns All traveler records mapped to domain objects
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function fetchAll(): Promise<Traveler[]> {
-    const { data, error } = await supabase
-      .from('travelers')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error)
-      throw error;
-
-    return data.map(mapTravelerRowToDomain);
-  }
-
-  /**
    * Fetches travelers for a specific travel ordered by creation date descending.
-   * Merging with the global cache is the store's responsibility.
    * @param travelId - UUID of the travel to fetch travelers for
    * @returns Travelers belonging to the given travel
    * @throws {PostgrestError} on Supabase failure
@@ -46,6 +28,25 @@ export function useTravelerRepository() {
       throw error;
 
     return data.map(mapTravelerRowToDomain);
+  }
+
+  /**
+   * Fetches a single traveler.
+   * @param id - UUID of the traveler
+   * @returns The traveler, or `null` if it doesn't exist or RLS hides it
+   * @throws {PostgrestError} on Supabase failure
+   */
+  async function fetchById(id: string): Promise<Traveler | null> {
+    const { data, error } = await supabase
+      .from('travelers')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (error)
+      throw error;
+
+    return data === null ? null : mapTravelerRowToDomain(data);
   }
 
   /**
@@ -206,22 +207,6 @@ export function useTravelerRepository() {
   }
 
   /**
-   * Fetches every room assignment the user can see.
-   * @returns All assignments mapped to domain objects
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function fetchRoomAssignments(): Promise<TravelerRoomAssignment[]> {
-    const { data, error } = await supabase
-      .from('traveler_room_assignments')
-      .select('*');
-
-    if (error)
-      throw error;
-
-    return data.map(mapTravelerRoomAssignmentRowToDomain);
-  }
-
-  /**
    * Fetches the room assignments of a specific travel.
    * @param travelId - UUID of the travel
    * @returns Assignments belonging to the given travel
@@ -289,8 +274,8 @@ export function useTravelerRepository() {
   }
 
   return {
-    fetchAll,
     fetchByTravel,
+    fetchById,
     insert,
     update,
     unlinkCompanions,
@@ -298,7 +283,6 @@ export function useTravelerRepository() {
     changeSeat,
     setCoordinatorSeat,
     clearCoordinatorSeats,
-    fetchRoomAssignments,
     fetchRoomAssignmentsByTravel,
     assignRoom,
     removeFromRoom,

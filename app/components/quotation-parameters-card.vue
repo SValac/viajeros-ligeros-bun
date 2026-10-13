@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Quotation } from '~/types/quotation';
+import type { Traveler } from '~/types/traveler';
 
+import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText } from '~/utils/form-validation';
 
@@ -14,6 +16,7 @@ const { quotation, readonly = false } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const travelerStore = useTravelerStore();
+const queryCache = useQueryCache();
 const toast = useToast();
 
 const editandoParametros = shallowRef(false);
@@ -71,8 +74,21 @@ function cancelarQuitarAsientos() {
 async function guardarParametros() {
   const quitaAsientos = quotation.coordinatorsTakeSeats && !paramsState.coordinatorsTakeSeats;
   if (quitaAsientos && !confirmarQuitarAsientos.value) {
-    await travelerStore.fetchByTravel(quotation.travelId);
-    const sentados = travelerStore.getCoordinatorsByTravel(quotation.travelId).filter(c => c.seat !== null);
+    // Fresh from the server (fetch ignores staleTime): this decides whether to ask first.
+    // If it can't be checked, stop: we'd take seats away without asking.
+    let sentados: Traveler[];
+    try {
+      const { data } = await queryCache.fetch(queryCache.ensure(travelersByTravelQuery(quotation.travelId)));
+      sentados = (data?.travelers ?? []).filter(t => t.kind === 'coordinator' && t.seat !== null);
+    }
+    catch (e) {
+      toast.add({
+        title: 'No se pudieron revisar los coordinadores',
+        description: e instanceof Error ? e.message : undefined,
+        color: 'error',
+      });
+      return;
+    }
     if (sentados.length > 0) {
       confirmarQuitarAsientos.value = true;
       return;

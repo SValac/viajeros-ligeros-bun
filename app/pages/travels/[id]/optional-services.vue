@@ -4,6 +4,7 @@ import type { QuotationProvider } from '~/types/quotation';
 
 import { isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { travelersByTravelQuery } from '~/queries/travelers';
 
 definePageMeta({
   name: 'travel-optional-services',
@@ -15,7 +16,6 @@ definePageMeta({
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
-const travelerStore = useTravelerStore();
 const providerStore = useProviderStore();
 const cotizacionStore = useCotizacionStore();
 
@@ -64,7 +64,8 @@ const selectedAdjustmentByTraveler = computed(() => new Map(
 ));
 
 // Coordinadores incluidos: cuentan para el pago salvo que el proveedor les dé cortesía.
-const occupants = computed(() => travelerStore.getOccupantsByTravel(travelId.value));
+const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
+const occupants = computed(() => travelerData.value?.travelers ?? []);
 
 // Servicio que se está guardando, para bloquear sus casillas mientras tanto.
 const savingServiceId = shallowRef<string | null>(null);
@@ -73,7 +74,6 @@ watch(travelId, async (id) => {
   if (!id)
     return;
   await Promise.all([
-    travelerStore.fetchByTravel(id),
     cotizacionStore.fetchByTravel(id),
     cotizacionStore.fetchProviderOptOuts(id),
     cotizacionStore.fetchTravelerAdjustments(id),
@@ -138,8 +138,26 @@ async function onChange(travelerIds: string[], toman: boolean) {
           <TravelOptionalServiceList v-model="selectedServiceId" :items="listItems" />
         </UCard>
 
+        <!-- Until the travelers load (or if they fail), the card's "no travelers" would be a lie -->
+        <UCard v-if="travelersStatus === 'pending' && !travelerData">
+          <div class="flex justify-center py-12">
+            <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+          </div>
+        </UCard>
+        <UCard v-else-if="travelersStatus === 'error'">
+          <div class="flex flex-col items-center justify-center gap-4 py-12">
+            <p class="text-muted">
+              No se pudieron cargar los viajeros
+            </p>
+            <UButton
+              label="Reintentar"
+              icon="i-lucide-refresh-cw"
+              @click="refetchTravelers()"
+            />
+          </div>
+        </UCard>
         <TravelOptionalServiceCard
-          v-if="selectedService"
+          v-else-if="selectedService"
           :key="selectedService.id"
           :service="selectedService"
           :provider-name="getProviderName(selectedService.providerId)"
