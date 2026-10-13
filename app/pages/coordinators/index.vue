@@ -182,7 +182,7 @@ const columns: TableColumn<Coordinator>[] = [
     />
 
     <UCard>
-      <CatalogLoadState
+      <LoadState
         :is-loaded="coordinatorStore.isLoaded"
         :load-error="coordinatorStore.loadError"
         label="los coordinadores"
@@ -217,7 +217,7 @@ const columns: TableColumn<Coordinator>[] = [
           :columns="columns"
           :data="coordinators"
         />
-      </CatalogLoadState>
+      </LoadState>
     </UCard>
 
     <UModal

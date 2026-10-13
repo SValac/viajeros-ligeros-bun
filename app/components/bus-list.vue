@@ -174,7 +174,7 @@ const columns: TableColumn<Bus>[] = [
         </UButton>
       </div>
 
-      <CatalogLoadState
+      <LoadState
         :is-loaded="busStore.isLoaded"
         :load-error="busStore.loadError"
         label="las unidades"
@@ -208,7 +208,7 @@ const columns: TableColumn<Bus>[] = [
           :columns="columns"
           :data="buses"
         />
-      </CatalogLoadState>
+      </LoadState>
     </div>
 
     <!-- Modal -->

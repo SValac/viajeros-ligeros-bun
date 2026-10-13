@@ -123,7 +123,7 @@ async function handleDelete(rt: HotelRoomType) {
 
 <template>
   <UCard>
-    <CatalogLoadState
+    <LoadState
       :is-loaded="store.isLoaded"
       :load-error="store.loadError"
       label="las habitaciones"
@@ -221,7 +221,7 @@ async function handleDelete(rt: HotelRoomType) {
           </div>
         </div>
       </div>
-    </CatalogLoadState>
+    </LoadState>
 
     <!-- Modal de formulario -->
     <UModal

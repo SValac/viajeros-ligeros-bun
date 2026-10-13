@@ -173,7 +173,7 @@ const columns = computed<TableColumn<Provider>[]>(() => [
     </div>
 
     <UCard>
-      <CatalogLoadState
+      <LoadState
         :is-loaded="providerStore.isLoaded"
         :load-error="providerStore.loadError"
         label="los proveedores"
@@ -213,7 +213,7 @@ const columns = computed<TableColumn<Provider>[]>(() => [
           :columns="columns"
           :data="providers"
         />
-      </CatalogLoadState>
+      </LoadState>
     </UCard>
 
     <UModal
