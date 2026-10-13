@@ -1,6 +1,7 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, ProviderPriceAdjustment, ProviderPriceAdjustmentDraft, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationExpense, QuotationExpenseFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData, TravelerPriceAdjustment } from '~/types/quotation';
 
+import { fetchInBatches } from '~/utils/fetch-in-batches';
 import {
   mapAccommodationPaymentRowToDomain,
   mapBusPaymentRowToDomain,
@@ -262,15 +263,17 @@ export function useQuotationRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function fetchProviderOptOuts(travelId: string): Promise<ProviderOptOut[]> {
-    const { data, error } = await supabase
+    // One row per traveler and service: in batches, so a big travel isn't cut at 1000 rows.
+    const rows = await fetchInBatches((from, to) => supabase
       .from('quotation_provider_opt_outs')
       .select('*')
-      .eq('travel_id', travelId);
+      .eq('travel_id', travelId)
+      .order('quotation_provider_id')
+      .order('traveler_id')
+      .range(from, to),
+    );
 
-    if (error)
-      throw error;
-
-    return data.map(mapProviderOptOutRowToDomain);
+    return rows.map(mapProviderOptOutRowToDomain);
   }
 
   /**
@@ -382,15 +385,17 @@ export function useQuotationRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function fetchTravelerAdjustments(travelId: string): Promise<TravelerPriceAdjustment[]> {
-    const { data, error } = await supabase
+    // One row per traveler and service: in batches, so a big travel isn't cut at 1000 rows.
+    const rows = await fetchInBatches((from, to) => supabase
       .from('quotation_provider_traveler_adjustments')
       .select('*')
-      .eq('travel_id', travelId);
+      .eq('travel_id', travelId)
+      .order('quotation_provider_id')
+      .order('traveler_id')
+      .range(from, to),
+    );
 
-    if (error)
-      throw error;
-
-    return data.map(mapTravelerPriceAdjustmentRowToDomain);
+    return rows.map(mapTravelerPriceAdjustmentRowToDomain);
   }
 
   /**
@@ -950,14 +955,17 @@ export function useQuotationRepository() {
   }
 
   async function getOccupiedAccommodationIds(travelId: string): Promise<Set<string>> {
-    const { data, error } = await supabase
+    // In batches: a room whose assignment fell past row 1000 would count as empty and the
+    // reconcile would delete it. A failed read throws for the same reason.
+    const rows = await fetchInBatches((from, to) => supabase
       .from('traveler_room_assignments')
       .select('travel_accommodation_id')
-      .eq('travel_id', travelId);
-    // Treating a failed read as "no occupied rooms" would let the reconcile delete occupied ones.
-    if (error)
-      throw error;
-    return new Set<string>(data.map(r => r.travel_accommodation_id));
+      .eq('travel_id', travelId)
+      .order('traveler_id')
+      .order('provider_id')
+      .range(from, to),
+    );
+    return new Set<string>(rows.map(r => r.travel_accommodation_id));
   }
 
   async function deleteUnoccupiedAccommodations(ids: string[]): Promise<void> {

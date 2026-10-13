@@ -10,7 +10,7 @@ primera vez que se necesitan. La capa de caché la pone **Pinia Colada**.
 fases y la app funciona entre una fase y otra. Sin migraciones previstas (ver
 "Base de datos").
 
-**Estado:** En progreso — Fases 0 y 1 completadas y en producción (PR #122, 2026-10-10); piloto aprobado, se sigue con Colada. Fase 2 completada y en producción (PR #125, 2026-10-12): ningún listado usa `travelsStore.travels` y `fetchAll` de viajes ya no corre al arrancar. Fase 3 completada y en producción (PR #126, 2026-10-12): los viajeros se piden por viaje y `travelerStore.fetchAll()` ya no corre al arrancar. Fase 4 completada y en producción, partida en 4a (PR #127) y 4b (PR #128), 2026-10-12: `cotizacionStore.fetchAll()` ya no corre al arrancar, la cotización se carga con Colada y el store de cotizaciones ya no lee la caché del viaje. Fase 5 completa en la rama `feature/on-demand-loading-phase-5`: los catálogos se piden la primera vez que una pantalla los usa y `init-stores.client.ts` ya no existe.
+**Estado:** Completa — Fases 0 y 1 completadas y en producción (PR #122, 2026-10-10); piloto aprobado, se sigue con Colada. Fase 2 completada y en producción (PR #125, 2026-10-12): ningún listado usa `travelsStore.travels` y `fetchAll` de viajes ya no corre al arrancar. Fase 3 completada y en producción (PR #126, 2026-10-12): los viajeros se piden por viaje y `travelerStore.fetchAll()` ya no corre al arrancar. Fase 4 completada y en producción, partida en 4a (PR #127) y 4b (PR #128), 2026-10-12: `cotizacionStore.fetchAll()` ya no corre al arrancar, la cotización se carga con Colada y el store de cotizaciones ya no lee la caché del viaje. Fase 5 completa (rama `feature/on-demand-loading-phase-5`): los catálogos se piden la primera vez que una pantalla los usa y `init-stores.client.ts` ya no existe. Fase 6 completa (rama `feature/on-demand-loading-phase-6`): verificada con más de 1000 viajes, viajeros y pagos; un viaje con más de 1000 viajeros ya no se corta. **Feature completa.**
 
 ---
 
@@ -118,8 +118,8 @@ de [Production data safety](../../../claude/05-git-workflow.md#production-data-s
 | [fase2-listados-viajes.md](fase2-listados-viajes.md) | Listados ligeros + conteos en servidor: dashboard, calendario, `/quotations`, `/payments`; adiós `travelsStore.travels` | Fase 1 | Completa (PR #125) |
 | [fase3-viajeros.md](fase3-viajeros.md) | Viajeros y asignaciones de habitación por viaje; adiós `travelerStore.fetchAll()` | Fase 2 | Completa (PR #126) |
 | [fase4-cotizaciones.md](fase4-cotizaciones.md) | Cotizaciones por viaje; el caché manual pasa a Colada; desacoplar cotización ↔ viaje | Fase 1 | Completa (PR #127 + #128) |
-| [fase5-catalogos.md](fase5-catalogos.md) | Proveedores, coordinadores, autobuses, habitaciones bajo demanda; borrar `init-stores.client.ts` | Fases 2-4 | Completa (rama, sin PR) |
-| [fase6-verificacion.md](fase6-verificacion.md) | Prueba con >1000 filas, auditoría de red, docs de arquitectura, cierre | Todas | Pendiente |
+| [fase5-catalogos.md](fase5-catalogos.md) | Proveedores, coordinadores, autobuses, habitaciones bajo demanda; borrar `init-stores.client.ts` | Fases 2-4 | Completa |
+| [fase6-verificacion.md](fase6-verificacion.md) | Prueba con >1000 filas, auditoría de red, docs de arquitectura, cierre | Todas | Completa |
 
 > Al terminar cada fase, actualizar su "Estado" acá y en el propio documento de la fase
 > (`Pendiente` → `Completada ✅`).
@@ -133,7 +133,7 @@ Rama inicial: `feature/on-demand-data-loading`.
 ## Rol del asistente
 
 **Modo:** Mentor / Guía de implementación (confirmado 2026-10-07 — el objetivo es aprender
-Pinia Colada).
+Pinia Colada). Las Fases 4a, 4b, 5 y 6 las implementó el asistente a pedido del usuario.
 **Comportamiento:** explicar el *por qué* y el *cómo* de cada paso antes de que el usuario
 escriba código. No implementar los archivos directamente. El usuario escribe el código,
 corre las verificaciones (`lint:fix`, `typecheck`, pruebas manuales) y comparte los
@@ -160,4 +160,4 @@ tema y actualiza el "Estado" de la fase acá y en su documento.
 - **Realtime** (suscripciones de Supabase): Colada con `refetchOnWindowFocus` cubre el
   caso de datos viejos por ahora.
 - **Optimización de imágenes**: feature aparte,
-  [image-optimization.md](../image-optimization.md).
+  [image-optimization.md](../../pending/image-optimization.md).

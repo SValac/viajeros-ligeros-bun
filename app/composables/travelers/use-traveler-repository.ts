@@ -2,6 +2,8 @@ import type { TablesUpdate } from '~/types/database.types';
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler, TravelerFormData, TravelerRoomAssignment, TravelerUpdateData } from '~/types/traveler';
 
+import { fetchInBatches } from '~/utils/fetch-in-batches';
+
 /**
  * Data access layer for the `travelers` table and their room assignments.
  * Each function performs a single Supabase operation and either returns domain data
@@ -13,21 +15,22 @@ export function useTravelerRepository() {
 
   /**
    * Fetches travelers for a specific travel ordered by creation date descending.
+   * In batches: a travel with more than 1000 travelers would otherwise be cut silently.
    * @param travelId - UUID of the travel to fetch travelers for
    * @returns Travelers belonging to the given travel
    * @throws {PostgrestError} on Supabase failure
    */
   async function fetchByTravel(travelId: string): Promise<Traveler[]> {
-    const { data, error } = await supabase
+    const rows = await fetchInBatches((from, to) => supabase
       .from('travelers')
       .select('*')
       .eq('travel_id', travelId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .order('id')
+      .range(from, to),
+    );
 
-    if (error)
-      throw error;
-
-    return data.map(mapTravelerRowToDomain);
+    return rows.map(mapTravelerRowToDomain);
   }
 
   /**
@@ -213,15 +216,17 @@ export function useTravelerRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function fetchRoomAssignmentsByTravel(travelId: string): Promise<TravelerRoomAssignment[]> {
-    const { data, error } = await supabase
+    // In batches, like the travelers: one assignment per traveler and hotel can pass 1000 rows.
+    const rows = await fetchInBatches((from, to) => supabase
       .from('traveler_room_assignments')
       .select('*')
-      .eq('travel_id', travelId);
+      .eq('travel_id', travelId)
+      .order('traveler_id')
+      .order('provider_id')
+      .range(from, to),
+    );
 
-    if (error)
-      throw error;
-
-    return data.map(mapTravelerRoomAssignmentRowToDomain);
+    return rows.map(mapTravelerRoomAssignmentRowToDomain);
   }
 
   /**
