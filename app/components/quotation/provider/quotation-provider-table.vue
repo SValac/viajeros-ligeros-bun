@@ -601,9 +601,10 @@ function getProviderActions(provider: QuotationProvider) {
   >
     <template #body>
       <div class="p-4">
-        <QuotationProviderPaymentHistory
-          :quotation-provider-id="historyProviderId"
-          :provider-name="historyProviderName"
+        <QuotationPaymentHistory
+          kind="provider"
+          :parent-id="historyProviderId"
+          :subtitle="historyProviderName"
         />
       </div>
     </template>

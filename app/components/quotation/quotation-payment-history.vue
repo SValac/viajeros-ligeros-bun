@@ -1,27 +1,26 @@
 <script setup lang="ts">
-import type { BusPayment, SupplierPaymentFields } from '~/types/quotation';
+import type { SupplierPaymentKind } from '~/composables/quotation/use-supplier-payments';
+import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 
+import { useSupplierPayments } from '~/composables/quotation/use-supplier-payments';
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
 
 type Props = {
-  quotationBusId: string;
-  busLabel?: string;
+  kind: SupplierPaymentKind;
+  parentId: string;
+  subtitle?: string;
 };
 
-const { quotationBusId, busLabel } = defineProps<Props>();
+const { kind, parentId, subtitle } = defineProps<Props>();
 
-const quotationStore = useQuotationStore();
 const toast = useToast();
-
-const payments = computed(() => quotationStore.getPaymentsByBus(quotationBusId));
-const paid = computed(() => quotationStore.getPaidByBus(quotationBusId));
-const pendingBalance = computed(() => quotationStore.getPendingBalanceByBus(quotationBusId));
+const { payments, paid, pendingBalance, add, update, remove } = useSupplierPayments(kind, () => parentId);
 
 const isFormModalOpen = shallowRef(false);
-const selectedPayment = shallowRef<BusPayment | null>(null);
+const selectedPayment = shallowRef<SupplierPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const paymentToDelete = shallowRef<BusPayment | null>(null);
+const paymentToDelete = shallowRef<SupplierPayment | null>(null);
 
 function formatDate(dateString: string): string {
   // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
@@ -37,12 +36,12 @@ function openNewPayment() {
   isFormModalOpen.value = true;
 }
 
-function openEditPayment(payment: BusPayment) {
+function openEditPayment(payment: SupplierPayment) {
   selectedPayment.value = payment;
   isFormModalOpen.value = true;
 }
 
-function openDeleteConfirm(payment: BusPayment) {
+function openDeleteConfirm(payment: SupplierPayment) {
   paymentToDelete.value = payment;
   isDeleteModalOpen.value = true;
 }
@@ -53,13 +52,13 @@ function closeDeleteModal() {
 
 async function handleSubmit(data: SupplierPaymentFields) {
   if (selectedPayment.value) {
-    const result = await quotationStore.updateBusPayment(selectedPayment.value.id, data);
+    const result = await update(selectedPayment.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = await quotationStore.addBusPayment({ ...data, quotationBusId });
+    const result = await add(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -74,7 +73,7 @@ async function handleSubmit(data: SupplierPaymentFields) {
 async function confirmDelete() {
   if (!paymentToDelete.value)
     return;
-  await quotationStore.deleteBusPayment(paymentToDelete.value.id);
+  await remove(paymentToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   paymentToDelete.value = null;
@@ -88,7 +87,7 @@ async function confirmDelete() {
       <h3 class="font-semibold text-lg flex items-center gap-2">
         <UIcon name="i-lucide-receipt" class="w-5 h-5 text-muted" />
         Historial de Pagos
-        <span v-if="busLabel" class="text-muted font-normal">— {{ busLabel }}</span>
+        <span v-if="subtitle" class="text-muted font-normal">— {{ subtitle }}</span>
       </h3>
       <UButton
         icon="i-lucide-plus"
@@ -200,6 +199,7 @@ async function confirmDelete() {
     v-model:open="isFormModalOpen"
     :title="selectedPayment ? 'Editar Pago' : 'Registrar Pago'"
     class="sm:max-w-lg"
+    :description="selectedPayment ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago'"
   >
     <template #body>
       <QuotationPaymentForm
@@ -215,7 +215,7 @@ async function confirmDelete() {
   <UModal
     v-model:open="isDeleteModalOpen"
     title="Eliminar Pago"
-    description="¿Estás seguro? Esta acción no se puede deshacer."
+    description="¿Estás seguro de que deseas eliminar este pago? Esta acción no se puede deshacer."
   >
     <template #footer>
       <div class="flex justify-end gap-3">

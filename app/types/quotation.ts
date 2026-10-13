@@ -85,6 +85,8 @@ export type ProviderOptOut = {
   travelId: string;
 };
 
+// Fields of a payment to a supplier, the same for a quotation provider, accommodation or bus.
+// What the payment form edits; the parent id is added by whoever saves it.
 export type SupplierPaymentFields = {
   amount: number;
   paymentDate: string;
@@ -92,6 +94,10 @@ export type SupplierPaymentFields = {
   concept?: string;
   notes?: string;
 };
+
+// A saved supplier payment, without its parent key. ProviderPayment, AccommodationPayment and
+// BusPayment fit it.
+export type SupplierPayment = SupplierPaymentFields & { id: string; createdAt: string };
 
 export type ProviderPayment = {
   id: string;

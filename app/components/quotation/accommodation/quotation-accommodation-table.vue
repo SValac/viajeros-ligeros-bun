@@ -363,10 +363,11 @@ async function deleteAccommodation(id: string) {
       class="sm:max-w-lg"
     >
       <template #body>
-        <QuotationAccommodationPaymentHistory
+        <QuotationPaymentHistory
           v-if="historyAccommodation"
-          :quotation-accommodation-id="historyAccommodation.id"
-          :hotel-name="getHotelName(historyAccommodation.providerId)"
+          kind="accommodation"
+          :parent-id="historyAccommodation.id"
+          :subtitle="getHotelName(historyAccommodation.providerId)"
         />
       </template>
     </USlideover>

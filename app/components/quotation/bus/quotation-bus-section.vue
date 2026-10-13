@@ -298,10 +298,11 @@ function getBusActions(bus: QuotationBus) {
   >
     <template #body>
       <div class="p-4">
-        <QuotationBusPaymentHistory
+        <QuotationPaymentHistory
           v-if="selectedBus"
-          :quotation-bus-id="selectedBus.id"
-          :bus-label="selectedBus.unitNumber"
+          kind="bus"
+          :parent-id="selectedBus.id"
+          :subtitle="selectedBus.unitNumber"
         />
       </div>
     </template>
