@@ -9,9 +9,9 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
 import { assignTravelLanes, getCalendarGridRange, getTravelDateRange, isTravelInRange } from '~/utils/travel-calendar';
 
-// Datos derivados para app/pages/calendar.vue. Los viajes salen de travelListQuery con el
-// rango de la cuadrícula visible; los estados se filtran aquí, en el cliente, para que
-// marcar o desmarcar un estado no haga otra petición. Carriles e índice por día también.
+// Derived data for app/pages/calendar.vue. Travels come from travelListQuery for the
+// visible grid's range; statuses are filtered here, on the client, so checking or
+// unchecking a status doesn't make another request. Lanes and the per-day index too.
 export function useTravelCalendar(visibleStatuses: MaybeRefOrGetter<TravelStatus[]>, month: MaybeRefOrGetter<DateValue>) {
   const range = computed(() => getCalendarGridRange(toValue(month)));
 
@@ -20,7 +20,7 @@ export function useTravelCalendar(visibleStatuses: MaybeRefOrGetter<TravelStatus
       overlapsFrom: range.value.start.toString(),
       overlapsTo: range.value.end.toString(),
     }),
-    // Al cambiar de mes, sigue mostrando el anterior hasta que llegue el nuevo (sin parpadeo a vacío)
+    // When the month changes, keep showing the previous one until the new one arrives (no flash of empty)
     placeholderData: previousList => previousList,
   }));
   const { data, refetch } = query;
@@ -37,8 +37,8 @@ export function useTravelCalendar(visibleStatuses: MaybeRefOrGetter<TravelStatus
 
   const travelLanes = computed(() => assignTravelLanes(visibleTravels.value));
 
-  // Índice `YYYY-MM-DD` → viajes de ese día: se arma una vez por cambio de datos,
-  // no en cada una de las 42 celdas del mes en cada render.
+  // `YYYY-MM-DD` index → travels on that day: built once per data change,
+  // not in each of the month's 42 cells on every render.
   const travelsByDay = computed(() => {
     const index = new Map<string, TravelSummary[]>();
     for (const travel of visibleTravels.value) {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 const route = useRoute();
 
-// Título del navbar: la sección del menú lateral según el primer segmento de la ruta.
+// Navbar title: the side menu section matching the route's first segment.
 const SECTION_TITLES: Record<string, string> = {
   travels: 'Viajes',
   calendar: 'Calendario',
@@ -24,7 +24,7 @@ const sectionTitle = computed(() => SECTION_TITLES[route.path.split('/')[1] ?? '
     >
       <template #header>
         <UDashboardNavbar>
-          <!-- #left en lugar de `title`: el título de la sección no es el <h1>, cada página tiene el suyo -->
+          <!-- #left instead of `title`: the section title isn't the <h1>, each page has its own -->
           <template #left>
             <UDashboardSidebarCollapse />
             <span class="font-semibold text-highlighted truncate">{{ sectionTitle }}</span>

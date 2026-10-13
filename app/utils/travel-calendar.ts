@@ -6,18 +6,18 @@ import type { Travel, TravelStatus } from '~/types/travel';
 
 import type { TravelStatusColor } from './travel-status';
 
-// Estatus que el calendario muestra de inicio; los cancelados se agregan con su propio switch
+// Statuses the calendar shows initially; cancelled ones are added with their own switch
 export const CALENDAR_DEFAULT_STATUSES: TravelStatus[] = ['pending', 'published', 'in_progress', 'completed'];
 
-// Mismo locale que UApp (app/app.vue): la semana empieza en domingo
+// Same locale as UApp (app/app.vue): the week starts on Sunday
 export const CALENDAR_LOCALE = 'es-MX';
 
-// `fixed-weeks`: el mes siempre se dibuja en 6 semanas
+// `fixed-weeks`: the month is always drawn in 6 weeks
 export const GRID_DAYS = 42;
 
 export type TravelBarShape = 'single' | 'start' | 'middle' | 'end';
 
-// Clases completas y estáticas: Tailwind no genera clases armadas con el color en runtime
+// Full, static classes: Tailwind doesn't generate classes built with the color at runtime
 export const TRAVEL_STATUS_BAR_CLASSES: Record<TravelStatusColor, string> = {
   primary: 'bg-primary/15 text-primary',
   info: 'bg-info/15 text-info',
@@ -26,7 +26,7 @@ export const TRAVEL_STATUS_BAR_CLASSES: Record<TravelStatusColor, string> = {
   error: 'bg-error/15 text-error',
 };
 
-// Viaje seleccionado: relleno sólido para que su tramo completo resalte
+// Selected travel: solid fill so its whole span stands out
 export const TRAVEL_STATUS_BAR_SELECTED_CLASSES: Record<TravelStatusColor, string> = {
   primary: 'bg-primary text-inverted',
   info: 'bg-info text-inverted',
@@ -35,7 +35,7 @@ export const TRAVEL_STATUS_BAR_SELECTED_CLASSES: Record<TravelStatusColor, strin
   error: 'bg-error text-inverted',
 };
 
-// `-mr-px`: la barra cubre el borde derecho de la celda para que el tramo se vea continuo
+// `-mr-px`: the bar covers the cell's right border so the span looks continuous
 export const TRAVEL_BAR_SHAPE_CLASSES: Record<TravelBarShape, string> = {
   single: 'mx-1 rounded-md',
   start: 'ml-1 -mr-px rounded-l-md',
@@ -44,29 +44,29 @@ export const TRAVEL_BAR_SHAPE_CLASSES: Record<TravelBarShape, string> = {
 };
 
 /**
- * Las fechas del viaje son `YYYY-MM-DD` (sin hora): `parseDate` las lee como días de calendario,
- * sin el corrimiento de zona horaria de `new Date()`.
- * @param travel - Viaje
- * @returns Primer y último día del viaje
+ * Travel dates are `YYYY-MM-DD` (no time): `parseDate` reads them as calendar days,
+ * without the time zone shift of `new Date()`.
+ * @param travel - Travel
+ * @returns First and last day of the travel
  */
 export function getTravelDateRange(travel: Pick<Travel, 'startDate' | 'endDate'>): { start: CalendarDate; end: CalendarDate } {
   return { start: parseDate(travel.startDate), end: parseDate(travel.endDate) };
 }
 
 /**
- * @param travel - Viaje
- * @returns Días del viaje contando salida y regreso (27 al 30 = 4 días)
+ * @param travel - Travel
+ * @returns Days of the travel counting departure and return (27 to 30 = 4 days)
  */
 export function getTravelDurationDays(travel: Pick<Travel, 'startDate' | 'endDate'>): number {
   const { start, end } = getTravelDateRange(travel);
-  // En UTC: sin cambios de horario que alarguen o acorten un día
+  // In UTC: no DST changes that lengthen or shorten a day
   return Math.round((end.toDate('UTC').getTime() - start.toDate('UTC').getTime()) / 86_400_000) + 1;
 }
 
 /**
- * @param travel - Viaje
- * @param day - Día del calendario
- * @returns Si el día cae entre la salida y el regreso (inclusive)
+ * @param travel - Travel
+ * @param day - Calendar day
+ * @returns Whether the day falls between departure and return (inclusive)
  */
 export function isTravelOnDay(travel: Pick<Travel, 'startDate' | 'endDate'>, day: DateValue): boolean {
   const { start, end } = getTravelDateRange(travel);
@@ -74,10 +74,10 @@ export function isTravelOnDay(travel: Pick<Travel, 'startDate' | 'endDate'>, day
 }
 
 /**
- * @param travel - Viaje
- * @param from - Primer día del periodo
- * @param to - Último día del periodo
- * @returns Si el viaje toca algún día del periodo
+ * @param travel - Travel
+ * @param from - First day of the period
+ * @param to - Last day of the period
+ * @returns Whether the travel touches any day of the period
  */
 export function isTravelInRange(travel: Pick<Travel, 'startDate' | 'endDate'>, from: DateValue, to: DateValue): boolean {
   const { start, end } = getTravelDateRange(travel);
@@ -85,11 +85,11 @@ export function isTravelInRange(travel: Pick<Travel, 'startDate' | 'endDate'>, f
 }
 
 /**
- * Forma de la barra del viaje en un día: los extremos redondeados hacen que los días
- * seguidos se lean como un solo tramo.
- * @param travel - Viaje
- * @param day - Día del calendario (dentro del viaje)
- * @returns Forma de la barra
+ * Shape of the travel's bar on a day: the rounded ends make consecutive days
+ * read as a single span.
+ * @param travel - Travel
+ * @param day - Calendar day (within the travel)
+ * @returns Bar shape
  */
 export function getTravelBarShape(travel: Pick<Travel, 'startDate' | 'endDate'>, day: DateValue): TravelBarShape {
   const { start, end } = getTravelDateRange(travel);
@@ -105,14 +105,14 @@ export function getTravelBarShape(travel: Pick<Travel, 'startDate' | 'endDate'>,
 }
 
 /**
- * Asigna a cada viaje un carril (fila de barras) para que un viaje quede a la misma altura
- * todos sus días aunque se traslape con otros. Asignación voraz por fecha de salida.
- * @param travels - Viajes ordenados por fecha de salida
- * @returns Carril (0, 1, …) por id de viaje
+ * Assigns each travel a lane (row of bars) so a travel stays at the same height
+ * on all its days even when it overlaps others. Greedy assignment by departure date.
+ * @param travels - Travels sorted by departure date
+ * @returns Lane (0, 1, …) by travel id
  */
 export function assignTravelLanes(travels: Pick<Travel, 'id' | 'startDate' | 'endDate'>[]): Map<string, number> {
   const lanes = new Map<string, number>();
-  // Último día ocupado de cada carril
+  // Last occupied day of each lane
   const laneEnds: CalendarDate[] = [];
 
   for (const travel of travels) {
@@ -132,10 +132,10 @@ export function assignTravelLanes(travels: Pick<Travel, 'id' | 'startDate' | 'en
 }
 
 /**
- * Días que dibuja el calendario para un mes: 6 semanas completas, desde el inicio de la
- * semana del día 1 (incluye días grises de los meses vecinos).
- * @param month - Cualquier día del mes visible
- * @returns Primer y último día de la cuadrícula
+ * Days the calendar draws for a month: 6 full weeks, from the start of the
+ * week of day 1 (includes the grey days of the neighboring months).
+ * @param month - Any day of the visible month
+ * @returns First and last day of the grid
  */
 export function getCalendarGridRange(month: DateValue): { start: DateValue; end: DateValue } {
   const start = startOfWeek(startOfMonth(month), CALENDAR_LOCALE);

@@ -26,7 +26,7 @@ export type Quotation = {
 
 export type CostSplitType = 'minimum' | 'total';
 
-// Cómo capturó el usuario el costo de un servicio: el total o un precio por persona.
+// How the user entered a service's cost: the total or a price per person.
 export type ProviderCostType = 'total' | 'per_person';
 
 export type QuotationProvider = {
@@ -37,23 +37,23 @@ export type QuotationProvider = {
   remarks?: string;
   totalCost: number;
   costType: ProviderCostType;
-  // Solo con costType 'per_person': precio por persona. Se suma directo al precio del
-  // asiento y al proveedor se le paga por cada viajero que toma el servicio. Su totalCost
-  // es solo de referencia (costo × asientos vendibles al guardar).
+  // Only with costType 'per_person': price per person. It's added straight to the seat
+  // price, and the provider is paid for each traveler who takes the service. Its totalCost
+  // is for reference only (cost × sellable seats when saved).
   unitCost?: number;
   paymentMethod: PaymentType;
-  // Solo en costo total: entre qué asientos se reparte.
+  // Total cost only: which seats it's split among.
   splitType: CostSplitType;
   confirmed: boolean;
-  // Solo por persona: los coordinadores no cuentan para el pago.
+  // Per person only: coordinators don't count for the payment.
   coordinatorsCourtesy: boolean;
-  // Lo que se le debe al proveedor (lo calcula la base de datos): por persona, costo ×
-  // viajeros que lo toman; en costo total, totalCost.
+  // What is owed to the provider (computed by the database): per person, cost ×
+  // travelers who take it; for a total cost, totalCost.
   payableCost: number;
 };
 
-// Ajuste al costo por persona de un servicio para un tipo de persona (ej. "Niño" -10%,
-// "Adulto mayor" -$50). Solo cambia lo que se le paga al proveedor, no el precio del asiento.
+// Adjustment to a service's per-person cost for a type of person (e.g. "Niño" -10%,
+// "Adulto mayor" -$50). It only changes what the provider is paid, not the seat price.
 export type PriceAdjustmentKind = 'discount' | 'surcharge';
 export type PriceAdjustmentMode = 'percent' | 'amount';
 
@@ -63,14 +63,14 @@ export type ProviderPriceAdjustment = {
   label: string;
   kind: PriceAdjustmentKind;
   mode: PriceAdjustmentMode;
-  /** Porcentaje (1-100 en descuento) o cantidad en pesos. Siempre > 0. */
+  /** Percentage (1-100 for a discount) or an amount in pesos. Always > 0. */
   value: number;
 };
 
-/** Un ajuste mientras se edita: sin id todavía si es nuevo. */
+/** An adjustment while editing: no id yet if it's new. */
 export type ProviderPriceAdjustmentDraft = Omit<ProviderPriceAdjustment, 'id' | 'quotationProviderId'> & { id?: string };
 
-// El ajuste que paga un viajero en un servicio (sin fila = precio base).
+// The adjustment a traveler pays in a service (no row = base price).
 export type TravelerPriceAdjustment = {
   quotationProviderId: string;
   travelerId: string;
@@ -78,7 +78,7 @@ export type TravelerPriceAdjustment = {
   adjustmentId: string;
 };
 
-// Un viajero que no toma un servicio opcional.
+// A traveler who doesn't take an optional service.
 export type ProviderOptOut = {
   quotationProviderId: string;
   travelerId: string;
@@ -96,16 +96,16 @@ export type ProviderPayment = {
   createdAt: string;
 };
 
-// Gasto adicional de la cotización que no es un servicio de proveedor: publicidad, viáticos,
-// comisiones, box lunch... Siempre se reparte entre los asientos según splitType. Sin pagos.
+// Extra quotation expense that isn't a provider service: advertising, travel allowances,
+// commissions, box lunch... Always split among the seats by splitType. No payments.
 export type QuotationExpense = {
   id: string;
   quotationId: string;
-  // Texto libre: categorías por defecto más las que la agencia ya usó.
+  // Free text: default categories plus the ones the agency already used.
   category: string;
   description?: string;
   costType: ProviderCostType;
-  // Solo con costType 'per_person': totalCost = unitCost × personCount.
+  // Only with costType 'per_person': totalCost = unitCost × personCount.
   unitCost?: number;
   personCount?: number;
   totalCost: number;
@@ -253,7 +253,7 @@ export type QuotationPublicPriceFormData = Omit<QuotationPublicPrice, 'id' | 'cr
   id?: string;
 };
 
-// Valores con los que se precarga el formulario de precio público desde un precio de referencia
+// Values the public price form is prefilled with from a reference price
 export type QuotationPublicPriceTemplate = Partial<Omit<QuotationPublicPriceFormData, 'id' | 'quotationId'>>;
 
 export type QuotationFetchResult = {

@@ -1,15 +1,15 @@
-// Teléfonos: se guardan en E.164 (`+523121273023`) y se muestran formateados (`(312) 127 3023`).
-// Para soportar otro país basta con agregarlo a PHONE_COUNTRIES.
+// Phones: stored as E.164 (`+523121273023`) and shown formatted (`(312) 127 3023`).
+// To support another country, just add it to PHONE_COUNTRIES.
 
 export type PhoneCountry = {
   // ISO 3166-1 alpha-2
   code: string;
   name: string;
-  // Sin el `+`
+  // Without the `+`
   dialCode: string;
-  // Dígitos del número nacional, sin el código de país
+  // Digits of the national number, without the country code
   nationalLength: number;
-  // Formatea los dígitos nacionales, completos o parciales (mientras se escriben)
+  // Formats the national digits, complete or partial (while typing)
   format: (digits: string) => string;
 };
 
@@ -17,7 +17,7 @@ function formatMx(digits: string): string {
   const area = digits.slice(0, 3);
   const prefix = digits.slice(3, 6);
   const line = digits.slice(6, 10);
-  // Sin paréntesis hasta el 4.º dígito: con `(312)` el retroceso borraría el `)` y volvería a aparecer
+  // No parentheses until the 4th digit: with `(312)` backspace would delete the `)` and it would come back
   if (digits.length <= 3)
     return digits;
   return [`(${area})`, prefix, line].filter(Boolean).join(' ');
@@ -34,18 +34,18 @@ export function getPhoneCountry(code: string): PhoneCountry {
 }
 
 export type ParsedPhone = {
-  // `null` cuando trae un código de país que no está en PHONE_COUNTRIES
+  // `null` when it has a country code that isn't in PHONE_COUNTRIES
   country: PhoneCountry | null;
-  // Dígitos nacionales, sin código de país
+  // National digits, without the country code
   digits: string;
 };
 
 /**
- * Lee un teléfono en cualquiera de los formatos que hay guardados: E.164 (`+523121273023`),
- * con código sin `+` (`523121273023`), el prefijo móvil viejo de México (`+52 1 312…`)
- * o solo el número nacional con espacios, guiones o paréntesis (`312-127-3023`).
- * @param value - Teléfono guardado o escrito
- * @returns País y dígitos nacionales
+ * Reads a phone in any of the stored formats: E.164 (`+523121273023`),
+ * with the code but no `+` (`523121273023`), Mexico's old mobile prefix (`+52 1 312…`)
+ * or just the national number with spaces, hyphens or parentheses (`312-127-3023`).
+ * @param value - Stored or typed phone
+ * @returns Country and national digits
  */
 export function parsePhone(value: string | null | undefined): ParsedPhone {
   const raw = (value ?? '').trim();
@@ -58,13 +58,13 @@ export function parsePhone(value: string | null | undefined): ParsedPhone {
       continue;
     if (digits.length === full)
       return { country, digits: digits.slice(country.dialCode.length) };
-    // México: `+52 1` + 10 dígitos era el formato para celulares antes de 2019
+    // Mexico: `+52 1` + 10 digits was the mobile format before 2019
     if (country.code === 'MX' && digits.length === full + 1 && digits[2] === '1')
       return { country, digits: digits.slice(-country.nationalLength) };
   }
 
   if (international) {
-    // Con `+` y un código conocido, aunque falten dígitos (número a medio escribir)
+    // With `+` and a known code, even if digits are missing (number being typed)
     const country = PHONE_COUNTRIES.find(c => digits.startsWith(c.dialCode));
     return country ? { country, digits: digits.slice(country.dialCode.length) } : { country: null, digits };
   }
@@ -73,19 +73,19 @@ export function parsePhone(value: string | null | undefined): ParsedPhone {
 }
 
 /**
- * Dígitos nacionales de lo que se escribió o pegó en el campo del número. Si sobran dígitos y
- * empiezan con el código del país (`+52 312…`, `52 1 312…`), se quita el código.
- * @param country - País elegido en el selector
- * @param input - Texto del campo
- * @returns Hasta `nationalLength` dígitos
+ * National digits of what was typed or pasted in the number field. If there are extra digits and
+ * they start with the country code (`+52 312…`, `52 1 312…`), the code is removed.
+ * @param country - Country picked in the selector
+ * @param input - Field text
+ * @returns Up to `nationalLength` digits
  */
 export function extractNationalDigits(country: PhoneCountry, input: string): string {
   let digits = input.replace(/\D/g, '');
   if (digits.length > country.nationalLength && digits.startsWith(country.dialCode)) {
     digits = digits.slice(country.dialCode.length);
-    // México: `52 1` + 10 dígitos era el formato para celulares antes de 2019. Ninguna lada
-    // empieza con 1, así que un 1 tras el 52 siempre es ese prefijo (aunque falten dígitos
-    // porque se está escribiendo tecla por tecla).
+    // Mexico: `52 1` + 10 digits was the mobile format before 2019. No area code
+    // starts with 1, so a 1 after the 52 is always that prefix (even when digits are missing
+    // because it's being typed key by key).
     if (country.code === 'MX' && digits.startsWith('1'))
       digits = digits.slice(1);
   }
@@ -93,9 +93,9 @@ export function extractNationalDigits(country: PhoneCountry, input: string): str
 }
 
 /**
- * @param country - País elegido
- * @param digits - Dígitos nacionales
- * @returns Teléfono en E.164, o `''` cuando no hay dígitos
+ * @param country - Picked country
+ * @param digits - National digits
+ * @returns Phone as E.164, or `''` when there are no digits
  */
 export function toE164(country: PhoneCountry, digits: string): string {
   const clean = digits.replace(/\D/g, '');
@@ -103,9 +103,9 @@ export function toE164(country: PhoneCountry, digits: string): string {
 }
 
 /**
- * Normaliza un teléfono a E.164 cuando se reconoce; si no, lo deja como está.
- * @param value - Teléfono guardado o escrito
- * @returns Teléfono en E.164, el valor original si no se reconoce, o `''`
+ * Normalizes a phone to E.164 when it's recognized; otherwise leaves it as is.
+ * @param value - Stored or typed phone
+ * @returns Phone as E.164, the original value if not recognized, or `''`
  */
 export function normalizePhone(value: string | null | undefined): string {
   const { country, digits } = parsePhone(value);
@@ -117,8 +117,8 @@ export function normalizePhone(value: string | null | undefined): string {
 }
 
 /**
- * @param value - Teléfono guardado o escrito
- * @returns `true` cuando tiene los dígitos que pide su país
+ * @param value - Stored or typed phone
+ * @returns `true` when it has the digits its country requires
  */
 export function isValidPhone(value: string | null | undefined): boolean {
   const { country, digits } = parsePhone(value);
@@ -126,10 +126,10 @@ export function isValidPhone(value: string | null | undefined): boolean {
 }
 
 /**
- * Teléfono legible para mostrar: `(312) 127 3023`, con `+código` delante si no es del país por defecto.
- * Lo que no se reconoce se muestra tal cual.
- * @param value - Teléfono guardado
- * @returns Teléfono formateado, o `''` cuando no hay
+ * Readable phone for display: `(312) 127 3023`, with `+code` in front if it's not from the default country.
+ * Anything not recognized is shown as is.
+ * @param value - Stored phone
+ * @returns Formatted phone, or `''` when there is none
  */
 export function formatPhone(value: string | null | undefined): string {
   const { country, digits } = parsePhone(value);

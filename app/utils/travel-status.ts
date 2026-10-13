@@ -6,12 +6,12 @@ const TRAVEL_STATUS_COLORS: Record<TravelStatus, TravelStatusColor> = {
   pending: 'warning',
   published: 'info',
   in_progress: 'primary',
-  // Gris, no verde: con el tema por defecto `success` es el mismo verde que `primary` (En Curso)
+  // Grey, not green: with the default theme `success` is the same green as `primary` (En Curso)
   completed: 'neutral',
   cancelled: 'error',
 };
 
-// Todos los estatus, en el orden del ciclo de vida del viaje
+// Every status, in the order of the travel's life cycle
 export const TRAVEL_STATUSES: TravelStatus[] = ['pending', 'published', 'in_progress', 'completed', 'cancelled'];
 
 const TRAVEL_STATUS_LABELS: Record<TravelStatus, string> = {
