@@ -10,7 +10,7 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (9-13). La 7 puede ir sola.
 
 **Status:** In progress. PR (b) on branch `feature/shared-components-dedup-payments`
-(phases 1, 2, 8). Phase 1 done.
+(phases 1, 2, 8). Phases 1 and 2 done.
 
 ---
 
@@ -71,7 +71,15 @@ Archivos: `quotation-bus-payment-form.vue`, `quotation-accommodation-payment-for
   (preferida: el formulario no necesita saber de qué es el pago).
 - `name` de cada `UFormField` = llave del esquema (mantenerlo al juntar los 3).
 
-### Fase 2 — Historiales de pago
+### Fase 2 — Historiales de pago ✅
+
+**Done (2026-10-13):** one `QuotationPaymentHistory` (`kind`, `parentId`, `subtitle`) on
+`useSupplierPayments(kind, parentId)` in `composables/quotation/`, which maps each kind to the
+store getters and actions; new `SupplierPayment` type. "Registrar pago" is disabled at zero
+balance in the three; generic form modal description and the longer delete text. Correction:
+the three already showed "Total pagado" and "Saldo pendiente", only the layout differed.
+Also in this PR: the four native `<table>` (payment history, buses, expenses, providers) now
+use `UTable` with `h()` cells like the rest of the app (see phase 16).
 
 Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-history.vue`,
 `quotation-provider-payment-history.vue`; usos en `quotation-bus-section.vue:301`,
@@ -392,7 +400,8 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - `quotation-provider-table`, `quotation-bus-section` y `quotation-accommodation-table`
   repiten el grupo de acciones de pago, la de confirmar y los badges; las dos primeras usan
   `<table>` a mano y la de hospedaje `UTable`. Al juntar los badges (fase 14) y las acciones,
-  decidir una sola forma de tabla.
+  decidir una sola forma de tabla. **Table form decided (2026-10-13):** every table is `UTable`
+  with `TableColumn` + `h()` cells; no native `<table>` left in `app/`.
 - `agency-about-page-form` y `agency-home-page-form` son iguales salvo los nombres →
   `AgencyPageForm` que reciba el esquema, `clone` y `serialize` del dominio. Los editores
   (`agency-about-page-editor` / `agency-home-page-editor`) comparten el estado vacío y la barra
