@@ -13,7 +13,7 @@ type Props = {
 
 const { travelId, editable = false } = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const coordinatorStore = useCoordinatorStore();
 
@@ -35,11 +35,11 @@ const { data: travel } = useQuery(() => travelDetailQuery(travelId));
 const quotationQuery = useQuery(() => quotationByTravelQuery(travelId));
 const { refetch: refetchQuotation } = quotationQuery;
 const quotationLoad = useQueryLoadState(quotationQuery);
-const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId));
+const quotation = computed(() => quotationStore.getQuotationByTravel(travelId));
 const buses = computed(() => {
-  if (!cotizacion.value)
+  if (!quotation.value)
     return [];
-  return cotizacionStore.getBusesByQuotation(cotizacion.value.id);
+  return quotationStore.getBusesByQuotation(quotation.value.id);
 });
 
 // El vínculo real es quotation_bus_id; el texto (proveedor + unidad) solo sirve para filas sin vínculo,
@@ -50,13 +50,13 @@ function getTravelBusForQuotationBus(bus: QuotationBus) {
     ?? travelBuses.find(b => !b.quotationBusId && b.providerId === bus.providerId && b.model === bus.unitNumber);
 }
 
-function getOperadores(bus: QuotationBus) {
+function getOperators(bus: QuotationBus) {
   const travelBus = getTravelBusForQuotationBus(bus);
   if (!travelBus)
     return [];
-  const ops = [{ nombre: travelBus.operator1Name, telefono: travelBus.operator1Phone }];
+  const ops = [{ name: travelBus.operator1Name, phone: travelBus.operator1Phone }];
   if (travelBus.operator2Name)
-    ops.push({ nombre: travelBus.operator2Name, telefono: travelBus.operator2Phone ?? '' });
+    ops.push({ name: travelBus.operator2Name, phone: travelBus.operator2Phone ?? '' });
   return ops;
 }
 
@@ -122,26 +122,26 @@ async function saveOperators(bus: QuotationBus) {
 }
 
 // IDs de coordinadores ya asignados a algún bus (excluyendo el bus actual)
-function coordinadoresOcupados(excludeBusId: string): string[] {
+function occupiedCoordinators(excludeBusId: string): string[] {
   return buses.value
     .filter(b => b.id !== excludeBusId)
     .flatMap(b => b.coordinatorIds ?? []);
 }
 
 // Opciones filtradas: solo coordinadores del viaje, no ocupados en otros buses
-function getCoordinadorOptions(busId: string) {
-  const delViaje = travel.value?.coordinatorIds ?? [];
-  const ocupados = coordinadoresOcupados(busId);
+function getCoordinatorOptions(busId: string) {
+  const ofTravel = travel.value?.coordinatorIds ?? [];
+  const occupied = occupiedCoordinators(busId);
   return coordinatorStore.allCoordinators
-    .filter(c => delViaje.includes(c.id) && !ocupados.includes(c.id))
+    .filter(c => ofTravel.includes(c.id) && !occupied.includes(c.id))
     .map(c => ({ value: c.id, label: c.name }));
 }
 
-function getProviderName(proveedorId: string): string {
-  return providerStore.getProviderById(proveedorId)?.name ?? 'Proveedor desconocido';
+function getProviderName(providerId: string): string {
+  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
 }
 
-function getEstadoColor(status: QuotationBusStatus): 'success' | 'warning' | 'neutral' {
+function getStatusColor(status: QuotationBusStatus): 'success' | 'warning' | 'neutral' {
   if (status === 'confirmed')
     return 'success';
   if (status === 'reserved')
@@ -149,7 +149,7 @@ function getEstadoColor(status: QuotationBusStatus): 'success' | 'warning' | 'ne
   return 'neutral';
 }
 
-function getEstadoLabel(status: QuotationBusStatus): string {
+function getStatusLabel(status: QuotationBusStatus): string {
   const labels: Record<QuotationBusStatus, string> = {
     confirmed: 'Confirmado',
     reserved: 'Apartado',
@@ -158,22 +158,22 @@ function getEstadoLabel(status: QuotationBusStatus): string {
   return labels[status];
 }
 
-function getBusCoordinadorIds(busId: string): string[] {
+function getBusCoordinatorIds(busId: string): string[] {
   const bus = buses.value.find(b => b.id === busId);
   return bus?.coordinatorIds ? [...bus.coordinatorIds] : [];
 }
 
-function getCoordinadorName(id: string): string {
+function getCoordinatorName(id: string): string {
   return coordinatorStore.getCoordinatorById(id)?.name ?? 'Desconocido';
 }
 
-async function onCoordinadoresChange(busId: string, selected: string[]) {
+async function onCoordinatorsChange(busId: string, selected: string[]) {
   const capped = selected.slice(0, 2) as [] | [string] | [string, string];
-  const updated = await cotizacionStore.updateBusQuotation(busId, { coordinatorIds: capped });
+  const updated = await quotationStore.updateBusQuotation(busId, { coordinatorIds: capped });
   if (!updated) {
     toast.add({
       title: 'No se pudieron guardar los coordinadores',
-      description: cotizacionStore.error ?? 'Intenta de nuevo',
+      description: quotationStore.error ?? 'Intenta de nuevo',
       color: 'error',
       icon: 'i-lucide-alert-circle',
     });
@@ -189,7 +189,7 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
       label="la cotización"
       @retry="refetchQuotation()"
     >
-      <template v-if="cotizacion && buses.length > 0">
+      <template v-if="quotation && buses.length > 0">
         <div class="space-y-3">
           <UCard
             v-for="bus in buses"
@@ -208,8 +208,8 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
                     <span>{{ bus.capacity }}</span>
                   </div>
                   <UBadge
-                    :label="getEstadoLabel(bus.status)"
-                    :color="getEstadoColor(bus.status)"
+                    :label="getStatusLabel(bus.status)"
+                    :color="getStatusColor(bus.status)"
                     variant="subtle"
                   />
                 </div>
@@ -222,26 +222,26 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
                 Coordinadores (máx. 2)
               </div>
               <USelectMenu
-                :model-value="getBusCoordinadorIds(bus.id)"
-                :items="getCoordinadorOptions(bus.id)"
+                :model-value="getBusCoordinatorIds(bus.id)"
+                :items="getCoordinatorOptions(bus.id)"
                 value-key="value"
                 multiple
                 placeholder="Seleccionar coordinadores"
-                @update:model-value="(val) => onCoordinadoresChange(bus.id, val)"
+                @update:model-value="(val) => onCoordinatorsChange(bus.id, val)"
               />
-              <div v-if="getBusCoordinadorIds(bus.id).length > 0" class="flex items-center gap-3 mt-3">
+              <div v-if="getBusCoordinatorIds(bus.id).length > 0" class="flex items-center gap-3 mt-3">
                 <div
-                  v-for="cId in getBusCoordinadorIds(bus.id)"
+                  v-for="cId in getBusCoordinatorIds(bus.id)"
                   :key="cId"
                   class="flex items-center gap-2"
                 >
                   <UAvatar
-                    :alt="getCoordinadorName(cId)"
+                    :alt="getCoordinatorName(cId)"
                     size="sm"
                     color="primary"
                     variant="soft"
                   />
-                  <span class="text-sm font-medium">{{ getCoordinadorName(cId) }}</span>
+                  <span class="text-sm font-medium">{{ getCoordinatorName(cId) }}</span>
                 </div>
               </div>
 
@@ -290,12 +290,12 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
                     class="flex items-center gap-2"
                   >
                     <UAvatar
-                      :alt="getCoordinadorName(cId)"
+                      :alt="getCoordinatorName(cId)"
                       size="sm"
                       color="primary"
                       variant="soft"
                     />
-                    <span class="text-sm font-medium">{{ getCoordinadorName(cId) }}</span>
+                    <span class="text-sm font-medium">{{ getCoordinatorName(cId) }}</span>
                   </div>
                   <p v-if="!bus.coordinatorIds || bus.coordinatorIds.length === 0" class="text-sm text-muted italic">
                     Sin coordinadores asignados
@@ -308,16 +308,16 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
                 </div>
                 <div class="space-y-1">
                   <div
-                    v-for="op in getOperadores(bus)"
-                    :key="op.nombre"
+                    v-for="op in getOperators(bus)"
+                    :key="op.name"
                     class="flex items-center gap-3 text-sm"
                   >
                     <UIcon name="i-lucide-user" class="w-3.5 h-3.5 text-muted shrink-0" />
-                    <span class="font-medium">{{ op.nombre }}</span>
+                    <span class="font-medium">{{ op.name }}</span>
                     <UIcon name="i-lucide-phone" class="w-3.5 h-3.5 text-muted shrink-0" />
-                    <span class="text-muted">{{ formatPhone(op.telefono) }}</span>
+                    <span class="text-muted">{{ formatPhone(op.phone) }}</span>
                   </div>
-                  <p v-if="getOperadores(bus).length === 0" class="text-sm text-muted italic">
+                  <p v-if="getOperators(bus).length === 0" class="text-sm text-muted italic">
                     Sin operadores asignados
                   </p>
                 </div>

@@ -11,18 +11,18 @@ type Props = {
 
 const { quotationProviderId, providerName } = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const toast = useToast();
 
-const pagos = computed(() => cotizacionStore.getPagosByProveedor(quotationProviderId));
-const anticipado = computed(() => cotizacionStore.getAnticipadoProveedor(quotationProviderId));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteProveedor(quotationProviderId));
+const payments = computed(() => quotationStore.getPaymentsByProvider(quotationProviderId));
+const paid = computed(() => quotationStore.getPaidByProvider(quotationProviderId));
+const pendingBalance = computed(() => quotationStore.getPendingBalanceByProvider(quotationProviderId));
 
 // Modal state
 const isFormModalOpen = shallowRef(false);
-const selectedPago = shallowRef<ProviderPayment | null>(null);
+const selectedPayment = shallowRef<ProviderPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const pagoToDelete = shallowRef<ProviderPayment | null>(null);
+const paymentToDelete = shallowRef<ProviderPayment | null>(null);
 
 function formatDate(dateString: string): string {
   // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
@@ -33,18 +33,18 @@ function formatDate(dateString: string): string {
   });
 }
 
-function openNewPago() {
-  selectedPago.value = null;
+function openNewPayment() {
+  selectedPayment.value = null;
   isFormModalOpen.value = true;
 }
 
-function openEditPago(pago: ProviderPayment) {
-  selectedPago.value = pago;
+function openEditPayment(payment: ProviderPayment) {
+  selectedPayment.value = payment;
   isFormModalOpen.value = true;
 }
 
-function openDeleteConfirm(pago: ProviderPayment) {
-  pagoToDelete.value = pago;
+function openDeleteConfirm(payment: ProviderPayment) {
+  paymentToDelete.value = payment;
   isDeleteModalOpen.value = true;
 }
 
@@ -53,14 +53,14 @@ function closeDeleteModal() {
 }
 
 async function handleSubmit(data: ProviderPaymentFormData) {
-  if (selectedPago.value) {
-    const result = await cotizacionStore.updateProviderPayment(selectedPago.value.id, data);
+  if (selectedPayment.value) {
+    const result = await quotationStore.updateProviderPayment(selectedPayment.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = await cotizacionStore.addProviderPayment(data);
+    const result = await quotationStore.addProviderPayment(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -69,16 +69,16 @@ async function handleSubmit(data: ProviderPaymentFormData) {
     }
   }
   isFormModalOpen.value = false;
-  selectedPago.value = null;
+  selectedPayment.value = null;
 }
 
 async function confirmDelete() {
-  if (!pagoToDelete.value)
+  if (!paymentToDelete.value)
     return;
-  await cotizacionStore.deleteProviderPayment(pagoToDelete.value.id);
+  await quotationStore.deleteProviderPayment(paymentToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
-  pagoToDelete.value = null;
+  paymentToDelete.value = null;
 }
 </script>
 
@@ -97,12 +97,12 @@ async function confirmDelete() {
         icon="i-lucide-plus"
         size="sm"
         label="Registrar pago"
-        @click="openNewPago"
+        @click="openNewPayment"
       />
     </div>
 
     <!-- Tabla de pagos -->
-    <div v-if="pagos.length > 0">
+    <div v-if="payments.length > 0">
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead>
@@ -129,28 +129,28 @@ async function confirmDelete() {
           </thead>
           <tbody>
             <tr
-              v-for="pago in pagos"
-              :key="pago.id"
+              v-for="payment in payments"
+              :key="payment.id"
               class="border-b border-default/50 hover:bg-elevated/50"
             >
               <td class="py-2 pr-4">
-                {{ formatDate(pago.paymentDate) }}
+                {{ formatDate(payment.paymentDate) }}
               </td>
               <td class="py-2 pr-4">
-                {{ pago.concept || '—' }}
+                {{ payment.concept || '—' }}
               </td>
               <td class="py-2 pr-4">
                 <UBadge
-                  :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
-                  :color="pago.paymentType === 'cash' ? 'success' : 'info'"
+                  :label="payment.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
+                  :color="payment.paymentType === 'cash' ? 'success' : 'info'"
                   variant="subtle"
                 />
               </td>
               <td class="py-2 pr-4 font-medium">
-                {{ formatCurrency(pago.amount) }}
+                {{ formatCurrency(payment.amount) }}
               </td>
               <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
-                {{ pago.notes || '—' }}
+                {{ payment.notes || '—' }}
               </td>
               <td class="py-2">
                 <div class="flex items-center gap-1">
@@ -159,14 +159,14 @@ async function confirmDelete() {
                     size="xs"
                     variant="ghost"
                     color="neutral"
-                    @click="openEditPago(pago)"
+                    @click="openEditPayment(payment)"
                   />
                   <UButton
                     icon="i-lucide-trash-2"
                     size="xs"
                     variant="ghost"
                     color="error"
-                    @click="openDeleteConfirm(pago)"
+                    @click="openDeleteConfirm(payment)"
                   />
                 </div>
               </td>
@@ -181,18 +181,18 @@ async function confirmDelete() {
       v-else
       section="payments"
       compact
-      :actions="[{ label: 'Registrar pago', icon: 'i-lucide-plus', size: 'sm', variant: 'outline', onClick: openNewPago }]"
+      :actions="[{ label: 'Registrar pago', icon: 'i-lucide-plus', size: 'sm', variant: 'outline', onClick: openNewPayment }]"
     />
 
     <!-- Footer: totales -->
     <div class="pt-2 border-t border-default flex items-center justify-between text-sm">
       <span class="text-muted">Total pagado</span>
-      <span class="font-semibold">{{ formatCurrency(anticipado) }}</span>
+      <span class="font-semibold">{{ formatCurrency(paid) }}</span>
     </div>
     <div class="flex items-center justify-between text-sm">
       <span class="text-muted">Saldo pendiente</span>
-      <span class="font-semibold" :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'">
-        {{ formatCurrency(saldoPendiente) }}
+      <span class="font-semibold" :class="pendingBalance > 0 ? 'text-warning' : 'text-success'">
+        {{ formatCurrency(pendingBalance) }}
       </span>
     </div>
   </div>
@@ -200,15 +200,15 @@ async function confirmDelete() {
   <!-- Modal: form de pago -->
   <UModal
     v-model:open="isFormModalOpen"
-    :title="selectedPago ? 'Editar Pago' : 'Registrar Pago'"
-    :description="selectedPago ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago al proveedor'"
+    :title="selectedPayment ? 'Editar Pago' : 'Registrar Pago'"
+    :description="selectedPayment ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago al proveedor'"
     class="sm:max-w-lg"
   >
     <template #body>
       <QuotationProviderPaymentForm
         :quotation-provider-id="quotationProviderId"
-        :max-amount="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
-        :payment="selectedPago"
+        :max-amount="selectedPayment ? selectedPayment.amount + pendingBalance : pendingBalance"
+        :payment="selectedPayment"
         @submit="handleSubmit"
         @cancel="isFormModalOpen = false"
       />

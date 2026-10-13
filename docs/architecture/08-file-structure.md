@@ -24,7 +24,7 @@ app/
 │   ├── use-auth-store.ts
 │   ├── use-bus-store.ts
 │   ├── use-coordinator-store.ts
-│   ├── use-cotizacion-store.ts     # El más complejo (~1,900 LOC)
+│   ├── use-quotation-store.ts     # El más complejo (~1,900 LOC)
 │   ├── use-hotel-room-store.ts
 │   ├── use-payment-store.ts
 │   ├── use-provider-store.ts

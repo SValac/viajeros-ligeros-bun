@@ -17,28 +17,28 @@ type Props = {
 
 const props = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const toast = useToast();
-// getMatrizPreciosReferencia reads these catalogs. Creating the stores here, in setup, keeps
+// getReferencePriceMatrix reads these catalogs. Creating the stores here, in setup, keeps
 // their catalog queries from starting during render (Vue warns: no active component instance).
 useProviderStore();
 useHotelRoomStore();
 
 // Obtener matriz de precios de referencia
-const matrizPreciosReferencia = computed(() => {
-  return cotizacionStore.getMatrizPreciosReferencia(props.quotationId);
+const referencePriceMatrix = computed(() => {
+  return quotationStore.getReferencePriceMatrix(props.quotationId);
 });
 
 // Obtener precios públicos agregados
-const preciosPublicos = computed(() => {
-  return cotizacionStore.getPreciosPublicosByQuotation(props.quotationId);
+const publicPrices = computed(() => {
+  return quotationStore.getPublicPricesByQuotation(props.quotationId);
 });
 
 // ============================================================================
 // Visibilidad del tipo de habitación y descripción en la web
 // ============================================================================
 
-const cotizacion = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId));
+const quotation = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId));
 
 type PublicVisibilityField = 'showPublicRoomType' | 'showPublicDescription';
 
@@ -59,13 +59,13 @@ const savingVisibilityField = shallowRef<PublicVisibilityField | null>(null);
 // stay editable once the quotation is confirmed. The DB hides the fields in the RPC.
 async function setPublicVisibility(field: PublicVisibilityField, value: boolean) {
   savingVisibilityField.value = field;
-  const updated = await cotizacionStore.updateQuotation(props.quotationId, { [field]: value });
+  const updated = await quotationStore.updateQuotation(props.quotationId, { [field]: value });
   savingVisibilityField.value = null;
 
   if (!updated) {
     toast.add({
       title: 'No se pudo guardar',
-      description: cotizacionStore.error ?? 'Intenta de nuevo',
+      description: quotationStore.error ?? 'Intenta de nuevo',
       color: 'error',
     });
     return;
@@ -80,34 +80,34 @@ async function setPublicVisibility(field: PublicVisibilityField, value: boolean)
 
 // Helper para formatear moneda
 // Determinar si hay datos
-const hayDatos = computed(() => {
-  return matrizPreciosReferencia.value.length > 0;
+const hasData = computed(() => {
+  return referencePriceMatrix.value.length > 0;
 });
 
 // ============================================================================
 // Selección de tipo de habitación por hotel
 // ============================================================================
 
-type EntradaGrupo = { roomType: string; nightCount: number; costPerPerson: number; additionalDetails?: string };
-type PrecioReferencia = (typeof matrizPreciosReferencia.value)[number];
+type GroupEntry = { roomType: string; nightCount: number; costPerPerson: number; additionalDetails?: string };
+type ReferencePrice = (typeof referencePriceMatrix.value)[number];
 
 // Map<`${maxOccupancy}::${hotelName}`, localIndex>
-const seleccion = reactive(new Map<string, number>());
+const selection = reactive(new Map<string, number>());
 
-function seleccionKey(maxOccupancy: number, hotelName: string): string {
+function selectionKey(maxOccupancy: number, hotelName: string): string {
   return `${maxOccupancy}::${hotelName}`;
 }
 
 function getSelectedLocalIndex(maxOccupancy: number, hotelName: string): number {
-  return seleccion.get(seleccionKey(maxOccupancy, hotelName)) ?? 0;
+  return selection.get(selectionKey(maxOccupancy, hotelName)) ?? 0;
 }
 
 function selectLocalIndex(maxOccupancy: number, hotelName: string, localIndex: number): void {
-  seleccion.set(seleccionKey(maxOccupancy, hotelName), localIndex);
+  selection.set(selectionKey(maxOccupancy, hotelName), localIndex);
 }
 
-function gruposHotel(accommodation: PrecioReferencia['breakdown']['accommodation']): [string, EntradaGrupo[]][] {
-  const map = new Map<string, EntradaGrupo[]>();
+function hotelGroups(accommodation: ReferencePrice['breakdown']['accommodation']): [string, GroupEntry[]][] {
+  const map = new Map<string, GroupEntry[]>();
   for (const entry of accommodation) {
     if (!map.has(entry.hotelName))
       map.set(entry.hotelName, []);
@@ -121,19 +121,19 @@ function gruposHotel(accommodation: PrecioReferencia['breakdown']['accommodation
   return [...map.entries()];
 }
 
-function hospedajeSeleccionado(price: PrecioReferencia): Array<EntradaGrupo & { hotelName: string }> {
-  return gruposHotel(price.breakdown.accommodation).map(([hotelName, tipos]) => {
+function selectedAccommodation(price: ReferencePrice): Array<GroupEntry & { hotelName: string }> {
+  return hotelGroups(price.breakdown.accommodation).map(([hotelName, types]) => {
     const idx = getSelectedLocalIndex(price.maxOccupancy, hotelName);
-    return { hotelName, ...(tipos[idx] ?? tipos[0]!) };
+    return { hotelName, ...(types[idx] ?? types[0]!) };
   });
 }
 
-function totalHospedajeSeleccionado(price: PrecioReferencia): number {
-  return hospedajeSeleccionado(price).reduce((sum, entrada) => sum + entrada.costPerPerson, 0);
+function selectedAccommodationTotal(price: ReferencePrice): number {
+  return selectedAccommodation(price).reduce((sum, entry) => sum + entry.costPerPerson, 0);
 }
 
-function precioTotalSeleccionado(price: PrecioReferencia): number {
-  return price.breakdown.seatPrice + totalHospedajeSeleccionado(price);
+function selectedTotalPrice(price: ReferencePrice): number {
+  return price.breakdown.seatPrice + selectedAccommodationTotal(price);
 }
 
 // ============================================================================
@@ -142,21 +142,21 @@ function precioTotalSeleccionado(price: PrecioReferencia): number {
 
 // Modal state
 const isFormModalOpen = shallowRef(false);
-const editingPrecio = ref<QuotationPublicPrice | null>(null);
-const plantilla = ref<QuotationPublicPriceTemplate | null>(null);
+const editingPrice = ref<QuotationPublicPrice | null>(null);
+const template = ref<QuotationPublicPriceTemplate | null>(null);
 
 const modalDescription = computed(() => {
-  if (editingPrecio.value)
+  if (editingPrice.value)
     return 'Actualiza los detalles del precio';
-  if (plantilla.value)
+  if (template.value)
     return 'Revisa y ajusta los datos precargados desde el precio de referencia';
   return 'Define un nuevo precio de venta para los viajeros';
 });
 
 // Abrir formulario para agregar
-function abrirFormulario() {
-  editingPrecio.value = null;
-  plantilla.value = null;
+function openForm() {
+  editingPrice.value = null;
+  template.value = null;
   isFormModalOpen.value = true;
 }
 
@@ -166,47 +166,47 @@ function toBusinessName(value: string, max: number): string {
   return sanitizeBusinessName(value).replace(/\s+/g, ' ').trim().slice(0, max);
 }
 
-function etiquetaOcupacion(maxOccupancy: number): string {
+function occupancyLabel(maxOccupancy: number): string {
   return `Habitación para ${maxOccupancy} persona${maxOccupancy > 1 ? 's' : ''}`;
 }
 
-function etiquetaNoches(nightCount: number): string {
+function nightsLabel(nightCount: number): string {
   return `${nightCount} noche${nightCount !== 1 ? 's' : ''}`;
 }
 
 // "Detalles adicionales" de los tipos de habitación seleccionados; con varios hoteles, uno por línea con su nombre
-function descripcionDesdeHabitaciones(hospedaje: Array<EntradaGrupo & { hotelName: string }>): string {
-  const conDetalles = hospedaje.filter(entrada => entrada.additionalDetails?.trim());
-  const lineas = conDetalles.length === 1
-    ? [conDetalles[0]!.additionalDetails!.trim()]
-    : conDetalles.map(entrada => `${entrada.hotelName} - ${entrada.additionalDetails!.trim()}`);
-  return sanitizeText(lineas.join('\n')).slice(0, 500);
+function descriptionFromRooms(accommodation: Array<GroupEntry & { hotelName: string }>): string {
+  const withDetails = accommodation.filter(entry => entry.additionalDetails?.trim());
+  const lines = withDetails.length === 1
+    ? [withDetails[0]!.additionalDetails!.trim()]
+    : withDetails.map(entry => `${entry.hotelName} - ${entry.additionalDetails!.trim()}`);
+  return sanitizeText(lines.join('\n')).slice(0, 500);
 }
 
 // Abrir formulario para agregar, precargado con un precio de referencia
-function abrirDesdePlantilla(price: PrecioReferencia) {
-  const hospedaje = hospedajeSeleccionado(price);
-  const tiposHabitacion = [...new Set(hospedaje.map(entrada => entrada.roomType.replaceAll(' + ', ' y ')))];
+function openFromTemplate(price: ReferencePrice) {
+  const accommodation = selectedAccommodation(price);
+  const roomTypes = [...new Set(accommodation.map(entry => entry.roomType.replaceAll(' + ', ' y ')))];
 
-  editingPrecio.value = null;
-  plantilla.value = {
-    priceType: toBusinessName(etiquetaOcupacion(price.maxOccupancy), 100),
+  editingPrice.value = null;
+  template.value = {
+    priceType: toBusinessName(occupancyLabel(price.maxOccupancy), 100),
     maxOccupancy: price.maxOccupancy,
-    pricePerPerson: Math.round(precioTotalSeleccionado(price) * 100) / 100,
-    roomType: toBusinessName(tiposHabitacion.join(', '), 100),
-    description: descripcionDesdeHabitaciones(hospedaje),
+    pricePerPerson: Math.round(selectedTotalPrice(price) * 100) / 100,
+    roomType: toBusinessName(roomTypes.join(', '), 100),
+    description: descriptionFromRooms(accommodation),
   };
   isFormModalOpen.value = true;
 }
 
-function cerrarFormulario() {
+function closeForm() {
   isFormModalOpen.value = false;
 }
 
 // Abrir formulario para editar
-function abrirEdicion(price: QuotationPublicPrice) {
-  editingPrecio.value = price;
-  plantilla.value = null;
+function openEdit(price: QuotationPublicPrice) {
+  editingPrice.value = price;
+  template.value = null;
   isFormModalOpen.value = true;
 }
 
@@ -218,71 +218,71 @@ function abrirEdicion(price: QuotationPublicPrice) {
 const paymentStore = usePaymentStore();
 
 // Only for the travelers' names in the warning; until they load the modal says "Viajero".
-const { data: travelerData } = useQuery(() => travelersByTravelQuery(cotizacion.value?.travelId));
+const { data: travelerData } = useQuery(() => travelersByTravelQuery(quotation.value?.travelId));
 const travelersById = computed(() => new Map((travelerData.value?.travelers ?? []).map(t => [t.id, t])));
 
 // Account configs aren't loaded on the quotation pages otherwise.
-watch(() => cotizacion.value?.travelId, (travelId) => {
+watch(() => quotation.value?.travelId, (travelId) => {
   if (travelId)
     paymentStore.fetchByTravel(travelId);
 }, { immediate: true });
 
-const viajerosPorPrecio = computed(() => {
+const travelersByPrice = computed(() => {
   const map = new Map<string, TravelerWithPrice[]>();
-  const travelId = cotizacion.value?.travelId;
+  const travelId = quotation.value?.travelId;
   for (const config of paymentStore.accountConfigs) {
     if (config.travelId !== travelId || !config.publicPriceId)
       continue;
     const traveler = travelersById.value.get(config.travelerId);
-    const viajero: TravelerWithPrice = {
+    const withPrice: TravelerWithPrice = {
       id: config.travelerId,
       name: traveler ? `${traveler.firstName} ${traveler.lastName}` : 'Viajero',
       amount: config.publicPriceAmount,
     };
-    map.set(config.publicPriceId, [...(map.get(config.publicPriceId) ?? []), viajero]);
+    map.set(config.publicPriceId, [...(map.get(config.publicPriceId) ?? []), withPrice]);
   }
   return map;
 });
 
-const isAvisoOpen = shallowRef(false);
-const isAvisoLoading = shallowRef(false);
-const avisoAccion = shallowRef<PublicPriceWarningAction>('edit');
-const avisoPrecio = shallowRef<QuotationPublicPrice | null>(null);
+const isWarningOpen = shallowRef(false);
+const isWarningLoading = shallowRef(false);
+const warningAction = shallowRef<PublicPriceWarningAction>('edit');
+const warningPrice = shallowRef<QuotationPublicPrice | null>(null);
 // Edit waiting for the user's confirmation in the warning modal
-const edicionPendiente = shallowRef<QuotationPublicPriceFormData | null>(null);
+const pendingEdit = shallowRef<QuotationPublicPriceFormData | null>(null);
 
-const avisoViajeros = computed(() =>
-  avisoPrecio.value ? viajerosPorPrecio.value.get(avisoPrecio.value.id) ?? [] : [],
+const warningTravelers = computed(() =>
+  warningPrice.value ? travelersByPrice.value.get(warningPrice.value.id) ?? [] : [],
 );
 
-function abrirAviso(accion: PublicPriceWarningAction, precio: QuotationPublicPrice) {
-  avisoAccion.value = accion;
-  avisoPrecio.value = precio;
-  isAvisoOpen.value = true;
+function openWarning(action: PublicPriceWarningAction, price: QuotationPublicPrice) {
+  warningAction.value = action;
+  warningPrice.value = price;
+  isWarningOpen.value = true;
 }
 
-async function confirmarAviso() {
-  const precio = avisoPrecio.value;
-  if (!precio)
+async function confirmWarning() {
+  const price = warningPrice.value;
+  if (!price)
     return;
 
-  isAvisoLoading.value = true;
-  if (avisoAccion.value === 'edit' && edicionPendiente.value) {
-    const ok = await actualizarPrecio(precio.id, edicionPendiente.value);
+  isWarningLoading.value = true;
+  if (warningAction.value === 'edit' && pendingEdit.value) {
+    const ok = await updatePrice(price.id, pendingEdit.value);
     if (ok)
       isFormModalOpen.value = false;
   }
-  else if (avisoAccion.value === 'delete') {
-    await cotizacionStore.deletePrecioPublico(precio.id);
+  else if (warningAction.value === 'delete') {
+    await quotationStore.deletePublicPrice(price.id);
     toast.add({ title: 'Precio eliminado', color: 'success' });
   }
-  isAvisoLoading.value = false;
-  isAvisoOpen.value = false;
-  edicionPendiente.value = null;
+  isWarningLoading.value = false;
+  isWarningOpen.value = false;
+  pendingEdit.value = null;
 }
 
-async function actualizarPrecio(id: string, data: QuotationPublicPriceFormData): Promise<boolean> {
-  const updated = await cotizacionStore.updatePrecioPublico(id, data);
+async function updatePrice(id: string, data: QuotationPublicPriceFormData): Promise<boolean> {
+  const updated = await quotationStore.updatePublicPrice(id, data);
 
   if (!updated) {
     toast.add({
@@ -300,21 +300,21 @@ async function actualizarPrecio(id: string, data: QuotationPublicPriceFormData):
   return true;
 }
 
-async function guardarPrecio(data: QuotationPublicPriceFormData) {
-  if (editingPrecio.value) {
+async function savePrice(data: QuotationPublicPriceFormData) {
+  if (editingPrice.value) {
     // Travelers already have this price: warn before saving, they keep their stored amount
-    if (viajerosPorPrecio.value.has(editingPrecio.value.id)) {
-      edicionPendiente.value = data;
-      abrirAviso('edit', editingPrecio.value);
+    if (travelersByPrice.value.has(editingPrice.value.id)) {
+      pendingEdit.value = data;
+      openWarning('edit', editingPrice.value);
       return;
     }
 
-    if (!await actualizarPrecio(editingPrecio.value.id, data))
+    if (!await updatePrice(editingPrice.value.id, data))
       return;
   }
   else {
     // Crear
-    const response = await cotizacionStore.addPrecioPublico(data);
+    const response = await quotationStore.addPublicPrice(data);
 
     if ('error' in response) {
       toast.add({
@@ -335,8 +335,8 @@ async function guardarPrecio(data: QuotationPublicPriceFormData) {
 }
 
 // Eliminar precio: always asks first (listing the travelers that have it, if any)
-function eliminarPrecio(precio: QuotationPublicPrice) {
-  abrirAviso('delete', precio);
+function deletePrice(price: QuotationPublicPrice) {
+  openWarning('delete', price);
 }
 
 // Acciones por fila
@@ -346,7 +346,7 @@ function getRowActions(price: QuotationPublicPrice) {
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
-        onSelect: () => abrirEdicion(price),
+        onSelect: () => openEdit(price),
       },
     ],
     [
@@ -354,7 +354,7 @@ function getRowActions(price: QuotationPublicPrice) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => eliminarPrecio(price),
+        onSelect: () => deletePrice(price),
       },
     ],
   ];
@@ -380,17 +380,17 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       ),
     },
     {
-      accessorKey: 'precioPorPersona',
+      accessorKey: 'pricePerPerson',
       header: 'Precio/Persona',
       cell: ({ row }) => h('span', { class: 'font-bold text-primary' }, formatCurrency(row.original.pricePerPerson)),
     },
     {
-      id: 'tipoHabitacion',
+      id: 'roomType',
       header: 'Tipo Habitación',
       cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.original.roomType ?? '—'),
     },
     {
-      id: 'grupoEdad',
+      id: 'ageGroup',
       header: 'Grupo Etario',
       cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.original.ageGroup ?? '—'),
     },
@@ -421,14 +421,14 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
     </template>
     <div class="space-y-6">
       <!-- Precios de referencia basados en costos -->
-      <div v-if="hayDatos" class="space-y-3">
+      <div v-if="hasData" class="space-y-3">
         <h3 class="text-sm font-semibold text-muted">
           Precios de Referencia (Costo base)
         </h3>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <UCard
-            v-for="(price, index) in matrizPreciosReferencia"
+            v-for="(price, index) in referencePriceMatrix"
             :key="index"
           >
             <template #header>
@@ -436,7 +436,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                 <div class="flex items-center gap-2">
                   <UIcon name="i-lucide-bed-double" class="w-4 h-4 text-muted" />
                   <p class="font-semibold">
-                    {{ etiquetaOcupacion(price.maxOccupancy) }}
+                    {{ occupancyLabel(price.maxOccupancy) }}
                   </p>
                 </div>
                 <div class="text-right">
@@ -444,7 +444,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                     Precio por Persona
                   </p>
                   <p class="text-xl font-bold text-primary">
-                    {{ formatCurrency(precioTotalSeleccionado(price)) }}
+                    {{ formatCurrency(selectedTotalPrice(price)) }}
                   </p>
                 </div>
               </div>
@@ -465,24 +465,24 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                   Hospedaje por Hotel
                 </p>
                 <div
-                  v-for="[hotelName, tipos] in gruposHotel(price.breakdown.accommodation)"
+                  v-for="[hotelName, types] in hotelGroups(price.breakdown.accommodation)"
                   :key="hotelName"
                   class="space-y-1"
                 >
                   <!-- Un solo tipo: sin radio -->
-                  <template v-if="tipos.length === 1">
+                  <template v-if="types.length === 1">
                     <div class="flex justify-between items-center pl-2">
                       <span class="text-muted">
                         {{ hotelName }}
-                        <span class="text-xs opacity-60">· {{ tipos[0]!.roomType }} · {{ etiquetaNoches(tipos[0]!.nightCount) }}</span>
+                        <span class="text-xs opacity-60">· {{ types[0]!.roomType }} · {{ nightsLabel(types[0]!.nightCount) }}</span>
                       </span>
-                      <span class="font-medium">{{ formatCurrency(tipos[0]!.costPerPerson) }}</span>
+                      <span class="font-medium">{{ formatCurrency(types[0]!.costPerPerson) }}</span>
                     </div>
                   </template>
                   <!-- Múltiples tipos: radio para elegir -->
                   <template v-else>
                     <div
-                      v-for="(tipo, localIdx) in tipos"
+                      v-for="(type, localIdx) in types"
                       :key="localIdx"
                       class="flex items-center gap-2 pl-2 cursor-pointer select-none rounded hover:bg-muted/10 py-0.5 transition-colors"
                       @click="selectLocalIndex(price.maxOccupancy, hotelName, localIdx)"
@@ -494,13 +494,13 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                       />
                       <span class="flex-1 text-muted">
                         {{ hotelName }}
-                        <span class="text-xs opacity-60">· {{ tipo.roomType }} · {{ etiquetaNoches(tipo.nightCount) }}</span>
+                        <span class="text-xs opacity-60">· {{ type.roomType }} · {{ nightsLabel(type.nightCount) }}</span>
                       </span>
                       <span
                         class="font-medium"
                         :class="getSelectedLocalIndex(price.maxOccupancy, hotelName) === localIdx ? 'text-foreground' : 'text-muted'"
                       >
-                        {{ formatCurrency(tipo.costPerPerson) }}
+                        {{ formatCurrency(type.costPerPerson) }}
                       </span>
                     </div>
                   </template>
@@ -512,7 +512,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
               <!-- Total hospedaje -->
               <div class="flex justify-between items-center font-semibold">
                 <span>Total Hospedaje</span>
-                <span class="text-primary">{{ formatCurrency(totalHospedajeSeleccionado(price)) }}</span>
+                <span class="text-primary">{{ formatCurrency(selectedAccommodationTotal(price)) }}</span>
               </div>
             </div>
 
@@ -520,7 +520,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
               <div class="flex justify-between items-center">
                 <span class="font-bold">Total por Persona</span>
                 <span class="text-lg font-bold text-primary">
-                  {{ formatCurrency(precioTotalSeleccionado(price)) }}
+                  {{ formatCurrency(selectedTotalPrice(price)) }}
                 </span>
               </div>
               <div v-if="!props.readonly" class="flex justify-end mt-3">
@@ -530,7 +530,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                   variant="soft"
                   label="Usar como plantilla"
                   class="w-full sm:w-auto justify-center"
-                  @click="abrirDesdePlantilla(price)"
+                  @click="openFromTemplate(price)"
                 />
               </div>
             </template>
@@ -556,13 +556,13 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
             icon="i-lucide-plus"
             size="xs"
             label="Agregar Precio"
-            @click="abrirFormulario"
+            @click="openForm"
           />
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row sm:gap-8">
           <USwitch
-            :model-value="cotizacion?.showPublicRoomType ?? true"
+            :model-value="quotation?.showPublicRoomType ?? true"
             :loading="savingVisibilityField === 'showPublicRoomType'"
             :disabled="savingVisibilityField !== null"
             label="Mostrar tipo de habitación en la web"
@@ -570,7 +570,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
             @update:model-value="value => setPublicVisibility('showPublicRoomType', value)"
           />
           <USwitch
-            :model-value="cotizacion?.showPublicDescription ?? true"
+            :model-value="quotation?.showPublicDescription ?? true"
             :loading="savingVisibilityField === 'showPublicDescription'"
             :disabled="savingVisibilityField !== null"
             label="Mostrar descripción en la web"
@@ -580,9 +580,9 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
         </div>
 
         <!-- Tabla de precios de venta -->
-        <div v-if="preciosPublicos.length > 0">
+        <div v-if="publicPrices.length > 0">
           <UTable
-            :data="preciosPublicos"
+            :data="publicPrices"
             :columns="columns"
           />
         </div>
@@ -599,28 +599,28 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
     <!-- Modal: Agregar/Editar Precio -->
     <UModal
       v-model:open="isFormModalOpen"
-      :title="editingPrecio ? 'Editar Precio' : 'Agregar Precio de Venta'"
+      :title="editingPrice ? 'Editar Precio' : 'Agregar Precio de Venta'"
       :description="modalDescription"
       class="sm:max-w-2xl"
     >
       <template #body>
         <QuotationPublicPriceForm
           :quotation-id="quotationId"
-          :price="editingPrecio"
-          :template="plantilla"
-          @submit="guardarPrecio"
-          @cancel="cerrarFormulario"
+          :price="editingPrice"
+          :template="template"
+          @submit="savePrice"
+          @cancel="closeForm"
         />
       </template>
     </UModal>
 
     <QuotationPublicPriceWarningModal
-      v-model:open="isAvisoOpen"
-      :action="avisoAccion"
-      :price="avisoPrecio"
-      :travelers="avisoViajeros"
-      :loading="isAvisoLoading"
-      @confirm="confirmarAviso"
+      v-model:open="isWarningOpen"
+      :action="warningAction"
+      :price="warningPrice"
+      :travelers="warningTravelers"
+      :loading="isWarningLoading"
+      @confirm="confirmWarning"
     />
   </UCard>
 </template>

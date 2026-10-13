@@ -20,11 +20,11 @@ const bedSizeOptions = [
   { value: 'king', label: 'King' },
 ];
 
-function updateCantidad(val: string | number) {
+function updateQuantity(val: string | number) {
   emit('update:modelValue', { ...props.modelValue, count: Number(val) });
 }
 
-function updateTamaño(val: string) {
+function updateSize(val: string) {
   emit('update:modelValue', { ...props.modelValue, size: val as BedSize });
 }
 </script>
@@ -37,7 +37,7 @@ function updateTamaño(val: string) {
       :min="1"
       :max="10"
       class="w-20 shrink-0"
-      @update:model-value="updateCantidad"
+      @update:model-value="updateQuantity"
     />
     <USelect
       :model-value="modelValue.size"
@@ -45,7 +45,7 @@ function updateTamaño(val: string) {
       value-key="value"
       label-key="label"
       class="flex-1 min-w-0"
-      @update:model-value="updateTamaño"
+      @update:model-value="updateSize"
     />
     <UButton
       icon="i-lucide-trash-2"

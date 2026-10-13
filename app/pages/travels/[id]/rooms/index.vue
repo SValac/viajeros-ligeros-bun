@@ -12,7 +12,7 @@ import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 
 definePageMeta({
-  name: 'travel-habitaciones',
+  name: 'travel-rooms',
 });
 
 const toast = useToast();
@@ -21,7 +21,7 @@ const travelerStore = useTravelerStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const paymentStore = usePaymentStore();
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
 const { travelId, travel } = useTravelRoute();
 
@@ -58,9 +58,9 @@ const occupiedRooms = computed(() =>
 );
 // The quotation picks each hotel's room types; how many rooms of each the travel holds
 // is set here (it changes until the trip leaves), and the hotel's cost follows it.
-const hospedajes = computed(() => {
-  const cotizacion = cotizacionStore.getCotizacionByTravel(travelId.value);
-  return cotizacion ? cotizacionStore.getHospedajesByQuotation(cotizacion.id) : [];
+const quotationAccommodations = computed(() => {
+  const quotation = quotationStore.getQuotationByTravel(travelId.value);
+  return quotation ? quotationStore.getAccommodationsByQuotation(quotation.id) : [];
 });
 
 type RoomTypeGroup = {
@@ -103,13 +103,13 @@ const hotelGroups = computed((): HotelGroup[] => {
     return hotel;
   };
 
-  for (const hospedaje of hospedajes.value) {
-    const hotel = hotelFor(hospedaje.providerId);
-    hotel.nightCount = hospedaje.nightCount;
-    hotel.totalCost = hospedaje.totalCost;
-    const catalogTypes = hotelRoomStore.getRoomDataByProviderId(hospedaje.providerId)?.roomTypes ?? [];
-    for (const detail of hospedaje.details) {
-      const key = roomTypeKey(hospedaje.providerId, detail.roomTypeId);
+  for (const accommodation of quotationAccommodations.value) {
+    const hotel = hotelFor(accommodation.providerId);
+    hotel.nightCount = accommodation.nightCount;
+    hotel.totalCost = accommodation.totalCost;
+    const catalogTypes = hotelRoomStore.getRoomDataByProviderId(accommodation.providerId)?.roomTypes ?? [];
+    for (const detail of accommodation.details) {
+      const key = roomTypeKey(accommodation.providerId, detail.roomTypeId);
       hotel.roomTypes.push({
         key,
         roomTypeId: detail.roomTypeId,
@@ -226,10 +226,10 @@ const addingRoomTypeLabel = computed(() => {
 const isAddModalOpen = shallowRef(false);
 
 // The public price each traveler paid says which room type (and hotels) they belong in.
-const preciosPublicosById = computed(() => {
-  const cotizacion = cotizacionStore.getCotizacionByTravel(travelId.value);
-  const precios = cotizacion ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.id) : [];
-  return new Map(precios.map(precio => [precio.id, precio]));
+const publicPricesById = computed(() => {
+  const quotation = quotationStore.getQuotationByTravel(travelId.value);
+  const prices = quotation ? quotationStore.getPublicPricesByQuotation(quotation.id) : [];
+  return new Map(prices.map(price => [price.id, price]));
 });
 
 /**
@@ -254,7 +254,7 @@ type AvailableTraveler = {
   traveler: Traveler;
   /** Companions only: their representative's full name, to tell which group they belong to. */
   representativeName?: string;
-  precio?: QuotationPublicPrice;
+  price?: QuotationPublicPrice;
   descriptionLines: string[];
 };
 
@@ -270,12 +270,12 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
     .filter(t => !hasRoomInHotel(t.id, accommodation.providerId))
     .map((traveler) => {
       const publicPriceId = paymentStore.getAccountConfig(traveler.id, travelId.value)?.publicPriceId;
-      const precio = publicPriceId ? preciosPublicosById.value.get(publicPriceId) : undefined;
+      const price = publicPriceId ? publicPricesById.value.get(publicPriceId) : undefined;
       return {
         traveler,
         representativeName: representativeNames.value[traveler.id],
-        precio,
-        descriptionLines: precio ? descriptionLinesForHotel(precio.description, hotelName, hotelNames) : [],
+        price,
+        descriptionLines: price ? descriptionLinesForHotel(price.description, hotelName, hotelNames) : [],
       };
     });
 });
@@ -346,7 +346,7 @@ async function addRoom(providerId: string, group: RoomTypeGroup): Promise<void> 
     toast.add({ title: 'Error al agregar la habitación', description: travelStore.error ?? undefined, color: 'error' });
     return;
   }
-  await cotizacionStore.refreshHospedajeCosts(travelId.value);
+  await quotationStore.refreshAccommodationCosts(travelId.value);
   toast.add({ title: 'Habitación agregada', color: 'success' });
 }
 
@@ -356,7 +356,7 @@ async function deleteRoom(roomId: string): Promise<void> {
     toast.add({ title: 'No se pudo eliminar la habitación', description: travelStore.error ?? undefined, color: 'error' });
     return;
   }
-  await cotizacionStore.refreshHospedajeCosts(travelId.value);
+  await quotationStore.refreshAccommodationCosts(travelId.value);
   toast.add({ title: 'Habitación eliminada', color: 'success' });
 }
 
@@ -500,7 +500,7 @@ async function updateAccommodation(
             Todos los viajeros ya tienen habitación en este hotel.
           </p>
           <button
-            v-for="{ traveler, representativeName, precio, descriptionLines } in availableTravelersForRoom"
+            v-for="{ traveler, representativeName, price, descriptionLines } in availableTravelersForRoom"
             :key="traveler.id"
             class="w-full flex items-start gap-3 rounded-lg border border-default px-3 py-2 hover:bg-elevated transition text-left"
             @click="assignTraveler(traveler)"
@@ -524,9 +524,9 @@ async function updateAccommodation(
               <p v-if="traveler.kind === 'coordinator'" class="text-xs text-info">
                 Coordinador
               </p>
-              <template v-else-if="precio">
+              <template v-else-if="price">
                 <p class="text-xs text-muted">
-                  {{ precio.priceType }}
+                  {{ price.priceType }}
                 </p>
                 <p
                   v-for="(line, index) in descriptionLines"

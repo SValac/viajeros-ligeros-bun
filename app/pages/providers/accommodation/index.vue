@@ -13,7 +13,7 @@ definePageMeta({
 
 const extraColumns: TableColumn<Provider>[] = [
   {
-    id: 'habitaciones',
+    id: 'rooms',
     header: 'Habitaciones',
     cell: ({ row }) =>
       h(resolveComponent('HotelRoomsSummary'), { providerId: row.original.id }),

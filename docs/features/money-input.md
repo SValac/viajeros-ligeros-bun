@@ -36,5 +36,5 @@ después también. Varias vistas de hospedaje mostraban los montos con `toFixed(
 | `app/components/money-input.vue` | `UInputNumber` con formato MXN o porcentaje; `aria-label` para cuando no está en un `UFormField` |
 | `app/app.vue` | Locale `es-MX` |
 | 10 formularios (pagos, servicios, autobuses, precios al público, tipos de habitación, configuración de cuenta) | 12 campos de dinero pasan a `<MoneyInput>` |
-| Hospedaje (form, tabla, resumen), tarjeta de tipo de habitación, `use-cotizacion-store.ts` | `toFixed(2)` → `formatCurrency` |
+| Hospedaje (form, tabla, resumen), tarjeta de tipo de habitación, `use-quotation-store.ts` | `toFixed(2)` → `formatCurrency` |
 | 20 componentes | Se borra su `formatCurrency` local |

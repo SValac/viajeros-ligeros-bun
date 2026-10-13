@@ -5,15 +5,15 @@ definePageMeta({
   name: 'quotation-buses',
 });
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
 const { travelId, quotation, readonly } = useQuotationRoute();
 
 // Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
 const quotationId = computed(() => quotation.value!.id);
-const hasBuses = computed(() => cotizacionStore.getBusesByQuotation(quotationId.value).length > 0);
+const hasBuses = computed(() => quotationStore.getBusesByQuotation(quotationId.value).length > 0);
 
-const isAgregarBusModalOpen = shallowRef(false);
+const isAddBusModalOpen = shallowRef(false);
 </script>
 
 <template>
@@ -21,7 +21,7 @@ const isAgregarBusModalOpen = shallowRef(false);
     <QuotationBusSection
       :quotation-id="quotationId"
       :readonly="readonly"
-      @add="isAgregarBusModalOpen = true"
+      @add="isAddBusModalOpen = true"
     />
 
     <!-- Operadores y coordinadores: son del viaje, se asignan en su pestaña Autobuses -->
@@ -36,10 +36,10 @@ const isAgregarBusModalOpen = shallowRef(false);
     />
 
     <QuotationBusForm
-      :open="isAgregarBusModalOpen"
+      :open="isAddBusModalOpen"
       :quotation-id="quotationId"
-      @update:open="(v) => isAgregarBusModalOpen = v"
-      @added="isAgregarBusModalOpen = false"
+      @update:open="(v) => isAddBusModalOpen = v"
+      @added="isAddBusModalOpen = false"
     />
   </div>
 </template>

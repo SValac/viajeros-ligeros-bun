@@ -7,15 +7,15 @@ definePageMeta({
 });
 
 const coordinatorStore = useCoordinatorStore();
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
 const { travelId, travel } = useTravelRoute();
 
 // The seat figures live in the quotation (they drive its seat price)
 useQuery(() => quotationByTravelQuery(travelId.value));
-const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
+const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
 
-const coordinadores = computed(() =>
+const coordinators = computed(() =>
   (travel.value?.coordinatorIds ?? [])
     .map(id => coordinatorStore.getCoordinatorById(id))
     .filter(coordinator => coordinator !== undefined),
@@ -41,9 +41,9 @@ const details = computed<Detail[]>(() => {
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(t.endDate) },
     { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
-    { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(cotizacion.value?.minimumSeatTarget) },
-    { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(cotizacion.value?.totalSeats) },
-    { icon: 'i-lucide-ticket', label: 'Asientos vendibles', value: seats(cotizacion.value && cotizacionStore.getAsientosVendibles(cotizacion.value.id, t.coordinatorIds.length)) },
+    { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(quotation.value?.minimumSeatTarget) },
+    { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(quotation.value?.totalSeats) },
+    { icon: 'i-lucide-ticket', label: 'Asientos vendibles', value: seats(quotation.value && quotationStore.getSellableSeats(quotation.value.id, t.coordinatorIds.length)) },
     { icon: 'i-lucide-star', label: 'Destacado en la web', value: t.featured ? 'Sí' : 'No' },
   ];
 });
@@ -123,14 +123,14 @@ const details = computed<Detail[]>(() => {
           </h2>
         </template>
 
-        <ul v-if="coordinadores.length > 0" class="space-y-2">
+        <ul v-if="coordinators.length > 0" class="space-y-2">
           <li
-            v-for="coordinador in coordinadores"
-            :key="coordinador.id"
+            v-for="coordinator in coordinators"
+            :key="coordinator.id"
             class="flex items-center gap-2 text-sm"
           >
             <UIcon name="i-lucide-user-star" class="size-4 shrink-0 text-muted" />
-            {{ coordinador.name }}
+            {{ coordinator.name }}
           </li>
         </ul>
         <p v-else class="text-sm text-muted">

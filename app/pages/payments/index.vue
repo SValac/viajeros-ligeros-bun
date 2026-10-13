@@ -96,7 +96,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     }),
   },
   {
-    id: 'viajeros',
+    id: 'travelers',
     header: 'Viajeros',
     cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, `${row.original.travelerCount}`),
   },

@@ -17,25 +17,25 @@ const { quotationId, readonly = false } = defineProps<Props>();
 
 defineEmits<Emits>();
 
-const cotizacionStore = useCotizacionStore();
-const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const quotationStore = useQuotationStore();
+const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
 const coordinatorCount = useTravelCoordinatorCount(travelId);
 const providerStore = useProviderStore();
 const toast = useToast();
 
-const buses = computed(() => cotizacionStore.getBusesByQuotation(quotationId));
+const buses = computed(() => quotationStore.getBusesByQuotation(quotationId));
 
 // Modal state
-const isDetallesFormOpen = shallowRef(false);
-const isHistorialOpen = shallowRef(false);
+const isDetailsFormOpen = shallowRef(false);
+const isHistoryOpen = shallowRef(false);
 const isDeleteModalOpen = shallowRef(false);
 const selectedBus = shallowRef<QuotationBus | null>(null);
 
-function getNombreAgencia(proveedorId: string): string {
-  return providerStore.getProviderById(proveedorId)?.name ?? 'Desconocido';
+function getAgencyName(providerId: string): string {
+  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
-function getEstadoPagoColor(status: BusPaymentStatus): 'warning' | 'info' | 'success' {
+function getPaymentStatusColor(status: BusPaymentStatus): 'warning' | 'info' | 'success' {
   if (status === 'pending')
     return 'warning';
   if (status === 'partial')
@@ -43,7 +43,7 @@ function getEstadoPagoColor(status: BusPaymentStatus): 'warning' | 'info' | 'suc
   return 'success';
 }
 
-function getEstadoPagoLabel(status: BusPaymentStatus): string {
+function getPaymentStatusLabel(status: BusPaymentStatus): string {
   if (status === 'pending')
     return 'Pendiente';
   if (status === 'partial')
@@ -51,14 +51,14 @@ function getEstadoPagoLabel(status: BusPaymentStatus): string {
   return 'Liquidado';
 }
 
-function openHistorial(bus: QuotationBus) {
+function openHistory(bus: QuotationBus) {
   selectedBus.value = bus;
-  isHistorialOpen.value = true;
+  isHistoryOpen.value = true;
 }
 
-function openDetalles(bus: QuotationBus) {
+function openDetails(bus: QuotationBus) {
   selectedBus.value = bus;
-  isDetallesFormOpen.value = true;
+  isDetailsFormOpen.value = true;
 }
 
 function openDeleteConfirm(bus: QuotationBus) {
@@ -70,16 +70,16 @@ function closeDeleteModal() {
   isDeleteModalOpen.value = false;
 }
 
-async function handleToggleConfirmado(bus: QuotationBus) {
+async function handleToggleConfirmed(bus: QuotationBus) {
   if (readonly)
     return;
-  await cotizacionStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
+  await quotationStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
 }
 
 async function confirmDelete() {
   if (!selectedBus.value)
     return;
-  await cotizacionStore.deleteBusQuotation(selectedBus.value.id);
+  await quotationStore.deleteBusQuotation(selectedBus.value.id);
   toast.add({ title: 'Autobús eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   selectedBus.value = null;
@@ -91,13 +91,13 @@ function getBusActions(bus: QuotationBus) {
     {
       label: 'Ver historial de pagos',
       icon: 'i-lucide-receipt',
-      onSelect: () => openHistorial(bus),
+      onSelect: () => openHistory(bus),
     },
     {
       label: 'Registrar pago',
       icon: 'i-lucide-banknote',
-      disabled: cotizacionStore.getSaldoPendienteBus(bus.id) <= 0,
-      onSelect: () => openHistorial(bus),
+      disabled: quotationStore.getPendingBalanceByBus(bus.id) <= 0,
+      onSelect: () => openHistory(bus),
     },
   ];
 
@@ -110,12 +110,12 @@ function getBusActions(bus: QuotationBus) {
       {
         label: 'Editar detalles',
         icon: 'i-lucide-pencil',
-        onSelect: () => openDetalles(bus),
+        onSelect: () => openDetails(bus),
       },
       {
         label: bus.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
         icon: bus.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-        onSelect: () => handleToggleConfirmado(bus),
+        onSelect: () => handleToggleConfirmed(bus),
       },
     ],
     [
@@ -198,7 +198,7 @@ function getBusActions(bus: QuotationBus) {
             class="border-b border-default/50 hover:bg-elevated/50"
           >
             <td class="py-3 pr-4 font-medium">
-              {{ getNombreAgencia(bus.providerId) }}
+              {{ getAgencyName(bus.providerId) }}
             </td>
             <td class="py-3 pr-4 font-mono">
               {{ bus.unitNumber }}
@@ -223,18 +223,18 @@ function getBusActions(bus: QuotationBus) {
 
             <!-- Costo/persona -->
             <td class="py-3 pr-4">
-              {{ formatCurrency(cotizacionStore.getCostoPerPersonaBus(bus.id, coordinatorCount)) }}
+              {{ formatCurrency(quotationStore.getBusCostPerPerson(bus.id, coordinatorCount)) }}
             </td>
 
             <!-- Pagado -->
             <td class="py-3 pr-4">
-              {{ formatCurrency(cotizacionStore.getAnticipadoBus(bus.id)) }}
+              {{ formatCurrency(quotationStore.getPaidByBus(bus.id)) }}
             </td>
 
             <!-- Pendiente -->
             <td class="py-3 pr-4">
-              <span :class="cotizacionStore.getSaldoPendienteBus(bus.id) > 0 ? 'text-warning' : 'text-success'">
-                {{ formatCurrency(cotizacionStore.getSaldoPendienteBus(bus.id)) }}
+              <span :class="quotationStore.getPendingBalanceByBus(bus.id) > 0 ? 'text-warning' : 'text-success'">
+                {{ formatCurrency(quotationStore.getPendingBalanceByBus(bus.id)) }}
               </span>
             </td>
 
@@ -250,8 +250,8 @@ function getBusActions(bus: QuotationBus) {
             <!-- Estado Pago -->
             <td class="py-3 pr-4">
               <UBadge
-                :label="getEstadoPagoLabel(cotizacionStore.getBusPaymentStatus(bus.id))"
-                :color="getEstadoPagoColor(cotizacionStore.getBusPaymentStatus(bus.id))"
+                :label="getPaymentStatusLabel(quotationStore.getBusPaymentStatus(bus.id))"
+                :color="getPaymentStatusColor(quotationStore.getBusPaymentStatus(bus.id))"
                 variant="subtle"
               />
             </td>
@@ -291,7 +291,7 @@ function getBusActions(bus: QuotationBus) {
 
   <!-- Slideover: historial de pagos -->
   <USlideover
-    v-model:open="isHistorialOpen"
+    v-model:open="isHistoryOpen"
     :title="selectedBus ? `Pagos — ${selectedBus.unitNumber}` : 'Historial de Pagos'"
     description="Registro de pagos realizados a la agencia"
     side="right"
@@ -309,7 +309,7 @@ function getBusActions(bus: QuotationBus) {
 
   <!-- Modal: editar autobús (mismo formulario que agregar) -->
   <QuotationBusForm
-    v-model:open="isDetallesFormOpen"
+    v-model:open="isDetailsFormOpen"
     :quotation-id="quotationId"
     :bus="selectedBus"
   />

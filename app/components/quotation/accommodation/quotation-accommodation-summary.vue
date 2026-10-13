@@ -16,14 +16,14 @@ type Props = {
 
 const props = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 
-const hospedajes = computed(() => cotizacionStore.getHospedajesByQuotation(props.quotationId));
-const totalCosto = computed(() => cotizacionStore.getTotalCostoHospedajes(props.quotationId));
+const accommodations = computed(() => quotationStore.getAccommodationsByQuotation(props.quotationId));
+const totalCost = computed(() => quotationStore.getAccommodationsTotalCost(props.quotationId));
 // Room counts come from the travel's rooms page, not from the quotation.
-const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId)?.travelId);
+const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
 
@@ -31,61 +31,61 @@ function getRoomCount(accommodation: QuotationAccommodation, roomTypeId: string)
   return roomCounts.value.get(roomTypeKey(accommodation.providerId, roomTypeId)) ?? 0;
 }
 
-const totalHabitaciones = computed(() =>
-  hospedajes.value.reduce((sum, h) => sum + h.details.reduce((s, d) => s + getRoomCount(h, d.roomTypeId), 0), 0),
+const totalRooms = computed(() =>
+  accommodations.value.reduce((sum, h) => sum + h.details.reduce((s, d) => s + getRoomCount(h, d.roomTypeId), 0), 0),
 );
 
-function getNombreHotel(providerId: string): string {
+function getHotelName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
 // Items del accordion — uno por hospedaje
-function getDesgloseHabitaciones(accommodation: QuotationAccommodation): string {
+function getRoomBreakdown(accommodation: QuotationAccommodation): string {
   return accommodation.details
     .map(d => `${getRoomCount(accommodation, d.roomTypeId)} hab (${d.maxOccupancy} p)`)
     .join(' · ');
 }
 
 const accordionItems = computed(() =>
-  hospedajes.value.map(h => ({
-    label: `${getNombreHotel(h.providerId)} - ${getDesgloseHabitaciones(h)}`,
+  accommodations.value.map(h => ({
+    label: `${getHotelName(h.providerId)} - ${getRoomBreakdown(h)}`,
     value: h.id,
     slot: `hotel-${h.id}`,
   })),
 );
 
-const defaultValue = computed(() => hospedajes.value.map(h => h.id));
+const defaultValue = computed(() => accommodations.value.map(h => h.id));
 
-const costoPromedioPorPersona = computed(() => {
-  let totalPersonas = 0;
-  for (const h of hospedajes.value) {
+const averageCostPerPerson = computed(() => {
+  let totalPeople = 0;
+  for (const h of accommodations.value) {
     for (const d of h.details) {
-      totalPersonas += getRoomCount(h, d.roomTypeId) * d.maxOccupancy;
+      totalPeople += getRoomCount(h, d.roomTypeId) * d.maxOccupancy;
     }
   }
-  return totalPersonas > 0 ? totalCosto.value / totalPersonas : 0;
+  return totalPeople > 0 ? totalCost.value / totalPeople : 0;
 });
 
 // ── UTable ────────────────────────────────────────────────────────────────────
 
-type DetalleRow = {
+type DetailRow = {
   id: string;
-  camasLabel: string;
-  ocupacion: number;
+  bedsLabel: string;
+  occupancy: number;
   count: number;
   pricePerNight: number;
   costPerPerson: number | undefined;
   totalCost: number;
 };
 
-const columns: TableColumn<DetalleRow>[] = [
+const columns: TableColumn<DetailRow>[] = [
   {
-    id: 'tipo',
+    id: 'type',
     header: 'Tipo',
     cell: ({ row }) =>
       h('div', [
-        h('p', { class: 'font-medium' }, row.original.camasLabel || '—'),
-        h('p', { class: 'text-xs text-muted' }, `${row.original.ocupacion} ${row.original.ocupacion === 1 ? 'persona' : 'personas'}`),
+        h('p', { class: 'font-medium' }, row.original.bedsLabel || '—'),
+        h('p', { class: 'text-xs text-muted' }, `${row.original.occupancy} ${row.original.occupancy === 1 ? 'persona' : 'personas'}`),
       ]),
   },
   {
@@ -94,7 +94,7 @@ const columns: TableColumn<DetalleRow>[] = [
     cell: ({ row }) => h('div', { class: 'text-right' }, `${row.original.count} hab`),
   },
   {
-    accessorKey: 'precioPorNoche',
+    accessorKey: 'pricePerNight',
     header: 'Precio/noche',
     cell: ({ row }) => h('div', { class: 'text-right' }, `${formatCurrency(row.original.pricePerNight)}`),
   },
@@ -105,20 +105,20 @@ const columns: TableColumn<DetalleRow>[] = [
       h('div', { class: 'text-right' }, row.original.costPerPerson != null ? `${formatCurrency(row.original.costPerPerson)}` : '—'),
   },
   {
-    accessorKey: 'costoTotal',
+    accessorKey: 'totalCost',
     header: 'Subtotal',
     cell: ({ row }) => h('div', { class: 'text-right font-semibold' }, `${formatCurrency(row.original.totalCost)}`),
   },
 ];
 
-function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
+function getDetailRows(accommodation: QuotationAccommodation): DetailRow[] {
   return accommodation.details.map((d) => {
     const roomData = hotelRoomStore.getRoomDataByProviderId(accommodation.providerId);
-    const tipoInfo = roomData?.roomTypes.find(t => t.id === d.roomTypeId) ?? null;
+    const typeInfo = roomData?.roomTypes.find(t => t.id === d.roomTypeId) ?? null;
     return {
       id: d.id,
-      camasLabel: formatBedConfiguration(tipoInfo?.beds ?? []),
-      ocupacion: d.maxOccupancy,
+      bedsLabel: formatBedConfiguration(typeInfo?.beds ?? []),
+      occupancy: d.maxOccupancy,
       count: getRoomCount(accommodation, d.roomTypeId),
       pricePerNight: d.pricePerNight,
       costPerPerson: d.costPerPerson,
@@ -130,7 +130,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
 
 <template>
   <!-- Sin hospedajes no muestra nada: la tabla de arriba ya tiene el estado vacío -->
-  <div v-if="hospedajes.length > 0" class="space-y-4">
+  <div v-if="accommodations.length > 0" class="space-y-4">
     <!-- Resumen General -->
     <div class="bg-linear-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -139,7 +139,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
             Hoteles
           </p>
           <p class="text-2xl font-bold">
-            {{ hospedajes.length }}
+            {{ accommodations.length }}
           </p>
         </div>
         <div>
@@ -147,7 +147,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
             Habitaciones en el viaje
           </p>
           <p class="text-2xl font-bold">
-            {{ totalHabitaciones }}
+            {{ totalRooms }}
           </p>
         </div>
         <div>
@@ -155,7 +155,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
             Costo Total
           </p>
           <p class="text-2xl font-bold text-primary">
-            {{ formatCurrency(totalCosto) }}
+            {{ formatCurrency(totalCost) }}
           </p>
         </div>
       </div>
@@ -176,14 +176,14 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
         class=""
       >
         <template
-          v-for="hospedaje in hospedajes"
-          :key="hospedaje.id"
-          #[`hotel-${hospedaje.id}`]
+          v-for="accommodation in accommodations"
+          :key="accommodation.id"
+          #[`hotel-${accommodation.id}`]
         >
-          <UTable :data="getDetalleRows(hospedaje)" :columns="columns" />
+          <UTable :data="getDetailRows(accommodation)" :columns="columns" />
           <div class="px-4 py-2 bg-muted/10 flex justify-between items-center text-sm font-semibold border-t">
-            <span>Total ({{ hospedaje.nightCount }} noche{{ hospedaje.nightCount !== 1 ? 's' : '' }})</span>
-            <span class="text-primary">{{ formatCurrency(hospedaje.totalCost) }}</span>
+            <span>Total ({{ accommodation.nightCount }} noche{{ accommodation.nightCount !== 1 ? 's' : '' }})</span>
+            <span class="text-primary">{{ formatCurrency(accommodation.totalCost) }}</span>
           </div>
         </template>
       </UAccordion>
@@ -193,7 +193,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
     <div class="bg-secondary/10 rounded-lg p-3 text-sm border border-secondary/20">
       <div class="flex justify-between items-center">
         <span class="text-muted">Costo Promedio por Persona (hospedaje)</span>
-        <span class="font-semibold">{{ formatCurrency(costoPromedioPorPersona) }}</span>
+        <span class="font-semibold">{{ formatCurrency(averageCostPerPerson) }}</span>
       </div>
     </div>
   </div>

@@ -51,7 +51,7 @@ Todos los stores aplican el patrón de tres capas:
 - `getProviderById`, `getProvidersByCategory`
 - `statsByCategory` — conteo por categoría
 - `filteredProviders` — aplica `activeFilters`
-- `availableCiudades`, `availableEstados` — valores únicos para filtros
+- `availableCities`, `availableStates` — valores únicos para filtros
 - `filteredCount`, `hasActiveFilters`
 
 **Actions**: `refetch`, `addProvider`, `updateProvider`, `deleteProvider`, `toggleProviderStatus`, gestión de filtros (`setFilters`, `updateFilter`, `removeFilter`, `clearFilters`)
@@ -162,12 +162,12 @@ Aplica patrón Repository + Domain: `composables/hotel-rooms/use-hotel-room-doma
 
 ---
 
-## 2.9 Quotation Store (`use-cotizacion-store.ts`)
+## 2.9 Quotation Store (`use-quotation-store.ts`)
 
 Gestiona todo el flujo de cotización de un viaje. Aplica el patrón Repository + Domain:
 - `app/composables/quotation/use-quotation-domain.ts` — lógica pura (calcPaymentStatus, calcSeatPrice, countRoomsByType, findRoomsOutsideQuotation)
 - `app/composables/quotation/use-quotation-repository.ts` — acceso a Supabase (~30 funciones, 8 tablas)
-- `use-cotizacion-store.ts` — orquestación; guarda la copia que le pasa `quotationByTravelQuery`
+- `use-quotation-store.ts` — orquestación; guarda la copia que le pasa `quotationByTravelQuery`
 
 **Estado**:
 - `cotizaciones[]` — registros principales
@@ -175,18 +175,18 @@ Gestiona todo el flujo de cotización de un viaje. Aplica el patrón Repository 
 - `pagosProveedor[]` — pagos a proveedores
 - `hospedajesQuotation[]` — cotizaciones de hospedaje
 - `pagosHospedaje[]` — pagos de hospedaje
-- `preciosPublicos[]` — lista de precios públicos
+- `publicPrices[]` — lista de precios públicos
 - `busesApartados[]` — reservas de buses
 - `pagosBus[]` — pagos de buses
 - La query `quotationByTravelQuery(travelId)` decide cuándo pedir (dedupe, `staleTime`, refetch
   al volver a la pestaña) y copia cada resultado al store (`hydrateTravel`)
 
 **Getters clave**:
-- `getCotizacionByTravel(travelId)`
-- `getCostoTotal` — todos los proveedores
-- `getCostoTipoMinimo` / `getCostoTipoTotal` — según split type
-- `getTotalCostoHospedajes`
-- `getMatrizPreciosReferencia` — matriz: precio por asiento + hospedaje por ocupación (queda en store porque depende de `useProviderStore` y `useHotelRoomStore`)
+- `getQuotationByTravel(travelId)`
+- `getProvidersFullBusCost` — todos los proveedores
+- `getProvidersMinimumSplitCost` / `getProvidersTotalSplitCost` — según split type
+- `getAccommodationsTotalCost`
+- `getReferencePriceMatrix` — matriz: precio por asiento + hospedaje por ocupación (queda en store porque depende de `useProviderStore` y `useHotelRoomStore`)
 - Estados de pago: proveedores, hospedajes, buses
 
 **Actions**:

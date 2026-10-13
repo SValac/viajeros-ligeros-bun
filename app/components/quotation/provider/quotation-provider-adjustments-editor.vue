@@ -14,7 +14,7 @@ type Props = {
 
 const { unitCost = 0 } = defineProps<Props>();
 
-const ajustes = defineModel<ProviderPriceAdjustmentDraft[]>({ required: true });
+const adjustments = defineModel<ProviderPriceAdjustmentDraft[]>({ required: true });
 
 const kindOptions: { label: string; value: PriceAdjustmentKind }[] = [
   { label: 'Descuento', value: 'discount' },
@@ -27,15 +27,15 @@ const modeOptions: { label: string; value: PriceAdjustmentMode }[] = [
 ];
 
 function update(index: number, patch: Partial<ProviderPriceAdjustmentDraft>) {
-  ajustes.value = ajustes.value.map((a, i) => (i === index ? { ...a, ...patch } : a));
+  adjustments.value = adjustments.value.map((a, i) => (i === index ? { ...a, ...patch } : a));
 }
 
 function add() {
-  ajustes.value = [...ajustes.value, { label: '', kind: 'discount', mode: 'percent', value: 0 }];
+  adjustments.value = [...adjustments.value, { label: '', kind: 'discount', mode: 'percent', value: 0 }];
 }
 
 function remove(index: number) {
-  ajustes.value = ajustes.value.filter((_, i) => i !== index);
+  adjustments.value = adjustments.value.filter((_, i) => i !== index);
 }
 </script>
 
@@ -61,13 +61,13 @@ function remove(index: number) {
     </div>
 
     <div
-      v-for="(ajuste, index) in ajustes"
-      :key="ajuste.id ?? `new-${index}`"
+      v-for="(adjustment, index) in adjustments"
+      :key="adjustment.id ?? `new-${index}`"
       class="rounded-md border border-default p-3 space-y-2"
     >
       <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_8rem_4.5rem_7rem_auto] items-start">
         <UInput
-          :model-value="ajuste.label"
+          :model-value="adjustment.label"
           placeholder="Motivo (ej. Niños)"
           :maxlength="60"
           aria-label="Motivo"
@@ -75,21 +75,21 @@ function remove(index: number) {
           @update:model-value="v => update(index, { label: sanitizeText(String(v)) })"
         />
         <USelect
-          :model-value="ajuste.kind"
+          :model-value="adjustment.kind"
           :items="kindOptions"
           aria-label="Tipo"
           class="w-full"
           @update:model-value="v => update(index, { kind: v as PriceAdjustmentKind })"
         />
         <USelect
-          :model-value="ajuste.mode"
+          :model-value="adjustment.mode"
           :items="modeOptions"
           aria-label="En porcentaje o cantidad"
           class="w-full"
           @update:model-value="v => update(index, { mode: v as PriceAdjustmentMode })"
         />
         <UInput
-          :model-value="ajuste.value || undefined"
+          :model-value="adjustment.value || undefined"
           type="number"
           min="0"
           step="0.01"
@@ -102,15 +102,15 @@ function remove(index: number) {
           icon="i-lucide-trash-2"
           color="error"
           variant="ghost"
-          :aria-label="`Quitar ${ajuste.label || 'ajuste'}`"
+          :aria-label="`Quitar ${adjustment.label || 'ajuste'}`"
           @click="remove(index)"
         />
       </div>
-      <p v-if="getPriceAdjustmentError(ajuste)" class="text-xs text-error">
-        {{ getPriceAdjustmentError(ajuste) }}
+      <p v-if="getPriceAdjustmentError(adjustment)" class="text-xs text-error">
+        {{ getPriceAdjustmentError(adjustment) }}
       </p>
       <p v-else class="text-xs text-muted">
-        Pagan {{ formatCurrency(calculateAdjustedUnitCost(unitCost, ajuste)) }} por persona en vez de {{ formatCurrency(unitCost) }}
+        Pagan {{ formatCurrency(calculateAdjustedUnitCost(unitCost, adjustment)) }} por persona en vez de {{ formatCurrency(unitCost) }}
       </p>
     </div>
   </div>

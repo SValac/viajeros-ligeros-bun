@@ -39,12 +39,12 @@ const title = computed(() => {
 
 // What happens to the travelers' accounts, so the user knows whether to follow up in Pagos
 const description = computed(() => {
-  const nombre = price ? `"${price.priceType}"` : 'este precio';
+  const name = price ? `"${price.priceType}"` : 'este precio';
   if (!enUso.value)
-    return `¿Eliminar ${nombre}? Esta acción no se puede deshacer.`;
+    return `¿Eliminar ${name}? Esta acción no se puede deshacer.`;
   if (action === 'edit')
-    return `Los viajeros conservan el monto con el que se configuró su cuenta: cambiar ${nombre} no actualiza sus saldos. Si deben pagar el nuevo precio, ajusta sus cuentas en Pagos.`;
-  return `Al eliminar ${nombre}, estos viajeros quedan sin precio vinculado. Conservan el monto que tienen registrado, pero al editar su cuenta tendrás que elegir otro precio.`;
+    return `Los viajeros conservan el monto con el que se configuró su cuenta: cambiar ${name} no actualiza sus saldos. Si deben pagar el nuevo precio, ajusta sus cuentas en Pagos.`;
+  return `Al eliminar ${name}, estos viajeros quedan sin precio vinculado. Conservan el monto que tienen registrado, pero al editar su cuenta tendrás que elegir otro precio.`;
 });
 
 const confirmLabel = computed(() => {

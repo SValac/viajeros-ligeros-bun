@@ -27,7 +27,7 @@ type Props = {
 const { service, occupants, optedOut, paid, sellableSeats, adjustments = [], adjustmentByTraveler = new Map(), busy = false } = defineProps<Props>();
 
 const emit = defineEmits<{
-  change: [travelerIds: string[], toman: boolean];
+  change: [travelerIds: string[], takes: boolean];
   adjust: [travelerIds: string[], adjustmentId: string | null];
 }>();
 
@@ -113,8 +113,8 @@ const rows = computed<Row[]>(() => {
   return [...result, ...coordinators.map(t => toRow(t))];
 });
 
-function setAll(toman: boolean) {
-  emit('change', selectable.value.map(t => t.id), toman);
+function setAll(takes: boolean) {
+  emit('change', selectable.value.map(t => t.id), takes);
 }
 </script>
 

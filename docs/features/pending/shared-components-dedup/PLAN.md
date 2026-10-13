@@ -53,10 +53,8 @@ Después de cada fase: `bun run lint:fix`, `bun run typecheck` (en una copia del
 Archivos: `quotation-bus-payment-form.vue`, `quotation-accommodation-payment-form.vue`, `quotation-provider-payment-form.vue`,
 `payment-form.vue`, `utils/format-date.ts`.
 
-- **Bug:** el esquema usa `amount`, `paymentDate`, `paymentType`, `concept`, `notes`, pero los
-  `UFormField` usan `name="monto"`, `fechaPago`, `tipoPago`, `concepto`, `notas`. Los errores de
-  validación no se muestran bajo su campo. Solo coinciden `amount` y `concept` en hospedaje y
-  proveedor.
+- ~~**Bug:** los `name` de los `UFormField` no coincidían con las llaves del esquema~~ — ya
+  corregido en la rama `refactor/english-identifiers` (nombres de campos en inglés).
 - **Bug:** `new Date().toISOString().split('T')[0]` da la fecha UTC; en México después de las
   6 pm sale la de mañana (mismo tipo de error que `parseDisplayDate`). Está en los 3 formularios
   de pago y en `payment-form.vue:19`.
@@ -66,7 +64,7 @@ Archivos: `quotation-bus-payment-form.vue`, `quotation-accommodation-payment-for
   `quotationAccommodationId`, `quotationProviderId`). Opción: prop `parentKey` + `parentId`, o
   que el formulario emita solo los campos del pago y el historial agregue el id del padre
   (preferida: el formulario no necesita saber de qué es el pago).
-- `name` de cada `UFormField` = llave del esquema.
+- `name` de cada `UFormField` = llave del esquema (mantenerlo al juntar los 3).
 
 ### Fase 2 — Historiales de pago
 
@@ -78,7 +76,7 @@ Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-
   tipo, los getters/acciones del store y el subtítulo (hoy props `providerName`, `hotelName`,
   `busLabel` → un solo `subtitle`).
 - Un `QuotationPaymentHistory` que reciba un adaptador:
-  `{ pagos, anticipado, saldoPendiente, add, update, remove }` + `subtitle`. Los 3 usos arman
+  `{ payments, paid, pendingBalance, add, update, remove }` + `subtitle`. Los 3 usos arman
   su adaptador (o un composable `useQuotationPaymentHistoryAdapter(kind, id)` en
   `composables/quotation/`).
 - Unificar las diferencias que hoy existen sin razón:
@@ -131,7 +129,7 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
   se usa en toda la app; `git mv`, ya hace lo mismo: label, icon, value,
   valueClass, slot) y usarla en las tarjetas copiadas a mano de `pages/payments/index.vue` (4),
   `pages/quotations/index.vue` (4), `pages/travels/dashboard.vue` (3),
-  `pages/travels/[id]/travelers/index.vue` (3), `pages/travels/[id]/habitaciones/index.vue` (3)
+  `pages/travels/[id]/travelers/index.vue` (3), `pages/travels/[id]/rooms/index.vue` (3)
   y `quotation-accommodation-summary.vue` (3).
 - El diseño cambia un poco (ícono junto a la etiqueta en vez de grande a la derecha). Decidir
   en la revisión visual si `StatCard` tiene una variante con ícono a la derecha o si todas
@@ -187,13 +185,13 @@ la 1 y la 2 (son los mismos pagos, de la UI a la base de datos).
 Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `paymentType`,
 `concept`, `notes`); solo cambia la llave del padre.
 
-- `use-cotizacion-store.ts`: 5 getters × 3 (`getPagosByX` ordenado, `getAnticipadoX`,
-  `getSaldoPendienteX`, `getXPaymentStatus`, `getSaldoTotalPendienteX`) y 3 acciones × 3
+- `use-quotation-store.ts`: 5 getters × 3 (`getPaymentsByX` ordenado, `getPaidByX`,
+  `getPendingBalanceByX`, `getXPaymentStatus`, `getTotalPendingBalanceX`) y 3 acciones × 3
   (`add/update/delete…Payment`, con la misma validación de monto y saldo) → una función interna
   que los arme por tipo (`_paymentSlice(payments, items, parentKey, cost)`), sin cambiar los
   nombres que exporta el store (los usan las pantallas).
 - Diferencias sin razón que se unifican al juntarlas:
-  - `getSaldoPendienteProveedor` usa `Math.max(0, …)`; los de bus y hospedaje pueden dar
+  - `getPendingBalanceByProvider` usa `Math.max(0, …)`; los de bus y hospedaje pueden dar
     negativo (y ese negativo llega como `maxAmount` al formulario).
   - Bus usa `bus.totalCost ?? 0` en el estado y `bus.totalCost` en el saldo.
 - `use-quotation-repository.ts`: `insert/update/delete…Payment` × 3, el `update` con los mismos
@@ -205,7 +203,7 @@ Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `payme
   (`quotation/use-quotation-domain.ts`) son la misma función → dejar una (en `utils/` o en el
   dominio de pagos) y que la otra la importe.
 
-### Fase 9 — Repetición interna de `use-cotizacion-store`
+### Fase 9 — Repetición interna de `use-quotation-store`
 
 Sin cambiar lo que exporta el store:
 
@@ -213,13 +211,13 @@ Sin cambiar lo que exporta el store:
   `finally` se repiten en ~25 acciones.
 - `_editableQuotation(id)`: "buscar la cotización y rechazar si está confirmada" se repite ~12
   veces con el mismo mensaje.
-- `toggleConfirmadoProveedor` / `toggleConfirmadoHospedaje`: iguales.
-- `refreshProviderPayableCosts` / `refreshHospedajeCosts`: misma forma (leer costos y mezclarlos
+- `toggleProviderConfirmed` / `toggleAccommodationConfirmed`: iguales.
+- `refreshProviderPayableCosts` / `refreshAccommodationCosts`: misma forma (leer costos y mezclarlos
   por id).
-- Sumas por reparto: `getCostoTipoMinimo/Total`, `getCostoBusesTipoMinimo/Total`,
-  `getGastosTipoMinimo/Total` → un `sumBySplit(items, splitType)`; `(splitType ?? 'minimum')`
+- Sumas por reparto: `getProvidersMinimumSplitCost/Total`, `getBusesMinimumSplitCost/Total`,
+  `getExpensesMinimumSplit/Total` → un `sumBySplit(items, splitType)`; `(splitType ?? 'minimum')`
   queda en un solo lugar.
-- `getCostoPerPersonaBus` reimplementa `getDivisorCosto` → usarlo.
+- `getBusCostPerPerson` reimplementa `getCostDivisor` → usarlo.
 - `quotations.value.find(c => c.id === id)` aparece ~20 veces → `_quotation(id)`.
 - **Bug menor:** en `hydrateTravel` con `result === null`, los pagos se filtran después de
   quitar sus padres, así que la condición nunca se cumple y los pagos de la cotización borrada
@@ -237,7 +235,7 @@ Sin cambiar lo que exporta el store:
   deleteTravelRoom), `use-agency-profile-store` (los 4 `save*` y las imágenes).
 - Tragan el error (`void` sin relanzar): `deleteTraveler`, `deleteCoordinator`,
   `deletePayment`, `setAccountConfig`, `fetchByTravels`, y casi todas las de
-  `use-cotizacion-store` (que además mezcla `undefined`, `{ error }` y `string | null`).
+  `use-quotation-store` (que además mezcla `undefined`, `{ error }` y `string | null`).
 - `e instanceof Error ? e.message : '…'` está 85 veces → `toErrorMessage(e, fallback)` en
   `utils/`.
 - Decidir al empezar: aplicar la regla tal cual (cambia a todos los que llaman, hay que
@@ -303,7 +301,7 @@ galería) y se buscó con grep cada patrón en el resto. Fases 14-17.
   `deleteCoordinator` (que además se traga el error): siempre dice "eliminado".
 - `components/bus/bus-list.vue`: si `updateBus` o `deleteBus` fallan (devuelven `false`) no hay
   ningún toast; el modal se queda abierto sin explicación.
-- `pages/quotations/[id].vue` `handleCrearCotizacion`: `createQuotation` relanza el error y no
+- `pages/quotations/[id].vue` `handleCreateQuotation`: `createQuotation` relanza el error y no
   hay `catch` → promesa rechazada sin aviso al usuario.
 - 6 de los 14 menús con "Eliminar" no llevan `color: 'error'` (travelers, coordinators,
   dashboard, bus-list, payments/traveler, travel-activity-list): la misma acción se ve distinta
@@ -358,7 +356,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - `useQuotationContext(quotationId)`: `cotizaciones.find(c => c.id === quotationId)?.travelId`
   + `useTravelCoordinatorCount` en 11 componentes de cotización.
 - `useTravelQuotation(travelId)`: `useQuery(quotationByTravelQuery)` +
-  `getCotizacionByTravel` + `useQueryLoadState` en 8 lugares.
+  `getQuotationByTravel` + `useQueryLoadState` en 8 lugares.
 - `useQuotationRoomCounts(quotationId)`: `travelDetailQuery` + `countRoomsByType` +
   `roomTypeKey` en `quotation-accommodation-table` y `quotation-accommodation-summary`.
 - `useRedirectIfMissing(query, { to, message })`: el `watch([status, data])` de "no
@@ -412,13 +410,13 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   del dominio (con variante plana para listas).
 - `getSeatChangeErrorMessage` en travelers vuelve a traducir los códigos que
   `toTravelerSeatChangeError` ya convierte en mensaje (con otros textos) → usar `error.message`.
-- `formatAjusteAmount` (`payment-summary-card`) = `calcAdjustmentAmount` del dominio de pagos.
+- `formatAdjustmentAmount` (`payment-summary-card`) = `calcAdjustmentAmount` del dominio de pagos.
 - Viajeros que toman un servicio `unitCost ? Math.round(payableCost / unitCost) : 0` ×2
   (`quotation-provider-table`, `travels/[id]/optional-services`), y
   `travel-optional-service-card` recalcula pendiente y sobrepago que ya dan
-  `getSaldoPendienteProveedor` / `getSobrepagoProveedor` → getters del store.
+  `getPendingBalanceByProvider` / `getProviderOverpayment` → getters del store.
 - `quotation-expense-section` calcula el costo por asiento de cada gasto a mano; proveedores y
-  autobuses tienen getter (`getCostoPerPersonaProveedor/Bus`) → agregar el de gastos.
+  autobuses tienen getter (`getProviderCostPerPerson/Bus`) → agregar el de gastos.
 - Los toasts de "guardado / no se pudo" después de cada acción del store se escriben a mano
   en casi todas las pantallas; se simplifican solos cuando el contrato de errores de la
   fase 10 sea uno solo.
