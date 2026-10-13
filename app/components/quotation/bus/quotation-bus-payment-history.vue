@@ -204,8 +204,8 @@ async function confirmDelete() {
     <template #body>
       <QuotationBusPaymentForm
         :quotation-bus-id="quotationBusId"
-        :max-monto="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
-        :pago="selectedPago"
+        :max-amount="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
+        :payment="selectedPago"
         @submit="handleSubmit"
         @cancel="isFormModalOpen = false"
       />

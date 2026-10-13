@@ -11,10 +11,10 @@ import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   quotationId: string;
-  proveedorCotizacion?: QuotationProvider | null;
+  quotationProvider?: QuotationProvider | null;
 };
 
-const { quotationId, proveedorCotizacion = null } = defineProps<Props>();
+const { quotationId, quotationProvider = null } = defineProps<Props>();
 
 const emit = defineEmits<{
   /** `ajustes` solo aplica a un servicio por persona; en costo total va vacío. */
@@ -79,22 +79,22 @@ const tipoCostoOptions: { label: string; value: ProviderCostType }[] = [
 ];
 
 const state = reactive<FormState>({
-  providerId: proveedorCotizacion?.providerId ?? undefined,
-  serviceDescription: proveedorCotizacion?.serviceDescription ?? '',
-  costType: proveedorCotizacion?.costType ?? 'total',
-  totalCost: proveedorCotizacion?.totalCost ?? undefined,
-  unitCost: proveedorCotizacion?.unitCost ?? undefined,
-  coordinatorsCourtesy: proveedorCotizacion?.coordinatorsCourtesy ?? false,
-  paymentMethod: proveedorCotizacion?.paymentMethod ?? 'cash',
-  splitType: proveedorCotizacion?.splitType ?? 'minimum',
-  remarks: proveedorCotizacion?.remarks ?? '',
-  confirmed: proveedorCotizacion?.confirmed ?? false,
+  providerId: quotationProvider?.providerId ?? undefined,
+  serviceDescription: quotationProvider?.serviceDescription ?? '',
+  costType: quotationProvider?.costType ?? 'total',
+  totalCost: quotationProvider?.totalCost ?? undefined,
+  unitCost: quotationProvider?.unitCost ?? undefined,
+  coordinatorsCourtesy: quotationProvider?.coordinatorsCourtesy ?? false,
+  paymentMethod: quotationProvider?.paymentMethod ?? 'cash',
+  splitType: quotationProvider?.splitType ?? 'minimum',
+  remarks: quotationProvider?.remarks ?? '',
+  confirmed: quotationProvider?.confirmed ?? false,
 });
 
 // Ajustes de precio por tipo de persona (copia editable; se guardan al enviar).
 const ajustes = ref<ProviderPriceAdjustmentDraft[]>(
-  proveedorCotizacion
-    ? cotizacionStore.getAjustesByProveedor(proveedorCotizacion.id).map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }))
+  quotationProvider
+    ? cotizacionStore.getAjustesByProveedor(quotationProvider.id).map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }))
     : [],
 );
 const ajustesInvalidos = computed(() => ajustes.value.some(a => getPriceAdjustmentError(a) !== null));
@@ -153,7 +153,7 @@ function onSubmit() {
     confirmed: form.confirmed,
     ...cost,
     quotationId,
-    ...(proveedorCotizacion?.id ? { id: proveedorCotizacion.id } : {}),
+    ...(quotationProvider?.id ? { id: quotationProvider.id } : {}),
   };
 
   emit('submit', data, form.costType === 'per_person' ? ajustes.value : []);
@@ -302,7 +302,7 @@ function onSubmit() {
       <UButton
         type="submit"
         :disabled="state.costType === 'per_person' && ajustesInvalidos"
-        :label="proveedorCotizacion ? 'Actualizar' : 'Agregar Proveedor'"
+        :label="quotationProvider ? 'Actualizar' : 'Agregar Proveedor'"
       />
     </div>
   </UForm>

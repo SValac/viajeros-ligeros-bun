@@ -5,17 +5,17 @@ import type { QuotationProvider } from '~/types/quotation';
 // del asiento, así que se puede usar con la cotización confirmada.
 
 type Props = {
-  proveedor: QuotationProvider;
+  provider: QuotationProvider;
 };
 
-const { proveedor } = defineProps<Props>();
+const { provider } = defineProps<Props>();
 
 const emit = defineEmits<{
   submit: [coordinatorsCourtesy: boolean];
   cancel: [];
 }>();
 
-const coordinatorsCourtesy = shallowRef(proveedor.coordinatorsCourtesy);
+const coordinatorsCourtesy = shallowRef(provider.coordinatorsCourtesy);
 </script>
 
 <template>

@@ -5,8 +5,8 @@ import { PROVIDER_CATEGORY_LIST } from '~/utils/provider-categories';
 
 type Props = {
   modelValue: ProviderFilters;
-  availableCiudades: string[];
-  availableEstados: string[];
+  availableCities: string[];
+  availableStates: string[];
   showCategoryFilter?: boolean;
 };
 
@@ -37,11 +37,11 @@ function onSearchInput(val: string) {
 }
 
 const ciudadOptions = computed(() =>
-  props.availableCiudades.map(c => ({ label: c, value: c })),
+  props.availableCities.map(c => ({ label: c, value: c })),
 );
 
 const estadoOptions = computed(() =>
-  props.availableEstados.map(e => ({ label: e, value: e })),
+  props.availableStates.map(e => ({ label: e, value: e })),
 );
 
 function onCategoryChange(val: string | undefined) {

@@ -7,7 +7,7 @@ import { formatCurrency } from '~/utils/currency';
 const props = defineProps<{
   travelerId: string;
   travelId: string;
-  preciosPublicos: QuotationPublicPrice[];
+  publicPrices: QuotationPublicPrice[];
   config?: TravelerAccountConfig;
 }>();
 
@@ -37,7 +37,7 @@ const travelerTypeOptions = [
 // also shows its description (one line per hotel) to tell them apart. The menu grows to fit
 // it from `sm` up; on phones it keeps the field's width and long lines wrap instead.
 const precioPublicoOptions = computed(() =>
-  props.preciosPublicos.map(p => ({
+  props.publicPrices.map(p => ({
     label: `${p.priceType} — ${formatCurrency(p.pricePerPerson)}`,
     description: p.description,
     value: p.id,
@@ -45,7 +45,7 @@ const precioPublicoOptions = computed(() =>
 );
 
 const selectedPrecio = computed(() =>
-  props.preciosPublicos.find(p => p.id === selectedPrecioPublicoId.value),
+  props.publicPrices.find(p => p.id === selectedPrecioPublicoId.value),
 );
 
 // Without a public price the traveler would cost $0 and any payment would mark them as paid.
@@ -129,7 +129,7 @@ function handleSubmit() {
       </div>
     </div>
 
-    <div v-if="preciosPublicos.length === 0">
+    <div v-if="publicPrices.length === 0">
       <UAlert
         color="warning"
         title="No hay precios al público configurados en la cotización de este viaje."

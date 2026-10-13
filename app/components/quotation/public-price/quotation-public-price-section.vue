@@ -3,7 +3,7 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { computed, h, reactive, ref, shallowRef } from 'vue';
 
-import type { PrecioPublicoAvisoAccion, ViajeroConPrecio } from '~/components/quotation/public-price/quotation-public-price-warning-modal.vue';
+import type { PublicPriceWarningAction, TravelerWithPrice } from '~/components/quotation/public-price/quotation-public-price-warning-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
 import { travelersByTravelQuery } from '~/queries/travelers';
@@ -224,13 +224,13 @@ watch(() => cotizacion.value?.travelId, (travelId) => {
 }, { immediate: true });
 
 const viajerosPorPrecio = computed(() => {
-  const map = new Map<string, ViajeroConPrecio[]>();
+  const map = new Map<string, TravelerWithPrice[]>();
   const travelId = cotizacion.value?.travelId;
   for (const config of paymentStore.accountConfigs) {
     if (config.travelId !== travelId || !config.publicPriceId)
       continue;
     const traveler = travelersById.value.get(config.travelerId);
-    const viajero: ViajeroConPrecio = {
+    const viajero: TravelerWithPrice = {
       id: config.travelerId,
       name: traveler ? `${traveler.firstName} ${traveler.lastName}` : 'Viajero',
       amount: config.publicPriceAmount,
@@ -242,7 +242,7 @@ const viajerosPorPrecio = computed(() => {
 
 const isAvisoOpen = shallowRef(false);
 const isAvisoLoading = shallowRef(false);
-const avisoAccion = shallowRef<PrecioPublicoAvisoAccion>('edit');
+const avisoAccion = shallowRef<PublicPriceWarningAction>('edit');
 const avisoPrecio = shallowRef<QuotationPublicPrice | null>(null);
 // Edit waiting for the user's confirmation in the warning modal
 const edicionPendiente = shallowRef<QuotationPublicPriceFormData | null>(null);
@@ -251,7 +251,7 @@ const avisoViajeros = computed(() =>
   avisoPrecio.value ? viajerosPorPrecio.value.get(avisoPrecio.value.id) ?? [] : [],
 );
 
-function abrirAviso(accion: PrecioPublicoAvisoAccion, precio: QuotationPublicPrice) {
+function abrirAviso(accion: PublicPriceWarningAction, precio: QuotationPublicPrice) {
   avisoAccion.value = accion;
   avisoPrecio.value = precio;
   isAvisoOpen.value = true;
@@ -602,8 +602,8 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       <template #body>
         <QuotationPublicPriceForm
           :quotation-id="quotationId"
-          :precio="editingPrecio"
-          :plantilla="plantilla"
+          :price="editingPrecio"
+          :template="plantilla"
           @submit="guardarPrecio"
           @cancel="cerrarFormulario"
         />
@@ -612,9 +612,9 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
 
     <QuotationPublicPriceWarningModal
       v-model:open="isAvisoOpen"
-      :accion="avisoAccion"
-      :precio="avisoPrecio"
-      :viajeros="avisoViajeros"
+      :action="avisoAccion"
+      :price="avisoPrecio"
+      :travelers="avisoViajeros"
       :loading="isAvisoLoading"
       @confirm="confirmarAviso"
     />

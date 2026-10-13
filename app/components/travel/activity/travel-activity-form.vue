@@ -10,7 +10,7 @@ import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } fr
 // Props
 type Props = {
   activity?: TravelActivity | null;
-  maxDia: number;
+  maxDay: number;
 };
 
 const props = defineProps<Props>();
@@ -22,11 +22,11 @@ const emit = defineEmits<{
 }>();
 
 // Schema de validación Zod
-function createSchema(maxDia: number) {
+function createSchema(maxDay: number) {
   return z.object({
     day: z.number()
       .min(1, 'El día debe ser al menos 1')
-      .max(maxDia, `El día no puede ser mayor a ${maxDia}`),
+      .max(maxDay, `El día no puede ser mayor a ${maxDay}`),
     title: businessNameSchema({ min: 3, max: 100 }),
     description: textSchema({ min: 10, max: 500 }),
     time: z.string()
@@ -45,7 +45,7 @@ function createSchema(maxDia: number) {
   });
 }
 
-const schema = computed(() => createSchema(Math.max(1, props.maxDia)));
+const schema = computed(() => createSchema(Math.max(1, props.maxDay)));
 
 type Schema = z.output<ReturnType<typeof createSchema>>;
 
@@ -124,13 +124,13 @@ function onCancel() {
       label="Día del itinerario"
       name="day"
       required
-      :description="`El viaje dura ${props.maxDia} día${props.maxDia !== 1 ? 's' : ''}`"
+      :description="`El viaje dura ${props.maxDay} día${props.maxDay !== 1 ? 's' : ''}`"
     >
       <UInput
         v-model.number="state.day"
         type="number"
         min="1"
-        :max="props.maxDia"
+        :max="props.maxDay"
         icon="i-lucide-calendar-days"
       />
     </UFormField>

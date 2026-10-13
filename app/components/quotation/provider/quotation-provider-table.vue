@@ -538,7 +538,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
     <template #body>
       <QuotationProviderForm
         :quotation-id="quotationId"
-        :proveedor-cotizacion="selectedProveedor"
+        :quotation-provider="selectedProveedor"
         @submit="handleProveedorSubmit"
         @cancel="isProveedorFormOpen = false"
       />
@@ -585,7 +585,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
     <template #body>
       <QuotationProviderCourtesyForm
         v-if="proveedorCortesia"
-        :proveedor="proveedorCortesia"
+        :provider="proveedorCortesia"
         @submit="handleCortesiaSubmit"
         @cancel="isCortesiaOpen = false"
       />

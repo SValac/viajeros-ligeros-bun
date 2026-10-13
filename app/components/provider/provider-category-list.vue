@@ -156,8 +156,8 @@ const columns = computed<TableColumn<Provider>[]>(() => [
     <div class="space-y-2">
       <ProviderFilterBar
         v-model="localFilters"
-        :available-ciudades="availableCiudades"
-        :available-estados="availableEstados"
+        :available-cities="availableCiudades"
+        :available-states="availableEstados"
         :show-category-filter="false"
       />
       <ProviderActiveFilters
@@ -206,7 +206,7 @@ const columns = computed<TableColumn<Provider>[]>(() => [
       <template #body>
         <ProviderForm
           :provider="editingProvider"
-          :fixed-categoria="category"
+          :fixed-category="category"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />

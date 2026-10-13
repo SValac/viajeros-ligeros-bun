@@ -129,7 +129,7 @@ async function handleDelete() {
     <ProviderForm
       :key="`${provider.id}-${isEditingProvider}`"
       :provider="provider"
-      :fixed-categoria="provider.category"
+      :fixed-category="provider.category"
       :disabled="!isEditingProvider"
       @submit="handleFormSubmit"
       @cancel="cancelEditing"

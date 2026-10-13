@@ -5,7 +5,7 @@ import type { Traveler, TravelerFilters } from '~/types/traveler';
 type Props = {
   availableTravels: Travel[];
   availableBuses: TravelBus[];
-  representantes?: Traveler[];
+  representatives?: Traveler[];
   hideTravelFilter?: boolean;
 };
 
@@ -21,7 +21,7 @@ const travelOptions = computed(() =>
 );
 
 const representanteOptions = computed(() =>
-  (props.representantes ?? []).map(r => ({
+  (props.representatives ?? []).map(r => ({
     label: `${r.firstName} ${r.lastName}`,
     value: r.id,
   })),

@@ -7,11 +7,11 @@ import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } fr
 
 type Props = {
   quotationId: string;
-  precio?: QuotationPublicPrice | null;
-  plantilla?: QuotationPublicPriceTemplate | null;
+  price?: QuotationPublicPrice | null;
+  template?: QuotationPublicPriceTemplate | null;
 };
 
-const { quotationId, precio = null, plantilla = null } = defineProps<Props>();
+const { quotationId, price = null, template = null } = defineProps<Props>();
 
 const emit = defineEmits<{
   submit: [data: QuotationPublicPriceFormData];
@@ -35,7 +35,7 @@ const schema = z.object({
 type FormSchema = z.output<typeof schema>;
 
 // Al editar manda el precio; al agregar, la plantilla (si la hay) y si no, valores vacíos
-const inicial = precio ?? plantilla;
+const inicial = price ?? template;
 
 const state = reactive<Partial<FormSchema>>({
   priceType: inicial?.priceType ?? '',
@@ -68,7 +68,7 @@ function onSubmit() {
     ...result.data,
     maxOccupancy,
     quotationId,
-    ...(precio ? { id: precio.id } : {}),
+    ...(price ? { id: price.id } : {}),
   });
 }
 </script>
@@ -178,7 +178,7 @@ function onSubmit() {
       />
       <UButton
         type="submit"
-        :label="precio ? 'Actualizar' : 'Agregar Precio'"
+        :label="price ? 'Actualizar' : 'Agregar Precio'"
       />
     </div>
   </UForm>

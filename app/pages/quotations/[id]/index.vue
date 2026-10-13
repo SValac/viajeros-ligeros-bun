@@ -24,6 +24,6 @@ onMounted(async () => {
   <!-- Los parámetros tienen su propia pestaña (parameters.vue) -->
   <QuotationFinancialSummary
     :quotation-id="cotizacion.id"
-    :acumulado-viajeros="acumuladoViajeros"
+    :travelers-collected="acumuladoViajeros"
   />
 </template>

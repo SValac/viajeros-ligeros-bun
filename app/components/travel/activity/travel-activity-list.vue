@@ -204,7 +204,7 @@ function getActivityActions(activity: TravelActivity) {
       <template #body>
         <TravelActivityForm
           :activity="editingActivity"
-          :max-dia="duracionViaje"
+          :max-day="duracionViaje"
           @submit="handleSubmit"
           @cancel="isActivityModalOpen = false"
         />

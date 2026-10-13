@@ -180,7 +180,7 @@ function handleCotizacionConfirmada() {
             <QuotationHeaderActions
               :quotation-id="cotizacion.id"
               :readonly="readonly"
-              @cotizacion-confirmada="handleCotizacionConfirmada"
+              @confirmed="handleCotizacionConfirmada"
             />
 
             <UNavigationMenu

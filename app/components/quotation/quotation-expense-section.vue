@@ -216,7 +216,7 @@ function getActions(gasto: QuotationExpense) {
     <template #body>
       <QuotationExpenseForm
         :quotation-id="quotationId"
-        :gasto="selectedGasto"
+        :expense="selectedGasto"
         @submit="handleSubmit"
         @cancel="isFormOpen = false"
       />

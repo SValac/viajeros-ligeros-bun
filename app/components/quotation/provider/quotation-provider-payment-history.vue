@@ -6,10 +6,10 @@ import { parseDisplayDate } from '~/utils/format-date';
 
 type Props = {
   quotationProviderId: string;
-  proveedorNombre?: string;
+  providerName?: string;
 };
 
-const { quotationProviderId, proveedorNombre } = defineProps<Props>();
+const { quotationProviderId, providerName } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
@@ -89,8 +89,8 @@ async function confirmDelete() {
       <h3 class="font-semibold text-lg flex items-center gap-2">
         <UIcon name="i-lucide-receipt" class="w-5 h-5 text-muted" />
         Historial de Pagos
-        <span v-if="proveedorNombre" class="text-muted font-normal">
-          — {{ proveedorNombre }}
+        <span v-if="providerName" class="text-muted font-normal">
+          — {{ providerName }}
         </span>
       </h3>
       <UButton
@@ -207,8 +207,8 @@ async function confirmDelete() {
     <template #body>
       <QuotationProviderPaymentForm
         :quotation-provider-id="quotationProviderId"
-        :max-monto="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
-        :pago="selectedPago"
+        :max-amount="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
+        :payment="selectedPago"
         @submit="handleSubmit"
         @cancel="isFormModalOpen = false"
       />

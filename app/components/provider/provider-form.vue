@@ -18,7 +18,7 @@ import { PROVIDER_CATEGORY_LIST, PROVIDER_CATEGORY_VALUES } from '~/utils/provid
 
 type Props = {
   provider?: Provider | null;
-  fixedCategoria?: ProviderCategory;
+  fixedCategory?: ProviderCategory;
   disabled?: boolean;
 };
 
@@ -84,7 +84,7 @@ type Schema = z.output<typeof schema>;
 // Estado inicial del formulario
 const state = ref<Schema>({
   name: props.provider?.name || '',
-  category: props.provider?.category || props.fixedCategoria || 'other',
+  category: props.provider?.category || props.fixedCategory || 'other',
   description: props.provider?.description || '',
   location: {
     city: props.provider?.location?.city || '',
@@ -165,13 +165,13 @@ function onCancel() {
       name="category"
       required
     >
-      <template v-if="fixedCategoria">
+      <template v-if="fixedCategory">
         <UBadge
           size="lg"
           variant="subtle"
           color="primary"
         >
-          {{ categoriaOptions.find(o => o.value === fixedCategoria)?.label }}
+          {{ categoriaOptions.find(o => o.value === fixedCategory)?.label }}
         </UBadge>
       </template>
       <USelect

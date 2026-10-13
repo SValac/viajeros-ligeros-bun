@@ -8,11 +8,11 @@ import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   quotationProviderId: string;
-  maxMonto: number;
-  pago?: ProviderPayment | null;
+  maxAmount: number;
+  payment?: ProviderPayment | null;
 };
 
-const { quotationProviderId, maxMonto, pago = null } = defineProps<Props>();
+const { quotationProviderId, maxAmount, payment = null } = defineProps<Props>();
 
 const emit = defineEmits<{
   submit: [data: ProviderPaymentFormData];
@@ -29,7 +29,7 @@ const schema = computed(() =>
     amount: z
       .number({ message: 'Ingresa un monto válido' })
       .positive('El monto debe ser mayor a 0')
-      .max(maxMonto, `El monto no puede superar ${formatCurrency(maxMonto)}`),
+      .max(maxAmount, `El monto no puede superar ${formatCurrency(maxAmount)}`),
     paymentDate: z.string().min(1, 'Selecciona una fecha'),
     paymentType: z.enum(['cash', 'transfer']),
     concept: textSchema({ max: 200 }).optional(),
@@ -46,11 +46,11 @@ type FormSchema = {
 };
 
 const state = reactive<FormSchema>({
-  amount: pago?.amount ?? undefined,
-  paymentDate: pago?.paymentDate ?? new Date().toISOString().split('T')[0]!,
-  paymentType: pago?.paymentType ?? 'cash',
-  concept: pago?.concept ?? '',
-  notes: pago?.notes ?? '',
+  amount: payment?.amount ?? undefined,
+  paymentDate: payment?.paymentDate ?? new Date().toISOString().split('T')[0]!,
+  paymentType: payment?.paymentType ?? 'cash',
+  concept: payment?.concept ?? '',
+  notes: payment?.notes ?? '',
 });
 
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
@@ -65,7 +65,7 @@ function onSubmit() {
   const data: ProviderPaymentFormData = {
     ...result.data,
     quotationProviderId,
-    ...(pago?.id ? { id: pago.id } : {}),
+    ...(payment?.id ? { id: payment.id } : {}),
   };
 
   emit('submit', data);
@@ -88,7 +88,7 @@ function onSubmit() {
       <MoneyInput v-model="state.amount" />
       <template #hint>
         <span class="text-xs text-muted">
-          Saldo pendiente: {{ formatCurrency(maxMonto) }}
+          Saldo pendiente: {{ formatCurrency(maxAmount) }}
         </span>
       </template>
     </UFormField>
@@ -149,7 +149,7 @@ function onSubmit() {
       />
       <UButton
         type="submit"
-        :label="pago ? 'Actualizar Pago' : 'Registrar Pago'"
+        :label="payment ? 'Actualizar Pago' : 'Registrar Pago'"
       />
     </div>
   </UForm>

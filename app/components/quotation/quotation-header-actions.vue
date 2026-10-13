@@ -7,7 +7,7 @@ type Props = {
 const { quotationId, readonly } = defineProps<Props>();
 
 const emit = defineEmits<{
-  cotizacionConfirmada: [];
+  confirmed: [];
 }>();
 
 const cotizacionStore = useCotizacionStore();
@@ -68,7 +68,7 @@ async function confirmarQuotation() {
 
   if (result.success) {
     toast.add({ title: 'Cotización confirmada', color: 'success' });
-    emit('cotizacionConfirmada');
+    emit('confirmed');
   }
   else {
     toast.add({ title: 'Error al confirmar', description: result.error, color: 'error' });

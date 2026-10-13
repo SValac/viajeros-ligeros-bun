@@ -4,10 +4,10 @@ import { formatCurrency } from '~/utils/currency';
 
 type Props = {
   quotationId: string;
-  acumuladoViajeros: number;
+  travelersCollected: number;
 };
 
-const { quotationId, acumuladoViajeros } = defineProps<Props>();
+const { quotationId, travelersCollected } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 
@@ -167,7 +167,7 @@ function saldoColor(saldo: number): string {
         <QuotationKpiCard
           label="Cobrado a viajeros"
           icon="i-lucide-users"
-          :value="formatCurrency(acumuladoViajeros)"
+          :value="formatCurrency(travelersCollected)"
         />
         <QuotationKpiCard
           label="Por pagar a proveedores"

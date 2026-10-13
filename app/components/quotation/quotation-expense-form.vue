@@ -10,10 +10,10 @@ import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 type Props = {
   quotationId: string;
-  gasto?: QuotationExpense | null;
+  expense?: QuotationExpense | null;
 };
 
-const { quotationId, gasto = null } = defineProps<Props>();
+const { quotationId, expense = null } = defineProps<Props>();
 
 const emit = defineEmits<{
   submit: [data: QuotationExpenseFormData];
@@ -69,13 +69,13 @@ const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
 ];
 
 const state = reactive<FormState>({
-  category: gasto?.category,
-  description: gasto?.description ?? '',
-  costType: gasto?.costType ?? 'total',
-  totalCost: gasto?.totalCost,
-  unitCost: gasto?.unitCost,
-  personCount: gasto?.personCount,
-  splitType: gasto?.splitType ?? 'minimum',
+  category: expense?.category,
+  description: expense?.description ?? '',
+  costType: expense?.costType ?? 'total',
+  totalCost: expense?.totalCost,
+  unitCost: expense?.unitCost,
+  personCount: expense?.personCount,
+  splitType: expense?.splitType ?? 'minimum',
 });
 
 onMounted(() => cotizacionStore.fetchCategoriasGasto());
@@ -100,7 +100,7 @@ const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotation
 
 // Las personas siguen al divisor mientras el usuario no las cambie a mano (en un gasto
 // nuevo, o uno guardado con las personas del divisor de entonces).
-const personasTocadas = shallowRef(gasto?.personCount !== undefined && gasto.personCount !== divisorPersonas.value);
+const personasTocadas = shallowRef(expense?.personCount !== undefined && expense.personCount !== divisorPersonas.value);
 watch(divisorPersonas, (divisor) => {
   if (!personasTocadas.value)
     state.personCount = divisor;
@@ -274,7 +274,7 @@ function onSubmit() {
       />
       <UButton
         type="submit"
-        :label="gasto ? 'Actualizar' : 'Agregar gasto'"
+        :label="expense ? 'Actualizar' : 'Agregar gasto'"
       />
     </div>
   </UForm>

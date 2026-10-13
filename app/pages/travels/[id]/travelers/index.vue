@@ -828,7 +828,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
               v-model="filters"
               :available-travels="[]"
               :available-buses="allBuses"
-              :representantes="representantes"
+              :representatives="representantes"
               :hide-travel-filter="true"
             />
 
