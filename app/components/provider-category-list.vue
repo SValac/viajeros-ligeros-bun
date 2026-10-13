@@ -19,6 +19,7 @@ type Props = {
 const props = defineProps<Props>();
 
 const meta = PROVIDER_CATEGORY_META[props.category];
+const providerStore = useProviderStore();
 
 const {
   isFormModalOpen,
@@ -172,40 +173,47 @@ const columns = computed<TableColumn<Provider>[]>(() => [
     </div>
 
     <UCard>
-      <div v-if="providers.length === 0" class="text-center py-12">
-        <UIcon :name="meta.icon" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-        <template v-if="hasLocalFilters">
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Sin resultados para los filtros aplicados
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Intenta con otros criterios de búsqueda
-          </p>
-          <UButton icon="i-lucide-filter-x" @click="clearLocalFilters">
-            Limpiar filtros
-          </UButton>
-        </template>
-        <template v-else>
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            {{ emptyStateTitle }}
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            {{ emptyStateDescription }}
-          </p>
-          <UButton
-            icon="i-lucide-plus"
-            :to="createRoute"
-            @click="handleCreateClick"
-          >
-            {{ emptyStateButtonLabel }}
-          </UButton>
-        </template>
-      </div>
-      <UTable
-        v-else
-        :columns="columns"
-        :data="providers"
-      />
+      <CatalogLoadState
+        :is-loaded="providerStore.isLoaded"
+        :load-error="providerStore.loadError"
+        label="los proveedores"
+        @retry="providerStore.refetch()"
+      >
+        <div v-if="providers.length === 0" class="text-center py-12">
+          <UIcon :name="meta.icon" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+          <template v-if="hasLocalFilters">
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              Sin resultados para los filtros aplicados
+            </h3>
+            <p class="text-gray-500 dark:text-gray-400 mb-4">
+              Intenta con otros criterios de búsqueda
+            </p>
+            <UButton icon="i-lucide-filter-x" @click="clearLocalFilters">
+              Limpiar filtros
+            </UButton>
+          </template>
+          <template v-else>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+              {{ emptyStateTitle }}
+            </h3>
+            <p class="text-gray-500 dark:text-gray-400 mb-4">
+              {{ emptyStateDescription }}
+            </p>
+            <UButton
+              icon="i-lucide-plus"
+              :to="createRoute"
+              @click="handleCreateClick"
+            >
+              {{ emptyStateButtonLabel }}
+            </UButton>
+          </template>
+        </div>
+        <UTable
+          v-else
+          :columns="columns"
+          :data="providers"
+        />
+      </CatalogLoadState>
     </UCard>
 
     <UModal

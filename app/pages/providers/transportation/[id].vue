@@ -11,29 +11,38 @@ const providerStore = useProviderStore();
 
 const provider = computed(() => providerStore.getProviderById(route.params.id as string));
 
-watchEffect(() => {
-  if (provider.value === undefined) {
-    router.replace('/providers/transportation');
-  }
-  else if (provider.value.category !== PROVIDER_CATEGORY.TRANSPORTATION) {
-    router.replace('/providers/transportation');
-  }
-});
+// Back to the list if the provider doesn't exist or belongs to another category. Only once the
+// catalog has loaded: before that, every provider looks missing.
+watch(
+  () => [providerStore.isLoaded, provider.value] as const,
+  ([isLoaded, current]) => {
+    if (isLoaded && current?.category !== PROVIDER_CATEGORY.TRANSPORTATION)
+      router.replace('/providers/transportation');
+  },
+  { immediate: true },
+);
 </script>
 
 <template>
-  <div v-if="provider" class="space-y-6">
-    <!-- Breadcrumb -->
-    <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-      <NuxtLink to="/providers/transportation" class="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-        Transporte
-      </NuxtLink>
-      <UIcon name="i-lucide-chevron-right" class="w-4 h-4" />
-      <span class="text-gray-900 dark:text-white font-medium">{{ provider.name }}</span>
-    </div>
+  <CatalogLoadState
+    :is-loaded="providerStore.isLoaded"
+    :load-error="providerStore.loadError"
+    label="los proveedores"
+    @retry="providerStore.refetch()"
+  >
+    <div v-if="provider" class="space-y-6">
+      <!-- Breadcrumb -->
+      <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+        <NuxtLink to="/providers/transportation" class="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+          Transporte
+        </NuxtLink>
+        <UIcon name="i-lucide-chevron-right" class="w-4 h-4" />
+        <span class="text-gray-900 dark:text-white font-medium">{{ provider.name }}</span>
+      </div>
 
-    <div class="max-w-3xl mx-auto w-full">
-      <ProviderDetailCard :provider="provider" />
+      <div class="max-w-3xl mx-auto w-full">
+        <ProviderDetailCard :provider="provider" />
+      </div>
     </div>
-  </div>
+  </CatalogLoadState>
 </template>
