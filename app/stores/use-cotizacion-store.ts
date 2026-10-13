@@ -641,6 +641,16 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     if (cotizacion.minimumSeatTarget === 0)
       return;
 
+    // The price is saved to the DB, so the coordinators it subtracts come fresh from the
+    // server: without a cached travel detail getAsientosVendibles would count 0. A failed
+    // request throws and the caller's catch skips the save rather than store a wrong price.
+    try {
+      await queryCache.fetch(queryCache.ensure(travelDetailQuery(cotizacion.travelId)));
+    }
+    catch (e) {
+      throw new Error('No se pudo recalcular el precio por asiento porque no cargó el viaje. Intenta de nuevo.', { cause: e });
+    }
+
     const nuevoPrecio = getPrecioAsientoCalculado.value(quotationId);
 
     await repository.updateSeatPrice(quotationId, nuevoPrecio);
@@ -811,12 +821,22 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    * Recalculates the seat price of a travel's quotation. Call it after the travel's
    * coordinators change: when they take seats, the sellable seats change with them.
    * @param travelId - UUID of the travel
+   * @returns `false` when the price couldn't be recomputed (the error is in `error`)
    */
-  async function syncSeatPriceForTravel(travelId: string): Promise<void> {
+  async function syncSeatPriceForTravel(travelId: string): Promise<boolean> {
     await fetchByTravel(travelId);
     const cotizacion = quotations.value.find(c => c.travelId === travelId);
-    if (cotizacion?.coordinatorsTakeSeats)
+    if (!cotizacion?.coordinatorsTakeSeats)
+      return true;
+
+    try {
       await _syncSeatPrice(cotizacion.id);
+      return true;
+    }
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      return false;
+    }
   }
 
   async function createQuotation(data: QuotationFormData): Promise<Quotation> {
