@@ -24,8 +24,9 @@
 ## Pinia
 
 - Un store por dominio, Composition API style
-- Los stores se cargan al inicio via plugin — los componentes pueden asumir que los datos ya están disponibles
-- El quotation store tiene caché anti-duplicado (`travelFetchCache`) porque múltiples componentes en la misma página lo solicitan simultáneamente
+- Los datos **no** están disponibles al montar: cada pantalla monta su query (o usa el store del catálogo) y muestra spinner → error + Reintentar → vacío → contenido. Un estado vacío antes de cargar sería mentira
+- Redirecciones de "no encontrado" solo cuando la query resolvió (`status === 'success' && data === null`, o `isLoaded` en catálogos), con `watch` y no `watchEffect`
+- La cotización pasa por `quotationByTravelQuery`, que deduplica y copia el resultado al store (ver [Flujo de datos](./04-data-flow.md#carga-de-datos-con-pinia-colada))
 - Getters costosos (como `getTravelerPaymentSummary`) se ejecutan sin memoización — si hay problemas de performance, considerar `computed` en el componente
 
 ## Google Maps
@@ -38,7 +39,7 @@
 ## Performance
 
 - `getBusesByProvider` en bus store pre-computa un mapa `providerId → Bus[]` para evitar `.filter()` en cada render
-- `init-stores.client.ts` usa `Promise.all` para cargar todos los stores en paralelo al inicio
+- Nada se carga al arrancar: cada pantalla pide su alcance con Pinia Colada (un viaje, un mes, una página) y los catálogos se piden la primera vez que una pantalla usa su store
 - Rich text editor tiene sufijo `.client.vue` — se hidrata solo en el cliente (no SSR)
 
 ## Seguridad
