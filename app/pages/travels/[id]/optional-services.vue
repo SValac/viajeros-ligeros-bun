@@ -4,6 +4,7 @@ import type { QuotationProvider } from '~/types/quotation';
 
 import { isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 
@@ -24,11 +25,9 @@ const { travelId, travel } = useTravelRoute();
 
 // Los servicios salen de la cotización. La query la copia al store y la vuelve a pedir tras
 // agregar o borrar viajeros, que cambian lo que se le debe a cada servicio.
-const {
-  data: quotationData,
-  status: quotationStatus,
-  refetch: refetchQuotation,
-} = useQuery(() => quotationByTravelQuery(travelId.value));
+const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
+const { refetch: refetchQuotation } = quotationQuery;
+const quotationLoad = useQueryLoadState(quotationQuery);
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 
 const services = computed<QuotationProvider[]>(() => {
@@ -72,7 +71,9 @@ const selectedAdjustmentByTraveler = computed(() => new Map(
 ));
 
 // Coordinadores incluidos: cuentan para el pago salvo que el proveedor les dé cortesía.
-const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
+const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
+const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
+const travelersLoad = useQueryLoadState(travelersQuery);
 const occupants = computed(() => travelerData.value?.travelers ?? []);
 
 // Servicio que se está guardando, para bloquear sus casillas mientras tanto.
@@ -123,78 +124,56 @@ async function onChange(travelerIds: string[], toman: boolean) {
     <!-- El encabezado y la navegación los pone app/pages/travels/[id].vue -->
     <div class="space-y-6">
       <!-- Hasta que la cotización cargue (o si falla), "sin servicios" sería mentira -->
-      <div v-if="quotationStatus === 'pending' && quotationData === undefined" class="flex justify-center py-12">
-        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-      </div>
-      <div
-        v-else-if="quotationStatus === 'error' && quotationData === undefined"
-        class="flex flex-col items-center justify-center gap-4 py-12"
+      <LoadState
+        v-bind="quotationLoad"
+        label="la cotización"
+        @retry="refetchQuotation()"
       >
-        <p class="text-muted">
-          No se pudo cargar la cotización
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="refetchQuotation()"
-        />
-      </div>
-
-      <UCard v-else-if="services.length === 0">
-        <div class="text-center py-8 text-muted">
-          <UIcon name="i-lucide-ticket-check" class="size-10 mx-auto mb-2 opacity-40" />
-          <p>Este viaje no tiene servicios cobrados por persona.</p>
-          <p class="text-sm mt-1">
-            En la cotización, agrega un servicio con "Costo por persona" para pagarle al proveedor solo por los viajeros que lo toman.
-          </p>
-          <UButton
-            label="Ir a los servicios de la cotización"
-            variant="ghost"
-            class="mt-3"
-            :to="{ name: 'quotation-services', params: { id: travelId } }"
-          />
-        </div>
-      </UCard>
-
-      <div v-else class="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] items-start">
-        <UCard :ui="{ body: 'p-2 sm:p-2' }" class="lg:sticky lg:top-4">
-          <TravelOptionalServiceList v-model="selectedServiceId" :items="listItems" />
-        </UCard>
-
-        <!-- Until the travelers load (or if they fail), the card's "no travelers" would be a lie -->
-        <UCard v-if="travelersStatus === 'pending' && !travelerData">
-          <div class="flex justify-center py-12">
-            <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-          </div>
-        </UCard>
-        <UCard v-else-if="travelersStatus === 'error'">
-          <div class="flex flex-col items-center justify-center gap-4 py-12">
-            <p class="text-muted">
-              No se pudieron cargar los viajeros
+        <UCard v-if="services.length === 0">
+          <div class="text-center py-8 text-muted">
+            <UIcon name="i-lucide-ticket-check" class="size-10 mx-auto mb-2 opacity-40" />
+            <p>Este viaje no tiene servicios cobrados por persona.</p>
+            <p class="text-sm mt-1">
+              En la cotización, agrega un servicio con "Costo por persona" para pagarle al proveedor solo por los viajeros que lo toman.
             </p>
             <UButton
-              label="Reintentar"
-              icon="i-lucide-refresh-cw"
-              @click="refetchTravelers()"
+              label="Ir a los servicios de la cotización"
+              variant="ghost"
+              class="mt-3"
+              :to="{ name: 'quotation-services', params: { id: travelId } }"
             />
           </div>
         </UCard>
-        <TravelOptionalServiceCard
-          v-else-if="selectedService"
-          :key="selectedService.id"
-          :service="selectedService"
-          :provider-name="getProviderName(selectedService.providerId)"
-          :occupants="occupants"
-          :opted-out="cotizacionStore.getOptOutsByProveedor(selectedService.id)"
-          :paid="cotizacionStore.getAnticipadoProveedor(selectedService.id)"
-          :sellable-seats="sellableSeats"
-          :adjustments="selectedAdjustments"
-          :adjustment-by-traveler="selectedAdjustmentByTraveler"
-          :busy="savingServiceId === selectedService.id"
-          @change="onChange"
-          @adjust="onAdjust"
-        />
-      </div>
+
+        <div v-else class="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] items-start">
+          <UCard :ui="{ body: 'p-2 sm:p-2' }" class="lg:sticky lg:top-4">
+            <TravelOptionalServiceList v-model="selectedServiceId" :items="listItems" />
+          </UCard>
+
+          <!-- Until the travelers load (or if they fail), the card's "no travelers" would be a lie -->
+          <LoadState
+            v-bind="travelersLoad"
+            label="los viajeros"
+            @retry="refetchTravelers()"
+          >
+            <TravelOptionalServiceCard
+              v-if="selectedService"
+              :key="selectedService.id"
+              :service="selectedService"
+              :provider-name="getProviderName(selectedService.providerId)"
+              :occupants="occupants"
+              :opted-out="cotizacionStore.getOptOutsByProveedor(selectedService.id)"
+              :paid="cotizacionStore.getAnticipadoProveedor(selectedService.id)"
+              :sellable-seats="sellableSeats"
+              :adjustments="selectedAdjustments"
+              :adjustment-by-traveler="selectedAdjustmentByTraveler"
+              :busy="savingServiceId === selectedService.id"
+              @change="onChange"
+              @adjust="onAdjust"
+            />
+          </LoadState>
+        </div>
+      </LoadState>
     </div>
   </div>
 </template>

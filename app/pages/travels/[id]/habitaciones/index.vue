@@ -6,6 +6,7 @@ import type { Traveler } from '~/types/traveler';
 import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
@@ -25,13 +26,13 @@ const cotizacionStore = useCotizacionStore();
 const { travelId, travel } = useTravelRoute();
 
 const accommodations = computed(() => travel.value?.accommodations ?? []);
-const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
+const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
+const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
+const travelersLoad = useQueryLoadState(travelersQuery);
 // The quoted hotels and room types group the rooms; the public prices say who goes where.
-const {
-  data: quotationData,
-  status: quotationStatus,
-  refetch: refetchQuotation,
-} = useQuery(() => quotationByTravelQuery(travelId.value));
+const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
+const { refetch: refetchQuotation } = quotationQuery;
+const quotationLoad = useQueryLoadState(quotationQuery);
 // Coordinators need a room too, so room counts and the add modal include them.
 const occupantsOfTravel = computed(() => travelerData.value?.travelers ?? []);
 const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel.value));
@@ -379,135 +380,115 @@ async function updateAccommodation(
     <div class="space-y-6">
       <!-- Until the travelers load (or if they fail), the stats and rooms would show nobody;
            until the quotation loads, every room would look unquoted -->
-      <div
-        v-if="(travelersStatus === 'pending' && !travelerData) || (quotationStatus === 'pending' && quotationData === undefined)"
-        class="flex justify-center py-12"
+      <LoadState
+        v-bind="travelersLoad"
+        label="los viajeros"
+        @retry="refetchTravelers()"
       >
-        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-      </div>
-      <UCard v-else-if="travelersStatus === 'error'">
-        <div class="flex flex-col items-center justify-center gap-4 py-12">
-          <p class="text-muted">
-            No se pudieron cargar los viajeros
-          </p>
-          <UButton
-            label="Reintentar"
-            icon="i-lucide-refresh-cw"
-            @click="refetchTravelers()"
-          />
-        </div>
-      </UCard>
-      <UCard v-else-if="quotationStatus === 'error' && quotationData === undefined">
-        <div class="flex flex-col items-center justify-center gap-4 py-12">
-          <p class="text-muted">
-            No se pudo cargar la cotización
-          </p>
-          <UButton
-            label="Reintentar"
-            icon="i-lucide-refresh-cw"
-            @click="refetchQuotation()"
-          />
-        </div>
-      </UCard>
-      <template v-else>
-        <!-- Stats -->
-        <div class="grid grid-cols-3 gap-4">
-          <UCard>
-            <div class="text-center">
-              <p class="text-2xl font-bold">
-                {{ totalRooms }}
-              </p>
-              <p class="text-sm text-muted">
-                Total habitaciones
-              </p>
-            </div>
-          </UCard>
-          <UCard>
-            <div class="text-center">
-              <p class="text-2xl font-bold text-success">
-                {{ occupiedRooms }}
-              </p>
-              <p class="text-sm text-muted">
-                Con viajeros
-              </p>
-            </div>
-          </UCard>
-          <UCard>
-            <div class="text-center">
-              <p class="text-2xl font-bold" :class="unassignedTravelers > 0 ? 'text-warning' : 'text-muted'">
-                {{ unassignedTravelers }}
-              </p>
-              <p class="text-sm text-muted">
-                Personas sin habitación
-              </p>
-              <p
-                v-if="pendingByHotel.length > 1"
-                class="text-xs text-dimmed mt-1"
-              >
-                <template v-for="(hotel, index) in pendingByHotel" :key="hotel.providerName">
-                  <span v-if="index > 0"> · </span>{{ hotel.providerName }}: {{ hotel.count }}
-                </template>
-              </p>
-            </div>
-          </UCard>
-        </div>
-
-        <!-- Tabs por hotel -->
-        <UCard v-if="hotelGroups.length === 0">
-          <div class="text-center py-8 text-muted">
-            <UIcon name="i-lucide-bed-double" class="size-10 mx-auto mb-2 opacity-40" />
-            <p>Este viaje aún no tiene hospedaje.</p>
-            <p class="text-sm mt-1">
-              Agrega los hoteles y sus tipos de habitación en la cotización; aquí defines cuántas habitaciones se apartan.
-            </p>
-          </div>
-        </UCard>
-
-        <UTabs
-          v-else
-          v-model="activeTabValue"
-          :items="tabs"
-          variant="link"
+        <LoadState
+          v-bind="quotationLoad"
+          label="la cotización"
+          @retry="refetchQuotation()"
         >
-          <template #hotel="{ item }">
-            <div class="space-y-6">
-              <p v-if="item.group.totalCost !== undefined" class="text-sm text-muted">
-                Costo del hotel:
-                <span class="font-semibold text-highlighted">{{ formatCurrency(item.group.totalCost) }}</span>
-                · {{ item.group.nightCount }} noche{{ item.group.nightCount === 1 ? '' : 's' }} · se calcula con las habitaciones de abajo
-              </p>
+          <!-- Stats -->
+          <div class="grid grid-cols-3 gap-4">
+            <UCard>
+              <div class="text-center">
+                <p class="text-2xl font-bold">
+                  {{ totalRooms }}
+                </p>
+                <p class="text-sm text-muted">
+                  Total habitaciones
+                </p>
+              </div>
+            </UCard>
+            <UCard>
+              <div class="text-center">
+                <p class="text-2xl font-bold text-success">
+                  {{ occupiedRooms }}
+                </p>
+                <p class="text-sm text-muted">
+                  Con viajeros
+                </p>
+              </div>
+            </UCard>
+            <UCard>
+              <div class="text-center">
+                <p class="text-2xl font-bold" :class="unassignedTravelers > 0 ? 'text-warning' : 'text-muted'">
+                  {{ unassignedTravelers }}
+                </p>
+                <p class="text-sm text-muted">
+                  Personas sin habitación
+                </p>
+                <p
+                  v-if="pendingByHotel.length > 1"
+                  class="text-xs text-dimmed mt-1"
+                >
+                  <template v-for="(hotel, index) in pendingByHotel" :key="hotel.providerName">
+                    <span v-if="index > 0"> · </span>{{ hotel.providerName }}: {{ hotel.count }}
+                  </template>
+                </p>
+              </div>
+            </UCard>
+          </div>
 
-              <TravelRoomTypeGroup
-                v-for="roomType in item.group.roomTypes"
-                :key="roomType.key"
-                :details="getRoomTypeInfo(roomType.roomTypeId).details"
-                :beds="getRoomTypeInfo(roomType.roomTypeId).beds"
-                :max-occupancy="roomType.maxOccupancy"
-                :room-count="roomType.accommodations.length"
-                :catalog-room-count="roomType.catalogRoomCount"
-                :unquoted="roomType.unquoted"
-                :adding="addingRoomKey === roomType.key"
-                @add-room="addRoom(item.group.providerId, roomType)"
-              >
-                <TravelAccommodationCard
-                  v-for="acc in roomType.accommodations"
-                  :key="acc.id"
-                  :accommodation="acc"
-                  :occupants="occupantsByAccommodation.get(acc.id) ?? []"
-                  :provider-name="item.group.providerName"
-                  :room-type-details="roomType.unquoted ? getRoomTypeInfo(acc.hotelRoomTypeId).details : undefined"
-                  :room-type-beds="roomType.unquoted ? getRoomTypeInfo(acc.hotelRoomTypeId).beds : undefined"
-                  :representative-names="representativeNames"
-                  @add-traveler="openAddTravelerModal"
-                  @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
-                  @update="updateAccommodation"
-                  @delete="deleteRoom"
-                />
-              </TravelRoomTypeGroup>
+          <!-- Tabs por hotel -->
+          <UCard v-if="hotelGroups.length === 0">
+            <div class="text-center py-8 text-muted">
+              <UIcon name="i-lucide-bed-double" class="size-10 mx-auto mb-2 opacity-40" />
+              <p>Este viaje aún no tiene hospedaje.</p>
+              <p class="text-sm mt-1">
+                Agrega los hoteles y sus tipos de habitación en la cotización; aquí defines cuántas habitaciones se apartan.
+              </p>
             </div>
-          </template>
-        </UTabs>
-      </template>
+          </UCard>
+
+          <UTabs
+            v-else
+            v-model="activeTabValue"
+            :items="tabs"
+            variant="link"
+          >
+            <template #hotel="{ item }">
+              <div class="space-y-6">
+                <p v-if="item.group.totalCost !== undefined" class="text-sm text-muted">
+                  Costo del hotel:
+                  <span class="font-semibold text-highlighted">{{ formatCurrency(item.group.totalCost) }}</span>
+                  · {{ item.group.nightCount }} noche{{ item.group.nightCount === 1 ? '' : 's' }} · se calcula con las habitaciones de abajo
+                </p>
+
+                <TravelRoomTypeGroup
+                  v-for="roomType in item.group.roomTypes"
+                  :key="roomType.key"
+                  :details="getRoomTypeInfo(roomType.roomTypeId).details"
+                  :beds="getRoomTypeInfo(roomType.roomTypeId).beds"
+                  :max-occupancy="roomType.maxOccupancy"
+                  :room-count="roomType.accommodations.length"
+                  :catalog-room-count="roomType.catalogRoomCount"
+                  :unquoted="roomType.unquoted"
+                  :adding="addingRoomKey === roomType.key"
+                  @add-room="addRoom(item.group.providerId, roomType)"
+                >
+                  <TravelAccommodationCard
+                    v-for="acc in roomType.accommodations"
+                    :key="acc.id"
+                    :accommodation="acc"
+                    :occupants="occupantsByAccommodation.get(acc.id) ?? []"
+                    :provider-name="item.group.providerName"
+                    :room-type-details="roomType.unquoted ? getRoomTypeInfo(acc.hotelRoomTypeId).details : undefined"
+                    :room-type-beds="roomType.unquoted ? getRoomTypeInfo(acc.hotelRoomTypeId).beds : undefined"
+                    :representative-names="representativeNames"
+                    @add-traveler="openAddTravelerModal"
+                    @remove-traveler="travelerId => removeTraveler(travelerId, acc.providerId)"
+                    @update="updateAccommodation"
+                    @delete="deleteRoom"
+                  />
+                </TravelRoomTypeGroup>
+              </div>
+            </template>
+          </UTabs>
+        </LoadState>
+      </LoadState>
     </div>
 
     <!-- Add Traveler Modal -->

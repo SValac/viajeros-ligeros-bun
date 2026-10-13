@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { TravelStatus, TravelSummary } from '~/types/travel';
 
+import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
 import { parseDisplayDate } from '~/utils/format-date';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
@@ -39,7 +40,7 @@ watch(statuses, () => {
   page.value = 1;
 });
 
-const { data, status, refetch } = useQuery(() => ({
+const travelsQuery = useQuery(() => ({
   ...travelListQuery({
     statuses: [...statuses.value].sort(),
     page: page.value,
@@ -48,6 +49,8 @@ const { data, status, refetch } = useQuery(() => ({
   placeholderData: previousList => previousList,
   enabled: statuses.value.length > 0,
 }));
+const { data, refetch } = travelsQuery;
+const travelsLoad = useQueryLoadState(travelsQuery);
 
 // Al borrar el único viaje de la última página, esa página deja de existir: ir a la última que sí
 watch(data, (list) => {
@@ -287,70 +290,61 @@ const columns: TableColumn<TravelSummary>[] = [
       <div v-if="statuses.length === 0" class="py-12 text-center text-muted">
         Elegí al menos un estatus para ver viajes
       </div>
-      <div v-else-if="status === 'pending' && !data" class="flex justify-center py-12">
-        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-      </div>
-      <div
-        v-else-if="status === 'error'"
-        class="flex flex-col items-center justify-center gap-4 py-12"
+      <LoadState
+        v-else
+        v-bind="travelsLoad"
+        label="los viajes"
+        @retry="refetch()"
       >
-        <p class="text-muted">
-          No se pudieron cargar los viajes
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="refetch()"
-        />
-      </div>
-      <!-- La agencia no tiene ningún viaje -->
-      <div v-else-if="travels.length === 0 && stats?.total === 0" class="text-center py-12">
-        <UIcon
-          name="i-lucide-inbox"
-          class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
-        />
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-          No hay viajes aún
-        </h3>
-        <p class="text-gray-500 dark:text-gray-400 mb-4">
-          Comienza creando tu primer viaje
-        </p>
-        <UButton
-          icon="i-lucide-plus"
-          @click="navigateToCreate"
-        >
-          Crear Primer Viaje
-        </UButton>
-      </div>
-      <!-- Hay viajes, pero ninguno con los estatus marcados -->
-      <div v-else-if="travels.length === 0" class="text-center py-12">
-        <UIcon
-          name="i-lucide-search-x"
-          class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
-        />
-        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
-          Ningún viaje con estos estatus
-        </h3>
-        <UButton
-          label="Restablecer filtros"
-          variant="outline"
-          color="neutral"
-          @click="resetStatuses"
-        />
-      </div>
-      <template v-else>
-        <UTable
-          :columns="columns"
-          :data="travels"
-        />
-        <div v-if="data && data.total > PAGE_SIZE" class="flex justify-end border-t border-default pt-4">
-          <UPagination
-            v-model:page="page"
-            :total="data.total"
-            :items-per-page="PAGE_SIZE"
+        <!-- La agencia no tiene ningún viaje -->
+        <div v-if="travels.length === 0 && stats?.total === 0" class="text-center py-12">
+          <UIcon
+            name="i-lucide-inbox"
+            class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
+          />
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            No hay viajes aún
+          </h3>
+          <p class="text-gray-500 dark:text-gray-400 mb-4">
+            Comienza creando tu primer viaje
+          </p>
+          <UButton
+            icon="i-lucide-plus"
+            @click="navigateToCreate"
+          >
+            Crear Primer Viaje
+          </UButton>
+        </div>
+        <!-- Hay viajes, pero ninguno con los estatus marcados -->
+        <div v-else-if="travels.length === 0" class="text-center py-12">
+          <UIcon
+            name="i-lucide-search-x"
+            class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
+          />
+          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
+            Ningún viaje con estos estatus
+          </h3>
+          <UButton
+            label="Restablecer filtros"
+            variant="outline"
+            color="neutral"
+            @click="resetStatuses"
           />
         </div>
-      </template>
+        <template v-else>
+          <UTable
+            :columns="columns"
+            :data="travels"
+          />
+          <div v-if="data && data.total > PAGE_SIZE" class="flex justify-end border-t border-default pt-4">
+            <UPagination
+              v-model:page="page"
+              :total="data.total"
+              :items-per-page="PAGE_SIZE"
+            />
+          </div>
+        </template>
+      </LoadState>
     </UCard>
   </div>
 </template>

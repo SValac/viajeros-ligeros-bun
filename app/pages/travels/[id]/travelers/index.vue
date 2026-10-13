@@ -9,6 +9,7 @@ import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErr
 import BusSeatMap from '~/components/bus-seat-map.vue';
 import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 
@@ -76,7 +77,9 @@ const seatingCoordinator = shallowRef<Traveler | null>(null);
 const filters = ref<TravelerFilters>({});
 
 // Datos derivados
-const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
+const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
+const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
+const travelersLoad = useQueryLoadState(travelersQuery);
 // Every traveler row of the travel, coordinators included (seats and rooms need them all)
 const occupantsOfTravel = computed(() => travelerData.value?.travelers ?? []);
 const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel.value));
@@ -719,22 +722,11 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     </div>
 
     <!-- Until the travelers load (or if they fail), stats, table and seat maps would show nobody -->
-    <div v-if="travelersStatus === 'pending' && !travelerData" class="flex justify-center py-12">
-      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-    </div>
-    <UCard v-else-if="travelersStatus === 'error'">
-      <div class="flex flex-col items-center justify-center gap-4 py-12">
-        <p class="text-muted">
-          No se pudieron cargar los viajeros
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="refetchTravelers()"
-        />
-      </div>
-    </UCard>
-    <template v-else>
+    <LoadState
+      v-bind="travelersLoad"
+      label="los viajeros"
+      @retry="refetchTravelers()"
+    >
       <!-- Estadísticas -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <UCard>
@@ -926,7 +918,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           </div>
         </template>
       </UTabs>
-    </template>
+    </LoadState>
 
     <!-- Modal de formulario -->
     <UModal
