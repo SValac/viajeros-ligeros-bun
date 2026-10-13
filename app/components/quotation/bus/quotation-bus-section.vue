@@ -1,0 +1,339 @@
+<script setup lang="ts">
+import type { BusPaymentStatus, QuotationBus } from '~/types/quotation';
+
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
+import { formatCurrency } from '~/utils/currency';
+
+type Props = {
+  quotationId: string;
+  readonly?: boolean;
+};
+
+type Emits = {
+  (e: 'add'): void;
+};
+
+const { quotationId, readonly = false } = defineProps<Props>();
+
+defineEmits<Emits>();
+
+const cotizacionStore = useCotizacionStore();
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(travelId);
+const providerStore = useProviderStore();
+const toast = useToast();
+
+const buses = computed(() => cotizacionStore.getBusesByQuotation(quotationId));
+
+// Modal state
+const isDetallesFormOpen = shallowRef(false);
+const isHistorialOpen = shallowRef(false);
+const isDeleteModalOpen = shallowRef(false);
+const selectedBus = shallowRef<QuotationBus | null>(null);
+
+function getNombreAgencia(proveedorId: string): string {
+  return providerStore.getProviderById(proveedorId)?.name ?? 'Desconocido';
+}
+
+function getEstadoPagoColor(status: BusPaymentStatus): 'warning' | 'info' | 'success' {
+  if (status === 'pending')
+    return 'warning';
+  if (status === 'partial')
+    return 'info';
+  return 'success';
+}
+
+function getEstadoPagoLabel(status: BusPaymentStatus): string {
+  if (status === 'pending')
+    return 'Pendiente';
+  if (status === 'partial')
+    return 'Anticipo';
+  return 'Liquidado';
+}
+
+function openHistorial(bus: QuotationBus) {
+  selectedBus.value = bus;
+  isHistorialOpen.value = true;
+}
+
+function openDetalles(bus: QuotationBus) {
+  selectedBus.value = bus;
+  isDetallesFormOpen.value = true;
+}
+
+function openDeleteConfirm(bus: QuotationBus) {
+  selectedBus.value = bus;
+  isDeleteModalOpen.value = true;
+}
+
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
+async function handleToggleConfirmado(bus: QuotationBus) {
+  if (readonly)
+    return;
+  await cotizacionStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
+}
+
+async function confirmDelete() {
+  if (!selectedBus.value)
+    return;
+  await cotizacionStore.deleteBusQuotation(selectedBus.value.id);
+  toast.add({ title: 'Autobús eliminado', color: 'warning' });
+  isDeleteModalOpen.value = false;
+  selectedBus.value = null;
+}
+
+function getBusActions(bus: QuotationBus) {
+  // Payments go on after the quotation is confirmed; only its structure is locked.
+  const paymentActions = [
+    {
+      label: 'Ver historial de pagos',
+      icon: 'i-lucide-receipt',
+      onSelect: () => openHistorial(bus),
+    },
+    {
+      label: 'Registrar pago',
+      icon: 'i-lucide-banknote',
+      disabled: cotizacionStore.getSaldoPendienteBus(bus.id) <= 0,
+      onSelect: () => openHistorial(bus),
+    },
+  ];
+
+  if (readonly)
+    return [paymentActions];
+
+  return [
+    paymentActions,
+    [
+      {
+        label: 'Editar detalles',
+        icon: 'i-lucide-pencil',
+        onSelect: () => openDetalles(bus),
+      },
+      {
+        label: bus.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
+        icon: bus.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
+        onSelect: () => handleToggleConfirmado(bus),
+      },
+    ],
+    [
+      {
+        label: 'Eliminar',
+        icon: 'i-lucide-trash-2',
+        color: 'error' as const,
+        onSelect: () => openDeleteConfirm(bus),
+      },
+    ],
+  ];
+}
+</script>
+
+<template>
+  <UCard>
+    <template #header>
+      <div class="flex items-center justify-between w-full">
+        <h2 class="font-semibold flex items-center gap-2">
+          <UIcon name="i-lucide-bus" class="w-5 h-5 text-muted" />
+          Autobuses Apartados
+        </h2>
+        <UButton
+          v-if="!readonly"
+          icon="i-lucide-plus"
+          size="xs"
+          label="Agregar Autobús"
+          @click="$emit('add')"
+        />
+      </div>
+    </template>
+
+    <!-- Tabla -->
+    <div v-if="buses.length > 0" class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-default text-left text-muted">
+            <th class="pb-2 pr-4 font-medium">
+              Agencia
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Unidad
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Asientos
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              División
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo Total
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo/persona
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pagado
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pendiente
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Método
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Estado Pago
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Confirmado
+            </th>
+            <th class="pb-2 font-medium">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="bus in buses"
+            :key="bus.id"
+            class="border-b border-default/50 hover:bg-elevated/50"
+          >
+            <td class="py-3 pr-4 font-medium">
+              {{ getNombreAgencia(bus.providerId) }}
+            </td>
+            <td class="py-3 pr-4 font-mono">
+              {{ bus.unitNumber }}
+            </td>
+            <td class="py-3 pr-4">
+              {{ bus.capacity }}
+            </td>
+
+            <!-- División -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
+                :color="(bus.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Costo Total -->
+            <td class="py-3 pr-4 font-medium">
+              {{ formatCurrency(bus.totalCost ?? 0) }}
+            </td>
+
+            <!-- Costo/persona -->
+            <td class="py-3 pr-4">
+              {{ formatCurrency(cotizacionStore.getCostoPerPersonaBus(bus.id, coordinatorCount)) }}
+            </td>
+
+            <!-- Pagado -->
+            <td class="py-3 pr-4">
+              {{ formatCurrency(cotizacionStore.getAnticipadoBus(bus.id)) }}
+            </td>
+
+            <!-- Pendiente -->
+            <td class="py-3 pr-4">
+              <span :class="cotizacionStore.getSaldoPendienteBus(bus.id) > 0 ? 'text-warning' : 'text-success'">
+                {{ formatCurrency(cotizacionStore.getSaldoPendienteBus(bus.id)) }}
+              </span>
+            </td>
+
+            <!-- Método -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="bus.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
+                color="neutral"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Estado Pago -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="getEstadoPagoLabel(cotizacionStore.getBusPaymentStatus(bus.id))"
+                :color="getEstadoPagoColor(cotizacionStore.getBusPaymentStatus(bus.id))"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Confirmado -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="bus.confirmed ? 'Sí' : 'No'"
+                :color="bus.confirmed ? 'success' : 'neutral'"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Acciones -->
+            <td class="py-3">
+              <UDropdownMenu :items="getBusActions(bus)">
+                <UButton
+                  icon="i-lucide-more-vertical"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                />
+              </UDropdownMenu>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty state -->
+    <EmptyState
+      v-else
+      section="buses"
+      :actions="readonly ? undefined : [{ label: 'Agregar autobús', icon: 'i-lucide-plus', onClick: () => $emit('add') }]"
+    />
+  </UCard>
+
+  <!-- Slideover: historial de pagos -->
+  <USlideover
+    v-model:open="isHistorialOpen"
+    :title="selectedBus ? `Pagos — ${selectedBus.unitNumber}` : 'Historial de Pagos'"
+    description="Registro de pagos realizados a la agencia"
+    side="right"
+  >
+    <template #body>
+      <div class="p-4">
+        <QuotationBusPaymentHistory
+          v-if="selectedBus"
+          :quotation-bus-id="selectedBus.id"
+          :bus-label="selectedBus.unitNumber"
+        />
+      </div>
+    </template>
+  </USlideover>
+
+  <!-- Modal: editar autobús (mismo formulario que agregar) -->
+  <QuotationBusForm
+    v-model:open="isDetallesFormOpen"
+    :quotation-id="quotationId"
+    :bus="selectedBus"
+  />
+
+  <!-- Modal: confirmar eliminación -->
+  <UModal
+    v-model:open="isDeleteModalOpen"
+    title="Eliminar Autobús"
+    description="¿Estás seguro? Se eliminarán también todos los pagos asociados."
+  >
+    <template #footer>
+      <div class="flex justify-end gap-3">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          label="Cancelar"
+          @click="closeDeleteModal"
+        />
+        <UButton
+          color="error"
+          label="Eliminar"
+          @click="confirmDelete"
+        />
+      </div>
+    </template>
+  </UModal>
+</template>

@@ -34,7 +34,7 @@
 - SDK cargado de forma lazy con `composables/use-google-maps.ts`
 - `NUXT_PUBLIC_GOOGLE_MAPS_API_KEY` y `NUXT_PUBLIC_GOOGLE_MAPS_MAP_ID` requeridos
 - En producción, si `MAP_ID` no está configurado, el composable emite una advertencia
-- Usar `map-location-picker.vue` para inputs y `map-location-display.vue` para lectura
+- Usar `map/map-location-picker.vue` para elegir una ubicación
 
 ## Performance
 

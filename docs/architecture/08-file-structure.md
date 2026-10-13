@@ -99,30 +99,29 @@ app/
 │           └── travelers/
 │               └── index.vue
 │
-├── components/                     # 54 componentes
-│   ├── hotel/
-│   │   ├── bed-configuration-input.vue
-│   │   ├── hotel-room-type-card.vue
-│   │   ├── hotel-room-type-form.vue
-│   │   ├── hotel-rooms-manager.vue
-│   │   └── hotel-rooms-summary.vue
-│   ├── bus-form.vue
-│   ├── bus-list.vue
-│   ├── coordinator-form.vue
-│   ├── cotizacion-*.vue            # ~12 componentes de cotización
-│   ├── map-location-display.vue
-│   ├── map-location-picker.vue
-│   ├── pago-*.vue                  # ~6 componentes de pagos a proveedores/buses/hospedajes
-│   ├── payment-*.vue               # ~3 componentes de pagos de viajeros
-│   ├── provider-*.vue              # ~4 componentes de proveedores
+├── components/                     # Por dominio; ver 03-components.md (convención de nombres)
+│   ├── agency/                     # Perfil de la agencia (+ home/, page/)
+│   ├── bus/                        # Inventario y mapa de asientos
+│   ├── coordinator/
+│   ├── hotel/                      # Tipos de habitación de hotel
+│   ├── map/                        # Google Maps
+│   ├── payment/                    # Pagos de viajeros
+│   ├── provider/                   # Catálogo de proveedores
+│   ├── quotation/                  # Cotización (+ accommodation/, bus/, provider/, public-price/)
+│   ├── travel/                     # Viaje (+ activity/, calendar/, gallery/)
+│   ├── traveler/
+│   ├── load-state.vue              # Globales: estados, inputs y layout
+│   ├── empty-state.vue
+│   ├── money-input.vue
+│   ├── phone-input.vue
+│   ├── char-counter.vue
 │   ├── rich-content.vue
 │   ├── rich-text-editor.client.vue
+│   ├── unsaved-changes-modal.vue
 │   ├── the-sidebar.vue
 │   ├── the-separator.vue
-│   ├── travel-*.vue                # ~10 componentes de viajes
-│   ├── traveler-*.vue              # ~2 componentes de viajeros
-│   ├── logo.vue
-│   └── user-menu.vue
+│   ├── user-menu.vue
+│   └── logo.vue
 │
 ├── utils/
 │   ├── mappers.ts                  # Mapeo snake_case (BD) ↔ camelCase (dominio)

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { OptionalServiceListItem } from '~/components/travel-optional-service-list.vue';
+import type { OptionalServiceListItem } from '~/components/travel/travel-optional-service-list.vue';
 import type { QuotationProvider } from '~/types/quotation';
 
 import { isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';

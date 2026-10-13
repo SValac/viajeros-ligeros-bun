@@ -6,7 +6,7 @@ import { h } from 'vue';
 
 import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
 
-import BusSeatMap from '~/components/bus-seat-map.vue';
+import BusSeatMap from '~/components/bus/bus-seat-map.vue';
 import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryLoadState } from '~/queries/load-state';
@@ -828,7 +828,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
               v-model="filters"
               :available-travels="[]"
               :available-buses="allBuses"
-              :representantes="representantes"
+              :representatives="representantes"
               :hide-travel-filter="true"
             />
 

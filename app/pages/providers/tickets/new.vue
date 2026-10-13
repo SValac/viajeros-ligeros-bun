@@ -51,7 +51,7 @@ function handleCancel() {
     <!-- Formulario -->
     <UCard>
       <ProviderForm
-        :fixed-categoria="PROVIDER_CATEGORY.TICKETS"
+        :fixed-category="PROVIDER_CATEGORY.TICKETS"
         @submit="handleSubmit"
         @cancel="handleCancel"
       />
