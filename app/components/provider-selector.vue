@@ -108,26 +108,18 @@ async function handleProviderSubmit(data: ProviderFormData) {
 // Watch para sincronizar con prop externa
 watch(() => modelValue, (newValue) => {
   selectedProviderId.value = newValue;
-
-  // Si hay un proveedor seleccionado, cargar su categoría
-  if (newValue) {
-    const provider = providerStore.getProviderById(newValue);
-    if (provider) {
-      selectedCategory.value = provider.category;
-    }
-  }
 });
 
-// Cargar datos mock y detectar categoría inicial
-onMounted(() => {
-  // Si hay un proveedor inicial, cargar su categoría
-  if (modelValue) {
-    const provider = providerStore.getProviderById(modelValue);
-    if (provider) {
-      selectedCategory.value = provider.category;
-    }
-  }
-});
+// Categoría del proveedor seleccionado. Se observa el catálogo y no solo el montaje: los
+// proveedores se cargan bajo demanda y pueden llegar después.
+watch(
+  () => (modelValue ? providerStore.getProviderById(modelValue)?.category : undefined),
+  (category) => {
+    if (category)
+      selectedCategory.value = category;
+  },
+  { immediate: true },
+);
 </script>
 
 <template>

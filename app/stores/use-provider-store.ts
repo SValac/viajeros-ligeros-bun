@@ -4,20 +4,28 @@ import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, Pro
 
 import { filterProviders } from '~/composables/providers/use-provider-domain';
 import { useProviderRepository } from '~/composables/providers/use-provider-repository';
+import { catalogKeys, providersCatalogQuery, useCatalogState, useProvidersCatalog } from '~/queries/catalogs';
 import { PROVIDER_CATEGORY } from '~/types/provider';
 
-import { useHotelRoomStore } from './use-hotel-room-store';
-
+/**
+ * Provider catalog, its writes and the providers list filters.
+ * `providers` reads its catalog query (`useProvidersCatalog`, through `useCatalogState`);
+ * writes go through `useProviderRepository` and then refetch it.
+ * @returns Store state, getters and actions
+ */
 export const useProviderStore = defineStore('providers', () => {
   const repository = useProviderRepository();
+  const queryCache = useQueryCache();
+  const catalog = useCatalogState(useProvidersCatalog, providersCatalogQuery);
 
-  // State
-  const providers = ref<Provider[]>([]);
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+  // State (writes and filters; the catalog's load state comes from `catalog`)
+  const loading = shallowRef(false);
+  const error = shallowRef<string | null>(null);
   const activeFilters = ref<ProviderFilters>({});
 
   // Getters
+  const providers = catalog.items;
+
   const allProviders = computed(() => {
     return [...providers.value].sort((a, b) =>
       a.name.localeCompare(b.name, 'es'),
@@ -76,26 +84,15 @@ export const useProviderStore = defineStore('providers', () => {
   );
 
   // Actions
-  async function fetchAll(): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      providers.value = await repository.fetchAll();
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al cargar proveedores';
-    }
-    finally {
-      loading.value = false;
-    }
-  }
-
   async function addProvider(data: ProviderFormData): Promise<Provider> {
     loading.value = true;
     error.value = null;
     try {
       const provider = await repository.insert(data);
-      providers.value.push(provider);
+      // Callers navigate to the new provider's detail: it must be in the catalog even if the
+      // refetch below fails.
+      catalog.setItems(items => [...items, provider]);
+      await catalog.refresh();
       return provider;
     }
     catch (e) {
@@ -111,11 +108,8 @@ export const useProviderStore = defineStore('providers', () => {
     loading.value = true;
     error.value = null;
     try {
-      const provider = await repository.update(id, data);
-      const index = providers.value.findIndex(p => p.id === id);
-      if (index !== -1) {
-        providers.value[index] = provider;
-      }
+      await repository.update(id, data);
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -131,12 +125,12 @@ export const useProviderStore = defineStore('providers', () => {
     loading.value = true;
     error.value = null;
     try {
+      const isAccommodation = getProviderById.value(id)?.category === PROVIDER_CATEGORY.ACCOMMODATION;
       await repository.remove(id);
-      const hotelRoomStore = useHotelRoomStore();
-      hotelRoomStore.deleteProviderRooms(id);
-
-      providers.value = providers.value.filter(p => p.id !== id);
-      error.value = null;
+      // The DB cascades the delete to the hotel's hotel_rooms/hotel_room_types.
+      if (isAccommodation)
+        queryCache.invalidateQueries({ key: catalogKeys.hotelRooms }).catch(() => {});
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -178,11 +172,13 @@ export const useProviderStore = defineStore('providers', () => {
 
   return {
     // State
-    providers,
     loading,
     error,
     activeFilters,
     // Getters
+    providers,
+    isLoaded: catalog.isLoaded,
+    loadError: catalog.loadError,
     allProviders,
     activeProviders,
     getProviderById,
@@ -195,7 +191,7 @@ export const useProviderStore = defineStore('providers', () => {
     filteredCount,
     hasActiveFilters,
     // Actions
-    fetchAll,
+    refetch: catalog.refetch,
     addProvider,
     updateProvider,
     deleteProvider,

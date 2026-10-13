@@ -20,16 +20,24 @@ async function handleSubmit(data: ProviderFormData) {
     return;
   }
 
+  let provider;
   try {
-    const provider = await providerStore.addProvider(data);
-    await hotelRoomStore.initRoomData(provider.id, totalRooms.value);
-
-    toast.add({ title: 'Hospedaje creado', description: `${provider.name} se creó correctamente`, color: 'primary' });
-    router.push(`/providers/accommodation/${provider.id}`);
+    provider = await providerStore.addProvider(data);
   }
   catch {
     toast.add({ title: 'Error', description: 'Ocurrió un error al crear el proveedor', color: 'error' });
+    return;
   }
+
+  try {
+    await hotelRoomStore.initRoomData(provider.id, totalRooms.value);
+    toast.add({ title: 'Hospedaje creado', description: `${provider.name} se creó correctamente`, color: 'primary' });
+  }
+  catch {
+    // The hotel exists: go to its detail anyway, where the total can be set again.
+    toast.add({ title: 'Hospedaje creado sin habitaciones', description: 'No se pudo guardar el total de habitaciones. Captúralo de nuevo en el detalle.', color: 'warning' });
+  }
+  router.push(`/providers/accommodation/${provider.id}`);
 }
 
 function handleCancel() {
