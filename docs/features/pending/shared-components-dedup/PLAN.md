@@ -37,7 +37,7 @@ Después de cada fase: `bun run lint:fix`, `bun run typecheck` (en una copia del
 
 ### Fase 1 — Formularios de pago a proveedores + fecha de hoy (bugs)
 
-Archivos: `pago-bus-form.vue`, `pago-hospedaje-form.vue`, `pago-proveedor-form.vue`,
+Archivos: `quotation-bus-payment-form.vue`, `quotation-accommodation-payment-form.vue`, `quotation-provider-payment-form.vue`,
 `payment-form.vue`, `utils/format-date.ts`.
 
 - **Bug:** el esquema usa `amount`, `paymentDate`, `paymentType`, `concept`, `notes`, pero los
@@ -48,7 +48,7 @@ Archivos: `pago-bus-form.vue`, `pago-hospedaje-form.vue`, `pago-proveedor-form.v
   6 pm sale la de mañana (mismo tipo de error que `parseDisplayDate`). Está en los 3 formularios
   de pago y en `payment-form.vue:19`.
 - Nuevo `todayISO()` en `utils/format-date.ts` (fecha local `YYYY-MM-DD`) y usarlo en los 4.
-- Un solo formulario `PagoProveedorForm` (genérico) en lugar de los 3: el esquema, el estado y
+- Un solo formulario `QuotationPaymentForm` (genérico) en lugar de los 3: el esquema, el estado y
   el template son iguales; solo cambia la llave del padre (`quotationBusId`,
   `quotationAccommodationId`, `quotationProviderId`). Opción: prop `parentKey` + `parentId`, o
   que el formulario emita solo los campos del pago y el historial agregue el id del padre
@@ -57,15 +57,15 @@ Archivos: `pago-bus-form.vue`, `pago-hospedaje-form.vue`, `pago-proveedor-form.v
 
 ### Fase 2 — Historiales de pago
 
-Archivos: `pago-bus-historial.vue`, `pago-hospedaje-historial.vue`,
-`pago-proveedor-historial.vue`; usos en `cotizacion-buses-section.vue:301`,
-`cotizacion-hospedaje-tabla.vue:366`, `cotizacion-proveedor-tabla.vue:604`.
+Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-history.vue`,
+`quotation-provider-payment-history.vue`; usos en `quotation-bus-section.vue:301`,
+`quotation-accommodation-table.vue:366`, `quotation-provider-table.vue:604`.
 
 - ~85 líneas iguales: lista, modal del formulario, modal de borrar y totales. Solo cambian el
   tipo, los getters/acciones del store y el subtítulo.
-- Un `PagoHistorial` que reciba un adaptador:
+- Un `QuotationPaymentHistory` que reciba un adaptador:
   `{ pagos, anticipado, saldoPendiente, add, update, remove }` + `subtitle`. Los 3 usos arman
-  su adaptador (o un composable `usePagoHistorialAdapter(kind, id)` en
+  su adaptador (o un composable `useQuotationPaymentHistoryAdapter(kind, id)` en
   `composables/quotation/`).
 - Unificar las diferencias que hoy existen sin razón:
   - "Registrar pago" deshabilitado con saldo 0 (hoy solo en bus) → en los 3.
@@ -77,15 +77,15 @@ Archivos: `pago-bus-historial.vue`, `pago-hospedaje-historial.vue`,
 - Componente con `v-model:open`, `title`, `description`, `loading?`, `confirmLabel?`
   (default "Eliminar"), emite `confirm`.
 - Reemplaza el `UModal` + Cancelar/Eliminar copiado en: los historiales (ya juntos tras la
-  fase 2), `cotizacion-buses-section`, `cotizacion-gastos-section`,
-  `cotizacion-proveedor-tabla`, `travel-service-list`, `travel-activity-list`,
-  `bus-list`, `hotel/hotel-rooms-manager`, `cotizacion-hospedaje-tabla`,
-  `cotizacion-precio-publico-section`, `pages/travels/[id].vue`,
+  fase 2), `quotation-bus-section`, `quotation-expense-section`,
+  `quotation-provider-table`, `travel-service-list`, `travel-activity-list`,
+  `bus-list`, `hotel/hotel-rooms-manager`, `quotation-accommodation-table`,
+  `quotation-public-price-section`, `pages/travels/[id].vue`,
   `pages/travels/[id]/travelers/index.vue`, `pages/payments/traveler/[id].vue`,
   `pages/coordinators/index.vue`. Inventario final con
   `grep -rln 'label="Cancelar"' app | xargs grep -l UModal`.
 - No tocar modales que no son de borrar (`travel-access-code-card`,
-  `cotizacion-precio-publico-aviso-modal`, `unsaved-changes-modal`).
+  `quotation-public-price-warning-modal`, `unsaved-changes-modal`).
 - Además hay 9 borrados con el `confirm()` nativo del navegador (`bus-list`,
   `travel-activity-list`, `coordinator-invite-button`, `provider-detail-card`,
   `payments/traveler/[id]`, `hotel/hotel-rooms-manager`, `coordinators/index`,
@@ -113,11 +113,11 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
 
 ### Fase 5 — `StatCard`
 
-- Renombrar `CotizacionKpiCard` → `StatCard` (`git mv`, ya hace lo mismo: label, icon, value,
+- Renombrar `QuotationKpiCard` → `StatCard` (`git mv`, ya hace lo mismo: label, icon, value,
   valueClass, slot) y usarla en las tarjetas copiadas a mano de `pages/payments/index.vue` (4),
   `pages/quotations/index.vue` (4), `pages/travels/dashboard.vue` (3),
   `pages/travels/[id]/travelers/index.vue` (3), `pages/travels/[id]/habitaciones/index.vue` (3)
-  y `cotizacion-hospedaje-resumen.vue` (3).
+  y `quotation-accommodation-summary.vue` (3).
 - El diseño cambia un poco (ícono junto a la etiqueta en vez de grande a la derecha). Decidir
   en la revisión visual si `StatCard` tiene una variante con ícono a la derecha o si todas
   quedan como la de cotización.
@@ -133,8 +133,8 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
   (y los demás que usen la misma estructura con otro espaciado).
 - **`actionsColumn(getActions)`** en `utils/` (o `composables/`): la columna con
   `UDropdownMenu` + botón `i-lucide-more-vertical` armada con `h(...)`, repetida en
-  `bus-list`, `provider-category-list`, `cotizacion-hospedaje-tabla`,
-  `cotizacion-precio-publico-section`, `travel-payments-panel`, `pages/coordinators/index`,
+  `bus-list`, `provider-category-list`, `quotation-accommodation-table`,
+  `quotation-public-price-section`, `travel-payments-panel`, `pages/coordinators/index`,
   `pages/payments/traveler/[id]`, `pages/travels/dashboard`,
   `pages/travels/[id]/travelers/index`.
 
@@ -144,7 +144,7 @@ No es duplicación, pero sale del mismo análisis y toca `LoadState` / `EmptySta
 mover a otra tarea si la rama crece mucho.
 
 - Textos de vacío que no corresponden: precios de venta en
-  `cotizacion-precio-publico-section.vue` (repite el de referencia, perdió la pista de «Usar
+  `quotation-public-price-section.vue` (repite el de referencia, perdió la pista de «Usar
   como plantilla»), `/payments` vacío (no hay viajes publicados, no "no hay pagos"), catálogo de
   cuartos de un hotel (`hotel-rooms-manager`) y unidades de una agencia (`bus-list`) hablan de
   repartir viajeros, y vistas de solo lectura dicen "Agrega…" sin botón. Probable solución:
@@ -286,7 +286,7 @@ galería) y se buscó con grep cada patrón en el resto. Fases 14-17.
   `updateCoordinator` sin `await`, así que el `try/catch` nunca atrapa nada: siempre muestra
   "Coordinador creado/actualizado" y cierra el modal aunque falle. `handleDelete` igual con
   `deleteCoordinator` (que además se traga el error): siempre dice "eliminado".
-- `components/bus-list.vue`: si `updateBus` o `deleteBus` fallan (devuelven `false`) no hay
+- `components/bus/bus-list.vue`: si `updateBus` o `deleteBus` fallan (devuelven `false`) no hay
   ningún toast; el modal se queda abierto sin explicación.
 - `pages/quotations/[id].vue` `handleCrearCotizacion`: `createQuotation` relanza el error y no
   hay `catch` → promesa rechazada sin aviso al usuario.
@@ -306,8 +306,8 @@ galería) y se buscó con grep cada patrón en el resto. Fases 14-17.
 Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 
 - **Estado de pago a proveedores** (Pendiente / Anticipo / Liquidado): copiado en
-  `cotizacion-proveedor-tabla`, `cotizacion-buses-section`, `cotizacion-hospedaje-tabla` y
-  `cotizacion-resumen-financiero`; en hospedaje "Anticipo" es `neutral` y en los otros `info`.
+  `quotation-provider-table`, `quotation-bus-section`, `quotation-accommodation-table` y
+  `quotation-financial-summary`; en hospedaje "Anticipo" es `neutral` y en los otros `info`.
 - **Estado de pago de viajeros** (Pendiente / Parcial o "Abono parcial" / Pagado): en
   `travel-payments-panel` (dos veces, con textos distintos) y `payment-summary-card`.
   → `utils/payment-status.ts` + `PaymentStatusBadge`.
@@ -316,7 +316,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - **Reparto** ("Asientos mínimos objetivo" / "Asientos vendibles"): opciones ×3, badge
   "Asientos min./vend." ×3; **tipo de costo** (total / por persona) ×2.
 - **Estado de cotización** (Borrador / Confirmada): `quotations/index` y
-  `cotizacion-header-actions`.
+  `quotation-header-actions`.
 - **Estado de viaje**: `travel-form` vuelve a escribir las etiquetas de `TRAVEL_STATUS_LABELS`
   → armar las opciones desde `TRAVEL_STATUSES`; el badge de estado está en 8 lugares →
   `TravelStatusBadge`.
@@ -345,7 +345,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - `useTravelQuotation(travelId)`: `useQuery(quotationByTravelQuery)` +
   `getCotizacionByTravel` + `useQueryLoadState` en 8 lugares.
 - `useQuotationRoomCounts(quotationId)`: `travelDetailQuery` + `countRoomsByType` +
-  `roomTypeKey` en `cotizacion-hospedaje-tabla` y `cotizacion-hospedaje-resumen`.
+  `roomTypeKey` en `quotation-accommodation-table` y `quotation-accommodation-summary`.
 - `useRedirectIfMissing(query, { to, message })`: el `watch([status, data])` de "no
   encontrado" (con la nota del bucle de `watchEffect`) está en `travels/[id]`,
   `quotations/[id]`, `payments/travel/[id]` y `payments/traveler/[id]`.
@@ -371,7 +371,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   (`dashboard`, `quotations/index`, `payments/index`), nombre con botón de expandir grupo ×2
   (travelers, `travel-payments-panel`), y un helper `deleteAction(onSelect)` para que
   "Eliminar" siempre lleve el mismo ícono y color.
-- `cotizacion-proveedor-tabla`, `cotizacion-buses-section` y `cotizacion-hospedaje-tabla`
+- `quotation-provider-table`, `quotation-bus-section` y `quotation-accommodation-table`
   repiten el grupo de acciones de pago, la de confirmar y los badges; las dos primeras usan
   `<table>` a mano y la de hospedaje `UTable`. Al juntar los badges (fase 14) y las acciones,
   decidir una sola forma de tabla.
@@ -399,10 +399,10 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   `toTravelerSeatChangeError` ya convierte en mensaje (con otros textos) → usar `error.message`.
 - `formatAjusteAmount` (`payment-summary-card`) = `calcAdjustmentAmount` del dominio de pagos.
 - Viajeros que toman un servicio `unitCost ? Math.round(payableCost / unitCost) : 0` ×2
-  (`cotizacion-proveedor-tabla`, `travels/[id]/optional-services`), y
+  (`quotation-provider-table`, `travels/[id]/optional-services`), y
   `travel-optional-service-card` recalcula pendiente y sobrepago que ya dan
   `getSaldoPendienteProveedor` / `getSobrepagoProveedor` → getters del store.
-- `cotizacion-gastos-section` calcula el costo por asiento de cada gasto a mano; proveedores y
+- `quotation-expense-section` calcula el costo por asiento de cada gasto a mano; proveedores y
   autobuses tienen getter (`getCostoPerPersonaProveedor/Bus`) → agregar el de gastos.
 - Los toasts de "guardado / no se pudo" después de cada acción del store se escriben a mano
   en casi todas las pantallas; se simplifican solos cuando el contrato de errores de la
@@ -413,7 +413,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - Los `update` de los repositorios (`if (data.x !== undefined) update.y = data.x`) se repiten en
   todos, pero cada uno decide distinto entre `!== undefined` y `'x' in data` (borrar vs. no
   tocar). Un helper genérico escondería esa diferencia.
-- `cotizacion-gasto-form` / `cotizacion-proveedor-form`: comparten ~20 líneas de campos
+- `quotation-expense-form` / `quotation-provider-form`: comparten ~20 líneas de campos
   (descripción, tipo de costo); dependen del contexto.
 - `agency-about-page-editor` / `agency-home-page-editor`: barra de plantilla/restaurar (~20
   líneas).

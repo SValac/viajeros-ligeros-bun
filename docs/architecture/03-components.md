@@ -1,150 +1,126 @@
 # 3. Componentes
 
-54 componentes en `app/components/`, agrupados por dominio. Todos usan `<script setup lang="ts">` con Composition API.
+~100 componentes en `app/components/`, agrupados en carpetas por dominio. Todos usan `<script setup lang="ts">` con Composition API.
 
 ---
 
-## 3.1 Layout y Navegación
+## 3.0 Convención de nombres (Nuxt)
 
-| Archivo | Propósito |
-|---------|-----------|
-| `the-sidebar.vue` | Navegación principal lateral |
-| `user-menu.vue` | Menú de cuenta de usuario (avatar, cerrar sesión) |
-| `logo.vue` | Logo de la marca |
-| `the-separator.vue` | Divisor UI reutilizable |
+Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archivo, **quitando los segmentos duplicados**: `travel/calendar/travel-calendar-filters.vue` → `<TravelCalendarFilters>`.
 
----
-
-## 3.2 Viajes
-
-| Archivo | Propósito |
-|---------|-----------|
-| `travel-form.vue` | Formulario completo crear/editar viaje (multi-sección) |
-| `travel-activity-form.vue` | Agregar/editar actividad del itinerario |
-| `travel-activity-list.vue` | Lista de actividades del itinerario |
-| `travel-activity-card.vue` | Card individual de actividad |
-| `travel-servicios-section.vue` | Sección de servicios incluidos |
-| `travel-service-form.vue` | Formulario de servicio |
-| `travel-service-list.vue` | Lista de servicios |
-| `travel-buses-section.vue` | Sección de buses asignados al viaje |
-| `travel-bus-form.vue` | Formulario de bus para el viaje |
-| `travel-bus-list.vue` | Lista de buses del viaje |
+- **El nombre del archivo es el nombre completo del componente**, con el prefijo de su carpeta: `quotation/bus/quotation-bus-form.vue`, no `quotation/bus/form.vue`. Así se encuentra por nombre de archivo y no cambia si se mueve.
+- **La subcarpeta debe repetir el prefijo del archivo.** Nuxt solo quita el segmento si el final de la ruta coincide con el inicio del archivo: `travel/itinerary/travel-activity-card.vue` daría `TravelItineraryTravelActivityCard`.
+- **Carpeta por dominio; subcarpeta solo si agrupa 3 o más archivos** con el mismo prefijo.
+- **En la raíz solo van componentes globales** que se usan en toda la app (estados de carga, inputs, layout).
+- **Nombres en inglés**, también la API pública (props, emits, tipos exportados).
+- Tras mover o renombrar, revisar `.nuxt/components.d.ts`: un nombre con un segmento repetido indica que la carpeta y el archivo no coinciden.
 
 ---
 
-## 3.3 Proveedores
+## 3.1 Globales (raíz)
 
 | Archivo | Propósito |
 |---------|-----------|
-| `provider-form.vue` | Crear/editar proveedor |
-| `provider-selector.vue` | Dropdown selector de proveedor |
-| `provider-filter-bar.vue` | Barra de filtros (categoría, ciudad, estado, búsqueda) |
-| `provider-active-filters.vue` | Chips de filtros activos con botón de limpiar |
-
----
-
-## 3.4 Buses
-
-| Archivo | Propósito |
-|---------|-----------|
-| `bus-form.vue` | Crear/editar bus en inventario |
-| `bus-list.vue` | Lista de buses de un proveedor |
-
----
-
-## 3.5 Hoteles y Habitaciones
-
-| Archivo | Propósito |
-|---------|-----------|
-| `hotel/hotel-rooms-manager.vue` | Gestor completo de habitaciones de hotel |
-| `hotel/hotel-rooms-summary.vue` | Resumen de habitaciones disponibles/usadas |
-| `hotel/hotel-room-type-card.vue` | Card de tipo de habitación |
-| `hotel/hotel-room-type-form.vue` | Formulario de tipo de habitación |
-| `hotel/bed-configuration-input.vue` | UI para configurar camas (tamaño + cantidad) |
-
----
-
-## 3.6 Cotización — Proveedores
-
-| Archivo | Propósito |
-|---------|-----------|
-| `cotizacion-proveedor-form.vue` | Agregar proveedor a cotización |
-| `cotizacion-proveedor-tabla.vue` | Tabla de proveedores cotizados |
-| `cotizacion-proveedores-section.vue` | Sección completa de proveedores |
-
----
-
-## 3.7 Cotización — Hospedaje
-
-| Archivo | Propósito |
-|---------|-----------|
-| `cotizacion-hospedaje-form.vue` | Agregar hospedaje a cotización |
-| `cotizacion-hospedaje-tabla.vue` | Tabla de hospedajes cotizados |
-| `cotizacion-hospedaje-resumen.vue` | Resumen de costos de hospedaje |
-| `cotizacion-hospedaje-section.vue` | Sección completa de hospedaje |
-
----
-
-## 3.8 Cotización — Buses
-
-| Archivo | Propósito |
-|---------|-----------|
-| `cotizacion-bus-form.vue` | Agregar o editar (prop `bus`) un bus de la cotización |
-| `cotizacion-buses-section.vue` | Sección completa de buses cotizados |
-
----
-
-## 3.9 Cotización — General
-
-| Archivo | Propósito |
-|---------|-----------|
-| `cotizacion-header-actions.vue` | Toolbar de la cotización (confirmar, etc.) |
-| `cotizacion-precio-publico-section.vue` | Gestión de precios públicos |
-| `cotizacion-resumen-financiero.vue` | Resumen financiero total de la cotización |
-
----
-
-## 3.10 Pagos a Proveedores / Hospedajes / Buses
-
-| Archivo | Propósito |
-|---------|-----------|
-| `pago-proveedor-form.vue` | Registrar pago a proveedor |
-| `pago-proveedor-historial.vue` | Historial de pagos a proveedor |
-| `pago-hospedaje-form.vue` | Registrar pago de hospedaje |
-| `pago-hospedaje-historial.vue` | Historial de pagos de hospedaje |
-| `pago-bus-form.vue` | Registrar pago de bus |
-| `pago-bus-historial.vue` | Historial de pagos de bus |
-
----
-
-## 3.11 Pagos de Viajeros
-
-| Archivo | Propósito |
-|---------|-----------|
-| `payment-form.vue` | Registrar pago de viajero |
-| `payment-summary-card.vue` | Card de resumen de cuenta del viajero |
-| `payment-account-config-form.vue` | Configurar precios, descuentos y recargos del viajero |
-
----
-
-## 3.12 Viajeros y Coordinadores
-
-| Archivo | Propósito |
-|---------|-----------|
-| `traveler-form.vue` | Agregar/editar viajero |
-| `traveler-filter-bar.vue` | Filtros de lista de viajeros |
-| `coordinator-form.vue` | Crear/editar coordinador |
-
----
-
-## 3.13 Mapas y Utilitarios
-
-| Archivo | Propósito |
-|---------|-----------|
-| `map-location-picker.vue` | Selector de ubicación con Google Maps (autocomplete + pin) |
-| `map-location-display.vue` | Mapa estático de solo lectura para mostrar ubicación |
+| `load-state.vue` | Carga, error con reintento y contenido de una query |
+| `empty-state.vue` | Estado vacío con textos de `utils/empty-states.ts` y acciones |
+| `money-input.vue` | Input de moneda (o porcentaje) |
+| `phone-input.vue` | Input de teléfono con lada |
+| `char-counter.vue` | Contador de caracteres para textareas |
 | `rich-text-editor.client.vue` | Editor rich text (Tiptap) — solo cliente |
 | `rich-content.vue` | Render de contenido rich text con sanitización DOMPurify |
+| `unsaved-changes-modal.vue` | Confirmación al salir con cambios sin guardar |
+| `the-sidebar.vue` | Navegación principal lateral |
+| `user-menu.vue` | Menú de cuenta de usuario |
+| `logo.vue` | Logo de la marca |
+| `the-separator.vue` | Divisor con texto o icono |
+
+---
+
+## 3.2 `travel/` — Viajes
+
+| Archivo | Propósito |
+|---------|-----------|
+| `travel-form.vue` | Crear/editar viaje |
+| `travel-access-code-card.vue` | Código de acceso del viaje |
+| `travel-accommodation-card.vue` / `-form.vue` | Hospedaje y habitaciones del viaje |
+| `travel-room-type-group.vue` | Habitaciones de un tipo |
+| `travel-buses-section.vue` | Buses asignados al viaje |
+| `travel-coordinators-card.vue` | Coordinadores y sus asientos |
+| `travel-optional-service-card.vue` / `-list.vue` | Servicios cobrados por persona |
+| `travel-payments-panel.vue` | Pagos de los viajeros de un viaje |
+| `travel-service-form.vue` / `-list.vue` / `travel-services-editor.vue` | Servicios incluidos |
+| `activity/travel-activity-*.vue` | Itinerario: lista, card y formulario de actividad |
+| `calendar/travel-calendar*.vue` | Calendario de viajes: calendario, filtros, lista y resumen |
+| `gallery/travel-gallery-*.vue` | Galería: sección, subida y visor |
+
+---
+
+## 3.3 `quotation/` — Cotización
+
+| Archivo | Propósito |
+|---------|-----------|
+| `quotation-header-actions.vue` | Estado y confirmación de la cotización |
+| `quotation-parameters-card.vue` | Parámetros (asientos, meta mínima) |
+| `quotation-financial-summary.vue` | Resumen financiero |
+| `quotation-summary-section.vue` / `quotation-kpi-card.vue` | Piezas del resumen |
+| `quotation-expense-form.vue` / `-section.vue` | Gastos extra |
+| `accommodation/quotation-accommodation-*.vue` | Hospedaje: sección, tabla, formulario, tipos de habitación, resumen y pagos (`-payment-form`, `-payment-history`) |
+| `bus/quotation-bus-*.vue` | Buses: sección, formulario y pagos |
+| `provider/quotation-provider-*.vue` | Proveedores de servicios: sección, tabla, formulario, ajustes de precio, cortesía y pagos |
+| `public-price/quotation-public-price-*.vue` | Precios al público: sección, formulario y aviso al editar/eliminar un precio en uso |
+
+---
+
+## 3.4 `provider/` — Proveedores
+
+| Archivo | Propósito |
+|---------|-----------|
+| `provider-category-list.vue` | Lista de proveedores de una categoría |
+| `provider-detail-card.vue` | Detalle de un proveedor |
+| `provider-form.vue` | Crear/editar proveedor |
+| `provider-selector.vue` | Selector de proveedor |
+| `provider-filter-bar.vue` / `provider-active-filters.vue` | Filtros y chips de filtros activos |
+
+---
+
+## 3.5 `hotel/` — Habitaciones de hotel
+
+| Archivo | Propósito |
+|---------|-----------|
+| `hotel-rooms-manager.vue` | Gestor de tipos de habitación de un hotel |
+| `hotel-rooms-summary.vue` | Resumen de habitaciones |
+| `hotel-room-type-card.vue` / `-form.vue` | Tipo de habitación |
+| `hotel-bed-configuration-input.vue` | Configuración de camas (tamaño + cantidad) |
+
+---
+
+## 3.6 `bus/`, `coordinator/`, `traveler/`, `payment/`, `map/`
+
+| Archivo | Propósito |
+|---------|-----------|
+| `bus/bus-form.vue` / `bus-list.vue` | Inventario de buses de una agencia |
+| `bus/bus-seat-map.vue` / `bus-seat-card.vue` | Mapa de asientos |
+| `coordinator/coordinator-form.vue` | Crear/editar coordinador |
+| `coordinator/coordinator-invite-button.vue` | Invitar coordinador a la app |
+| `coordinator/coordinator-seat-form.vue` | Asiento del coordinador en el viaje |
+| `traveler/traveler-form.vue` / `traveler-filter-bar.vue` | Viajeros: formulario y filtros |
+| `payment/payment-form.vue` | Registrar pago de viajero |
+| `payment/payment-summary-card.vue` | Resumen de cuenta del viajero |
+| `payment/payment-account-config-form.vue` | Precio, descuentos y recargos del viajero |
+| `map/map-location-picker.vue` | Selector de ubicación con Google Maps |
+
+---
+
+## 3.7 `agency/` — Perfil de la agencia
+
+| Archivo | Propósito |
+|---------|-----------|
+| `agency-profile-form.vue` / `agency-brand-preview.vue` / `agency-color-input.vue` | Datos y marca |
+| `agency-seo-form.vue` / `agency-seo-preview.vue` | SEO |
+| `agency-about-page-form.vue` / `-editor.vue` | Página "Nosotros" |
+| `agency-image-upload.vue` / `agency-icon-picker.vue` | Imagen e icono |
+| `home/agency-home-*.vue` | Página de inicio: formulario, editor y campos de bloque |
+| `page/agency-page-*.vue` | Secciones editables de una página: editor, card, items y modal de confirmación |
 
 ---
 
