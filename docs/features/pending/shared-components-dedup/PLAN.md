@@ -32,6 +32,19 @@ Sigue el mismo enfoque que `completed/shared-load-states/PLAN.md` (`LoadState` /
 ## Fases
 
 Cada fase = un commit (o varios por tema) en la misma rama `feature/shared-components-dedup`.
+
+**Dónde va cada componente nuevo** (convención de `docs/claude/04-code-style.md`, ver
+`completed/components-by-domain/PLAN.md`): nombre en inglés, también props y emits; el archivo
+lleva el nombre completo con el prefijo de su carpeta.
+- Raíz (globales): `ConfirmDeleteModal` (`confirm-delete-modal.vue`), `StatCard`,
+  `PasswordInput`, `FormActions`, `PageHeader`, `ImageUpload`.
+- `quotation/`: `QuotationPaymentForm` y `QuotationPaymentHistory`
+  (`quotation/quotation-payment-form.vue`, `quotation/quotation-payment-history.vue`); al
+  juntarlos se borran los 6 `quotation-{accommodation,bus,provider}-payment-{form,history}.vue`
+  de las subcarpetas.
+- `provider/`: `ProviderCreatePage`, `ProviderDetailPage` (`provider/provider-create-page.vue`…).
+- `agency/page/`: `AgencyPageForm` (`agency/page/agency-page-form.vue`).
+- Tras crear o mover, revisar `.nuxt/components.d.ts` (ningún nombre con un segmento repetido).
 Después de cada fase: `bun run lint:fix`, `bun run typecheck` (en una copia del scratchpad si
 `nuxt dev` está corriendo) y revisar en el navegador las pantallas afectadas.
 
@@ -62,7 +75,8 @@ Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-
 `quotation-accommodation-table.vue:366`, `quotation-provider-table.vue:604`.
 
 - ~85 líneas iguales: lista, modal del formulario, modal de borrar y totales. Solo cambian el
-  tipo, los getters/acciones del store y el subtítulo.
+  tipo, los getters/acciones del store y el subtítulo (hoy props `providerName`, `hotelName`,
+  `busLabel` → un solo `subtitle`).
 - Un `QuotationPaymentHistory` que reciba un adaptador:
   `{ pagos, anticipado, saldoPendiente, add, update, remove }` + `subtitle`. Los 3 usos arman
   su adaptador (o un composable `useQuotationPaymentHistoryAdapter(kind, id)` en
@@ -102,7 +116,7 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
   (`utils/provider-categories.ts`). Falta un dato: el título de "Nuevo …" y el género del
   toast ("Proveedor creado" / "Agencia creada" / "Guía creado") → agregar al meta
   `singularLabel` y `createdTitle` (o similar).
-- `ProviderCreatePage` (`category`): header con volver, `ProviderForm` con `fixed-categoria`,
+- `ProviderCreatePage` (`category`): header con volver, `ProviderForm` con `fixed-category`,
   toast y redirección. Slot `extra-fields` (hospedaje: cantidad de habitaciones) y un hook
   `afterCreate(provider)` para `hotelRoomStore.initRoomData` con su toast de advertencia.
 - `ProviderDetailPage` (`category`): `LoadState` + breadcrumb + `ProviderDetailCard`, con slot
@@ -113,7 +127,8 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
 
 ### Fase 5 — `StatCard`
 
-- Renombrar `QuotationKpiCard` → `StatCard` (`git mv`, ya hace lo mismo: label, icon, value,
+- Mover `quotation/quotation-kpi-card.vue` → `stat-card.vue` en la raíz (`StatCard`, global porque
+  se usa en toda la app; `git mv`, ya hace lo mismo: label, icon, value,
   valueClass, slot) y usarla en las tarjetas copiadas a mano de `pages/payments/index.vue` (4),
   `pages/quotations/index.vue` (4), `pages/travels/dashboard.vue` (3),
   `pages/travels/[id]/travelers/index.vue` (3), `pages/travels/[id]/habitaciones/index.vue` (3)
@@ -179,7 +194,7 @@ Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `payme
   nombres que exporta el store (los usan las pantallas).
 - Diferencias sin razón que se unifican al juntarlas:
   - `getSaldoPendienteProveedor` usa `Math.max(0, …)`; los de bus y hospedaje pueden dar
-    negativo (y ese negativo llega como `maxMonto` al formulario).
+    negativo (y ese negativo llega como `maxAmount` al formulario).
   - Bus usa `bus.totalCost ?? 0` en el estado y `bus.totalCost` en el saldo.
 - `use-quotation-repository.ts`: `insert/update/delete…Payment` × 3, el `update` con los mismos
   5 `if` → una función por tabla (`'provider_payments' | 'accommodation_payments' | 'bus_payments'`).
