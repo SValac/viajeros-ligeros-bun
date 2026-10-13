@@ -5,7 +5,7 @@
 
 **Complejidad:** Media — muchos archivos (~40), pero cada cambio es de plantilla.
 
-**Estado:** En progreso (rama `feature/shared-load-states`).
+**Estado:** Completa (rama `feature/shared-load-states`).
 
 ---
 
@@ -13,7 +13,7 @@
 
 Tarea del backlog del project #3: "Refactor: componente compartido para estados de carga, error y
 vacío". En la fase 5 de on-demand loading (PR #129) nació `app/components/catalog-load-state.vue`
-(spinner → error + "Reintentar" → slot), y hoy lo usan 13 pantallas de catálogos. Las pantallas de
+(spinner → error + "Reintentar" → slot), y hoy lo usan 12 pantallas de catálogos. Las pantallas de
 viajes, cotizaciones, pagos y calendario repiten el mismo bloque a mano en unos 13 lugares más, y
 los estados vacíos están copiados con al menos tres estilos distintos (`w-16 text-gray-300` + h3,
 `w-12 text-muted`, `size-10 opacity-40`), con textos distintos en cada pantalla. Objetivo: un
@@ -82,7 +82,7 @@ sus textos**: cada sección del CRM tiene un solo vacío genérico.
 
 ## Inventario
 
-**Carga/error a `LoadState`** (los 13 de catálogos solo cambian de nombre):
+**Carga/error a `LoadState`** (los 12 de catálogos solo cambian de nombre):
 - Pantalla completa (`fill`): `pages/travels/[id].vue`, `pages/quotations/[id].vue` (exterior),
   `pages/quotations/index.vue`, `pages/payments/traveler/[id].vue`.
 - Sección: `pages/quotations/[id].vue` (cotización), `pages/travels/dashboard.vue` (el aviso
@@ -117,7 +117,7 @@ sus textos**: cada sección del CRM tiene un solo vacío genérico.
 
 1. `docs`: `docs/features/pending/shared-load-states/PLAN.md` (este plan) y link desde el item
    del project #3. El item pasa a "In progress".
-2. `refactor(ui): rename CatalogLoadState to LoadState and add fill`, con los 13 usos.
+2. `refactor(ui): rename CatalogLoadState to LoadState and add fill`, con los 12 usos.
 3. `refactor(queries): extract useQueryLoadState from the catalog store`, con `catalogs.ts`.
 4. `refactor(...)`: `LoadState` en las pantallas, un commit por área (viajes, cotizaciones,
    pagos, calendario).
@@ -152,9 +152,62 @@ sus textos**: cada sección del CRM tiene un solo vacío genérico.
 ## Progreso
 
 - [x] 1. Plan y item del project
-- [ ] 2. `CatalogLoadState` → `LoadState` + `fill`
-- [ ] 3. `useQueryLoadState`
-- [ ] 4. `LoadState` en viajes, cotizaciones, pagos y calendario
-- [ ] 5. `EmptyState` y reemplazo de los vacíos
-- [ ] 6. Docs de arquitectura, mover a `completed/`
-- [ ] Verificación
+- [x] 2. `CatalogLoadState` → `LoadState` + `fill`
+- [x] 3. `useQueryLoadState`
+- [x] 4. `LoadState` en viajes, cotizaciones, pagos y calendario
+- [x] 5. `EmptyState` y reemplazo de los vacíos
+- [x] 6. Docs de arquitectura, mover a `completed/`
+- [x] Verificación
+
+## Resultado (2026-10-13)
+
+### Decisiones que cambiaron respecto al diseño
+
+- **`isLoaded = data !== undefined`**, no `!= null`: la cotización resuelve a `null` cuando el viaje
+  no tiene, y eso es "cargado". Los detalles que redirigen en `null` (viaje, viajero) ya tenían un
+  `v-if` sobre el registro dentro del slot (también lo pide el typecheck).
+- **`label` con artículo**: el mensaje concuerda solo ("No se pudieron cargar los viajes" / "No se
+  pudo cargar la cotización").
+- **`/payments/traveler/[id]` y el calendario** usan `LoadState` sin `fill` (su contenedor no tiene
+  altura completa).
+- **Secciones de `EMPTY_STATES`**: `travels`, `quotation`, `travelers`, `payments`, `providers`,
+  `coordinators`, `buses`, `lodging` (hospedaje de la cotización, habitaciones del viaje y tipos de
+  habitación del hotel), `services` (proveedores de la cotización, servicios del viaje y por
+  persona), `expenses`, `prices` (precios de referencia y de venta), `gallery`, `activities` y
+  `noResults`.
+- **`EmptyState`** siempre `variant="naked"`; `compact` (`size="sm"`) en historiales de pago,
+  precios y la tarjeta de servicio por persona.
+
+### Arreglos de paso
+
+- **Reintentar mostraba el error viejo**: en Colada `status` sigue en `'error'` durante el
+  reintento. Ahora sale el spinner (verificado en el detalle del viaje con `fetch` retrasado).
+- **`/payments` sin viajes en la página**: los totales quedan desactivados (sin ids) y el spinner no
+  se iba. El `LoadState` de los totales recibe `:is-loaded` también cuando no hay ids.
+- **Resumen del calendario**: no tenía estado de error; ahora muestra error + Reintentar.
+- **Hospedaje de la cotización**: tabla y resumen mostraban cada uno su vacío; el resumen ya no.
+- `useProviderCategoryList` ya no expone `emptyStateTitle`/`Description`/`ButtonLabel`.
+
+### Fuera
+
+- `pages/profile.vue` (store Pinia + `UAlert`).
+- Textos en línea que no son bloques de lista: "No hay viajes este mes" del calendario, avisos
+  (`UAlert`) dentro de formularios.
+
+### Verificación (local, playwright-cli contra un servidor aparte en :3002)
+
+- [x] Errores con `route` 500: viajes (dashboard, `/payments`, `/calendar`, `/quotations`),
+  detalle del viaje (`fill`), resumen del calendario (solo `id=eq.`), viajeros (pestañas
+  Viajeros, Habitaciones y Pagos), cotización (Habitaciones, Servicios por persona, Autobuses,
+  detalle de la cotización), pagos (`/payments` → "No se pudieron cargar los pagos").
+- [x] Reintentar: spinner durante el reintento y error otra vez si sigue fallando; con la ruta
+  quitada, carga el contenido (dashboard y detalle del viaje).
+- [x] Cambio de mes en el calendario: la cuadrícula sigue visible, sin spinner.
+- [x] Vacíos: "Sin resultados" con acción en coordinadores; itinerario, galería, autobuses y
+  servicios por persona de un viaje sin datos; cotización sin proveedores, hospedaje ni gastos;
+  "Este viaje no tiene cotización"; historial de pagos de un proveedor (`compact`). Escritorio y
+  tablet (900 px).
+- [x] `eslint` y `typecheck` (copia en el scratchpad) limpios.
+- Consola: solo `NUXT_E4016` (`<NuxtPage />` sin montar) en el viaje con error forzado y en
+  cotizaciones de viajes sin cotización. `main` tiene el mismo `<NuxtPage />` condicional; con
+  datos normales no aparece.

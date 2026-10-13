@@ -141,10 +141,29 @@ en selects por toda la app), la primera vez que una pantalla usa su store. Cada 
 - `useXCatalog` es un `defineQuery`, no `useQuery`: dentro de un store, `useQuery` se ataría al
   componente que creó el store y se apagaría al desmontarse. Así la query queda activa mientras
   vive el store: las escrituras la invalidan y se vuelve a pedir desde cualquier pantalla.
-- Las pantallas que muestran un catálogo usan `CatalogLoadState` (spinner → error + Reintentar →
-  contenido): antes de cargar, una lista vacía o un registro faltante serían mentira.
+- Las pantallas que muestran un catálogo envuelven el contenido en `LoadState` con `isLoaded` y
+  `loadError` del store (ver "Estados de carga, error y vacío").
 - Escrituras que validan contra el catálogo usan `ensureFresh()`; un alta mete el registro a la
   caché con `setItems` antes del refetch.
+
+### Estados de carga, error y vacío
+
+- **`LoadState`** (`app/components/load-state.vue`): spinner → error + "Reintentar" → slot. Antes de
+  la primera carga, una lista vacía o un registro faltante serían mentira; si falla un refetch con
+  datos ya cargados, se queda el contenido. `label` lleva el artículo ("los viajeros", "la
+  cotización") y el verbo concuerda solo. `fill` centra en toda la altura (páginas completas).
+- **`useQueryLoadState(query)`** (`app/queries/load-state.ts`) da sus props desde un `useQuery`:
+  `<LoadState v-bind="travelersLoad" label="los viajeros" @retry="refetchTravelers()">`.
+  `isLoaded` es `data !== undefined` (`null` = "no hay" o "no existe" también es respuesta: el slot
+  necesita su propio `v-if`). `loadError` se oculta mientras corre el reintento, para que vuelva el
+  spinner (en Colada, `status` sigue en `'error'` durante el reintento). Los catálogos usan la
+  misma regla.
+- Dos queries en una pantalla: dos `LoadState` anidados, cada uno con su mensaje y reintento. Una
+  query desactivada sin datos (p. ej. totales de una página sin viajes) nunca carga: se le pasa
+  `:is-loaded` a mano.
+- **`EmptyState`** (`app/components/empty-state.vue`, sobre `UEmpty`): un texto por sección del CRM
+  en `EMPTY_STATES` (`app/utils/empty-states.ts`); cada pantalla solo pone sus acciones.
+  `section="noResults"` para listas filtradas sin filas. `compact` dentro de un panel pequeño.
 
 ### Más de 1000 filas
 
