@@ -3,11 +3,8 @@ import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, Bu
 
 import { fetchInBatches } from '~/utils/fetch-in-batches';
 import {
-  mapAccommodationPaymentRowToDomain,
-  mapBusPaymentRowToDomain,
   mapProviderCostFields,
   mapProviderOptOutRowToDomain,
-  mapProviderPaymentRowToDomain,
   mapProviderPriceAdjustmentRowToDomain,
   mapQuotationAccommodationDetailRowToDomain,
   mapQuotationAccommodationRowToDomain,
@@ -18,7 +15,12 @@ import {
   mapQuotationPublicPriceRowToDomain,
   mapQuotationRowToDomain,
   mapTravelerPriceAdjustmentRowToDomain,
-} from '~/utils/mappers';
+} from '~/utils/mappers/quotation-mappers';
+import {
+  mapAccommodationPaymentRowToDomain,
+  mapBusPaymentRowToDomain,
+  mapProviderPaymentRowToDomain,
+} from '~/utils/mappers/supplier-payment-mappers';
 
 export function useQuotationRepository() {
   const supabase = useSupabase();

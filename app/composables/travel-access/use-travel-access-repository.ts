@@ -1,6 +1,6 @@
 import type { TravelAccessCode, TravelAccessCodeGenerated } from '~/types/travel-access';
 
-import { mapGeneratedRpcResultToDomain } from '~/utils/mappers';
+import { mapGeneratedRpcResultToDomain } from '~/utils/mappers/travel-access-mappers';
 
 export function useTravelAccessRepository() {
   const supabase = useSupabase();
