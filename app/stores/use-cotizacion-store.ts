@@ -516,12 +516,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  const hasQuotation = computed(() => {
-    return (travelId: string): boolean => {
-      return quotations.value.some(c => c.travelId === travelId);
-    };
-  });
-
   const filteredProveedores = computed(() => {
     return (quotationId: string): QuotationProvider[] => {
       let result = quotationProviders.value.filter(p => p.quotationId === quotationId);
@@ -717,20 +711,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   }
 
   // Actions
-
-  async function fetchAll(): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      quotations.value = await repository.fetchAll();
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      loading.value = false;
-    }
-  }
 
   async function fetchByTravel(travelId: string, options?: { force?: boolean }): Promise<void> {
     const force = options?.force === true;
@@ -1932,7 +1912,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getAccommodationPaymentStatus,
     getSaldoTotalPendienteHospedajes,
     puedeConfirmar,
-    hasQuotation,
     filteredProveedores,
     getHospedajesByQuotation,
     getTotalCostoHospedajes,
@@ -1955,7 +1934,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getGastosTipoMinimo,
     getGastosTipoTotal,
     // Actions
-    fetchAll,
     fetchByTravel,
     createQuotation,
     syncSeatPriceForTravel,
