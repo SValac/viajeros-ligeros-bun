@@ -1,6 +1,6 @@
 # Fase 3 — Viajeros y asignaciones de habitación por viaje
 
-**Estado:** Completa en la rama `feature/on-demand-loading-phase-3` (desde `main` 55c76df), verificada en local; falta el PR
+**Estado:** Completa — PR #126 (2026-10-12), en producción
 **Dependencia:** Fase 2 (los conteos de los listados ya no usan el store)
 **Migración:** No
 

@@ -1,8 +1,7 @@
 # Fase 4 — Cotizaciones por viaje
 
-**Estado:** Partida en dos PRs, ambas completas y verificadas en local. **4a** en la rama
-`feature/on-demand-loading-phase-4a` (desde `main` 455042b); **4b** en
-`feature/on-demand-loading-phase-4b` (desde la 4a, fddce4b). Falta abrir los PRs.
+**Estado:** Completa — partida en dos PRs: **4a** PR #127 y **4b** PR #128 (2026-10-12), en
+producción.
 **Dependencia:** Fase 1 (el detalle de viaje ya está en caché); puede ir en paralelo con 2-3
 **Migración:** No
 
