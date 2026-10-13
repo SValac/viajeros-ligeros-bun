@@ -1,7 +1,7 @@
 # Fase 5 — Catálogos bajo demanda y adiós al plugin de arranque
 
 **Estado:** Completa en la rama `feature/on-demand-loading-phase-5` (desde `main` 05de48a), verificada
-en local; falta el PR
+en local
 **Dependencia:** Fases 2-4 (el plugin ya solo carga catálogos)
 **Migración:** No
 

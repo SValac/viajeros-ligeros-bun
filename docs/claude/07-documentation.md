@@ -54,6 +54,7 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `provider-category-tickets.md` — Categoría de proveedor "Entradas" (zoológico, parques…) y una sola lista de categorías para menú, filtros y selects
 - `quotation-extra-expenses.md` — Gastos adicionales de la cotización (publicidad, viáticos, comisiones…): categoría libre, costo total o por persona, repartidos en el precio por asiento
 - `travel-calendar.md` — Calendario de viajes (`/calendar`): mes sobre `UCalendar` con barras por viaje y resumen al elegir uno
+- `on-demand-data-loading/PLAN.md` — Carga bajo demanda con Pinia Colada: nada al arrancar, cada pantalla pide su alcance, catálogos la primera vez que se usan, sin cortes silenciosos a 1000 filas
 
 ---
 
