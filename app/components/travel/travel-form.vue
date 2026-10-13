@@ -175,7 +175,7 @@ onMounted(() => agencyProfileStore.fetchProfile());
 const canPublish = computed(() => agencyProfileStore.isComplete || travel?.status === 'published');
 
 // Opciones de estado para el select
-const estadoOptions = computed<SelectItem[]>(() => [
+const statusOptions = computed<SelectItem[]>(() => [
   { value: 'pending', label: 'Pendiente' },
   { value: 'published', label: 'Publicado', disabled: !canPublish.value },
   { value: 'in_progress', label: 'En Curso' },
@@ -413,7 +413,7 @@ function onCancel() {
           >
             <USelect
               v-model="state.status"
-              :items="estadoOptions"
+              :items="statusOptions"
               icon="i-lucide-circle-dot"
               class="w-full"
             />

@@ -27,12 +27,12 @@ const editingActivity = ref<TravelActivity | null>(null);
 const toast = useToast();
 
 // Calcular duración del viaje en días
-const duracionViaje = computed(() => {
+const travelDuration = computed(() => {
   if (!props.startDate || !props.endDate)
     return 0;
-  const inicio = new Date(props.startDate);
+  const start = new Date(props.startDate);
   const fin = new Date(props.endDate);
-  const diff = fin.getTime() - inicio.getTime();
+  const diff = fin.getTime() - start.getTime();
   return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir ambos días
 });
 
@@ -158,7 +158,7 @@ function getActivityActions(activity: TravelActivity) {
     <div class="flex items-center justify-between">
       <div class="text-sm text-muted">
         {{ sortedActivities.length }} actividad{{ sortedActivities.length !== 1 ? 'es' : '' }}
-        {{ duracionViaje > 0 ? `en ${duracionViaje} día${duracionViaje !== 1 ? 's' : ''}` : '' }}
+        {{ travelDuration > 0 ? `en ${travelDuration} día${travelDuration !== 1 ? 's' : ''}` : '' }}
       </div>
       <UButton
         icon="i-lucide-plus"
@@ -204,7 +204,7 @@ function getActivityActions(activity: TravelActivity) {
       <template #body>
         <TravelActivityForm
           :activity="editingActivity"
-          :max-day="duracionViaje"
+          :max-day="travelDuration"
           @submit="handleSubmit"
           @cancel="isActivityModalOpen = false"
         />

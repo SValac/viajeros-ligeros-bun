@@ -17,7 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const travelerType = ref<TravelerType>(props.config?.travelerType ?? 'adult');
-const selectedPrecioPublicoId = ref<string | undefined>(
+const selectedPublicPriceId = ref<string | undefined>(
   props.config?.publicPriceId ?? undefined,
 );
 
@@ -36,7 +36,7 @@ const travelerTypeOptions = [
 // Several prices share a type (e.g. three "Habitación para 2 personas"), so each option
 // also shows its description (one line per hotel) to tell them apart. The menu grows to fit
 // it from `sm` up; on phones it keeps the field's width and long lines wrap instead.
-const precioPublicoOptions = computed(() =>
+const publicPriceOptions = computed(() =>
   props.publicPrices.map(p => ({
     label: `${p.priceType} — ${formatCurrency(p.pricePerPerson)}`,
     description: p.description,
@@ -44,19 +44,19 @@ const precioPublicoOptions = computed(() =>
   })),
 );
 
-const selectedPrecio = computed(() =>
-  props.publicPrices.find(p => p.id === selectedPrecioPublicoId.value),
+const selectedPrice = computed(() =>
+  props.publicPrices.find(p => p.id === selectedPublicPriceId.value),
 );
 
 // Without a public price the traveler would cost $0 and any payment would mark them as paid.
-const canSave = computed(() => selectedPrecio.value !== undefined);
+const canSave = computed(() => selectedPrice.value !== undefined);
 
-const ajusteTypeOptions = [
+const adjustmentTypeOptions = [
   { label: 'Monto fijo', value: 'fixed' },
   { label: 'Porcentaje (%)', value: 'percentage' },
 ];
 
-const appliedPrice = computed(() => selectedPrecio.value?.pricePerPerson ?? 0);
+const appliedPrice = computed(() => selectedPrice.value?.pricePerPerson ?? 0);
 
 const finalCost = computed(() => {
   const base = appliedPrice.value;
@@ -93,8 +93,8 @@ function handleSubmit() {
     travelId: props.travelId,
     travelerId: props.travelerId,
     travelerType: travelerType.value,
-    publicPriceId: selectedPrecio.value?.id,
-    publicPriceAmount: selectedPrecio.value?.pricePerPerson,
+    publicPriceId: selectedPrice.value?.id,
+    publicPriceAmount: selectedPrice.value?.pricePerPerson,
     discounts: discounts.value
       .filter(d => d.amount > 0)
       .map(d => ({ amount: d.amount, type: d.type, description: d.description || undefined })),
@@ -142,8 +142,8 @@ function handleSubmit() {
         Precio al público
       </label>
       <USelectMenu
-        v-model="selectedPrecioPublicoId"
-        :items="precioPublicoOptions"
+        v-model="selectedPublicPriceId"
+        :items="publicPriceOptions"
         value-key="value"
         label-key="label"
         :filter-fields="['label', 'description']"
@@ -194,7 +194,7 @@ function handleSubmit() {
         <USelect
           v-model="item.type"
           aria-label="Tipo de descuento"
-          :items="ajusteTypeOptions"
+          :items="adjustmentTypeOptions"
           value-key="value"
           label-key="label"
           class="w-40"
@@ -241,7 +241,7 @@ function handleSubmit() {
         <USelect
           v-model="item.type"
           aria-label="Tipo de incremento"
-          :items="ajusteTypeOptions"
+          :items="adjustmentTypeOptions"
           value-key="value"
           label-key="label"
           class="w-40"

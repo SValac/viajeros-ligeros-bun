@@ -54,11 +54,11 @@ const state = ref<HotelRoomTypeFormData>({
 // Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
 const additionalDetailsInput = useSanitizedModel(() => state.value.additionalDetails ?? '', v => state.value.additionalDetails = v, sanitizeText);
 
-function addCama() {
+function addBed() {
   state.value.beds.push({ size: 'single', count: 1 });
 }
 
-function removeCama(index: number) {
+function removeBed(index: number) {
   if (state.value.beds.length > 1) {
     state.value.beds.splice(index, 1);
   }
@@ -140,19 +140,19 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
     >
       <div class="space-y-2">
         <HotelBedConfigurationInput
-          v-for="(cama, i) in state.beds"
+          v-for="(bed, i) in state.beds"
           :key="i"
-          :model-value="cama"
+          :model-value="bed"
           :removable="state.beds.length > 1"
           @update:model-value="(val) => state.beds[i] = val"
-          @remove="removeCama(i)"
+          @remove="removeBed(i)"
         />
         <UButton
           type="button"
           variant="ghost"
           icon="i-lucide-plus"
           size="sm"
-          @click="addCama"
+          @click="addBed"
         >
           Agregar cama
         </UButton>

@@ -21,7 +21,7 @@ const { travelId, travel } = useTravelRoute();
 const router = useRouter();
 const travelerStore = useTravelerStore();
 const providerStore = useProviderStore();
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const toast = useToast();
 
 type TravelerActionItem = {
@@ -86,8 +86,8 @@ const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel
 const filteredTravelers = computed(() => filterTravelers(travelersOfTravel.value, filters.value));
 const travelers = computed(() => groupTravelersByRepresentative(filteredTravelers.value, filters.value.representativeId));
 const totalTravelers = computed(() => travelersOfTravel.value.length);
-const totalRepresentantes = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
-const totalAcompañantes = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
+const totalRepresentatives = computed(() => travelersOfTravel.value.filter(t => t.isRepresentative).length);
+const totalCompanions = computed(() => travelersOfTravel.value.filter(t => !t.isRepresentative).length);
 const isSeatChangeModeActive = computed(() => seatChangeContext.value !== null);
 
 // Coordinators travel in their own travelers rows: no payments or groups, but a seat (when
@@ -96,7 +96,7 @@ const coordinatorsOfTravel = computed(() => occupantsOfTravel.value.filter(t => 
 // Whether coordinators take seats, and which bus each one rides, live in the quotation.
 useQuery(() => quotationByTravelQuery(travelId.value));
 const coordinatorsTakeSeats = computed(() =>
-  cotizacionStore.getCotizacionByTravel(travelId.value)?.coordinatorsTakeSeats ?? false,
+  quotationStore.getQuotationByTravel(travelId.value)?.coordinatorsTakeSeats ?? false,
 );
 const coordinatorRows = computed(() =>
   coordinatorsOfTravel.value.map(coordinator => ({
@@ -206,7 +206,7 @@ function getLastRowSeats(bus: { seatCount: number; lastRowSeats?: number | null 
   return bus.lastRowSeats ?? (bus.seatCount % 4 || 4);
 }
 
-const representantes = computed(() =>
+const representatives = computed(() =>
   filteredTravelers.value.filter(t => t.isRepresentative),
 );
 
@@ -226,9 +226,9 @@ function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
   if (!bus)
     return travelBusId;
-  const agencia = providerStore.getProviderById(bus.providerId)?.name;
+  const agency = providerStore.getProviderById(bus.providerId)?.name;
   const busName = [bus.brand, bus.model].filter(Boolean).join(' ').trim() || 'Camión';
-  return agencia ? `${agencia} — ${busName}` : busName;
+  return agency ? `${agency} — ${busName}` : busName;
 }
 
 function openCreateModal() {
@@ -509,10 +509,10 @@ const coordinatorSeatBuses = computed(() => {
 
 const coordinatorInitialBusId = computed(() => {
   const coordinatorId = seatingCoordinator.value?.coordinatorId;
-  const cotizacion = cotizacionStore.getCotizacionByTravel(travelId.value);
-  if (!coordinatorId || !cotizacion)
+  const quotation = quotationStore.getQuotationByTravel(travelId.value);
+  if (!coordinatorId || !quotation)
     return undefined;
-  const quotationBus = cotizacionStore.getBusesByQuotation(cotizacion.id)
+  const quotationBus = quotationStore.getBusesByQuotation(quotation.id)
     .find(bus => (bus.coordinatorIds as string[] | undefined)?.includes(coordinatorId));
   return allBuses.value.find(bus => quotationBus && bus.quotationBusId === quotationBus.id)?.id;
 });
@@ -580,7 +580,7 @@ function getRowActions(traveler: Traveler) {
       {
         label: 'Habitaciones',
         icon: 'i-lucide-bed-double',
-        onSelect: () => router.push({ name: 'travel-habitaciones', params: { id: travelId.value } }),
+        onSelect: () => router.push({ name: 'travel-rooms', params: { id: travelId.value } }),
       },
     ],
     [
@@ -602,7 +602,7 @@ function getRowActions(traveler: Traveler) {
 
 const columns: TableColumn<TravelerWithChildren>[] = [
   {
-    id: 'nombreCompleto',
+    id: 'fullName',
     header: 'Nombre',
     cell: ({ row }) => {
       const t = row.original;
@@ -643,7 +643,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    id: 'habitaciones',
+    id: 'rooms',
     header: 'Habitación',
     cell: ({ row }) => {
       const labels = getAccommodationLabels(row.original.id);
@@ -754,7 +754,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
                 Representantes
               </p>
               <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalRepresentantes }}
+                {{ totalRepresentatives }}
               </p>
             </div>
             <UIcon name="i-lucide-user-check" class="w-10 h-10 text-muted" />
@@ -768,7 +768,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
                 Acompañantes
               </p>
               <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalAcompañantes }}
+                {{ totalCompanions }}
               </p>
             </div>
             <UIcon name="i-lucide-user" class="w-10 h-10 text-muted" />
@@ -828,7 +828,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
               v-model="filters"
               :available-travels="[]"
               :available-buses="allBuses"
-              :representatives="representantes"
+              :representatives="representatives"
               :hide-travel-filter="true"
             />
 

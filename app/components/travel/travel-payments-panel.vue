@@ -24,7 +24,7 @@ const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
 const travelId = computed(() => props.travelId);
 const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
@@ -33,10 +33,10 @@ const travelersLoad = useQueryLoadState(travelersQuery);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 // The public prices (what each traveler is charged) live in the quotation.
 useQuery(() => quotationByTravelQuery(travelId.value));
-const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
-const preciosPublicos = computed(() =>
-  cotizacion.value
-    ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.value.id)
+const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
+const publicPrices = computed(() =>
+  quotation.value
+    ? quotationStore.getPublicPricesByQuotation(quotation.value.id)
     : [],
 );
 
@@ -60,7 +60,7 @@ const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
   // Filtering by status applies only to which representative rows are shown at root level.
   const all = enrolledTravelers.value;
   const grouped = Object.groupBy(all, t => t.representativeId ?? '');
-  const acompañantesIds = new Set(
+  const companionIds = new Set(
     all.filter(t => t.representativeId).map(t => t.id),
   );
 
@@ -68,7 +68,7 @@ const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
 
   for (const t of all) {
     // Acompañantes are embedded as children — skip them as root rows.
-    if (acompañantesIds.has(t.id))
+    if (companionIds.has(t.id))
       continue;
 
     // Apply status filter at the representative level.
@@ -175,7 +175,7 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
 
 const columns: TableColumn<TravelerWithChildren>[] = [
   {
-    id: 'nombre',
+    id: 'name',
     header: 'Nombre',
     cell: ({ row }) => {
       const depth = row.depth;
@@ -216,14 +216,14 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    id: 'tipo',
+    id: 'type',
     header: 'Precio',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
       if (config?.publicPriceId) {
-        const precio = preciosPublicos.value.find(p => p.id === config.publicPriceId);
-        if (precio) {
-          return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => precio.priceType);
+        const price = publicPrices.value.find(p => p.id === config.publicPriceId);
+        if (price) {
+          return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => price.priceType);
         }
       }
       const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
@@ -231,7 +231,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    id: 'costoFinal',
+    id: 'finalCost',
     header: 'Costo final',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
@@ -242,7 +242,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     },
   },
   {
-    id: 'descuento',
+    id: 'discount',
     header: 'Descuento',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
@@ -485,7 +485,7 @@ watch(travelId, async (id) => {
           v-if="selectedTraveler"
           :traveler-id="selectedTraveler.id"
           :travel-id="travelId"
-          :public-prices="preciosPublicos"
+          :public-prices="publicPrices"
           :config="selectedConfig"
           @submit="handleConfigSubmit"
           @cancel="closeModals"

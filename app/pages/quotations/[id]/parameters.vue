@@ -8,13 +8,13 @@ definePageMeta({
 const { quotation, readonly } = useQuotationRoute();
 
 // Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
-const cotizacion = computed(() => quotation.value!);
+const loadedQuotation = computed(() => quotation.value!);
 </script>
 
 <template>
   <!-- Editables solo en borrador; confirmada se ven de solo lectura -->
   <QuotationParametersCard
-    :quotation="cotizacion"
+    :quotation="loadedQuotation"
     :readonly="readonly"
   />
 </template>
