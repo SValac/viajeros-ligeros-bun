@@ -127,10 +127,9 @@ El `use-auth-store` mapea errores de Supabase a mensajes en español antes de pr
 
 ## Google Maps
 
-Dos componentes para ubicaciones en actividades del itinerario:
+Un componente para ubicaciones en actividades del itinerario y proveedores:
 
-- **`map-location-picker.vue`**: selector con autocomplete de Places API y pin arrastrable. Emite `{ lat, lng, placeId, address }`.
-- **`map-location-display.vue`**: mapa de solo lectura centrado en coordenadas dadas.
+- **`map/map-location-picker.vue`**: selector con autocomplete de Places API y pin arrastrable. Emite `{ lat, lng, placeId, address }`.
 
 La inicialización del SDK de Maps es lazy (se carga el script solo cuando se necesita) mediante `app/composables/use-google-maps.ts`.
 

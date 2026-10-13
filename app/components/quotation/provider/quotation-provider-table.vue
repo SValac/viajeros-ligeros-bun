@@ -1,0 +1,634 @@
+<script setup lang="ts">
+import type { ProviderPaymentStatus, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
+
+import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
+import { formatCurrency } from '~/utils/currency';
+
+type Props = {
+  quotationId: string;
+  readonly?: boolean;
+};
+
+const { quotationId, readonly = false } = defineProps<Props>();
+
+const cotizacionStore = useCotizacionStore();
+const providerStore = useProviderStore();
+const toast = useToast();
+
+// Derived data
+const proveedores = computed(() => cotizacionStore.filteredProveedores(quotationId));
+
+// Filter state (local — synced to store)
+const filterEstadoPago = shallowRef<ProviderPaymentStatus | 'all'>('all');
+const filterConfirmado = shallowRef<'all' | 'si' | 'no'>('all');
+const filterMetodoPago = shallowRef<'all' | 'cash' | 'transfer'>('all');
+
+watch([filterEstadoPago, filterConfirmado, filterMetodoPago], () => {
+  cotizacionStore.setFilters({
+    paymentStatus: filterEstadoPago.value,
+    confirmed: filterConfirmado.value === 'all'
+      ? 'all'
+      : filterConfirmado.value === 'si',
+    paymentMethod: filterMetodoPago.value,
+  });
+});
+
+// Modal state
+const isProveedorFormOpen = shallowRef(false);
+const selectedProveedor = shallowRef<QuotationProvider | null>(null);
+const isHistorialOpen = shallowRef(false);
+const historialProveedorId = shallowRef<string>('');
+const historialProveedorNombre = shallowRef<string>('');
+const isDeleteModalOpen = shallowRef(false);
+const proveedorToDelete = shallowRef<QuotationProvider | null>(null);
+const isAjustesOpen = shallowRef(false);
+const proveedorAjustes = shallowRef<QuotationProvider | null>(null);
+const ajustesDraft = ref<ProviderPriceAdjustmentDraft[]>([]);
+const ajustesInvalidos = computed(() => ajustesDraft.value.some(a => getPriceAdjustmentError(a) !== null));
+const isCortesiaOpen = shallowRef(false);
+const proveedorCortesia = shallowRef<QuotationProvider | null>(null);
+
+// El viaje de la cotización, para enlazar a su pestaña de servicios por persona.
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(travelId);
+
+// Filter options
+const estadoPagoOptions = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Pendiente', value: 'pending' },
+  { label: 'Anticipo', value: 'partial' },
+  { label: 'Liquidado', value: 'paid' },
+];
+
+const confirmadoOptions = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Sí', value: 'si' },
+  { label: 'No', value: 'no' },
+];
+
+const metodoPagoOptions = [
+  { label: 'Todos', value: 'all' },
+  { label: 'Efectivo', value: 'cash' },
+  { label: 'Transferencia', value: 'transfer' },
+];
+
+function getEstadoPagoColor(status: ProviderPaymentStatus): 'warning' | 'info' | 'success' {
+  if (status === 'pending')
+    return 'warning';
+  if (status === 'partial')
+    return 'info';
+  return 'success';
+}
+
+function getEstadoPagoLabel(status: ProviderPaymentStatus): string {
+  if (status === 'pending')
+    return 'Pendiente';
+  if (status === 'partial')
+    return 'Anticipo';
+  return 'Liquidado';
+}
+
+function getProviderName(providerId: string): string {
+  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
+}
+
+function isProviderInactive(providerId: string): boolean {
+  const provider = providerStore.getProviderById(providerId);
+  return provider ? !provider.active : false;
+}
+
+// Costo con el autobús lleno: en un servicio por persona, costo × asientos vendibles.
+function getQuotedCost(proveedor: QuotationProvider): number {
+  return calculateProviderQuotedCost(proveedor, cotizacionStore.getAsientosVendibles(proveedor.quotationId, coordinatorCount.value));
+}
+
+// Cuántos viajeros cuentan para el pago de un servicio por persona.
+function getTakersCount(proveedor: QuotationProvider): number {
+  return proveedor.unitCost ? Math.round(proveedor.payableCost / proveedor.unitCost) : 0;
+}
+
+function openAjustes(proveedor: QuotationProvider) {
+  proveedorAjustes.value = proveedor;
+  ajustesDraft.value = cotizacionStore.getAjustesByProveedor(proveedor.id)
+    .map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }));
+  isAjustesOpen.value = true;
+}
+
+function closeAjustes() {
+  isAjustesOpen.value = false;
+}
+
+async function handleAjustesSave() {
+  if (!proveedorAjustes.value || ajustesInvalidos.value)
+    return;
+  const error = await cotizacionStore.saveAjustesProveedor(proveedorAjustes.value.id, ajustesDraft.value);
+  if (error) {
+    toast.add({ title: 'Error', description: error, color: 'error' });
+    return;
+  }
+  toast.add({ title: 'Precios por tipo guardados', color: 'success' });
+  isAjustesOpen.value = false;
+  proveedorAjustes.value = null;
+}
+
+function openCortesia(proveedor: QuotationProvider) {
+  proveedorCortesia.value = proveedor;
+  isCortesiaOpen.value = true;
+}
+
+async function handleCortesiaSubmit(coordinatorsCourtesy: boolean) {
+  if (!proveedorCortesia.value)
+    return;
+  const result = await cotizacionStore.updateProveedorCortesia(proveedorCortesia.value.id, coordinatorsCourtesy);
+  if ('error' in result) {
+    toast.add({ title: 'Error', description: result.error, color: 'error' });
+    return;
+  }
+  toast.add({ title: 'Cortesía actualizada', color: 'success' });
+  isCortesiaOpen.value = false;
+  proveedorCortesia.value = null;
+}
+
+function openNewProveedor() {
+  selectedProveedor.value = null;
+  isProveedorFormOpen.value = true;
+}
+
+function openEditProveedor(proveedor: QuotationProvider) {
+  selectedProveedor.value = proveedor;
+  isProveedorFormOpen.value = true;
+}
+
+function openHistorial(proveedor: QuotationProvider) {
+  historialProveedorId.value = proveedor.id;
+  historialProveedorNombre.value = getProviderName(proveedor.providerId);
+  isHistorialOpen.value = true;
+}
+
+function openRegistrarPago(proveedor: QuotationProvider) {
+  historialProveedorId.value = proveedor.id;
+  historialProveedorNombre.value = getProviderName(proveedor.providerId);
+  isHistorialOpen.value = true;
+}
+
+function openDeleteConfirm(proveedor: QuotationProvider) {
+  proveedorToDelete.value = proveedor;
+  isDeleteModalOpen.value = true;
+}
+
+function closeDeleteModal() {
+  isDeleteModalOpen.value = false;
+}
+
+async function handleProveedorSubmit(data: QuotationProviderFormData, ajustes: ProviderPriceAdjustmentDraft[]) {
+  let saved: QuotationProvider | undefined;
+  if (selectedProveedor.value) {
+    saved = await cotizacionStore.updateProveedorQuotation(selectedProveedor.value.id, data);
+    if (saved) {
+      toast.add({ title: 'Proveedor actualizado', color: 'success' });
+    }
+    else {
+      toast.add({ title: 'No se pudo actualizar el proveedor', description: cotizacionStore.error ?? undefined, color: 'error' });
+      return;
+    }
+  }
+  else {
+    const result = await cotizacionStore.addProveedorQuotation(data);
+    if ('error' in result) {
+      toast.add({ title: 'Error', description: result.error, color: 'error' });
+    }
+    else {
+      saved = result;
+      toast.add({ title: 'Proveedor agregado', color: 'success' });
+    }
+  }
+  // Los ajustes van aparte; en costo total se borran los que hubiera.
+  if (saved && (ajustes.length > 0 || cotizacionStore.getAjustesByProveedor(saved.id).length > 0)) {
+    const error = await cotizacionStore.saveAjustesProveedor(saved.id, ajustes);
+    if (error)
+      toast.add({ title: 'No se guardaron los precios por tipo', description: error, color: 'error' });
+  }
+  isProveedorFormOpen.value = false;
+  selectedProveedor.value = null;
+}
+
+async function handleToggleConfirmado(proveedor: QuotationProvider) {
+  if (readonly)
+    return;
+  await cotizacionStore.toggleConfirmadoProveedor(proveedor.id);
+}
+
+async function confirmDeleteProveedor() {
+  if (!proveedorToDelete.value)
+    return;
+  await cotizacionStore.deleteProveedorQuotation(proveedorToDelete.value.id);
+  toast.add({ title: 'Proveedor eliminado', color: 'warning' });
+  isDeleteModalOpen.value = false;
+  proveedorToDelete.value = null;
+}
+
+function getProveedorActions(proveedor: QuotationProvider) {
+  // Payments go on after the quotation is confirmed; only its structure is locked.
+  const paymentActions = [
+    {
+      label: 'Ver historial de pagos',
+      icon: 'i-lucide-receipt',
+      onSelect: () => openHistorial(proveedor),
+    },
+    {
+      label: 'Registrar pago',
+      icon: 'i-lucide-banknote',
+      disabled: cotizacionStore.getSaldoPendienteProveedor(proveedor.id) <= 0,
+      onSelect: () => openRegistrarPago(proveedor),
+    },
+    // La cortesía no cambia el precio del asiento, así que también se puede con la
+    // cotización confirmada.
+    ...(isPerPersonProvider(proveedor)
+      ? [{
+          label: 'Precios por tipo de persona',
+          icon: 'i-lucide-tags',
+          onSelect: () => openAjustes(proveedor),
+        }, {
+          label: 'Cortesía para coordinadores',
+          icon: 'i-lucide-gift',
+          onSelect: () => openCortesia(proveedor),
+        }]
+      : []),
+  ];
+
+  if (readonly)
+    return [paymentActions];
+
+  const writeActions = [
+    {
+      label: 'Editar',
+      icon: 'i-lucide-pencil',
+      onSelect: () => openEditProveedor(proveedor),
+    },
+    {
+      label: proveedor.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
+      icon: proveedor.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
+      onSelect: () => handleToggleConfirmado(proveedor),
+    },
+  ];
+
+  const destructiveActions = [
+    {
+      label: 'Eliminar',
+      icon: 'i-lucide-trash-2',
+      color: 'error' as const,
+      onSelect: () => openDeleteConfirm(proveedor),
+    },
+  ];
+
+  return [paymentActions, writeActions, destructiveActions];
+}
+</script>
+
+<template>
+  <div class="space-y-4">
+    <!-- Barra de filtros -->
+    <div class="flex flex-wrap gap-3 items-end">
+      <div class="flex-1 min-w-32">
+        <p class="text-xs text-muted mb-1">
+          Estado de pago
+        </p>
+        <USelect
+          v-model="filterEstadoPago"
+          :items="estadoPagoOptions"
+          size="sm"
+        />
+      </div>
+      <div class="flex-1 min-w-28">
+        <p class="text-xs text-muted mb-1">
+          Confirmado
+        </p>
+        <USelect
+          v-model="filterConfirmado"
+          :items="confirmadoOptions"
+          size="sm"
+        />
+      </div>
+      <div class="flex-1 min-w-32">
+        <p class="text-xs text-muted mb-1">
+          Método de pago
+        </p>
+        <USelect
+          v-model="filterMetodoPago"
+          :items="metodoPagoOptions"
+          size="sm"
+        />
+      </div>
+      <UButton
+        v-if="!readonly"
+        icon="i-lucide-plus"
+        label="Agregar proveedor"
+        @click="openNewProveedor"
+      />
+    </div>
+
+    <!-- Tabla -->
+    <div v-if="proveedores.length > 0" class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-default text-left text-muted">
+            <th class="pb-2 pr-4 font-medium">
+              Proveedor
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Servicio
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              División
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo Total
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              A pagar
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Costo/persona
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pagado
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Pendiente
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Método
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Estado Pago
+            </th>
+            <th class="pb-2 pr-4 font-medium">
+              Confirmado
+            </th>
+            <th class="pb-2 font-medium">
+              Acciones
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="proveedor in proveedores"
+            :key="proveedor.id"
+            class="border-b border-default/50 hover:bg-elevated/50"
+          >
+            <!-- Proveedor -->
+            <td class="py-3 pr-4">
+              <div class="flex items-center gap-1.5">
+                <UIcon
+                  v-if="isProviderInactive(proveedor.providerId)"
+                  name="i-lucide-triangle-alert"
+                  class="w-4 h-4 text-warning shrink-0"
+                  title="Proveedor inactivo en el catálogo"
+                />
+                <span class="font-medium">{{ getProviderName(proveedor.providerId) }}</span>
+              </div>
+            </td>
+
+            <!-- Servicio -->
+            <td class="py-3 pr-4 max-w-40">
+              <span class="truncate block">{{ proveedor.serviceDescription }}</span>
+              <UBadge
+                v-if="proveedor.coordinatorsCourtesy"
+                label="Cortesía coord."
+                icon="i-lucide-gift"
+                color="info"
+                variant="subtle"
+                class="mt-1"
+              />
+            </td>
+
+            <!-- División -->
+            <td class="py-3 pr-4">
+              <UBadge
+                v-if="isPerPersonProvider(proveedor)"
+                label="Por persona"
+                color="primary"
+                variant="subtle"
+              />
+              <UBadge
+                v-else
+                :label="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
+                :color="(proveedor.splitType ?? 'minimum') === 'minimum' ? 'info' : 'neutral'"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Costo Total: en un servicio por persona, con el autobús lleno -->
+            <td class="py-3 pr-4">
+              <p class="font-medium">
+                {{ formatCurrency(getQuotedCost(proveedor)) }}
+              </p>
+              <p
+                v-if="isPerPersonProvider(proveedor)"
+                class="text-xs text-muted whitespace-nowrap"
+              >
+                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ cotizacionStore.getAsientosVendibles(proveedor.quotationId, coordinatorCount) }} asientos
+              </p>
+              <button
+                v-if="isPerPersonProvider(proveedor) && cotizacionStore.getAjustesByProveedor(proveedor.id).length > 0"
+                type="button"
+                class="text-xs text-primary hover:underline whitespace-nowrap"
+                @click="openAjustes(proveedor)"
+              >
+                {{ cotizacionStore.getAjustesByProveedor(proveedor.id).length }} precio{{ cotizacionStore.getAjustesByProveedor(proveedor.id).length === 1 ? '' : 's' }} por tipo
+              </button>
+            </td>
+
+            <!-- A pagar: en un opcional, solo por los viajeros que lo toman -->
+            <td class="py-3 pr-4">
+              <p class="font-medium">
+                {{ formatCurrency(proveedor.payableCost) }}
+              </p>
+              <ULink
+                v-if="isPerPersonProvider(proveedor) && travelId"
+                :to="{ name: 'travel-optional-services', params: { id: travelId } }"
+                class="text-xs text-primary whitespace-nowrap"
+              >
+                {{ getTakersCount(proveedor) }} lo toman
+              </ULink>
+            </td>
+
+            <!-- Costo/persona -->
+            <td class="py-3 pr-4">
+              {{ formatCurrency(cotizacionStore.getCostoPerPersonaProveedor(proveedor.id, coordinatorCount)) }}
+            </td>
+
+            <!-- Pagado -->
+            <td class="py-3 pr-4">
+              {{ formatCurrency(cotizacionStore.getAnticipadoProveedor(proveedor.id)) }}
+            </td>
+
+            <!-- Pendiente -->
+            <td class="py-3 pr-4">
+              <span :class="cotizacionStore.getSaldoPendienteProveedor(proveedor.id) > 0 ? 'text-warning' : 'text-success'">
+                {{ formatCurrency(cotizacionStore.getSaldoPendienteProveedor(proveedor.id)) }}
+              </span>
+              <p
+                v-if="cotizacionStore.getSobrepagoProveedor(proveedor.id) > 0"
+                class="text-xs text-error whitespace-nowrap"
+              >
+                Pagado de más: {{ formatCurrency(cotizacionStore.getSobrepagoProveedor(proveedor.id)) }}
+              </p>
+            </td>
+
+            <!-- Método -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="proveedor.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
+                color="neutral"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Estado Pago -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="getEstadoPagoLabel(cotizacionStore.getProviderPaymentStatus(proveedor.id))"
+                :color="getEstadoPagoColor(cotizacionStore.getProviderPaymentStatus(proveedor.id))"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Confirmado -->
+            <td class="py-3 pr-4">
+              <UBadge
+                :label="proveedor.confirmed ? 'Sí' : 'No'"
+                :color="proveedor.confirmed ? 'success' : 'neutral'"
+                variant="subtle"
+              />
+            </td>
+
+            <!-- Acciones -->
+            <td class="py-3">
+              <UDropdownMenu :items="getProveedorActions(proveedor)">
+                <UButton
+                  icon="i-lucide-more-vertical"
+                  variant="ghost"
+                  color="neutral"
+                  size="xs"
+                />
+              </UDropdownMenu>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Estado vacío -->
+    <EmptyState
+      v-else
+      section="services"
+      :actions="readonly ? undefined : [{ label: 'Agregar proveedor', icon: 'i-lucide-plus', onClick: openNewProveedor }]"
+    />
+  </div>
+
+  <!-- Modal: form de proveedor -->
+  <UModal
+    v-model:open="isProveedorFormOpen"
+    :title="selectedProveedor ? 'Editar Proveedor' : 'Agregar Proveedor'"
+    :description="selectedProveedor ? 'Modifica los datos del proveedor en la cotización' : 'Agrega un nuevo proveedor de servicio a la cotización'"
+    class="sm:max-w-2xl"
+  >
+    <template #body>
+      <QuotationProviderForm
+        :quotation-id="quotationId"
+        :quotation-provider="selectedProveedor"
+        @submit="handleProveedorSubmit"
+        @cancel="isProveedorFormOpen = false"
+      />
+    </template>
+  </UModal>
+
+  <!-- Modal: precios por tipo de persona -->
+  <UModal
+    v-model:open="isAjustesOpen"
+    title="Precios por tipo de persona"
+    :description="proveedorAjustes ? `${getProviderName(proveedorAjustes.providerId)} · ${proveedorAjustes.serviceDescription} · base ${formatCurrency(proveedorAjustes.unitCost ?? 0)}` : undefined"
+    class="sm:max-w-2xl"
+  >
+    <template #body>
+      <QuotationProviderAdjustmentsEditor
+        v-if="proveedorAjustes"
+        v-model="ajustesDraft"
+        :unit-cost="proveedorAjustes.unitCost"
+      />
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-3 w-full">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          label="Cancelar"
+          @click="closeAjustes"
+        />
+        <UButton
+          label="Guardar"
+          :disabled="ajustesInvalidos"
+          @click="handleAjustesSave"
+        />
+      </div>
+    </template>
+  </UModal>
+
+  <!-- Modal: cortesía para coordinadores -->
+  <UModal
+    v-model:open="isCortesiaOpen"
+    title="Cortesía para coordinadores"
+    description="Define si los coordinadores cuentan para el pago de este servicio"
+  >
+    <template #body>
+      <QuotationProviderCourtesyForm
+        v-if="proveedorCortesia"
+        :provider="proveedorCortesia"
+        @submit="handleCortesiaSubmit"
+        @cancel="isCortesiaOpen = false"
+      />
+    </template>
+  </UModal>
+
+  <!-- Drawer/modal: historial de pagos -->
+  <USlideover
+    v-model:open="isHistorialOpen"
+    :title="`Pagos — ${historialProveedorNombre}`"
+    description="Registro de pagos realizados al proveedor"
+    side="right"
+  >
+    <template #body>
+      <div class="p-4">
+        <QuotationProviderPaymentHistory
+          :quotation-provider-id="historialProveedorId"
+          :provider-name="historialProveedorNombre"
+        />
+      </div>
+    </template>
+  </USlideover>
+
+  <!-- Modal: confirmar eliminación -->
+  <UModal
+    v-model:open="isDeleteModalOpen"
+    title="Eliminar Proveedor"
+    description="¿Estás seguro? Se eliminarán también todos los pagos asociados a este proveedor."
+  >
+    <template #footer>
+      <div class="flex justify-end gap-3">
+        <UButton
+          variant="ghost"
+          color="neutral"
+          label="Cancelar"
+          @click="closeDeleteModal"
+        />
+        <UButton
+          color="error"
+          label="Eliminar"
+          @click="confirmDeleteProveedor"
+        />
+      </div>
+    </template>
+  </UModal>
+</template>

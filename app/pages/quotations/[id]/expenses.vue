@@ -12,7 +12,7 @@ const quotationId = computed(() => quotation.value!.id);
 </script>
 
 <template>
-  <CotizacionGastosSection
+  <QuotationExpenseSection
     :quotation-id="quotationId"
     :readonly="readonly"
   />

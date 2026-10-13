@@ -18,10 +18,10 @@ const isAgregarBusModalOpen = shallowRef(false);
 
 <template>
   <div class="space-y-6">
-    <CotizacionBusesSection
+    <QuotationBusSection
       :quotation-id="quotationId"
       :readonly="readonly"
-      @agregar-bus="isAgregarBusModalOpen = true"
+      @add="isAgregarBusModalOpen = true"
     />
 
     <!-- Operadores y coordinadores: son del viaje, se asignan en su pestaña Autobuses -->
@@ -35,11 +35,11 @@ const isAgregarBusModalOpen = shallowRef(false);
       :actions="[{ label: 'Ir al viaje', icon: 'i-lucide-arrow-right', trailing: true, to: { name: 'travel-buses', params: { id: travelId } } }]"
     />
 
-    <CotizacionBusForm
+    <QuotationBusForm
       :open="isAgregarBusModalOpen"
       :quotation-id="quotationId"
       @update:open="(v) => isAgregarBusModalOpen = v"
-      @bus-agregado="isAgregarBusModalOpen = false"
+      @added="isAgregarBusModalOpen = false"
     />
   </div>
 </template>
