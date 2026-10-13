@@ -1,5 +1,5 @@
-// Estado compartido por app/pages/quotations/[id].vue y sus pestañas (app/pages/quotations/[id]/*).
-// El param `id` de la ruta es el id del viaje: la cotización es 1:1 con el viaje.
+// State shared by app/pages/quotations/[id].vue and its tabs (app/pages/quotations/[id]/*).
+// The route's `id` param is the travel id: the quotation is 1:1 with the travel.
 export function useQuotationRoute() {
   const route = useRoute();
   const quotationStore = useQuotationStore();

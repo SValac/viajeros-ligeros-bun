@@ -4,9 +4,9 @@ import type { TravelSummary } from '~/types/travel';
 import { parseDisplayDate } from '~/utils/format-date';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
-// Lista de viajes para elegir uno en el calendario (los del mes o los de un día).
-// Muestra hasta 4 viajes (fila de 2rem + 0.25rem de separación) y el resto con scroll,
-// para que el resumen de abajo no se empuje fuera de la pantalla.
+// List of travels to pick one in the calendar (the month's or a day's).
+// Shows up to 4 travels (2rem row + 0.25rem gap) and scrolls the rest,
+// so the summary below isn't pushed off screen.
 
 const props = defineProps<{
   travels: TravelSummary[];
@@ -25,7 +25,7 @@ const DOT_CLASSES = {
   error: 'bg-error',
 } as const;
 
-// Con scroll, el viaje elegido (p. ej. desde el calendario o un link) puede quedar oculto
+// With scrolling, the picked travel (e.g. from the calendar or a link) could stay hidden
 const list = useTemplateRef('list');
 watch(() => props.selectedTravelId, () => {
   list.value?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });

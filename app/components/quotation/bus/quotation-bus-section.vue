@@ -148,7 +148,7 @@ function getBusActions(bus: QuotationBus) {
       </div>
     </template>
 
-    <!-- Tabla -->
+    <!-- Table -->
     <div v-if="buses.length > 0" class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
@@ -207,7 +207,7 @@ function getBusActions(bus: QuotationBus) {
               {{ bus.capacity }}
             </td>
 
-            <!-- División -->
+            <!-- Split -->
             <td class="py-3 pr-4">
               <UBadge
                 :label="(bus.splitType ?? 'minimum') === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
@@ -216,29 +216,29 @@ function getBusActions(bus: QuotationBus) {
               />
             </td>
 
-            <!-- Costo Total -->
+            <!-- Total Cost -->
             <td class="py-3 pr-4 font-medium">
               {{ formatCurrency(bus.totalCost ?? 0) }}
             </td>
 
-            <!-- Costo/persona -->
+            <!-- Cost/person -->
             <td class="py-3 pr-4">
               {{ formatCurrency(quotationStore.getBusCostPerPerson(bus.id, coordinatorCount)) }}
             </td>
 
-            <!-- Pagado -->
+            <!-- Paid -->
             <td class="py-3 pr-4">
               {{ formatCurrency(quotationStore.getPaidByBus(bus.id)) }}
             </td>
 
-            <!-- Pendiente -->
+            <!-- Pending -->
             <td class="py-3 pr-4">
               <span :class="quotationStore.getPendingBalanceByBus(bus.id) > 0 ? 'text-warning' : 'text-success'">
                 {{ formatCurrency(quotationStore.getPendingBalanceByBus(bus.id)) }}
               </span>
             </td>
 
-            <!-- Método -->
+            <!-- Method -->
             <td class="py-3 pr-4">
               <UBadge
                 :label="bus.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
@@ -247,7 +247,7 @@ function getBusActions(bus: QuotationBus) {
               />
             </td>
 
-            <!-- Estado Pago -->
+            <!-- Payment Status -->
             <td class="py-3 pr-4">
               <UBadge
                 :label="getPaymentStatusLabel(quotationStore.getBusPaymentStatus(bus.id))"
@@ -256,7 +256,7 @@ function getBusActions(bus: QuotationBus) {
               />
             </td>
 
-            <!-- Confirmado -->
+            <!-- Confirmed -->
             <td class="py-3 pr-4">
               <UBadge
                 :label="bus.confirmed ? 'Sí' : 'No'"
@@ -265,7 +265,7 @@ function getBusActions(bus: QuotationBus) {
               />
             </td>
 
-            <!-- Acciones -->
+            <!-- Actions -->
             <td class="py-3">
               <UDropdownMenu :items="getBusActions(bus)">
                 <UButton
@@ -289,7 +289,7 @@ function getBusActions(bus: QuotationBus) {
     />
   </UCard>
 
-  <!-- Slideover: historial de pagos -->
+  <!-- Slideover: payment history -->
   <USlideover
     v-model:open="isHistoryOpen"
     :title="selectedBus ? `Pagos — ${selectedBus.unitNumber}` : 'Historial de Pagos'"
@@ -307,14 +307,14 @@ function getBusActions(bus: QuotationBus) {
     </template>
   </USlideover>
 
-  <!-- Modal: editar autobús (mismo formulario que agregar) -->
+  <!-- Modal: edit bus (same form as adding) -->
   <QuotationBusForm
     v-model:open="isDetailsFormOpen"
     :quotation-id="quotationId"
     :bus="selectedBus"
   />
 
-  <!-- Modal: confirmar eliminación -->
+  <!-- Modal: confirm deletion -->
   <UModal
     v-model:open="isDeleteModalOpen"
     title="Eliminar Autobús"

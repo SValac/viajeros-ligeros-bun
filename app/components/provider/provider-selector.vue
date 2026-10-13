@@ -19,13 +19,13 @@ const emit = defineEmits<{
 const providerStore = useProviderStore();
 const toast = useToast();
 
-// Estado local
+// Local state
 const isAddModalOpen = ref(false);
 const selectedCategory = ref<ProviderCategory | undefined>(undefined);
 const selectedProviderId = ref(modelValue);
 const searchTerm = shallowRef('');
 
-// Opciones de categoría
+// Category options
 const allCategoryOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ value: meta.category, label: meta.label, icon: meta.icon }));
 
 const categoryOptions = computed(() =>
@@ -34,7 +34,7 @@ const categoryOptions = computed(() =>
     : allCategoryOptions,
 );
 
-// Computed - Proveedores disponibles filtrados por categoría
+// Computed - Available providers filtered by category
 const availableProviders = computed(() => {
   if (!selectedCategory.value) {
     return [];
@@ -45,9 +45,9 @@ const availableProviders = computed(() => {
   );
 });
 
-// Opciones para el select de proveedores. La etiqueta lleva el contacto para distinguir
-// proveedores parecidos. La búsqueda es la misma que en las páginas de proveedores
-// (nombre, descripción, ubicación o contacto, sin importar acentos).
+// Options for the provider select. The label includes the contact to tell similar
+// providers apart. The search is the same as in the provider pages
+// (name, description, location or contact, ignoring accents).
 const providerOptions = computed(() => {
   return availableProviders.value
     .filter(provider => matchesProviderSearch(provider, searchTerm.value))
@@ -67,7 +67,7 @@ const providerOptions = computed(() => {
 function handleCategoryChange(value: string | null | undefined) {
   selectedCategory.value = (value as ProviderCategory) || undefined;
 
-  // Limpiar proveedor seleccionado al cambiar categoría
+  // Clear the selected provider when the category changes
   if (selectedProviderId.value) {
     selectedProviderId.value = undefined;
     emit('update:modelValue', undefined);
@@ -85,7 +85,7 @@ function openAddModal() {
 }
 
 async function handleProviderSubmit(data: ProviderFormData) {
-  // Si hay categoría seleccionada, forzarla
+  // If a category is selected, force it
   if (selectedCategory.value) {
     data.category = selectedCategory.value;
   }
@@ -98,20 +98,20 @@ async function handleProviderSubmit(data: ProviderFormData) {
     color: 'primary',
   });
 
-  // Seleccionar automáticamente el nuevo proveedor
+  // Automatically select the new provider
   selectedProviderId.value = newProvider.id;
   emit('update:modelValue', newProvider.id);
 
   isAddModalOpen.value = false;
 }
 
-// Watch para sincronizar con prop externa
+// Watch to sync with the external prop
 watch(() => modelValue, (newValue) => {
   selectedProviderId.value = newValue;
 });
 
-// Categoría del proveedor seleccionado. Se observa el catálogo y no solo el montaje: los
-// proveedores se cargan bajo demanda y pueden llegar después.
+// Category of the selected provider. It watches the catalog, not just the mount:
+// providers load on demand and can arrive later.
 watch(
   () => (modelValue ? providerStore.getProviderById(modelValue)?.category : undefined),
   (category) => {
@@ -124,7 +124,7 @@ watch(
 
 <template>
   <div class="space-y-3">
-    <!-- Select de categoría -->
+    <!-- Category select -->
     <div class="flex gap-2 items-center">
       <div class="flex-1">
         <USelect
@@ -138,7 +138,7 @@ watch(
       </div>
     </div>
 
-    <!-- Select de proveedor (solo se muestra si hay categoría seleccionada) -->
+    <!-- Provider select (only shown when a category is selected) -->
     <div v-if="selectedCategory" class="flex gap-2 items-center">
       <div class="flex-1 min-w-0">
         <USelectMenu
@@ -160,7 +160,7 @@ watch(
         </USelectMenu>
       </div>
 
-      <!-- Botón para agregar nuevo proveedor -->
+      <!-- Button to add a new provider -->
       <UButton
         icon="i-lucide-plus"
         variant="outline"
@@ -169,12 +169,12 @@ watch(
       />
     </div>
 
-    <!-- Mensaje informativo cuando no hay categoría seleccionada -->
+    <!-- Info message when no category is selected -->
     <div v-else class="text-xs text-muted">
       Primero selecciona la categoría del servicio
     </div>
 
-    <!-- Modal para agregar proveedor -->
+    <!-- Modal to add a provider -->
     <UModal
       v-model:open="isAddModalOpen"
       title="Nuevo Proveedor"

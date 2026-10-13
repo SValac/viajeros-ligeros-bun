@@ -76,8 +76,8 @@ const editor = useEditor({
   content: model.value,
   extensions: [
     StarterKit.configure({
-      // StarterKit v3 ya los incluye — los desactivamos para usar
-      // nuestras versiones configuradas y evitar extensiones duplicadas.
+      // StarterKit v3 already includes them — we disable them to use
+      // our configured versions and avoid duplicate extensions.
       link: false,
       underline: false,
     }),
@@ -111,8 +111,8 @@ onBeforeUnmount(() => {
 // ─── Toolbar actions ──────────────────────────────────────────────────────────
 
 /**
- * Wrapper que devuelve la cadena de comandos sin restricciones de tipo.
- *  Necesario por el conflicto de paths de @tiptap/core en las dependencias.
+ * Wrapper that returns the command chain without type restrictions.
+ * Needed because of the @tiptap/core path conflict in the dependencies.
  */
 function chain(): any {
   return editor.value?.chain().focus();
@@ -157,7 +157,7 @@ function onEmojiSelect(emoji: { i: string }) {
       v-if="editor"
       class="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-default bg-elevated"
     >
-      <!-- Tamaño de fuente -->
+      <!-- Font size -->
       <USelect
         :model-value="selectedFontSize"
         :items="fontSizeItems"
@@ -168,7 +168,7 @@ function onEmojiSelect(emoji: { i: string }) {
 
       <div class="w-px h-5 bg-default mx-1" />
 
-      <!-- Negrita -->
+      <!-- Bold -->
       <UTooltip text="Negrita (Ctrl+B)">
         <UButton
           size="xs"
@@ -179,7 +179,7 @@ function onEmojiSelect(emoji: { i: string }) {
         />
       </UTooltip>
 
-      <!-- Cursiva -->
+      <!-- Italic -->
       <UTooltip text="Cursiva (Ctrl+I)">
         <UButton
           size="xs"
@@ -190,7 +190,7 @@ function onEmojiSelect(emoji: { i: string }) {
         />
       </UTooltip>
 
-      <!-- Subrayado -->
+      <!-- Underline -->
       <UTooltip text="Subrayado (Ctrl+U)">
         <UButton
           size="xs"
@@ -201,7 +201,7 @@ function onEmojiSelect(emoji: { i: string }) {
         />
       </UTooltip>
 
-      <!-- Tachado -->
+      <!-- Strikethrough -->
       <UTooltip text="Tachado">
         <UButton
           size="xs"
@@ -214,7 +214,7 @@ function onEmojiSelect(emoji: { i: string }) {
 
       <div class="w-px h-5 bg-default mx-1" />
 
-      <!-- Lista con viñetas -->
+      <!-- Bulleted list -->
       <UTooltip text="Lista con viñetas">
         <UButton
           size="xs"
@@ -225,7 +225,7 @@ function onEmojiSelect(emoji: { i: string }) {
         />
       </UTooltip>
 
-      <!-- Lista numerada -->
+      <!-- Numbered list -->
       <UTooltip text="Lista numerada">
         <UButton
           size="xs"
@@ -238,7 +238,7 @@ function onEmojiSelect(emoji: { i: string }) {
 
       <div class="w-px h-5 bg-default mx-1" />
 
-      <!-- Enlace -->
+      <!-- Link -->
       <UPopover v-model:open="showLinkPopover">
         <UTooltip text="Insertar enlace">
           <UButton
@@ -288,7 +288,7 @@ function onEmojiSelect(emoji: { i: string }) {
       </UPopover>
     </div>
 
-    <!-- Área de edición -->
+    <!-- Editing area -->
     <EditorContent
       :editor="editor"
       class="rich-editor-content"

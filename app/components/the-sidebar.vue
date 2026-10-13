@@ -7,7 +7,7 @@ import UserMenu from './user-menu.vue';
 
 const route = useRoute();
 
-// Logo y nombre vienen del perfil de la agencia (/profile); sin ellos (o sin perfil, p. ej. un coordinador) quedan los de la app
+// Logo and name come from the agency profile (/profile); without them (or without a profile, e.g. a coordinator) the app's ones stay
 const agencyProfileStore = useAgencyProfileStore();
 onMounted(() => agencyProfileStore.fetchProfile());
 
@@ -15,7 +15,7 @@ const items = computed<NavigationMenuItem[]>(() => [{
   label: 'Viajes',
   icon: 'i-lucide-map',
   to: { name: 'travels-dashboard' },
-  // `/travels/[id]/*` y `/travels/new` son rutas hermanas de `/travels/dashboard`: forzar el activo
+  // `/travels/[id]/*` and `/travels/new` are sibling routes of `/travels/dashboard`: force it active
   active: route.path.startsWith('/travels'),
 }, {
   label: 'Calendario',
@@ -25,7 +25,7 @@ const items = computed<NavigationMenuItem[]>(() => [{
   label: 'Cotizaciones',
   icon: 'i-lucide-calculator',
   to: { name: 'quotations-index' },
-  // `/quotations/[id]` es ruta hermana (no hija) de `/quotations`: forzar el activo
+  // `/quotations/[id]` is a sibling route (not a child) of `/quotations`: force it active
   active: route.path.startsWith('/quotations'),
 }, {
   label: 'Pagos',
@@ -44,7 +44,7 @@ const items = computed<NavigationMenuItem[]>(() => [{
     icon: 'i-lucide-list',
     to: { name: 'providers-dashboard' },
   },
-  // Una entrada por categoría, en el orden de PROVIDER_CATEGORY_META
+  // One entry per category, in the order of PROVIDER_CATEGORY_META
   ...PROVIDER_CATEGORY_LIST.map(meta => ({ label: meta.label, icon: meta.icon, to: meta.route }))],
 }]);
 </script>
@@ -61,7 +61,7 @@ const items = computed<NavigationMenuItem[]>(() => [{
         :alt="agencyProfileStore.profile?.companyName || 'Logo'"
         class="w-auto shrink-0 mx-auto"
       />
-      <!-- No es <h1>: el <h1> de cada pantalla es el título de la página -->
+      <!-- Not an <h1>: each screen's <h1> is the page title -->
       <p
         v-if="!collapsed"
         class="text-center text-lg font-semibold text-highlighted"

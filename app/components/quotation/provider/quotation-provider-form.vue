@@ -17,7 +17,7 @@ type Props = {
 const { quotationId, quotationProvider = null } = defineProps<Props>();
 
 const emit = defineEmits<{
-  /** `ajustes` solo aplica a un servicio por persona; en costo total va vacío. */
+  /** `adjustments` only applies to a per-person service; for a total cost it's empty. */
   submit: [data: QuotationProviderFormData, adjustments: ProviderPriceAdjustmentDraft[]];
   cancel: [];
 }>();
@@ -37,7 +37,7 @@ const baseSchema = z.object({
   confirmed: z.boolean(),
 });
 
-// Cada tipo de costo valida solo sus campos; los del otro tipo se descartan.
+// Each cost type validates only its own fields; the other type's are discarded.
 const schema = z.discriminatedUnion('costType', [
   baseSchema.extend({
     costType: z.literal('total'),
@@ -91,7 +91,7 @@ const state = reactive<FormState>({
   confirmed: quotationProvider?.confirmed ?? false,
 });
 
-// Ajustes de precio por tipo de persona (copia editable; se guardan al enviar).
+// Price adjustments by type of person (editable copy; saved on submit).
 const adjustments = ref<ProviderPriceAdjustmentDraft[]>(
   quotationProvider
     ? quotationStore.getAdjustmentsByProvider(quotationProvider.id).map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }))
@@ -99,18 +99,18 @@ const adjustments = ref<ProviderPriceAdjustmentDraft[]>(
 );
 const invalidAdjustments = computed(() => adjustments.value.some(a => getPriceAdjustmentError(a) !== null));
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const serviceDescriptionInput = useSanitizedModel(() => state.serviceDescription ?? '', v => state.serviceDescription = v, sanitizeText);
 const remarksInput = useSanitizedModel(() => state.remarks ?? '', v => state.remarks = v, sanitizeText);
 
-// Entre cuántas personas se reparte un costo total ("Dividir entre").
+// How many people a total cost is split among ("Dividir entre").
 const personDivisor = computed(() => quotationStore.getCostDivisor(quotationId, state.splitType, coordinatorCount.value));
 
-// Un servicio por persona suma su costo directo al asiento; su total de referencia es el
-// costo × asientos vendibles (lo que costaría con el autobús lleno).
+// A per-person service adds its cost straight to the seat; its reference total is
+// cost × sellable seats (what it would cost with a full bus).
 const sellableSeats = computed(() => quotationStore.getSellableSeats(quotationId, coordinatorCount.value));
 
-// Al pasar de "por persona" a "total" el total arranca con el de referencia.
+// When switching from "per person" to "total", the total starts from the reference one.
 watch(() => state.costType, (costType) => {
   if (costType === 'total' && isValidAmount(state.unitCost))
     state.totalCost = calculateProviderTotalCost(state.unitCost, sellableSeats.value);
@@ -128,7 +128,7 @@ function onSubmit() {
     return;
 
   const form = result.data;
-  // Por persona no se reparte: splitType queda en 'total' solo porque la columna lo exige.
+  // Per person isn't split: splitType stays 'total' only because the column requires it.
   const cost: Pick<QuotationProviderFormData, 'costType' | 'totalCost' | 'unitCost' | 'coordinatorsCourtesy' | 'splitType'> = form.costType === 'per_person'
     ? {
         costType: 'per_person',
@@ -167,7 +167,7 @@ function onSubmit() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Proveedor -->
+    <!-- Provider -->
     <UFormField
       label="Proveedor"
       name="providerId"
@@ -179,7 +179,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Descripción del Servicio -->
+    <!-- Service Description -->
     <UFormField
       label="Descripción del Servicio"
       name="serviceDescription"
@@ -192,7 +192,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Tipo de costo -->
+    <!-- Cost type -->
     <UFormField
       label="Tipo de costo"
       name="costType"
@@ -206,7 +206,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Costo Total -->
+    <!-- Total Cost -->
     <UFormField
       v-if="state.costType === 'total'"
       label="Costo Total"
@@ -216,7 +216,7 @@ function onSubmit() {
       <MoneyInput v-model="state.totalCost" />
     </UFormField>
 
-    <!-- Costo por persona -->
+    <!-- Cost per person -->
     <div v-else class="space-y-3">
       <UFormField
         label="Costo por persona"
@@ -244,7 +244,7 @@ function onSubmit() {
       <QuotationProviderAdjustmentsEditor v-model="adjustments" :unit-cost="state.unitCost" />
     </div>
 
-    <!-- Dividir entre: solo un costo total se reparte -->
+    <!-- Split among: only a total cost is split -->
     <UFormField
       v-if="state.costType === 'total'"
       label="Dividir entre"
@@ -259,7 +259,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Método de Pago -->
+    <!-- Payment Method -->
     <UFormField
       label="Método de Pago"
       name="paymentMethod"
@@ -272,7 +272,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Observaciones -->
+    <!-- Remarks -->
     <UFormField label="Observaciones" name="remarks">
       <UTextarea
         v-model="remarksInput"
@@ -282,7 +282,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Confirmado -->
+    <!-- Confirmed -->
     <UFormField name="confirmed">
       <UCheckbox
         v-model="state.confirmed"
@@ -290,7 +290,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Acciones -->
+    <!-- Actions -->
     <div class="flex justify-end gap-3 pt-2">
       <UButton
         type="button"

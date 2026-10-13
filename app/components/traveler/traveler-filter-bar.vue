@@ -27,7 +27,7 @@ const representativeOptions = computed(() =>
   })),
 );
 
-// Opciones de camiones
+// Bus options
 const busOptions = computed(() => {
   return props.availableBuses.map((b) => {
     const agency = providerStore.getProviderById(b.providerId)?.name;
@@ -40,7 +40,7 @@ const busOptions = computed(() => {
 });
 
 function onTravelChange(val: string | undefined) {
-  // Al cambiar de viaje, reseteamos el camión y representante para evitar selección inválida
+  // When the travel changes, reset the bus and representative to avoid an invalid selection
   filters.value = { ...filters.value, travelId: val, travelBusId: undefined, representativeId: undefined };
 }
 

@@ -29,7 +29,7 @@ const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.BUS_AGEN
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <ProviderDetailCard :provider="provider" />
 
-        <!-- Unidades -->
+        <!-- Units -->
         <BusList :provider-id="provider.id" />
       </div>
     </div>

@@ -6,7 +6,7 @@ import type { TravelStatus } from '~/types/travel';
 import { CALENDAR_DEFAULT_STATUSES } from '~/utils/travel-calendar';
 import { getTravelStatusLabel } from '~/utils/travel-status';
 
-// Filtros del calendario (app/pages/calendar.vue): estatus visibles, cancelados aparte y días festivos
+// Calendar filters (app/pages/calendar.vue): visible statuses, cancelled apart and public holidays
 
 const statuses = defineModel<TravelStatus[]>('statuses', { required: true });
 const showCancelled = defineModel<boolean>('showCancelled', { required: true });
@@ -17,7 +17,7 @@ const statusItems: CheckboxGroupItem[] = CALENDAR_DEFAULT_STATUSES.map(status =>
   value: status,
 }));
 
-// Cuántos filtros se apartan de lo de inicio (todos los estatus, sin cancelados, con festivos)
+// How many filters differ from the defaults (all statuses, no cancelled, with holidays)
 const activeCount = computed(() =>
   CALENDAR_DEFAULT_STATUSES.filter(status => !statuses.value.includes(status)).length
   + (showCancelled.value ? 1 : 0)

@@ -2,13 +2,13 @@ import { z } from 'zod';
 
 import { parsePhone } from '~/utils/phone';
 
-// Letras (con acentos/ñ), espacios, apóstrofes, puntos y guiones — sin dígitos ni símbolos.
+// Letters (with accents/ñ), spaces, apostrophes, periods and hyphens — no digits or symbols.
 const NAME_REGEX = /^[\p{L}\s'.-]+$/u;
-// Letras, números y puntuación típica de un nombre de negocio — sin < > { } ; ni otros símbolos de inyección.
+// Letters, numbers and the punctuation typical of a business name — no < > { } ; or other injection symbols.
 const BUSINESS_NAME_REGEX = /^[\p{L}\p{N}\s'&.,/()°#-]+$/u;
 
-// Caracteres de control (excepto salto de línea, retorno de carro y tab), típicos de contenido pegado o corrupto.
-// Se construye a partir de sus códigos numéricos para no depender de escapes literales en el código fuente.
+// Control characters (except newline, carriage return and tab), typical of pasted or corrupted content.
+// Built from their numeric codes so it doesn't depend on literal escapes in the source code.
 const CONTROL_CHAR_CODES = Array.from({ length: 32 }, (_, i) => i)
   .filter(code => code !== 9 && code !== 10 && code !== 13)
   .concat(127);
@@ -44,7 +44,7 @@ type PhoneSchemaOptions = {
   required?: boolean;
 };
 
-// Valida el teléfono que entrega <PhoneInput> (E.164) con la longitud de su país.
+// Validates the phone <PhoneInput> returns (E.164) with its country's length.
 export function phoneSchema({ required = false }: PhoneSchemaOptions = {}) {
   return z.string()
     .trim()

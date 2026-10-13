@@ -11,7 +11,7 @@ import { parseDisplayDate } from '~/utils/format-date';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
 const PAGE_SIZE = 20;
-// Por defecto solo los viajes activos
+// Only active travels by default
 const DASHBOARD_DEFAULT_STATUSES: TravelStatus[] = ['pending', 'published', 'in_progress'];
 
 definePageMeta({
@@ -35,7 +35,7 @@ const statusItems: CheckboxGroupItem[] = TRAVEL_STATUSES.map(status => ({
   value: status,
 }));
 
-// Con otro filtro la página actual puede no existir
+// With another filter the current page may not exist
 watch(statuses, () => {
   page.value = 1;
 });
@@ -52,7 +52,7 @@ const travelsQuery = useQuery(() => ({
 const { data, refetch } = travelsQuery;
 const travelsLoad = useQueryLoadState(travelsQuery);
 
-// Al borrar el único viaje de la última página, esa página deja de existir: ir a la última que sí
+// Deleting the only travel on the last page removes that page: go to the last one that exists
 watch(data, (list) => {
   if (list && list.items.length === 0 && page.value > 1) {
     page.value = Math.max(1, Math.ceil(list.total / PAGE_SIZE));
@@ -61,9 +61,9 @@ watch(data, (list) => {
 
 const travels = computed(() => data.value?.items ?? []);
 
-// Funciones auxiliares
+// Helper functions
 function formatDate(dateString: string): string {
-  // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
+  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
   return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
     day: '2-digit',
     month: 'short',
@@ -79,7 +79,7 @@ function resetStatuses() {
   statuses.value = [...DASHBOARD_DEFAULT_STATUSES];
 }
 
-// Navegación
+// Navigation
 function navigateToCreate() {
   router.push('/travels/new');
 }
@@ -109,7 +109,7 @@ async function handleDelete(travel: TravelSummary) {
   }
 }
 
-// Acciones de la fila
+// Row actions
 function getRowActions(travel: TravelSummary) {
   return [
     [
@@ -134,7 +134,7 @@ function getRowActions(travel: TravelSummary) {
   ];
 }
 
-// Columnas de la tabla
+// Table columns
 const columns: TableColumn<TravelSummary>[] = [
   {
     accessorKey: 'label',
@@ -228,7 +228,7 @@ const columns: TableColumn<TravelSummary>[] = [
       </UButton>
     </div>
 
-    <!-- Estadísticas -->
+    <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <!-- Total -->
       <UCard>
@@ -248,7 +248,7 @@ const columns: TableColumn<TravelSummary>[] = [
         </div>
       </UCard>
 
-      <!-- Publicados -->
+      <!-- Published -->
       <UCard>
         <div class="flex items-center justify-between">
           <div>
@@ -266,7 +266,7 @@ const columns: TableColumn<TravelSummary>[] = [
         </div>
       </UCard>
 
-      <!-- En Curso -->
+      <!-- In Progress -->
       <UCard>
         <div class="flex items-center justify-between">
           <div>
@@ -285,7 +285,7 @@ const columns: TableColumn<TravelSummary>[] = [
       </UCard>
     </div>
 
-    <!-- Tabla de viajes -->
+    <!-- Travels table -->
     <UCard>
       <div v-if="statuses.length === 0" class="py-12 text-center text-muted">
         Elegí al menos un estatus para ver viajes
@@ -296,13 +296,13 @@ const columns: TableColumn<TravelSummary>[] = [
         label="los viajes"
         @retry="refetch()"
       >
-        <!-- La agencia no tiene ningún viaje -->
+        <!-- The agency has no travels at all -->
         <EmptyState
           v-if="travels.length === 0 && stats?.total === 0"
           section="travels"
           :actions="[{ label: 'Crear viaje', icon: 'i-lucide-plus', onClick: navigateToCreate }]"
         />
-        <!-- Hay viajes, pero ninguno con los estatus marcados -->
+        <!-- There are travels, but none with the checked statuses -->
         <EmptyState
           v-else-if="travels.length === 0"
           section="noResults"

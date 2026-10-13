@@ -18,7 +18,7 @@ const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.ACCOMMOD
     @retry="providerStore.refetch()"
   >
     <div v-if="provider" class="space-y-6">
-      <!-- Header con breadcrumb -->
+      <!-- Header with breadcrumb -->
       <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         <NuxtLink to="/providers/accommodation" class="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
           Hospedajes
@@ -30,7 +30,7 @@ const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.ACCOMMOD
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <ProviderDetailCard :provider="provider" />
 
-        <!-- Gestión de habitaciones -->
+        <!-- Room management -->
         <HotelRoomsManager
           :provider="provider"
           @close="router.push('/providers/accommodation')"

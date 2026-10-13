@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { QuotationProvider } from '~/types/quotation';
 
-// Cambia solo la cortesía para coordinadores de un servicio por persona. No toca el precio
-// del asiento, así que se puede usar con la cotización confirmada.
+// Changes only the coordinator courtesy of a per-person service. It doesn't touch the seat
+// price, so it can be used on a confirmed quotation.
 
 type Props = {
   provider: QuotationProvider;

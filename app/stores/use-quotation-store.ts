@@ -64,7 +64,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   const quotationBuses = ref<QuotationBus[]>([]);
   const busPayments = ref<BusPayment[]>([]);
   const quotationExpenses = ref<QuotationExpense[]>([]);
-  // Categorías que la agencia ya usó en sus gastos (se cargan al abrir el formulario).
+  // Categories the agency already used in its expenses (loaded when the form opens).
   const expenseCategories = ref<string[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
@@ -90,7 +90,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Servicios de costo total que se reparten entre los asientos mínimos objetivo.
+  // Total-cost services split among the minimum target seats.
   const getProvidersMinimumSplitCost = computed(() => {
     return (quotationId: string): number => {
       return quotationProviders.value
@@ -99,7 +99,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Servicios de costo total que se reparten entre los asientos vendibles.
+  // Total-cost services split among the sellable seats.
   const getProvidersTotalSplitCost = computed(() => {
     return (quotationId: string): number => {
       return quotationProviders.value
@@ -108,7 +108,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Lo que suman al precio de cada asiento los servicios por persona.
+  // What per-person services add to the price of each seat.
   const getPerPersonSeatCost = computed(() => {
     return (quotationId: string): number => {
       return quotationProviders.value
@@ -137,7 +137,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Matriz de precios de referencia: seatPrice + hospedaje agrupado por maxOccupancy.
+  // Reference price matrix: seatPrice + accommodation grouped by maxOccupancy.
   // Reads the provider and hotel-room catalogs: the calling component must create those stores
   // in its setup, or their catalog queries start during render (Vue lifecycle warnings).
   const getReferencePriceMatrix = computed(() => {
@@ -165,7 +165,7 @@ export const useQuotationStore = defineStore('quotation', () => {
       const providerStore = useProviderStore();
       const hotelRoomStore = useHotelRoomStore();
 
-      // Agrupar entradas por maxOccupancy
+      // Group entries by maxOccupancy
       const byOccupancy: Map<number, Array<{
         hotelName: string;
         roomType: string;
@@ -202,7 +202,7 @@ export const useQuotationStore = defineStore('quotation', () => {
         }
       }
 
-      // Construir resultado ordenado por maxOccupancy ascendente
+      // Build the result sorted by maxOccupancy ascending
       return [...byOccupancy.entries()]
         .sort((a, b) => a[0] - b[0])
         .map(([maxOccupancy, hotels]) => {
@@ -272,11 +272,11 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Asientos que se pueden vender: el total menos los coordinadores del viaje cuando la
-  // cotización dice que ocupan asiento. Es el divisor de los costos repartidos entre el
-  // total y la base de la ganancia proyectada.
-  // Los coordinadores son del viaje, no de la cotización: quien llama pasa cuántos son
-  // (`coordinatorIds.length` de travelDetailQuery). Lo mismo los getters que dependen de este.
+  // Seats that can be sold: the total minus the travel's coordinators when the
+  // quotation says they take a seat. It's the divisor of costs split among the
+  // total and the base of the projected profit.
+  // Coordinators belong to the travel, not the quotation: the caller passes how many there
+  // are (`coordinatorIds.length` from travelDetailQuery). Same for the getters built on this one.
   const getSellableSeats = computed(() => {
     return (quotationId: string, coordinatorCount: number): number => {
       const quote = quotations.value.find(c => c.id === quotationId);
@@ -286,8 +286,8 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Costo de los servicios con el autobús lleno: los por persona cuentan su costo por
-  // persona × asientos vendibles.
+  // Cost of the services with a full bus: per-person ones count their cost per
+  // person × sellable seats.
   const getProvidersFullBusCost = computed(() => {
     return (quotationId: string, coordinatorCount: number): number => {
       const sellableSeats = getSellableSeats.value(quotationId, coordinatorCount);
@@ -297,16 +297,16 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Primer asiento vendido con el que los ingresos superan el costo de servicios + autobuses + gastos.
-  // El hospedaje queda fuera: cada viajero lo paga aparte según su habitación.
-  // Devuelve 0 si aún no hay precio por asiento.
+  // First sold seat at which revenue exceeds the cost of services + buses + expenses.
+  // Accommodation is left out: each traveler pays it separately according to their room.
+  // Returns 0 if there's no seat price yet.
   const getBreakEvenSeat = computed(() => {
     return (quotationId: string, coordinatorCount: number): number => {
       const quotation = quotations.value.find(c => c.id === quotationId);
       if (!quotation || quotation.seatPrice === 0)
         return 0;
-      // Los servicios por persona crecen con cada viajero: cada asiento deja precio − su costo
-      // por persona para cubrir los costos fijos (servicios de costo total + autobuses).
+      // Per-person services grow with each traveler: each seat leaves price − its per-person
+      // cost to cover the fixed costs (total-cost services + buses).
       const costPerSeat = getPerPersonSeatCost.value(quotationId);
       const marginPerSeat = quotation.seatPrice - costPerSeat;
       if (marginPerSeat <= 0)
@@ -316,8 +316,8 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Precio calculado a partir del asiento mínimo objetivo (seatPrice de la cotización)
-  // Incluye costos de proveedores, autobuses y gastos adicionales; el hospedaje se suma aparte en la matriz de precios de referencia
+  // Price calculated from the minimum target seat (the quotation's seatPrice)
+  // Includes provider, bus and extra expense costs; accommodation is added separately in the reference price matrix
   const getCalculatedSeatPrice = computed(() => {
     return (quotationId: string, coordinatorCount: number): number => {
       const quotation = quotations.value.find(c => c.id === quotationId);
@@ -333,8 +333,8 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Ganancia con el autobús lleno: asientos vendibles × precio por asiento − (servicios + autobuses + gastos).
-  // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
+  // Profit with a full bus: sellable seats × seat price − (services + buses + expenses).
+  // Accommodation is left out of both sides: travelers pay it separately according to their room.
   const getProjectedProfit = computed(() => {
     return (quotationId: string, coordinatorCount: number): number => {
       const quotation = quotations.value.find(c => c.id === quotationId);
@@ -354,9 +354,9 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Entre cuántas personas se reparte un costo según "Dividir entre": los asientos mínimos
-  // objetivo o los asientos vendibles. También es el número de personas por defecto de un
-  // servicio cobrado por persona.
+  // How many people a cost is split among according to "Dividir entre": the minimum
+  // target seats or the sellable seats. It's also the default number of people of a
+  // service charged per person.
   const getCostDivisor = computed(() => {
     return (quotationId: string, splitType: CostSplitType, coordinatorCount: number): number => {
       const quotation = quotations.value.find(c => c.id === quotationId);
@@ -374,7 +374,7 @@ export const useQuotationStore = defineStore('quotation', () => {
       if (!provider)
         return 0;
 
-      // Un servicio por persona suma su costo por persona a cada asiento, sin reparto.
+      // A per-person service adds its per-person cost to each seat, with no split.
       if (isPerPersonProvider(provider))
         return provider.unitCost ?? 0;
 
@@ -390,13 +390,13 @@ export const useQuotationStore = defineStore('quotation', () => {
       const provider = quotationProviders.value.find(p => p.id === quotationProviderId);
       if (!provider)
         return 0;
-      // Lo que se le debe es payableCost (en un servicio opcional, solo por quienes lo toman).
+      // What is owed is payableCost (in an optional service, only for those who take it).
       const paid = getPaidByProvider.value(quotationProviderId);
       return Math.max(0, provider.payableCost - paid);
     };
   });
 
-  // Lo pagado de más a un proveedor opcional cuando después se desmarcan o se borran viajeros.
+  // What was overpaid to an optional provider when travelers are later unchecked or deleted.
   const getProviderOverpayment = computed(() => {
     return (quotationProviderId: string): number => {
       const provider = quotationProviders.value.find(p => p.id === quotationProviderId);
@@ -407,13 +407,13 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Ajustes de precio (Niño -10%, Adulto mayor -$50...) de un servicio por persona.
+  // Price adjustments (Niño -10%, Adulto mayor -$50...) of a per-person service.
   const getAdjustmentsByProvider = computed(() => {
     return (quotationProviderId: string): ProviderPriceAdjustment[] =>
       providerPriceAdjustments.value.filter(a => a.quotationProviderId === quotationProviderId);
   });
 
-  // El ajuste que paga un viajero en un servicio; undefined = precio base.
+  // The adjustment a traveler pays in a service; undefined = base price.
   const getTravelerAdjustment = computed(() => {
     return (quotationProviderId: string, travelerId: string): ProviderPriceAdjustment | undefined => {
       const choice = travelerPriceAdjustments.value.find(a => a.quotationProviderId === quotationProviderId && a.travelerId === travelerId);
@@ -421,7 +421,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Viajeros (por id) que NO toman un servicio opcional. Todos los demás sí lo toman.
+  // Travelers (by id) who do NOT take an optional service. Everyone else does.
   const getOptOutsByProvider = computed(() => {
     return (quotationProviderId: string): Set<string> => {
       return new Set(
@@ -596,7 +596,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  // Helper interno — recalcula seatPrice de la cotización.
+  // Internal helper — recalculates the quotation's seatPrice.
   // quotations.total_seats is kept by a DB trigger as the sum of the quotation's bus
   // capacities; mirror it in the cache so the seat price, profit and break-even use it.
   function _refreshTotalSeats(quotationId: string): void {
@@ -989,8 +989,8 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   /**
-   * Cambia si el proveedor de un servicio por persona les da cortesía a los coordinadores.
-   * Se permite con la cotización confirmada porque no cambia el precio del asiento.
+   * Changes whether the provider of a per-person service gives coordinators a courtesy.
+   * Allowed on a confirmed quotation because it doesn't change the seat price.
    */
   async function updateProviderCourtesy(
     id: string,
@@ -1021,9 +1021,9 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   /**
-   * Re-lee lo que se le debe a cada proveedor de la cotización del viaje. La base de datos
-   * lo recalcula cuando se agregan, borran o desmarcan viajeros.
-   * @param travelId - El viaje cuyos viajeros cambiaron
+   * Re-reads what is owed to each provider of the travel's quotation. The database
+   * recalculates it when travelers are added, deleted or unchecked.
+   * @param travelId - The travel whose travelers changed
    */
   async function refreshProviderPayableCosts(travelId: string): Promise<void> {
     const quotation = quotations.value.find(c => c.travelId === travelId);
@@ -1057,9 +1057,9 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   /**
-   * Marca si unos viajeros toman o no un servicio opcional y refresca lo que se le debe.
-   * Se permite con la cotización confirmada, igual que las habitaciones.
-   * @returns Un mensaje de error, o null si todo salió bien
+   * Sets whether some travelers take an optional service and refreshes what is owed.
+   * Allowed on a confirmed quotation, like the rooms.
+   * @returns An error message, or null if everything went well
    */
   async function setServiceTakers(
     quotationProviderId: string,
@@ -1098,9 +1098,9 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   /**
-   * Guarda los ajustes de precio de un servicio por persona y refresca lo que se le debe.
-   * Se permite con la cotización confirmada porque no cambian el precio del asiento.
-   * @returns Un mensaje de error, o null si todo salió bien
+   * Saves the price adjustments of a per-person service and refreshes what is owed.
+   * Allowed on a confirmed quotation because they don't change the seat price.
+   * @returns An error message, or null if everything went well
    */
   async function saveProviderAdjustments(
     quotationProviderId: string,
@@ -1118,7 +1118,7 @@ export const useQuotationStore = defineStore('quotation', () => {
         ...providerPriceAdjustments.value.filter(a => a.quotationProviderId !== quotationProviderId),
         ...saved,
       ];
-      // Un ajuste borrado regresa a sus viajeros al precio base (en la BD por cascada).
+      // A deleted adjustment puts its travelers back on the base price (in the DB by cascade).
       const savedIds = new Set(saved.map(a => a.id));
       travelerPriceAdjustments.value = travelerPriceAdjustments.value.filter(a =>
         a.quotationProviderId !== quotationProviderId || savedIds.has(a.adjustmentId),
@@ -1150,9 +1150,9 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   /**
-   * Elige el ajuste que pagan unos viajeros en un servicio (null = precio base) y refresca
-   * lo que se le debe al proveedor.
-   * @returns Un mensaje de error, o null si todo salió bien
+   * Picks the adjustment some travelers pay in a service (null = base price) and refreshes
+   * what is owed to the provider.
+   * @returns An error message, or null if everything went well
    */
   async function setTravelerAdjustment(
     quotationProviderId: string,
@@ -1296,7 +1296,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   // ============================================================================
-  // Hospedaje Actions
+  // Accommodation Actions
   // ============================================================================
 
   async function addQuotationAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
@@ -1531,7 +1531,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   // ============================================================================
-  // Precio al Público Actions
+  // Public Price Actions
   // ============================================================================
 
   async function addPublicPrice(data: QuotationPublicPriceFormData): Promise<QuotationPublicPrice | { error: string }> {
@@ -1599,7 +1599,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   // ============================================================================
-  // Gastos Adicionales Actions
+  // Extra Expense Actions
   // ============================================================================
 
   async function fetchExpenseCategories(): Promise<void> {
@@ -1699,7 +1699,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   // ============================================================================
-  // Autobuses Apartados Actions
+  // Reserved Bus Actions
   // ============================================================================
 
   async function addBusQuotation(data: QuotationBusFormData): Promise<QuotationBus | { error: string }> {
@@ -1799,9 +1799,9 @@ export const useQuotationStore = defineStore('quotation', () => {
 
       quotationBuses.value = quotationBuses.value.filter(b => b.id !== id);
       busPayments.value = busPayments.value.filter(p => p.quotationBusId !== id);
-      // El travel_bus vinculado se elimina por CASCADE en DB (quotation_bus_id FK ON DELETE CASCADE)
-      // y travelers.travel_bus_id se limpia por ON DELETE SET NULL. Volver a pedir el detalle
-      // del viaje lo quita de las opciones de camión de los viajeros.
+      // The linked travel_bus is deleted by CASCADE in the DB (quotation_bus_id FK ON DELETE CASCADE)
+      // and travelers.travel_bus_id is cleared by ON DELETE SET NULL. Refetching the travel
+      // detail removes it from the travelers' bus options.
       if (quotation) {
         queryCache.invalidateQueries({ key: travelKeys.detail(quotation.travelId), exact: true });
       }

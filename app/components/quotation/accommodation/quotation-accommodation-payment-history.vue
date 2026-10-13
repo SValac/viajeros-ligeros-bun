@@ -24,7 +24,7 @@ const isDeleteModalOpen = shallowRef(false);
 const paymentToDelete = shallowRef<AccommodationPayment | null>(null);
 
 function formatDate(dateString: string): string {
-  // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
+  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
   return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
     day: '2-digit',
     month: 'short',
@@ -100,7 +100,7 @@ async function confirmDelete() {
       />
     </div>
 
-    <!-- Tabla de pagos -->
+    <!-- Payments table -->
     <div v-if="payments.length > 0" class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
@@ -173,7 +173,7 @@ async function confirmDelete() {
       </table>
     </div>
 
-    <!-- Estado vacío -->
+    <!-- Empty state -->
     <EmptyState
       v-else
       section="payments"
@@ -181,7 +181,7 @@ async function confirmDelete() {
       :actions="[{ label: 'Registrar pago', icon: 'i-lucide-plus', size: 'sm', variant: 'outline', onClick: openNewPayment }]"
     />
 
-    <!-- Footer: totales -->
+    <!-- Footer: totals -->
     <div class="pt-2 border-t border-default flex items-center justify-between text-sm">
       <span class="text-muted">Total pagado</span>
       <span class="font-semibold">{{ formatCurrency(paid) }}</span>
@@ -194,7 +194,7 @@ async function confirmDelete() {
     </div>
   </div>
 
-  <!-- Modal: form de pago -->
+  <!-- Modal: payment form -->
   <UModal
     v-model:open="isFormModalOpen"
     :title="selectedPayment ? 'Editar Pago' : 'Registrar Pago'"
@@ -212,7 +212,7 @@ async function confirmDelete() {
     </template>
   </UModal>
 
-  <!-- Modal: confirmar eliminación -->
+  <!-- Modal: confirm deletion -->
   <UModal
     v-model:open="isDeleteModalOpen"
     title="Eliminar Pago"

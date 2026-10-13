@@ -21,9 +21,9 @@ export default {
       return errorResponse('missing_coordinator_id', 400);
     }
 
-    // Step 2 — ownership: ctx.supabase respeta RLS, así que si no devuelve
-    // fila, quien llama no es dueño de ese coordinador. No comparamos
-    // owner_id a mano; dejamos que la policy lo decida.
+    // Step 2 — ownership: ctx.supabase respects RLS, so if it returns no
+    // row, the caller doesn't own that coordinator. We don't compare
+    // owner_id by hand; we let the policy decide.
     const { data: coordinator, error: fetchError } = await ctx.supabase
       .from('coordinators')
       .select('id, email, user_id')
@@ -38,7 +38,7 @@ export default {
       return errorResponse('not_authorized', 403);
     }
 
-    // Step 3 — validar estado
+    // Step 3 — validate status
     if (coordinator.user_id) {
       return errorResponse('already_invited', 409);
     }
@@ -49,9 +49,9 @@ export default {
       return errorResponse('cannot_invite_self', 400);
     }
 
-    // Step 4 — recién acá tocamos service-role. inviteUserByEmail's `data`
-    // mapea a user_metadata, NO a app_metadata — el rol se setea aparte
-    // (ver Step 5).
+    // Step 4 — only now do we touch service-role. inviteUserByEmail's `data`
+    // maps to user_metadata, NOT to app_metadata — the role is set separately
+    // (see Step 5).
     const { data: inviteData, error: inviteError } = await ctx.supabaseAdmin.auth.admin.inviteUserByEmail(coordinator.email, {
       data: { coordinator_id: coordinator.id },
     });
@@ -67,9 +67,9 @@ export default {
 
     const newUserId = inviteData.user.id;
 
-    // Step 5 — el rol va en app_metadata: es el único que no puede editar
-    // el propio usuario, y el que la app móvil puede confiar para decidir
-    // el tipo de cuenta.
+    // Step 5 — the role goes in app_metadata: it's the only one the user can't
+    // edit themselves, and the one the mobile app can trust to decide the
+    // account type.
     const { error: metadataError } = await ctx.supabaseAdmin.auth.admin.updateUserById(newUserId, {
       app_metadata: { role: 'coordinator' },
     });
@@ -78,7 +78,7 @@ export default {
       return errorResponse('unknown_error', 500);
     }
 
-    // step 6 vincular
+    // step 6 link
     const { error: linkError } = await ctx.supabaseAdmin
       .from('coordinators')
       .update({ user_id: newUserId })

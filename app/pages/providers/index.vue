@@ -31,7 +31,7 @@ const categories = Object.values(PROVIDER_CATEGORY_META);
       label="los proveedores"
       @retry="providerStore.refetch()"
     >
-      <!-- Resumen total -->
+      <!-- Overall summary -->
       <UCard>
         <div class="flex items-center justify-between">
           <div>
@@ -46,7 +46,7 @@ const categories = Object.values(PROVIDER_CATEGORY_META);
         </div>
       </UCard>
 
-      <!-- Categorías -->
+      <!-- Categories -->
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <NuxtLink
           v-for="cat in categories"

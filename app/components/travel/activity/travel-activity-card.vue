@@ -39,7 +39,7 @@ const googleMapsUrl = computed(() => {
             {{ activity.time }}
           </span>
         </div>
-        <!-- Slot de acciones en la esquina superior derecha -->
+        <!-- Actions slot in the top right corner -->
         <div
           v-if="$slots.actions"
           class="absolute top-0 right-0 z-10"
@@ -50,13 +50,13 @@ const googleMapsUrl = computed(() => {
     </template>
     <div class="flex flex-col-reverse md:flex-row items-center justify-center gap-4">
       <div class="basis-1/6 shrink-0">
-        <!-- Ubicación -->
+        <!-- Location -->
         <div
           v-if="activity.location || activity.mapLocation"
         >
-          <!-- Caso: hay location textual -->
+          <!-- Case: there's a text location -->
           <template v-if="activity.location">
-            <!-- Si hay mapLocation, el texto es un link a Google Maps -->
+            <!-- If there's a mapLocation, the text links to Google Maps -->
             <UButton
               v-if="activity.mapLocation"
               as="a"
@@ -70,14 +70,14 @@ const googleMapsUrl = computed(() => {
               color="primary"
               class="flex items-center justify-center w-36"
             />
-            <!-- Si no hay mapLocation, texto muted normal -->
+            <!-- If there's no mapLocation, plain muted text -->
             <span
               v-else
               class="flex-1"
             >{{ activity.location }}</span>
           </template>
 
-          <!-- Caso: no hay location pero sí hay mapLocation -->
+          <!-- Case: no location but there is a mapLocation -->
           <UButton
             v-else-if="activity.mapLocation"
             as="a"
@@ -94,7 +94,7 @@ const googleMapsUrl = computed(() => {
         </div>
       </div>
 
-      <!-- Descripción -->
+      <!-- Description -->
       <div class="flex-1 text-sm text-muted text-pretty">
         {{ activity.description }}
       </div>

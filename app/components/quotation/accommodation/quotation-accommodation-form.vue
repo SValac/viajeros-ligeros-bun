@@ -21,14 +21,14 @@ const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
 
-// IDs de hoteles ya agregados a esta cotización
+// IDs of hotels already added to this quotation
 const alreadyAddedHotels = computed(() => {
   return new Set(
     quotationStore.getAccommodationsByQuotation(props.quotationId).map(h => h.providerId),
   );
 });
 
-// Hoteles disponibles (providers con categoría 'accommodation', activos y no duplicados)
+// Available hotels (providers with category 'accommodation', active and not duplicated)
 const availableHotels = computed(() => {
   return providerStore.getProvidersByCategory('accommodation')
     .filter(p => p.active && !alreadyAddedHotels.value.has(p.id));
@@ -43,7 +43,7 @@ const paymentMethodOptions = [
   { label: 'Transferencia', value: 'transfer' },
 ];
 
-// Esquema de validación
+// Validation schema
 const formSchema = z.object({
   quotationId: z.string(),
   providerId: z.string({ message: 'Selecciona un hotel' }),
@@ -68,7 +68,7 @@ const formState = reactive<Partial<FormSchema>>({
   details: [],
 });
 
-// Tipos de habitación del hotel seleccionado
+// Room types of the selected hotel
 const selectedRoomTypes = computed(() => {
   if (!formState.providerId)
     return [];
@@ -78,7 +78,7 @@ const selectedRoomTypes = computed(() => {
   return hotelRoomData.roomTypes;
 });
 
-// Al cambiar de hotel, reiniciar detalles
+// When the hotel changes, reset the details
 watch(() => formState.providerId, () => {
   formState.details = [];
 });
@@ -110,7 +110,7 @@ async function handleSubmit() {
     color: 'success',
   });
 
-  // Reiniciar form
+  // Reset form
   formState.quotationId = props.quotationId;
   formState.providerId = '';
   formState.nightCount = 1;
@@ -141,7 +141,7 @@ function handleCancel() {
   >
     <template #body>
       <form class="space-y-6" @submit.prevent="handleSubmit">
-        <!-- Seleccionar Hotel -->
+        <!-- Select Hotel -->
         <UFormField label="Hotel" required>
           <UAlert
             v-if="availableHotels.length === 0"
@@ -158,7 +158,7 @@ function handleCancel() {
           />
         </UFormField>
 
-        <!-- Cantidad de Noches -->
+        <!-- Number of Nights -->
         <UFormField label="Cantidad de Noches" required>
           <UInput
             v-model.number="formState.nightCount"
@@ -168,7 +168,7 @@ function handleCancel() {
           />
         </UFormField>
 
-        <!-- Método de Pago -->
+        <!-- Payment Method -->
         <UFormField label="Método de Pago" required>
           <USelect
             v-model="formState.paymentMethod"
@@ -176,7 +176,7 @@ function handleCancel() {
           />
         </UFormField>
 
-        <!-- Tipos de Habitación -->
+        <!-- Room Types -->
         <QuotationAccommodationRoomTypes
           v-if="formState.providerId"
           :model-value="formState.details ?? []"
@@ -185,7 +185,7 @@ function handleCancel() {
           @update:model-value="(details) => formState.details = details"
         />
 
-        <!-- Acciones -->
+        <!-- Actions -->
         <div class="flex justify-end gap-3 pt-2">
           <UButton
             type="button"

@@ -66,7 +66,7 @@ function handleCancel() {
       </div>
     </div>
 
-    <!-- Formulario -->
+    <!-- Form -->
     <UCard>
       <ProviderForm
         :fixed-category="PROVIDER_CATEGORY.ACCOMMODATION"
