@@ -96,7 +96,7 @@ function onSubmit() {
     <!-- Fecha de Pago -->
     <UFormField
       label="Fecha de Pago"
-      name="fechaPago"
+      name="paymentDate"
       required
     >
       <UInput
@@ -109,7 +109,7 @@ function onSubmit() {
     <!-- Tipo de Pago -->
     <UFormField
       label="Tipo de Pago"
-      name="tipoPago"
+      name="paymentType"
       required
     >
       <USelect
@@ -129,7 +129,7 @@ function onSubmit() {
     </UFormField>
 
     <!-- Notas -->
-    <UFormField label="Notas" name="notas">
+    <UFormField label="Notas" name="notes">
       <UTextarea
         v-model="notesInput"
         placeholder="Notas adicionales..."

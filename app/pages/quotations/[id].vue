@@ -218,7 +218,7 @@ function handleQuotationConfirmed() {
               />
             </UFormField>
 
-            <UFormField label="Notas" name="notas">
+            <UFormField label="Notas" name="notes">
               <UTextarea
                 v-model="createNotesInput"
                 placeholder="Observaciones sobre esta cotización..."

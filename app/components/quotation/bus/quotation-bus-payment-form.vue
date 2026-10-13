@@ -79,7 +79,7 @@ function onSubmit() {
   >
     <UFormField
       label="Monto"
-      name="monto"
+      name="amount"
       required
     >
       <MoneyInput v-model="state.amount" />
@@ -90,7 +90,7 @@ function onSubmit() {
 
     <UFormField
       label="Fecha de Pago"
-      name="fechaPago"
+      name="paymentDate"
       required
     >
       <UInput
@@ -102,7 +102,7 @@ function onSubmit() {
 
     <UFormField
       label="Tipo de Pago"
-      name="tipoPago"
+      name="paymentType"
       required
     >
       <USelect
@@ -112,7 +112,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <UFormField label="Concepto" name="concepto">
+    <UFormField label="Concepto" name="concept">
       <UInput
         v-model="conceptInput"
         placeholder="Ej. Anticipo, Liquidación..."
@@ -120,7 +120,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <UFormField label="Notas" name="notas">
+    <UFormField label="Notas" name="notes">
       <UTextarea
         v-model="notesInput"
         placeholder="Notas adicionales..."
