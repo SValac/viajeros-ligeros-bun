@@ -1,7 +1,6 @@
-import type { PaymentType } from '~/types/payment';
+import type { PaymentStatus, PaymentType } from '~/types/payment';
 
 export type QuotationStatus = 'draft' | 'confirmed';
-export type ProviderPaymentStatus = 'pending' | 'partial' | 'paid';
 
 export type Quotation = {
   id: string;
@@ -95,20 +94,12 @@ export type SupplierPaymentFields = {
   notes?: string;
 };
 
-// A saved supplier payment, without its parent key. ProviderPayment, AccommodationPayment and
-// BusPayment fit it.
+// A saved supplier payment, without its parent key. Each supplier payment type below adds its
+// own parent key to it.
 export type SupplierPayment = SupplierPaymentFields & { id: string; createdAt: string };
-
-export type ProviderPayment = {
-  id: string;
-  quotationProviderId: string;
-  amount: number;
-  paymentDate: string;
-  paymentType: PaymentType;
-  concept?: string;
-  notes?: string;
-  createdAt: string;
-};
+export type ProviderPayment = SupplierPayment & { quotationProviderId: string };
+export type AccommodationPayment = SupplierPayment & { quotationAccommodationId: string };
+export type BusPayment = SupplierPayment & { quotationBusId: string };
 
 // Extra quotation expense that isn't a provider service: advertising, travel allowances,
 // commissions, box lunch... Always split among the seats by splitType. No payments.
@@ -142,7 +133,7 @@ export type QuotationProviderFormData = Omit<QuotationProvider, 'id' | 'payableC
 export type ProviderPaymentFormData = Omit<ProviderPayment, 'id' | 'createdAt'> & { id?: string };
 
 export type QuotationProviderFilters = {
-  paymentStatus?: ProviderPaymentStatus | 'all';
+  paymentStatus?: PaymentStatus | 'all';
   confirmed?: boolean | 'all';
   paymentMethod?: PaymentType | 'all';
 };
@@ -162,8 +153,6 @@ export type QuotationAccommodationDetail = {
   totalCost?: number;
 };
 
-export type AccommodationPaymentStatus = 'pending' | 'partial' | 'paid';
-
 export type QuotationAccommodation = {
   id: string;
   quotationId: string;
@@ -175,17 +164,6 @@ export type QuotationAccommodation = {
   confirmed: boolean;
   createdAt: string;
   updatedAt: string;
-};
-
-export type AccommodationPayment = {
-  id: string;
-  quotationAccommodationId: string;
-  amount: number;
-  paymentDate: string;
-  paymentType: PaymentType;
-  concept?: string;
-  notes?: string;
-  createdAt: string;
 };
 
 export type AccommodationPaymentFormData = Omit<AccommodationPayment, 'id' | 'createdAt'> & { id?: string };
@@ -224,19 +202,6 @@ export type QuotationBus = {
 
 export type QuotationBusFormData = Omit<QuotationBus, 'id' | 'createdAt' | 'updatedAt'> & {
   id?: string;
-};
-
-export type BusPaymentStatus = 'pending' | 'partial' | 'paid';
-
-export type BusPayment = {
-  id: string;
-  quotationBusId: string;
-  amount: number;
-  paymentDate: string;
-  paymentType: PaymentType;
-  concept?: string;
-  notes?: string;
-  createdAt: string;
 };
 
 export type BusPaymentFormData = Omit<BusPayment, 'id' | 'createdAt'> & { id?: string };

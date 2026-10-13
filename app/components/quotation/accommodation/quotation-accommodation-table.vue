@@ -4,7 +4,8 @@ import type { TableColumn } from '@nuxt/ui';
 import { h } from 'vue';
 import { z } from 'zod';
 
-import type { AccommodationPaymentStatus, QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
+import type { PaymentStatus } from '~/types/payment';
+import type { QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
 
 import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { travelDetailQuery } from '~/queries/travels';
@@ -92,7 +93,7 @@ function openHistory(accommodation: QuotationAccommodation) {
 }
 
 // Payment helpers for the columns
-const paymentStatusBadge: Record<AccommodationPaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
+const paymentStatusBadge: Record<PaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
   pending: { label: 'Pendiente', color: 'warning' },
   partial: { label: 'Anticipo', color: 'neutral' },
   paid: { label: 'Liquidado', color: 'success' },

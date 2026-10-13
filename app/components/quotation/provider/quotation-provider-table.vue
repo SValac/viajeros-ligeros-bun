@@ -3,7 +3,8 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { ProviderPaymentStatus, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
+import type { PaymentStatus } from '~/types/payment';
+import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
@@ -24,7 +25,7 @@ const toast = useToast();
 const providers = computed(() => quotationStore.filteredProviders(quotationId));
 
 // Filter state (local — synced to store)
-const filterPaymentStatus = shallowRef<ProviderPaymentStatus | 'all'>('all');
+const filterPaymentStatus = shallowRef<PaymentStatus | 'all'>('all');
 const filterConfirmed = shallowRef<'all' | 'yes' | 'no'>('all');
 const filterPaymentMethod = shallowRef<'all' | 'cash' | 'transfer'>('all');
 
@@ -77,7 +78,7 @@ const paymentMethodOptions = [
   { label: 'Transferencia', value: 'transfer' },
 ];
 
-function getPaymentStatusColor(status: ProviderPaymentStatus): 'warning' | 'info' | 'success' {
+function getPaymentStatusColor(status: PaymentStatus): 'warning' | 'info' | 'success' {
   if (status === 'pending')
     return 'warning';
   if (status === 'partial')
@@ -85,7 +86,7 @@ function getPaymentStatusColor(status: ProviderPaymentStatus): 'warning' | 'info
   return 'success';
 }
 
-function getPaymentStatusLabel(status: ProviderPaymentStatus): string {
+function getPaymentStatusLabel(status: PaymentStatus): string {
   if (status === 'pending')
     return 'Pendiente';
   if (status === 'partial')

@@ -1,15 +1,13 @@
+import type { PaymentStatus } from '~/types/payment';
 import type {
   AccommodationPayment,
   AccommodationPaymentFormData,
-  AccommodationPaymentStatus,
   BusPayment,
   BusPaymentFormData,
-  BusPaymentStatus,
   CostSplitType,
   ProviderOptOut,
   ProviderPayment,
   ProviderPaymentFormData,
-  ProviderPaymentStatus,
   ProviderPriceAdjustment,
   ProviderPriceAdjustmentDraft,
   Quotation,
@@ -31,7 +29,6 @@ import type {
 import type { TravelAccommodation, TravelDetail } from '~/types/travel';
 
 import {
-  calculatePaymentStatus,
   calculateProviderQuotedCost,
   calculateSeatPrice,
   calculateSellableSeats,
@@ -43,6 +40,7 @@ import { quotationByTravelQuery, quotationKeys } from '~/queries/quotations';
 import { travelDetailQuery, travelKeys } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import { getPaymentStatus } from '~/utils/payment-status';
 
 export const useQuotationStore = defineStore('quotation', () => {
   const queryCache = useQueryCache();
@@ -433,12 +431,12 @@ export const useQuotationStore = defineStore('quotation', () => {
   });
 
   const getProviderPaymentStatus = computed(() => {
-    return (quotationProviderId: string): ProviderPaymentStatus => {
+    return (quotationProviderId: string): PaymentStatus => {
       const provider = quotationProviders.value.find(p => p.id === quotationProviderId);
       if (!provider)
         return 'pending';
       const paid = getPaidByProvider.value(quotationProviderId);
-      return calculatePaymentStatus(paid, provider.payableCost);
+      return getPaymentStatus(paid, provider.payableCost);
     };
   });
 
@@ -475,12 +473,12 @@ export const useQuotationStore = defineStore('quotation', () => {
   });
 
   const getAccommodationPaymentStatus = computed(() => {
-    return (quotationAccommodationId: string): AccommodationPaymentStatus => {
+    return (quotationAccommodationId: string): PaymentStatus => {
       const accommodation = quotationAccommodations.value.find(h => h.id === quotationAccommodationId);
       if (!accommodation)
         return 'pending';
       const paid = getPaidByAccommodation.value(quotationAccommodationId);
-      return calculatePaymentStatus(paid, accommodation.totalCost);
+      return getPaymentStatus(paid, accommodation.totalCost);
     };
   });
 
@@ -570,12 +568,12 @@ export const useQuotationStore = defineStore('quotation', () => {
   });
 
   const getBusPaymentStatus = computed(() => {
-    return (quotationBusId: string): BusPaymentStatus => {
+    return (quotationBusId: string): PaymentStatus => {
       const bus = quotationBuses.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 'pending';
       const paid = getPaidByBus.value(quotationBusId);
-      return calculatePaymentStatus(paid, bus.totalCost ?? 0);
+      return getPaymentStatus(paid, bus.totalCost ?? 0);
     };
   });
 

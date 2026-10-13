@@ -3,7 +3,8 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { BusPaymentStatus, QuotationBus } from '~/types/quotation';
+import type { PaymentStatus } from '~/types/payment';
+import type { QuotationBus } from '~/types/quotation';
 
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
@@ -39,7 +40,7 @@ function getAgencyName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
-function getPaymentStatusColor(status: BusPaymentStatus): 'warning' | 'info' | 'success' {
+function getPaymentStatusColor(status: PaymentStatus): 'warning' | 'info' | 'success' {
   if (status === 'pending')
     return 'warning';
   if (status === 'partial')
@@ -47,7 +48,7 @@ function getPaymentStatusColor(status: BusPaymentStatus): 'warning' | 'info' | '
   return 'success';
 }
 
-function getPaymentStatusLabel(status: BusPaymentStatus): string {
+function getPaymentStatusLabel(status: PaymentStatus): string {
   if (status === 'pending')
     return 'Pendiente';
   if (status === 'partial')
