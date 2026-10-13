@@ -20,7 +20,7 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-// Schema de validación Zod
+// Zod validation schema
 const schema = z.object({
   name: businessNameSchema({ min: 3, max: 100 }),
   description: textSchema({ max: 300 })
@@ -31,7 +31,7 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-// Estado inicial del formulario
+// Initial form state
 const initialState = computed((): Schema => {
   if (service) {
     return {
@@ -44,13 +44,13 @@ const initialState = computed((): Schema => {
   return {
     name: '',
     description: '',
-    included: true, // Por defecto marcado como incluido
+    included: true, // Checked as included by default
   };
 });
 
 const state = ref<Schema>({ ...initialState.value });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeBusinessName);
 const descriptionInput = useSanitizedModel(() => state.value.description ?? '', v => state.value.description = v, sanitizeText);
 
@@ -86,7 +86,7 @@ function onCancel() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Nombre del servicio -->
+    <!-- Service name -->
     <UFormField
       label="Nombre del servicio"
       name="name"
@@ -99,7 +99,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Descripción (opcional) -->
+    <!-- Description (optional) -->
     <UFormField
       label="Descripción"
       name="description"
@@ -112,7 +112,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Incluido en el paquete -->
+    <!-- Included in the package -->
     <UFormField
       label="Estado"
       name="included"
@@ -123,7 +123,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Botones de acción -->
+    <!-- Action buttons -->
     <div class="flex justify-end gap-3 pt-4">
       <UButton
         type="button"

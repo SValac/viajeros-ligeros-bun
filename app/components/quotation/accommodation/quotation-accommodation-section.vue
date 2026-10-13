@@ -30,13 +30,13 @@ defineEmits<Emits>();
       </div>
     </template>
     <div class="space-y-6">
-      <!-- Tabla de hospedajes -->
+      <!-- Accommodations table -->
       <QuotationAccommodationTable
         :quotation-id="quotationId"
         :readonly="readonly ?? false"
       />
 
-      <!-- Resumen de hospedajes -->
+      <!-- Accommodations summary -->
       <QuotationAccommodationSummary
         :quotation-id="quotationId"
       />

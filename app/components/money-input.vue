@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { CURRENCY_FORMAT_OPTIONS } from '~/utils/currency';
 
-// Monto en pesos con formato local ($4,500.00), o porcentaje (12.5%) con `percent`.
-// Se escribe libre (4500, 4,500.50) y se formatea al salir del campo; el v-model se
-// actualiza en ese momento (blur o Enter), no con cada tecla.
+// Amount in pesos with local format ($4,500.00), or a percentage (12.5%) with `percent`.
+// It's typed freely (4500, 4,500.50) and formatted when leaving the field; the v-model
+// updates at that moment (blur or Enter), not on every keystroke.
 //
-// Sin min/max a propósito: en el NumberField, Inicio/Fin saltan al mínimo/máximo y los
-// valores fuera de rango se recortan sin avisar. Los límites los valida el schema del form.
+// No min/max on purpose: in the NumberField, Home/End jump to the minimum/maximum and
+// out-of-range values are clamped without warning. The form schema validates the limits.
 
 const { percent = false, placeholder, ariaLabel, disabled = false } = defineProps<{
   percent?: boolean;
   placeholder?: string;
-  // Solo cuando no está dentro de un UFormField con label
+  // Only when it's not inside a UFormField with a label
   ariaLabel?: string;
   disabled?: boolean;
 }>();

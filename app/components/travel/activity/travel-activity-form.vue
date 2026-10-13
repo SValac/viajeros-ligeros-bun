@@ -21,7 +21,7 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-// Schema de validación Zod
+// Zod validation schema
 function createSchema(maxDay: number) {
   return z.object({
     day: z.number()
@@ -49,7 +49,7 @@ const schema = computed(() => createSchema(Math.max(1, props.maxDay)));
 
 type Schema = z.output<ReturnType<typeof createSchema>>;
 
-// Estado inicial del formulario
+// Initial form state
 const initialState = computed((): Schema => {
   if (props.activity) {
     return {
@@ -74,7 +74,7 @@ const initialState = computed((): Schema => {
 
 const state = ref<Schema>({ ...initialState.value });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const titleInput = useSanitizedModel(() => state.value.title, v => state.value.title = v, sanitizeBusinessName);
 const descriptionInput = useSanitizedModel(() => state.value.description, v => state.value.description = v, sanitizeText);
 const locationInput = useSanitizedModel(() => state.value.location ?? '', v => state.value.location = v, sanitizeText);
@@ -119,7 +119,7 @@ function onCancel() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Día -->
+    <!-- Day -->
     <UFormField
       label="Día del itinerario"
       name="day"
@@ -135,7 +135,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Título -->
+    <!-- Title -->
     <UFormField
       label="Título de la actividad"
       name="title"
@@ -148,7 +148,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Hora (opcional) -->
+    <!-- Time (optional) -->
     <UFormField
       label="Hora"
       name="time"
@@ -162,7 +162,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Ubicación (opcional) -->
+    <!-- Location (optional) -->
     <UFormField
       label="Ubicación"
       name="location"
@@ -175,7 +175,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Ubicación en Mapa (opcional) -->
+    <!-- Map location (optional) -->
     <UFormField
       label="Ubicación precisa en mapa"
       description="Opcional - Búsqueda y marcador interactivo"
@@ -185,7 +185,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Descripción -->
+    <!-- Description -->
     <UFormField
       label="Descripción"
       name="description"
@@ -198,7 +198,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Botones de acción -->
+    <!-- Action buttons -->
     <div class="flex justify-end gap-3 pt-4">
       <UButton
         type="button"

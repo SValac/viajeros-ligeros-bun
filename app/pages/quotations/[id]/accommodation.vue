@@ -7,7 +7,7 @@ definePageMeta({
 
 const { quotation, readonly } = useQuotationRoute();
 
-// Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
+// Rendered by app/pages/quotations/[id].vue only when the quotation exists.
 const quotationId = computed(() => quotation.value!.id);
 
 const isAddAccommodationModalOpen = shallowRef(false);

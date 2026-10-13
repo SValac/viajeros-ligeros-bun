@@ -29,16 +29,16 @@ const travelId = computed(() => quotationStore.quotations.find(c => c.id === pro
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
 
-// Hospedajes de la cotización
+// The quotation's accommodations
 const accommodations = computed(() => {
   return quotationStore.getAccommodationsByQuotation(props.quotationId);
 });
 
-// Modal estado
+// Modal state
 const isEditModalOpen = ref(false);
 const editingAccommodation = ref<QuotationAccommodation | null>(null);
 
-// Schema para editar
+// Edit schema
 const editSchema = z.object({
   nightCount: z.number().int().positive(),
   details: z.array(z.object({
@@ -48,13 +48,13 @@ const editSchema = z.object({
   })).min(1),
 });
 
-// Estado del form de edición
+// Edit form state
 const editFormState = reactive({
   nightCount: 0,
   details: [] as QuotationAccommodationDetailFormData[],
 });
 
-// Tipos de habitación disponibles para el hospedaje en edición
+// Room types available for the accommodation being edited
 const roomTypesEdit = computed(() => {
   if (!editingAccommodation.value)
     return [];
@@ -77,12 +77,12 @@ function getTravelRooms(accommodation: QuotationAccommodation): number {
   );
 }
 
-// Obtener nombre del hotel
+// Get the hotel name
 function getHotelName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
-// Slideover historial de pagos
+// Payment history slideover
 const isHistoryOpen = ref(false);
 const historyAccommodation = ref<QuotationAccommodation | null>(null);
 
@@ -91,14 +91,14 @@ function openHistory(accommodation: QuotationAccommodation) {
   isHistoryOpen.value = true;
 }
 
-// Helpers de pago para columnas
+// Payment helpers for the columns
 const paymentStatusBadge: Record<AccommodationPaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
   pending: { label: 'Pendiente', color: 'warning' },
   partial: { label: 'Anticipo', color: 'neutral' },
   paid: { label: 'Liquidado', color: 'success' },
 };
 
-// Acciones por fila
+// Row actions
 function getRowActions(accommodation: QuotationAccommodation) {
   const balance = quotationStore.getPendingBalanceByAccommodation(accommodation.id);
   // Payments go on after the quotation is confirmed; only its structure is locked.
@@ -144,7 +144,7 @@ function getRowActions(accommodation: QuotationAccommodation) {
   ];
 }
 
-// Columnas de la tabla
+// Table columns
 const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
   const cols: TableColumn<QuotationAccommodation>[] = [
     {
@@ -221,7 +221,7 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
   return cols;
 });
 
-// Abrir modal de edición
+// Open the edit modal
 function openEdit(accommodation: QuotationAccommodation) {
   editingAccommodation.value = accommodation;
   editFormState.nightCount = accommodation.nightCount;
@@ -229,7 +229,7 @@ function openEdit(accommodation: QuotationAccommodation) {
   isEditModalOpen.value = true;
 }
 
-// Guardar edición
+// Save the edit
 async function saveEdit() {
   if (!editingAccommodation.value)
     return;
@@ -271,7 +271,7 @@ function closeEdit() {
   isEditModalOpen.value = false;
 }
 
-// Eliminar hospedaje
+// Delete accommodation
 async function deleteAccommodation(id: string) {
   const error = await quotationStore.deleteQuotationAccommodation(id);
   if (error) {
@@ -291,17 +291,17 @@ async function deleteAccommodation(id: string) {
 
 <template>
   <div class="space-y-4">
-    <!-- Tabla de hospedajes -->
+    <!-- Accommodations table -->
     <UTable
       v-if="accommodations.length > 0"
       :data="accommodations"
       :columns="columns"
     />
 
-    <!-- Sin hospedajes -->
+    <!-- No accommodations -->
     <EmptyState v-else section="lodging" />
 
-    <!-- Modal de edición -->
+    <!-- Edit modal -->
     <UModal
       v-model:open="isEditModalOpen"
       title="Editar Hospedaje"
@@ -318,7 +318,7 @@ async function deleteAccommodation(id: string) {
             </div>
           </div>
 
-          <!-- Cantidad de noches editable -->
+          <!-- Editable number of nights -->
           <div>
             <label class="text-sm font-medium block mb-2">Cantidad de Noches</label>
             <UInput
@@ -329,7 +329,7 @@ async function deleteAccommodation(id: string) {
             />
           </div>
 
-          <!-- Tipos de habitación con checkboxes -->
+          <!-- Room types with checkboxes -->
           <QuotationAccommodationRoomTypes
             v-model="editFormState.details"
             :room-types="roomTypesEdit"
@@ -337,7 +337,7 @@ async function deleteAccommodation(id: string) {
             :room-counts="roomCountsEdit"
           />
 
-          <!-- Acciones -->
+          <!-- Actions -->
           <div class="flex justify-end gap-3 pt-2">
             <UButton
               variant="ghost"
@@ -354,7 +354,7 @@ async function deleteAccommodation(id: string) {
       </template>
     </UModal>
 
-    <!-- Slideover historial de pagos -->
+    <!-- Payment history slideover -->
     <USlideover
       v-model:open="isHistoryOpen"
       :title="historyAccommodation ? `Pagos — ${getHotelName(historyAccommodation.providerId)}` : 'Historial de Pagos'"

@@ -9,7 +9,7 @@ const quotationStore = useQuotationStore();
 
 const { travelId, quotation, readonly } = useQuotationRoute();
 
-// Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
+// Rendered by app/pages/quotations/[id].vue only when the quotation exists.
 const quotationId = computed(() => quotation.value!.id);
 const hasBuses = computed(() => quotationStore.getBusesByQuotation(quotationId.value).length > 0);
 
@@ -24,7 +24,7 @@ const isAddBusModalOpen = shallowRef(false);
       @add="isAddBusModalOpen = true"
     />
 
-    <!-- Operadores y coordinadores: son del viaje, se asignan en su pestaña Autobuses -->
+    <!-- Operators and coordinators: they belong to the travel and are assigned in its Autobuses tab -->
     <UAlert
       v-if="hasBuses"
       icon="i-lucide-users"

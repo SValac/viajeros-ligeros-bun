@@ -18,25 +18,25 @@ const emit = defineEmits<{
 
 const travelsStore = useTravelsStore();
 
-// Estado local
+// Local state
 const activities = ref<TravelActivity[]>([...props.modelValue]);
 const isActivityModalOpen = ref(false);
 const editingActivity = ref<TravelActivity | null>(null);
 
-// Toast para feedback
+// Toast for feedback
 const toast = useToast();
 
-// Calcular duración del viaje en días
+// Travel duration in days
 const travelDuration = computed(() => {
   if (!props.startDate || !props.endDate)
     return 0;
   const start = new Date(props.startDate);
   const fin = new Date(props.endDate);
   const diff = fin.getTime() - start.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1; // +1 para incluir ambos días
+  return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both days
 });
 
-// Actividades ordenadas por día
+// Activities sorted by day
 const sortedActivities = computed(() => {
   return [...activities.value].sort((a, b) => a.day - b.day);
 });
@@ -83,7 +83,7 @@ async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
   let nextActivities = [...activities.value];
 
   if (editingActivity.value) {
-    // Editar actividad existente
+    // Edit an existing activity
     const index = activities.value.findIndex(a => a.id === editingActivity.value!.id);
     if (index !== -1) {
       nextActivities[index] = {
@@ -93,7 +93,7 @@ async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
     }
   }
   else {
-    // Agregar nueva actividad
+    // Add a new activity
     const newActivity: TravelActivity = {
       ...activityData,
       id: crypto.randomUUID(),
@@ -129,12 +129,12 @@ async function deleteActivity(activity: TravelActivity) {
   }
 }
 
-// Sincronizar con prop cuando cambia externamente
+// Sync with the prop when it changes from outside
 watch(() => props.modelValue, (newVal) => {
   activities.value = [...newVal];
 }, { deep: true });
 
-// Acciones por actividad
+// Actions per activity
 function getActivityActions(activity: TravelActivity) {
   return [
     {
@@ -154,7 +154,7 @@ function getActivityActions(activity: TravelActivity) {
 
 <template>
   <div class="space-y-4">
-    <!-- Header con botón agregar -->
+    <!-- Header with the add button -->
     <div class="flex items-center justify-between">
       <div class="text-sm text-muted">
         {{ sortedActivities.length }} actividad{{ sortedActivities.length !== 1 ? 'es' : '' }}
@@ -168,7 +168,7 @@ function getActivityActions(activity: TravelActivity) {
       />
     </div>
 
-    <!-- Lista de actividades -->
+    <!-- Activity list -->
     <div
       v-if="sortedActivities.length > 0"
       class="space-y-3"
@@ -191,10 +191,10 @@ function getActivityActions(activity: TravelActivity) {
       </TravelActivityCard>
     </div>
 
-    <!-- Estado vacío -->
+    <!-- Empty state -->
     <EmptyState v-else section="activities" />
 
-    <!-- Modal de formulario -->
+    <!-- Form modal -->
     <UModal
       v-model:open="isActivityModalOpen"
       :title="editingActivity ? 'Editar Actividad' : 'Nueva Actividad'"

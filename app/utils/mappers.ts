@@ -521,7 +521,7 @@ export function mapQuotationProviderToInsert(data: QuotationProviderFormData): T
   };
 }
 
-// Un costo total no lleva precio por persona ni cortesía.
+// A total cost has no per-person price or courtesy.
 export function mapProviderCostFields(data: Pick<QuotationProviderFormData, 'costType' | 'unitCost' | 'coordinatorsCourtesy'>): Pick<Tables<'quotation_providers'>, 'cost_type' | 'unit_cost' | 'coordinators_courtesy'> {
   const perPerson = data.costType === 'per_person';
   return {
@@ -550,7 +550,7 @@ export function mapQuotationExpenseRowToDomain(row: Tables<'quotation_expenses'>
   };
 }
 
-// Un costo total no lleva precio por persona ni personas.
+// A total cost has no per-person price or people.
 export function mapQuotationExpenseToRow(data: QuotationExpenseFormData): TablesInsert<'quotation_expenses'> {
   const perPerson = data.costType === 'per_person';
   return {

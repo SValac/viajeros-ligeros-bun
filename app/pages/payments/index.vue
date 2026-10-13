@@ -19,7 +19,7 @@ const router = useRouter();
 // Travelers pay before, during and after the trip, so a travel stays here once published
 // (not while pending, nor once cancelled).
 const PAYABLE_STATUSES: TravelStatus[] = ['completed', 'in_progress', 'published'];
-// Las tarjetas suman solo los activos: los completados crecen para siempre (sus saldos se ven en la tabla)
+// The cards add up active ones only: completed ones grow forever (their balances show in the table)
 const ACTIVE_STATUSES: TravelStatus[] = ['in_progress', 'published'];
 const PAGE_SIZE = 20;
 const EMPTY_TOTALS: TravelPaymentTotals = { totalExpected: 0, totalCollected: 0, balance: 0, percent: 0 };
@@ -51,10 +51,10 @@ const pageRows = computed(() => (list.value?.items ?? []).map(travel => ({
 })));
 
 const globalStats = computed(() => {
-  // Todavía no llegó la lista de activos
+  // The active list hasn't arrived yet
   if (!activeList.value)
     return undefined;
-  // Hay activos, pero todavía no llegaron sus totales (sin activos la query no corre: todo en 0)
+  // There are active ones, but their totals haven't arrived yet (with none active the query doesn't run: all 0)
   if (activeTravelIds.value.length > 0 && !activeTotals.value)
     return undefined;
 
@@ -123,7 +123,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     header: '% Completado',
     cell: ({ row }) => {
       const pct = row.original.percent;
-      // Solo el viaje liquidado lleva color; un avance parcial es normal, no un error.
+      // Only a settled travel gets a color; partial progress is normal, not an error.
       const color = pct >= 100 ? 'text-success' : 'text-highlighted';
       return h('span', { class: `text-sm font-medium ${color}` }, `${pct}%`);
     },
@@ -159,7 +159,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
       </p>
     </div>
 
-    <!-- Stats cards: solo viajes activos -->
+    <!-- Stats cards: active travels only -->
     <p class="text-sm text-muted -mb-2">
       Viajes publicados y en curso
     </p>
@@ -241,7 +241,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
         label="los viajes"
         @retry="refetchList()"
       >
-        <!-- Sin viajes en la página, los totales están desactivados (sin ids) y no van a llegar -->
+        <!-- With no travels on the page, the totals are disabled (no ids) and won't arrive -->
         <LoadState
           v-bind="totalsLoad"
           :is-loaded="totalsLoad.isLoaded || pageTravelIds.length === 0"

@@ -12,8 +12,8 @@ definePageMeta({
   name: 'travel-optional-services',
 });
 
-// Servicios de la cotización cobrados por persona (un tour, una comida): al proveedor se le
-// paga por los viajeros que los toman. Todos lo toman salvo los que se desmarcan aquí.
+// Quotation services charged per person (a tour, a meal): the provider is paid
+// for the travelers who take them. Everyone takes them except those unchecked here.
 
 const route = useRoute();
 const router = useRouter();
@@ -23,8 +23,8 @@ const quotationStore = useQuotationStore();
 
 const { travelId, travel } = useTravelRoute();
 
-// Los servicios salen de la cotización. La query la copia al store y la vuelve a pedir tras
-// agregar o borrar viajeros, que cambian lo que se le debe a cada servicio.
+// The services come from the quotation. The query copies it into the store and refetches it after
+// travelers are added or deleted, which changes what is owed to each service.
 const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
 const { refetch: refetchQuotation } = quotationQuery;
 const quotationLoad = useQueryLoadState(quotationQuery);
@@ -47,8 +47,8 @@ const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s
   overpaid: quotationStore.getProviderOverpayment(s.id) > 0,
 })));
 
-// El servicio elegido vive en la URL (?service=) para no perderlo al recargar; sin uno
-// válido se muestra el primero.
+// The picked service lives in the URL (?service=) so it isn't lost on reload; without a
+// valid one the first is shown.
 const selectedServiceId = computed<string | undefined>({
   get: () => {
     const fromQuery = route.query.service;
@@ -63,20 +63,20 @@ const selectedService = computed(() => services.value.find(s => s.id === selecte
 
 const selectedAdjustments = computed(() => (selectedService.value ? quotationStore.getAdjustmentsByProvider(selectedService.value.id) : []));
 
-// travelerId → ajuste que paga en el servicio elegido.
+// travelerId → adjustment they pay in the picked service.
 const selectedAdjustmentByTraveler = computed(() => new Map(
   quotationStore.travelerPriceAdjustments
     .filter(a => a.quotationProviderId === selectedService.value?.id)
     .map(a => [a.travelerId, a.adjustmentId]),
 ));
 
-// Coordinadores incluidos: cuentan para el pago salvo que el proveedor les dé cortesía.
+// Coordinators included: they count for the payment unless the provider gives them a courtesy.
 const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
 const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
 const travelersLoad = useQueryLoadState(travelersQuery);
 const occupants = computed(() => travelerData.value?.travelers ?? []);
 
-// Servicio que se está guardando, para bloquear sus casillas mientras tanto.
+// Service being saved, to lock its checkboxes meanwhile.
 const savingServiceId = shallowRef<string | null>(null);
 
 watch(travelId, async (id) => {
@@ -121,9 +121,9 @@ async function onChange(travelerIds: string[], takes: boolean) {
 
 <template>
   <div>
-    <!-- El encabezado y la navegación los pone app/pages/travels/[id].vue -->
+    <!-- The header and navigation come from app/pages/travels/[id].vue -->
     <div class="space-y-6">
-      <!-- Hasta que la cotización cargue (o si falla), "sin servicios" sería mentira -->
+      <!-- Until the quotation loads (or if it fails), "sin servicios" would be a lie -->
       <LoadState
         v-bind="quotationLoad"
         label="la cotización"

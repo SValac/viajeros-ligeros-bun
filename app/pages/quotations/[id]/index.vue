@@ -9,7 +9,7 @@ const paymentStore = usePaymentStore();
 
 const { travelId, quotation } = useQuotationRoute();
 
-// Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
+// Rendered by app/pages/quotations/[id].vue only when the quotation exists.
 const loadedQuotation = computed(() => quotation.value!);
 const travelersCollected = computed(() =>
   paymentStore.getTravelCashSummary(travelId.value).totalCollected,
@@ -21,7 +21,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <!-- Los parámetros tienen su propia pestaña (parameters.vue) -->
+  <!-- Parameters have their own tab (parameters.vue) -->
   <QuotationFinancialSummary
     :quotation-id="loadedQuotation.id"
     :travelers-collected="travelersCollected"

@@ -9,9 +9,9 @@ import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
-// Padre de las pestañas de la cotización (app/pages/quotations/[id]/*). Muestra el
-// encabezado, el estado y la navegación; las pestañas solo se renderizan cuando la
-// cotización existe. Sin cotización, muestra el estado vacío para crearla.
+// Parent of the quotation tabs (app/pages/quotations/[id]/*). Shows the
+// header, the status and the navigation; the tabs only render when the
+// quotation exists. Without a quotation, shows the empty state to create it.
 
 const router = useRouter();
 const toast = useToast();
@@ -20,9 +20,9 @@ const quotationStore = useQuotationStore();
 
 const { travelId, quotation, readonly } = useQuotationRoute();
 
-// La cotización se copia al store en cada petición; las pestañas leen del store. La query
-// la vuelve a pedir al regresar a la pestaña del navegador y tras cada escritura, así que
-// también trae lo que se le debe a cada servicio opcional (cambia con los viajeros).
+// The quotation is copied into the store on every request; the tabs read from the store. The query
+// refetches it when returning to the browser tab and after every write, so it
+// also brings what is owed to each optional service (it changes with the travelers).
 const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
 const { refetch: refetchQuotation } = quotationQuery;
 const quotationLoad = useQueryLoadState(quotationQuery);
@@ -32,9 +32,9 @@ const { data: travel, status, refetch: refetchTravel } = travelQuery;
 const travelLoad = useQueryLoadState(travelQuery);
 
 // Redirect if travel not found.
-// `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
-// y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
-// Espera a que la query resuelva: `undefined` = cargando, `null` = no existe o RLS lo oculta.
+// `watch` with an explicit source, not `watchEffect`: toast.add() reads internal reactive state
+// and the effect would retrigger in a loop (endless toast + router.push).
+// Waits for the query to resolve: `undefined` = loading, `null` = doesn't exist or RLS hides it.
 watch([status, travel], ([currentStatus, value]) => {
   if (currentStatus === 'success' && value === null && travelId.value) {
     toast.add({
@@ -46,7 +46,7 @@ watch([status, travel], ([currentStatus, value]) => {
   }
 }, { immediate: true });
 
-// Para agregar una pestaña: crear app/pages/quotations/[id]/<name>.vue y agregarla aquí.
+// To add a tab: create app/pages/quotations/[id]/<name>.vue and add it here.
 const tabs = computed<NavigationMenuItem[]>(() => {
   const quotationId = quotation.value?.id ?? '';
   const params = { id: travelId.value };
@@ -79,7 +79,7 @@ const createState = reactive<CreateFormSchema>({
   notes: '',
 });
 
-// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
+// Sanitized proxy: filters out invalid characters while the user types
 const createNotesInput = useSanitizedModel(() => createState.notes ?? '', v => createState.notes = v, sanitizeText);
 
 const isCreateModalOpen = shallowRef(false);
@@ -159,14 +159,13 @@ function handleQuotationConfirmed() {
           />
         </div>
 
-        <!-- Hasta que la cotización cargue (o si falla la primera vez), "Sin cotización" sería
-           mentira. Si falla un refetch posterior, se queda lo que ya se tenía. -->
+        <!-- Until the quotation loads (or if the first load fails), "Sin cotización" would be a lie. If a later refetch fails, what was already there stays. -->
         <LoadState
           v-bind="quotationLoad"
           label="la cotización"
           @retry="refetchQuotation()"
         >
-          <!-- Sin cotización -->
+          <!-- No quotation -->
           <UCard v-if="!quotation">
             <EmptyState
               section="quotation"
@@ -174,9 +173,9 @@ function handleQuotationConfirmed() {
             />
           </UCard>
 
-          <!-- Con cotización -->
+          <!-- With a quotation -->
           <template v-else>
-            <!-- Estado + confirmar -->
+            <!-- Status + confirm -->
             <QuotationHeaderActions
               :quotation-id="quotation.id"
               :readonly="readonly"
@@ -195,7 +194,7 @@ function handleQuotationConfirmed() {
         </LoadState>
       </div>
 
-      <!-- Modal: crear cotización -->
+      <!-- Modal: create quotation -->
       <UModal
         v-model:open="isCreateModalOpen"
         title="Crear Cotización"

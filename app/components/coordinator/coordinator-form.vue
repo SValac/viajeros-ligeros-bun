@@ -45,7 +45,7 @@ const state = ref<Schema>({
   notes: coordinator?.notes ?? '',
 });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeName);
 const notesInput = useSanitizedModel(() => state.value.notes ?? '', v => state.value.notes = v, sanitizeText);
 

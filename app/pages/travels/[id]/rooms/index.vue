@@ -376,7 +376,7 @@ async function updateAccommodation(
 
 <template>
   <div>
-    <!-- El encabezado y la navegación los pone app/pages/travels/[id].vue -->
+    <!-- The header and navigation come from app/pages/travels/[id].vue -->
     <div class="space-y-6">
       <!-- Until the travelers load (or if they fail), the stats and rooms would show nobody;
            until the quotation loads, every room would look unquoted -->
@@ -432,7 +432,7 @@ async function updateAccommodation(
             </UCard>
           </div>
 
-          <!-- Tabs por hotel -->
+          <!-- Tabs per hotel -->
           <UCard v-if="hotelGroups.length === 0">
             <EmptyState
               section="lodging"

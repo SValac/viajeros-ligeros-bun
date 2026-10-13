@@ -32,7 +32,7 @@ const emit = defineEmits<{
 }>();
 const providerStore = useProviderStore();
 
-// Estado inicial del formulario
+// Initial form state
 const state = ref({
   firstName: traveler?.firstName ?? initialValues?.firstName ?? '',
   lastName: traveler?.lastName ?? initialValues?.lastName ?? '',
@@ -45,18 +45,18 @@ const state = ref({
   representativeId: traveler?.representativeId ?? initialValues?.representativeId ?? undefined,
 });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const firstNameInput = useSanitizedModel(() => state.value.firstName, v => state.value.firstName = v, sanitizeName);
 const lastNameInput = useSanitizedModel(() => state.value.lastName, v => state.value.lastName = v, sanitizeName);
 const boardingPointInput = useSanitizedModel(() => state.value.boardingPoint, v => state.value.boardingPoint = v, sanitizeBusinessName);
 
-// Camión seleccionado — fuente de verdad para el máximo de asientos
+// Selected bus — source of truth for the max seat
 const selectedBusForSeat = computed(() =>
   availableBuses.find(b => b.id === state.value.travelBusId),
 );
 const maxSeats = computed(() => selectedBusForSeat.value?.seatCount ?? 1);
 
-// Schema reactivo al máximo de asientos del camión seleccionado
+// Schema reactive to the selected bus's max seat
 const schema = computed(() =>
   z.object({
     firstName: nameSchema({ min: 2, max: 100 }),
@@ -95,7 +95,7 @@ type Schema = {
   representativeId?: string;
 };
 
-// Opciones de viajes para USelect
+// Travel options for USelect
 const travelOptions = computed(() =>
   availableTravels.map(t => ({
     value: t.id,
@@ -103,10 +103,10 @@ const travelOptions = computed(() =>
   })),
 );
 
-// Viaje seleccionado — fuente de verdad para los buses (FK a travel_buses.id)
+// Selected travel — source of truth for the buses (FK to travel_buses.id)
 const { data: selectedTravel } = useQuery(() => travelDetailQuery(state.value.travelId));
 
-// Opciones de camiones: vienen de travel.buses (id de travel_buses)
+// Bus options: they come from travel.buses (travel_buses id)
 const busOptions = computed(() => {
   const buses = lockedTravelId
     ? availableBuses
@@ -120,7 +120,7 @@ const busOptions = computed(() => {
   });
 });
 
-// Opciones de representante: viajeros del mismo viaje y camión, excluyendo al propio viajero
+// Representative options: travelers of the same travel and bus, excluding the traveler itself
 const representativeOptions = computed(() => {
   if (!state.value.travelId || !state.value.travelBusId)
     return [];
@@ -137,20 +137,20 @@ const representativeOptions = computed(() => {
     }));
 });
 
-// Cuando cambia el viaje, resetear el camión, asiento y representante
+// When the travel changes, reset the bus, seat and representative
 watch(() => state.value.travelId, () => {
   state.value.travelBusId = '';
   state.value.seat = undefined as unknown as number;
   state.value.representativeId = undefined;
 });
 
-// Cuando cambia el camión, resetear el asiento y el representante
+// When the bus changes, reset the seat and the representative
 watch(() => state.value.travelBusId, () => {
   state.value.seat = undefined as unknown as number;
   state.value.representativeId = undefined;
 });
 
-// Cuando isRepresentative cambia a true, limpiar representativeId
+// When isRepresentative becomes true, clear representativeId
 watch(() => state.value.isRepresentative, (isRep) => {
   if (isRep) {
     state.value.representativeId = undefined;
@@ -186,7 +186,7 @@ function onCancel() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Datos personales -->
+    <!-- Personal data -->
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Nombre"
@@ -219,7 +219,7 @@ function onCancel() {
       <PhoneInput v-model="state.phone" />
     </UFormField>
 
-    <!-- Viaje y Camión -->
+    <!-- Travel and Bus -->
     <USeparator label="Asignación al viaje" />
 
     <UFormField
@@ -249,7 +249,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Asiento y Punto de Abordaje -->
+    <!-- Seat and Boarding Point -->
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Asiento"
@@ -278,7 +278,7 @@ function onCancel() {
       </UFormField>
     </div>
 
-    <!-- Representante de grupo -->
+    <!-- Group representative -->
     <USeparator label="Representación" />
 
     <UFormField name="isRepresentative">
@@ -288,7 +288,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Selector de representante (solo si NO es representante) -->
+    <!-- Representative selector (only if NOT a representative) -->
     <UFormField
       v-if="!state.isRepresentative"
       label="Representante del grupo"
@@ -303,7 +303,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Botones -->
+    <!-- Buttons -->
     <div class="flex justify-end gap-3 pt-4">
       <UButton
         type="button"

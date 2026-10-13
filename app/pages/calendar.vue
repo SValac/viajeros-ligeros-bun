@@ -22,17 +22,17 @@ const router = useRouter();
 
 const timeZone = getLocalTimeZone();
 
-// Estado de la vista: es solo de esta página, no va al store
+// View state: it belongs to this page only, it doesn't go to the store
 const placeholder = shallowRef<DateValue>(today(timeZone));
 const selectedDay = shallowRef<DateValue>();
-// Filtros: estatus visibles (sin cancelados) y cancelados aparte, como en el popover
+// Filters: visible statuses (no cancelled) and cancelled apart, like in the popover
 const selectedStatuses = ref<TravelStatus[]>([...CALENDAR_DEFAULT_STATUSES]);
 const showCancelled = shallowRef(false);
 const showHolidays = shallowRef(true);
-// Pestaña de la lista del panel derecho; elegir un día cambia a "Del día"
+// Tab of the right panel's list; picking a day switches to "Del día"
 const listTab = shallowRef<'day' | 'month'>('month');
 
-// En el orden de la leyenda, no en el que se marcaron
+// In the legend's order, not the order they were checked in
 const visibleStatuses = computed<TravelStatus[]>(() => [
   ...CALENDAR_DEFAULT_STATUSES.filter(status => selectedStatuses.value.includes(status)),
   ...(showCancelled.value ? ['cancelled' as const] : []),
@@ -40,8 +40,8 @@ const visibleStatuses = computed<TravelStatus[]>(() => [
 
 const { loadState, refetch, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses, placeholder);
 
-// El viaje elegido vive en `?travel=`: recargar o compartir el link conserva la selección.
-// `replace`: elegir viajes no llena el historial del navegador.
+// The picked travel lives in `?travel=`: reloading or sharing the link keeps the selection.
+// `replace`: picking travels doesn't fill the browser history.
 const selectedTravelId = computed({
   get: () => (typeof route.query.travel === 'string' ? route.query.travel : undefined),
   set: (id: string | undefined) => {
@@ -49,8 +49,8 @@ const selectedTravelId = computed({
   },
 });
 
-// Festivos del año visible y de los vecinos: las 6 semanas del mes pueden tocar otro año.
-// Se recalcula solo al cambiar de año.
+// Holidays of the visible year and its neighbors: the month's 6 weeks can touch another year.
+// Recomputed only when the year changes.
 const visibleYear = computed(() => placeholder.value.year);
 const holidaysByDay = computed(() =>
   getMexicanHolidaysByDay([visibleYear.value - 1, visibleYear.value, visibleYear.value + 1]),
@@ -82,7 +82,7 @@ const listTabs = computed<TabsItem[]>(() => [
   { label: 'Del mes', value: 'month', icon: 'i-lucide-calendar-days', badge: monthTravels.value.length },
 ]);
 
-// Un viaje ese día → se abre directo; varios → se elige de la lista; ninguno → nada
+// One travel that day → open it directly; several → pick from the list; none → nothing
 function selectDay(day: DateValue | undefined) {
   selectedDay.value = day;
   listTab.value = 'day';
@@ -90,7 +90,7 @@ function selectDay(day: DateValue | undefined) {
   selectedTravelId.value = travels.length === 1 ? travels[0]?.id : undefined;
 }
 
-// Desde la lista del mes: el día elegido antes ya no aplica
+// From the month list: the day picked before no longer applies
 function selectTravelFromMonth(travel: TravelSummary) {
   selectedDay.value = undefined;
   selectedTravelId.value = travel.id;
@@ -106,33 +106,33 @@ function goToToday() {
   selectDay(date);
 }
 
-// Viaje elegido, sin importar el mes visible. Misma clave que el panel (TravelCalendarSummary):
-// Colada hace una sola petición para los dos. Sin `?travel=` no pide nada (`enabled`).
+// Picked travel, regardless of the visible month. Same key as the panel (TravelCalendarSummary):
+// Colada makes a single request for both. Without `?travel=` it requests nothing (`enabled`).
 const { data: selectedTravel } = useQuery(() => travelDetailQuery(selectedTravelId.value));
 
-// Si un filtro oculta el viaje elegido, se deselecciona (y sale del query)
+// If a filter hides the picked travel, it's deselected (and leaves the query)
 watch(visibleStatuses, (statuses) => {
   const selected = selectedTravel.value;
   if (selected && !statuses.includes(selected.status))
     selectedTravelId.value = undefined;
 });
 
-// Link directo con `?travel=`: cuando llega ese viaje, abrir su mes y que los filtros no lo oculten.
-// Solo una vez, para el id con el que se entró: elegir viajes después no mueve el calendario.
-// Bandera en vez de `stop()`: con `immediate` y el viaje ya en caché, el callback corre antes
-// de que `watch()` devuelva su handle.
+// Direct link with `?travel=`: when that travel arrives, open its month and keep the filters from hiding it.
+// Only once, for the id the page was entered with: picking travels later doesn't move the calendar.
+// A flag instead of `stop()`: with `immediate` and the travel already cached, the callback runs before
+// `watch()` returns its handle.
 let linkHandled = !selectedTravelId.value;
 watch(selectedTravel, (travel) => {
-  if (linkHandled || travel === undefined) { // ya resuelto, o el viaje todavía está cargando
+  if (linkHandled || travel === undefined) { // already resolved, or the travel is still loading
     return;
   }
   linkHandled = true;
-  // No existe o RLS lo oculta: se limpia `?travel=` y el panel muestra su estado vacío
+  // It doesn't exist or RLS hides it: `?travel=` is cleared and the panel shows its empty state
   if (travel === null) {
     selectedTravelId.value = undefined;
     return;
   }
-  // Que los filtros no oculten el viaje del link
+  // Keep the filters from hiding the linked travel
   if (travel.status === 'cancelled') {
     showCancelled.value = true;
   }
@@ -162,7 +162,7 @@ watch(selectedTravel, (travel) => {
               />
             </li>
             <template v-if="showHolidays">
-              <!-- Separados de los estatus: los festivos no son viajes -->
+              <!-- Separate from the statuses: holidays aren't travels -->
               <li class="ml-1 border-l border-default pl-2.5">
                 <UBadge
                   :label="HOLIDAY_KIND_LABELS.official"
@@ -207,7 +207,7 @@ watch(selectedTravel, (travel) => {
         @retry="refetch()"
       >
         <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-          <!-- Calendario -->
+          <!-- Calendar -->
           <UCard class="lg:col-span-2">
             <TravelCalendar
               v-model:placeholder="placeholder"
@@ -220,9 +220,9 @@ watch(selectedTravel, (travel) => {
             />
           </UCard>
 
-          <!-- Panel derecho -->
+          <!-- Right panel -->
           <div class="space-y-6 lg:sticky lg:top-6">
-            <!-- Viajes del día / del mes en una sola card: sin scroll para ver ambas listas -->
+            <!-- Travels of the day / of the month in a single card: no scrolling to see both lists -->
             <UCard :ui="{ header: 'px-4 pt-2 pb-0 sm:px-4', body: 'p-4 sm:p-4' }">
               <template #header>
                 <UTabs
@@ -237,7 +237,7 @@ watch(selectedTravel, (travel) => {
 
               <template v-if="listTab === 'day'">
                 <template v-if="selectedDay">
-                  <!-- El festivo va en la fila del título: no agrega alto ni empuja el resumen -->
+                  <!-- The holiday goes in the title row: it adds no height and doesn't push the summary -->
                   <div class="mb-2 flex items-center justify-between gap-2">
                     <h2 class="truncate text-sm font-semibold text-highlighted">
                       Viajes del {{ dayLabel }}
@@ -272,12 +272,12 @@ watch(selectedTravel, (travel) => {
               </template>
 
               <template v-else>
-                <!-- Festivos del mes en la fila del título (detalle en el popover): no empujan el resumen -->
+                <!-- The month's holidays in the title row (details in the popover): they don't push the summary -->
                 <div class="mb-2 flex items-center justify-between gap-2">
                   <h2 class="truncate text-sm font-semibold text-highlighted">
                     Viajes de {{ monthLabel }}
                   </h2>
-                  <!-- Botón (no hover): en tablet se abre con un toque -->
+                  <!-- Button (not hover): on tablet it opens with a tap -->
                   <UPopover
                     v-if="monthHolidays.length > 0"
                     :content="{ align: 'end' }"

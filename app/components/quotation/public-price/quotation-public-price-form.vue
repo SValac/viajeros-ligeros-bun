@@ -24,7 +24,7 @@ const ageGroupOptions = AGE_GROUPS.map(group => ({ label: group, value: group })
 
 const schema = z.object({
   priceType: businessNameSchema({ min: 1, max: 100 }),
-  // Texto libre, igual que los "Detalles adicionales" del tipo de habitación con los que se precarga
+  // Free text, like the room type's "Detalles adicionales" it's prefilled with
   description: textSchema({ min: 1, max: 500 }),
   pricePerPerson: z.number({ message: 'Ingresa el precio' }).positive('Debe ser mayor a 0'),
   roomType: businessNameSchema({ max: 100 }).optional().or(z.literal('')),
@@ -34,7 +34,7 @@ const schema = z.object({
 
 type FormSchema = z.output<typeof schema>;
 
-// Al editar manda el precio; al agregar, la plantilla (si la hay) y si no, valores vacíos
+// When editing, the price wins; when adding, the template (if any), otherwise empty values
 const initial = price ?? template;
 
 const state = reactive<Partial<FormSchema>>({
@@ -53,7 +53,7 @@ const occupancyLabel = maxOccupancy
   ? `${maxOccupancy} persona${maxOccupancy === 1 ? '' : 's'}`
   : 'Sin ocupación (no se creó desde un precio de referencia)';
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const priceTypeInput = useSanitizedModel(() => state.priceType ?? '', v => state.priceType = v, sanitizeBusinessName);
 const descriptionInput = useSanitizedModel(() => state.description ?? '', v => state.description = v, sanitizeText);
 const roomTypeInput = useSanitizedModel(() => state.roomType ?? '', v => state.roomType = v, sanitizeBusinessName);
@@ -80,7 +80,7 @@ function onSubmit() {
     class="grid grid-cols-1 sm:grid-cols-2 gap-4"
     @submit="onSubmit"
   >
-    <!-- Nombre o etiqueta -->
+    <!-- Name or label -->
     <UFormField
       label="Nombre o etiqueta"
       name="priceType"
@@ -93,7 +93,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Precio por Persona -->
+    <!-- Price per Person -->
     <UFormField
       label="Precio por Persona"
       name="pricePerPerson"
@@ -102,7 +102,7 @@ function onSubmit() {
       <MoneyInput v-model="state.pricePerPerson" />
     </UFormField>
 
-    <!-- Tipo Habitación (opcional) -->
+    <!-- Room Type (optional) -->
     <UFormField label="Tipo Habitación (opcional)" name="roomType">
       <UInput
         v-model="roomTypeInput"
@@ -111,7 +111,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Grupo Etario -->
+    <!-- Age Group -->
     <UFormField
       label="Grupo Etario"
       name="ageGroup"
@@ -125,7 +125,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Ocupación (solo lectura) -->
+    <!-- Occupancy (read-only) -->
     <UFormField
       label="Ocupación"
       help="Se toma del precio de referencia y no se puede editar."
@@ -136,7 +136,7 @@ function onSubmit() {
       </p>
     </UFormField>
 
-    <!-- Descripción -->
+    <!-- Description -->
     <UFormField
       label="Descripción"
       name="description"
@@ -152,7 +152,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Notas -->
+    <!-- Notes -->
     <UFormField
       label="Notas (opcional)"
       name="notes"
@@ -167,7 +167,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Acciones -->
+    <!-- Actions -->
     <div class="flex justify-end gap-3 pt-2 sm:col-span-2">
       <UButton
         type="button"

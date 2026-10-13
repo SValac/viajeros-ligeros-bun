@@ -52,8 +52,8 @@ const toPay = computed(() => [
   className: item.cost === 0 ? 'text-muted' : balanceColor(item.balance),
 })));
 
-// El color solo marca estado: ganancia/pérdida y saldo pendiente/liquidado.
-// Costos, precios y totales van en texto normal.
+// Color only marks status: profit/loss and pending/settled balance.
+// Costs, prices and totals use plain text.
 const profitColor = computed(() => {
   if (projectedProfit.value > 0)
     return 'text-success';
@@ -69,7 +69,7 @@ function balanceColor(balance: number): string {
 
 <template>
   <div class="space-y-8">
-    <!-- 1. Costos -->
+    <!-- 1. Costs -->
     <QuotationSummarySection
       title="Costos del viaje"
       description="Lo que cuesta operar el viaje. El hospedaje se cobra aparte en los precios al público."
@@ -107,7 +107,7 @@ function balanceColor(balance: number): string {
       </div>
     </QuotationSummarySection>
 
-    <!-- 2. Precio y ganancia -->
+    <!-- 2. Price and profit -->
     <QuotationSummarySection
       title="Precio y ganancia"
       description="Cuánto se cobra por asiento, desde qué asiento se gana y cuánto deja el viaje lleno."
@@ -158,7 +158,7 @@ function balanceColor(balance: number): string {
       </div>
     </QuotationSummarySection>
 
-    <!-- 3. Pagos -->
+    <!-- 3. Payments -->
     <QuotationSummarySection
       title="Pagos"
       description="Lo que ya pagaron los viajeros y lo que falta pagar a proveedores."

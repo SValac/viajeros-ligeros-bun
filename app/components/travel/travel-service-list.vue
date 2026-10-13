@@ -178,7 +178,7 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
 
     <EmptyState v-else section="services" />
 
-    <!-- Modal: agregar / editar -->
+    <!-- Modal: add / edit -->
     <UModal
       v-model:open="isServiceModalOpen"
       :title="editingService ? 'Editar servicio' : 'Nuevo servicio'"
@@ -192,7 +192,7 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
       </template>
     </UModal>
 
-    <!-- Modal: eliminar -->
+    <!-- Modal: delete -->
     <UModal
       v-model:open="isDeleteModalOpen"
       title="Eliminar servicio"
