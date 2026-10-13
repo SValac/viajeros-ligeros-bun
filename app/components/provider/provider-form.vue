@@ -102,7 +102,7 @@ const state = ref<Schema>({
 });
 
 // Opciones de categoría
-const categoriaOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ value: meta.category, label: meta.label }));
+const categoryOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ value: meta.category, label: meta.label }));
 
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeBusinessName);
@@ -171,13 +171,13 @@ function onCancel() {
           variant="subtle"
           color="primary"
         >
-          {{ categoriaOptions.find(o => o.value === fixedCategory)?.label }}
+          {{ categoryOptions.find(o => o.value === fixedCategory)?.label }}
         </UBadge>
       </template>
       <USelect
         v-else
         v-model="state.category"
-        :items="categoriaOptions"
+        :items="categoryOptions"
         placeholder="Seleccionar categoría"
         class="w-full"
       />

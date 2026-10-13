@@ -16,9 +16,9 @@ import { sanitizeText, textSchema } from '~/utils/form-validation';
 const router = useRouter();
 const toast = useToast();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
-const { travelId, quotation: cotizacion, readonly } = useQuotationRoute();
+const { travelId, quotation, readonly } = useQuotationRoute();
 
 // La cotización se copia al store en cada petición; las pestañas leen del store. La query
 // la vuelve a pedir al regresar a la pestaña del navegador y tras cada escritura, así que
@@ -48,41 +48,41 @@ watch([status, travel], ([currentStatus, value]) => {
 
 // Para agregar una pestaña: crear app/pages/quotations/[id]/<name>.vue y agregarla aquí.
 const tabs = computed<NavigationMenuItem[]>(() => {
-  const quotationId = cotizacion.value?.id ?? '';
+  const quotationId = quotation.value?.id ?? '';
   const params = { id: travelId.value };
   const count = (n: number) => (n > 0 ? String(n) : undefined);
 
   return [
     { label: 'Resumen', icon: 'i-lucide-layout-dashboard', to: { name: 'quotation-detail', params }, exact: true },
     { label: 'Parámetros', icon: 'i-lucide-settings', to: { name: 'quotation-parameters', params } },
-    { label: 'Proveedores', icon: 'i-lucide-building', to: { name: 'quotation-services', params }, badge: count(cotizacionStore.getProveedoresByQuotation(quotationId).length) },
-    { label: 'Hospedaje', icon: 'i-lucide-door-open', to: { name: 'quotation-accommodation', params }, badge: count(cotizacionStore.getHospedajesByQuotation(quotationId).length) },
-    { label: 'Autobuses', icon: 'i-lucide-bus', to: { name: 'quotation-buses', params }, badge: count(cotizacionStore.getBusesByQuotation(quotationId).length) },
-    { label: 'Gastos', icon: 'i-lucide-receipt', to: { name: 'quotation-expenses', params }, badge: count(cotizacionStore.getGastosByQuotation(quotationId).length) },
-    { label: 'Precios al público', icon: 'i-lucide-tag', to: { name: 'quotation-prices', params }, badge: count(cotizacionStore.getPreciosPublicosByQuotation(quotationId).length) },
+    { label: 'Proveedores', icon: 'i-lucide-building', to: { name: 'quotation-services', params }, badge: count(quotationStore.getProvidersByQuotation(quotationId).length) },
+    { label: 'Hospedaje', icon: 'i-lucide-door-open', to: { name: 'quotation-accommodation', params }, badge: count(quotationStore.getAccommodationsByQuotation(quotationId).length) },
+    { label: 'Autobuses', icon: 'i-lucide-bus', to: { name: 'quotation-buses', params }, badge: count(quotationStore.getBusesByQuotation(quotationId).length) },
+    { label: 'Gastos', icon: 'i-lucide-receipt', to: { name: 'quotation-expenses', params }, badge: count(quotationStore.getExpensesByQuotation(quotationId).length) },
+    { label: 'Precios al público', icon: 'i-lucide-tag', to: { name: 'quotation-prices', params }, badge: count(quotationStore.getPublicPricesByQuotation(quotationId).length) },
   ];
 });
 
 // Form for creating a new cotizacion
-const crearSchema = z.object({
+const createSchema = z.object({
   minimumSeatTarget: z.number().int().nonnegative().optional(),
   notes: textSchema({ max: 1000 }).optional(),
 });
 
-type CrearFormSchema = {
+type CreateFormSchema = {
   minimumSeatTarget?: number;
   notes?: string;
 };
 
-const crearState = reactive<CrearFormSchema>({
+const createState = reactive<CreateFormSchema>({
   minimumSeatTarget: undefined,
   notes: '',
 });
 
 // Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
-const crearNotesInput = useSanitizedModel(() => crearState.notes ?? '', v => crearState.notes = v, sanitizeText);
+const createNotesInput = useSanitizedModel(() => createState.notes ?? '', v => createState.notes = v, sanitizeText);
 
-const isCrearModalOpen = shallowRef(false);
+const isCreateModalOpen = shallowRef(false);
 
 function goToQuotations() {
   router.push({ name: 'quotations-index' });
@@ -92,20 +92,20 @@ function goToTravelDetail() {
   router.push({ name: 'travel-detail', params: { id: travelId.value } });
 }
 
-function openCrearModal() {
-  isCrearModalOpen.value = true;
+function openCreateModal() {
+  isCreateModalOpen.value = true;
 }
 
-function closeCrearModal() {
-  isCrearModalOpen.value = false;
+function closeCreateModal() {
+  isCreateModalOpen.value = false;
 }
 
-async function handleCrearCotizacion() {
-  const result = crearSchema.safeParse(crearState);
+async function handleCreateQuotation() {
+  const result = createSchema.safeParse(createState);
   if (!result.success)
     return;
 
-  await cotizacionStore.createQuotation({
+  await quotationStore.createQuotation({
     travelId: travelId.value,
     seatPrice: 0,
     totalSeats: 0,
@@ -115,10 +115,10 @@ async function handleCrearCotizacion() {
   });
 
   toast.add({ title: 'Cotización creada', color: 'success' });
-  isCrearModalOpen.value = false;
+  isCreateModalOpen.value = false;
 }
 
-function handleCotizacionConfirmada() {
+function handleQuotationConfirmed() {
   toast.add({ title: 'Cotización confirmada exitosamente', color: 'success' });
 }
 </script>
@@ -167,10 +167,10 @@ function handleCotizacionConfirmada() {
           @retry="refetchQuotation()"
         >
           <!-- Sin cotización -->
-          <UCard v-if="!cotizacion">
+          <UCard v-if="!quotation">
             <EmptyState
               section="quotation"
-              :actions="[{ label: 'Crear cotización', icon: 'i-lucide-plus', onClick: openCrearModal }]"
+              :actions="[{ label: 'Crear cotización', icon: 'i-lucide-plus', onClick: openCreateModal }]"
             />
           </UCard>
 
@@ -178,9 +178,9 @@ function handleCotizacionConfirmada() {
           <template v-else>
             <!-- Estado + confirmar -->
             <QuotationHeaderActions
-              :quotation-id="cotizacion.id"
+              :quotation-id="quotation.id"
               :readonly="readonly"
-              @confirmed="handleCotizacionConfirmada"
+              @confirmed="handleQuotationConfirmed"
             />
 
             <UNavigationMenu
@@ -197,30 +197,30 @@ function handleCotizacionConfirmada() {
 
       <!-- Modal: crear cotización -->
       <UModal
-        v-model:open="isCrearModalOpen"
+        v-model:open="isCreateModalOpen"
         title="Crear Cotización"
         description="Define los parámetros iniciales de la cotización"
         class="sm:max-w-lg"
       >
         <template #body>
           <UForm
-            :schema="crearSchema"
-            :state="crearState"
+            :schema="createSchema"
+            :state="createState"
             class="space-y-4"
-            @submit="handleCrearCotizacion"
+            @submit="handleCreateQuotation"
           >
             <UFormField label="Meta mínima de asientos" name="minimumSeatTarget">
               <UInput
-                v-model.number="crearState.minimumSeatTarget"
+                v-model.number="createState.minimumSeatTarget"
                 type="number"
                 placeholder="Ej. 30"
                 class="w-full"
               />
             </UFormField>
 
-            <UFormField label="Notas" name="notas">
+            <UFormField label="Notas" name="notes">
               <UTextarea
-                v-model="crearNotesInput"
+                v-model="createNotesInput"
                 placeholder="Observaciones sobre esta cotización..."
                 :rows="3"
                 class="w-full"
@@ -233,7 +233,7 @@ function handleCotizacionConfirmada() {
                 variant="ghost"
                 color="neutral"
                 label="Cancelar"
-                @click="closeCrearModal"
+                @click="closeCreateModal"
               />
               <UButton
                 type="submit"

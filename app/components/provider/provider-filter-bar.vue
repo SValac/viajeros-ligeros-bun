@@ -36,11 +36,11 @@ function onSearchInput(val: string) {
   }, 300);
 }
 
-const ciudadOptions = computed(() =>
+const cityOptions = computed(() =>
   props.availableCities.map(c => ({ label: c, value: c })),
 );
 
-const estadoOptions = computed(() =>
+const statusOptions = computed(() =>
   props.availableStates.map(e => ({ label: e, value: e })),
 );
 
@@ -51,14 +51,14 @@ function onCategoryChange(val: string | undefined) {
   });
 }
 
-function onCiudadChange(val: string | undefined) {
+function onCityChange(val: string | undefined) {
   emit('update:modelValue', {
     ...props.modelValue,
     city: val,
   });
 }
 
-function onEstadoChange(val: string | undefined) {
+function onStateChange(val: string | undefined) {
   emit('update:modelValue', {
     ...props.modelValue,
     state: val,
@@ -98,22 +98,22 @@ const hasFilters = computed(() =>
 
     <USelect
       :model-value="modelValue.city"
-      :items="ciudadOptions"
+      :items="cityOptions"
       value-key="value"
       label-key="label"
       placeholder="Todas las ciudades"
       class="w-48"
-      @update:model-value="onCiudadChange"
+      @update:model-value="onCityChange"
     />
 
     <USelect
       :model-value="modelValue.state"
-      :items="estadoOptions"
+      :items="statusOptions"
       value-key="value"
       label-key="label"
       placeholder="Todos los estados"
       class="w-48"
-      @update:model-value="onEstadoChange"
+      @update:model-value="onStateChange"
     />
 
     <UButton

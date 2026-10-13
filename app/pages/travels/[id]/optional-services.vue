@@ -19,7 +19,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const providerStore = useProviderStore();
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
 const { travelId, travel } = useTravelRoute();
 
@@ -28,15 +28,15 @@ const { travelId, travel } = useTravelRoute();
 const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
 const { refetch: refetchQuotation } = quotationQuery;
 const quotationLoad = useQueryLoadState(quotationQuery);
-const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
+const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
 
 const services = computed<QuotationProvider[]>(() => {
-  if (!cotizacion.value)
+  if (!quotation.value)
     return [];
-  return cotizacionStore.getProveedoresByQuotation(cotizacion.value.id).filter(isPerPersonProvider);
+  return quotationStore.getProvidersByQuotation(quotation.value.id).filter(isPerPersonProvider);
 });
 
-const sellableSeats = computed(() => (cotizacion.value ? cotizacionStore.getAsientosVendibles(cotizacion.value.id, travel.value?.coordinatorIds.length ?? 0) : 0));
+const sellableSeats = computed(() => (quotation.value ? quotationStore.getSellableSeats(quotation.value.id, travel.value?.coordinatorIds.length ?? 0) : 0));
 
 const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s => ({
   id: s.id,
@@ -44,28 +44,28 @@ const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s
   providerName: getProviderName(s.providerId),
   takers: s.unitCost ? Math.round(s.payableCost / s.unitCost) : 0,
   payableCost: s.payableCost,
-  overpaid: cotizacionStore.getSobrepagoProveedor(s.id) > 0,
+  overpaid: quotationStore.getProviderOverpayment(s.id) > 0,
 })));
 
-// El servicio elegido vive en la URL (?servicio=) para no perderlo al recargar; sin uno
+// El servicio elegido vive en la URL (?service=) para no perderlo al recargar; sin uno
 // válido se muestra el primero.
 const selectedServiceId = computed<string | undefined>({
   get: () => {
-    const fromQuery = route.query.servicio;
+    const fromQuery = route.query.service;
     return services.value.find(s => s.id === fromQuery)?.id ?? services.value[0]?.id;
   },
   set: (id) => {
-    router.replace({ query: { ...route.query, servicio: id } });
+    router.replace({ query: { ...route.query, service: id } });
   },
 });
 
 const selectedService = computed(() => services.value.find(s => s.id === selectedServiceId.value));
 
-const selectedAdjustments = computed(() => (selectedService.value ? cotizacionStore.getAjustesByProveedor(selectedService.value.id) : []));
+const selectedAdjustments = computed(() => (selectedService.value ? quotationStore.getAdjustmentsByProvider(selectedService.value.id) : []));
 
 // travelerId → ajuste que paga en el servicio elegido.
 const selectedAdjustmentByTraveler = computed(() => new Map(
-  cotizacionStore.ajustesViajero
+  quotationStore.travelerPriceAdjustments
     .filter(a => a.quotationProviderId === selectedService.value?.id)
     .map(a => [a.travelerId, a.adjustmentId]),
 ));
@@ -83,8 +83,8 @@ watch(travelId, async (id) => {
   if (!id)
     return;
   await Promise.all([
-    cotizacionStore.fetchProviderOptOuts(id),
-    cotizacionStore.fetchTravelerAdjustments(id),
+    quotationStore.fetchProviderOptOuts(id),
+    quotationStore.fetchTravelerAdjustments(id),
   ]);
 }, { immediate: true });
 
@@ -98,20 +98,20 @@ async function onAdjust(travelerIds: string[], adjustmentId: string | null) {
     return;
 
   savingServiceId.value = service.id;
-  const error = await cotizacionStore.setAjusteViajero(service.id, travelId.value, travelerIds, adjustmentId);
+  const error = await quotationStore.setTravelerAdjustment(service.id, travelId.value, travelerIds, adjustmentId);
   savingServiceId.value = null;
 
   if (error)
     toast.add({ title: 'No se pudo guardar el precio', description: error, color: 'error' });
 }
 
-async function onChange(travelerIds: string[], toman: boolean) {
+async function onChange(travelerIds: string[], takes: boolean) {
   const service = selectedService.value;
   if (!service)
     return;
 
   savingServiceId.value = service.id;
-  const error = await cotizacionStore.setTomanServicio(service.id, travelId.value, travelerIds, toman);
+  const error = await quotationStore.setServiceTakers(service.id, travelId.value, travelerIds, takes);
   savingServiceId.value = null;
 
   if (error)
@@ -153,8 +153,8 @@ async function onChange(travelerIds: string[], toman: boolean) {
               :service="selectedService"
               :provider-name="getProviderName(selectedService.providerId)"
               :occupants="occupants"
-              :opted-out="cotizacionStore.getOptOutsByProveedor(selectedService.id)"
-              :paid="cotizacionStore.getAnticipadoProveedor(selectedService.id)"
+              :opted-out="quotationStore.getOptOutsByProvider(selectedService.id)"
+              :paid="quotationStore.getPaidByProvider(selectedService.id)"
               :sellable-seats="sellableSeats"
               :adjustments="selectedAdjustments"
               :adjustment-by-traveler="selectedAdjustmentByTraveler"

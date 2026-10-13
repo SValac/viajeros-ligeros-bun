@@ -14,7 +14,7 @@ definePageMeta({
 
 const router = useRouter();
 const travelsStore = useTravelsStore();
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const toast = useToast();
 const { uploadBanner, removeFile } = useTravelMediaRepository();
 
@@ -60,7 +60,7 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   // already invalidated the travelers query), and when the quotation counts coordinators as
   // passengers it changes the sellable seats, so the seat price is recomputed.
   if (success && !sameIds(previousCoordinatorIds, data.coordinatorIds)) {
-    const priceSynced = await cotizacionStore.syncSeatPriceForTravel(travelId.value);
+    const priceSynced = await quotationStore.syncSeatPriceForTravel(travelId.value);
     if (!priceSynced) {
       toast.add({
         title: 'Precio por asiento sin recalcular',

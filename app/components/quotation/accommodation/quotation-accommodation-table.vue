@@ -19,24 +19,24 @@ const props = withDefaults(defineProps<Props>(), {
   readonly: false,
 });
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
 
 // Rooms the travel holds per hotel room type: they're added on the travel's rooms page.
-const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId)?.travelId);
+const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
 
 // Hospedajes de la cotización
-const hospedajes = computed(() => {
-  return cotizacionStore.getHospedajesByQuotation(props.quotationId);
+const accommodations = computed(() => {
+  return quotationStore.getAccommodationsByQuotation(props.quotationId);
 });
 
 // Modal estado
 const isEditModalOpen = ref(false);
-const editingHospedaje = ref<QuotationAccommodation | null>(null);
+const editingAccommodation = ref<QuotationAccommodation | null>(null);
 
 // Schema para editar
 const editSchema = z.object({
@@ -55,22 +55,22 @@ const editFormState = reactive({
 });
 
 // Tipos de habitación disponibles para el hospedaje en edición
-const tiposHabitacionEdit = computed(() => {
-  if (!editingHospedaje.value)
+const roomTypesEdit = computed(() => {
+  if (!editingAccommodation.value)
     return [];
-  return hotelRoomStore.getRoomDataByProviderId(editingHospedaje.value.providerId)?.roomTypes ?? [];
+  return hotelRoomStore.getRoomDataByProviderId(editingAccommodation.value.providerId)?.roomTypes ?? [];
 });
 
 // Rooms the travel already holds per room type of the hotel being edited
 const roomCountsEdit = computed(() => {
-  const hospedaje = editingHospedaje.value;
-  if (!hospedaje)
+  const accommodation = editingAccommodation.value;
+  if (!accommodation)
     return new Map<string, number>();
-  return new Map(tiposHabitacionEdit.value.map(t => [t.id, roomCounts.value.get(roomTypeKey(hospedaje.providerId, t.id)) ?? 0]));
+  return new Map(roomTypesEdit.value.map(t => [t.id, roomCounts.value.get(roomTypeKey(accommodation.providerId, t.id)) ?? 0]));
 });
 
 // Rooms the travel holds in a quoted hotel (only its quoted types count toward the cost)
-function getHabitacionesViaje(accommodation: QuotationAccommodation): number {
+function getTravelRooms(accommodation: QuotationAccommodation): number {
   return accommodation.details.reduce(
     (sum, d) => sum + (roomCounts.value.get(roomTypeKey(accommodation.providerId, d.roomTypeId)) ?? 0),
     0,
@@ -78,21 +78,21 @@ function getHabitacionesViaje(accommodation: QuotationAccommodation): number {
 }
 
 // Obtener nombre del hotel
-function getNombreHotel(providerId: string): string {
+function getHotelName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
 // Slideover historial de pagos
-const isHistorialOpen = ref(false);
-const historialHospedaje = ref<QuotationAccommodation | null>(null);
+const isHistoryOpen = ref(false);
+const historyAccommodation = ref<QuotationAccommodation | null>(null);
 
-function abrirHistorial(accommodation: QuotationAccommodation) {
-  historialHospedaje.value = accommodation;
-  isHistorialOpen.value = true;
+function openHistory(accommodation: QuotationAccommodation) {
+  historyAccommodation.value = accommodation;
+  isHistoryOpen.value = true;
 }
 
 // Helpers de pago para columnas
-const estadoPagoBadge: Record<AccommodationPaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
+const paymentStatusBadge: Record<AccommodationPaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
   pending: { label: 'Pendiente', color: 'warning' },
   partial: { label: 'Anticipo', color: 'neutral' },
   paid: { label: 'Liquidado', color: 'success' },
@@ -100,19 +100,19 @@ const estadoPagoBadge: Record<AccommodationPaymentStatus, { label: string; color
 
 // Acciones por fila
 function getRowActions(accommodation: QuotationAccommodation) {
-  const saldo = cotizacionStore.getSaldoPendienteHospedaje(accommodation.id);
+  const balance = quotationStore.getPendingBalanceByAccommodation(accommodation.id);
   // Payments go on after the quotation is confirmed; only its structure is locked.
   const paymentActions = [
     {
       label: 'Ver historial de pagos',
       icon: 'i-lucide-receipt',
-      onSelect: () => abrirHistorial(accommodation),
+      onSelect: () => openHistory(accommodation),
     },
     {
       label: 'Registrar pago',
       icon: 'i-lucide-banknote',
-      disabled: saldo <= 0,
-      onSelect: () => abrirHistorial(accommodation),
+      disabled: balance <= 0,
+      onSelect: () => openHistory(accommodation),
     },
   ];
 
@@ -125,12 +125,12 @@ function getRowActions(accommodation: QuotationAccommodation) {
       {
         label: 'Editar',
         icon: 'i-lucide-pencil',
-        onSelect: () => abrirEdicion(accommodation),
+        onSelect: () => openEdit(accommodation),
       },
       {
         label: accommodation.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
         icon: accommodation.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-        onSelect: () => cotizacionStore.toggleConfirmadoHospedaje(accommodation.id),
+        onSelect: () => quotationStore.toggleAccommodationConfirmed(accommodation.id),
       },
     ],
     [
@@ -138,7 +138,7 @@ function getRowActions(accommodation: QuotationAccommodation) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => eliminarHospedaje(accommodation.id),
+        onSelect: () => deleteAccommodation(accommodation.id),
       },
     ],
   ];
@@ -150,20 +150,20 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
     {
       accessorKey: 'providerId',
       header: 'Hotel',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, getNombreHotel(row.original.providerId)),
+      cell: ({ row }) => h('span', { class: 'font-medium' }, getHotelName(row.original.providerId)),
     },
     {
-      accessorKey: 'cantidadNoches',
+      accessorKey: 'nightCount',
       header: 'Noches',
       cell: ({ row }) => h('span', { class: 'font-medium' }, String(row.original.nightCount)),
     },
     {
-      id: 'habitaciones',
+      id: 'rooms',
       header: 'Habitaciones',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, String(getHabitacionesViaje(row.original))),
+      cell: ({ row }) => h('span', { class: 'font-medium' }, String(getTravelRooms(row.original))),
     },
     {
-      accessorKey: 'costoTotal',
+      accessorKey: 'totalCost',
       header: 'Costo Total',
       cell: ({ row }) => h('span', { class: 'font-bold' }, formatCurrency(row.original.totalCost)),
     },
@@ -171,24 +171,24 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       id: 'paid',
       header: 'Pagado',
       cell: ({ row }) => {
-        const pagado = cotizacionStore.getAnticipadoHospedaje(row.original.id);
-        return h('span', { class: 'font-medium' }, formatCurrency(pagado));
+        const paid = quotationStore.getPaidByAccommodation(row.original.id);
+        return h('span', { class: 'font-medium' }, formatCurrency(paid));
       },
     },
     {
       id: 'pending',
       header: 'Pendiente',
       cell: ({ row }) => {
-        const saldo = cotizacionStore.getSaldoPendienteHospedaje(row.original.id);
-        return h('span', { class: saldo > 0 ? 'text-warning font-medium' : 'text-success font-medium' }, formatCurrency(saldo));
+        const balance = quotationStore.getPendingBalanceByAccommodation(row.original.id);
+        return h('span', { class: balance > 0 ? 'text-warning font-medium' : 'text-success font-medium' }, formatCurrency(balance));
       },
     },
     {
-      id: 'estadoPago',
+      id: 'paymentStatus',
       header: 'Estado Pago',
       cell: ({ row }) => {
-        const status = cotizacionStore.getAccommodationPaymentStatus(row.original.id);
-        const badge = estadoPagoBadge[status];
+        const status = quotationStore.getAccommodationPaymentStatus(row.original.id);
+        const badge = paymentStatusBadge[status];
         return h(resolveComponent('UBadge'), { label: badge.label, color: badge.color, variant: 'subtle' });
       },
     },
@@ -222,16 +222,16 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
 });
 
 // Abrir modal de edición
-function abrirEdicion(accommodation: QuotationAccommodation) {
-  editingHospedaje.value = accommodation;
+function openEdit(accommodation: QuotationAccommodation) {
+  editingAccommodation.value = accommodation;
   editFormState.nightCount = accommodation.nightCount;
   editFormState.details = accommodation.details.map(d => ({ ...d }));
   isEditModalOpen.value = true;
 }
 
 // Guardar edición
-async function guardarEdicion() {
-  if (!editingHospedaje.value)
+async function saveEdit() {
+  if (!editingAccommodation.value)
     return;
 
   const result = editSchema.safeParse(editFormState);
@@ -244,7 +244,7 @@ async function guardarEdicion() {
     return;
   }
 
-  const updated = await cotizacionStore.updateHospedajeQuotation(editingHospedaje.value.id, {
+  const updated = await quotationStore.updateQuotationAccommodation(editingAccommodation.value.id, {
     nightCount: editFormState.nightCount,
     details: editFormState.details.map(d => ({ ...d, id: d.id ?? crypto.randomUUID() })),
   });
@@ -264,16 +264,16 @@ async function guardarEdicion() {
   });
 
   isEditModalOpen.value = false;
-  editingHospedaje.value = null;
+  editingAccommodation.value = null;
 }
 
-function cerrarEdicion() {
+function closeEdit() {
   isEditModalOpen.value = false;
 }
 
 // Eliminar hospedaje
-async function eliminarHospedaje(id: string) {
-  const error = await cotizacionStore.deleteHospedajeQuotation(id);
+async function deleteAccommodation(id: string) {
+  const error = await quotationStore.deleteQuotationAccommodation(id);
   if (error) {
     toast.add({
       title: 'No se pudo eliminar el hospedaje',
@@ -293,8 +293,8 @@ async function eliminarHospedaje(id: string) {
   <div class="space-y-4">
     <!-- Tabla de hospedajes -->
     <UTable
-      v-if="hospedajes.length > 0"
-      :data="hospedajes"
+      v-if="accommodations.length > 0"
+      :data="accommodations"
       :columns="columns"
     />
 
@@ -309,12 +309,12 @@ async function eliminarHospedaje(id: string) {
       class="sm:max-w-2xl"
     >
       <template #body>
-        <div v-if="editingHospedaje" class="space-y-6">
+        <div v-if="editingAccommodation" class="space-y-6">
           <!-- Mostrar hotel (read-only) -->
           <div>
             <label class="text-sm font-medium block mb-2">Hotel</label>
             <div class="bg-muted/20 rounded px-4 py-2">
-              {{ getNombreHotel(editingHospedaje.providerId) }}
+              {{ getHotelName(editingAccommodation.providerId) }}
             </div>
           </div>
 
@@ -332,7 +332,7 @@ async function eliminarHospedaje(id: string) {
           <!-- Tipos de habitación con checkboxes -->
           <QuotationAccommodationRoomTypes
             v-model="editFormState.details"
-            :room-types="tiposHabitacionEdit"
+            :room-types="roomTypesEdit"
             :night-count="editFormState.nightCount"
             :room-counts="roomCountsEdit"
           />
@@ -343,11 +343,11 @@ async function eliminarHospedaje(id: string) {
               variant="ghost"
               color="neutral"
               label="Cancelar"
-              @click="cerrarEdicion"
+              @click="closeEdit"
             />
             <UButton
               label="Guardar"
-              @click="guardarEdicion"
+              @click="saveEdit"
             />
           </div>
         </div>
@@ -356,17 +356,17 @@ async function eliminarHospedaje(id: string) {
 
     <!-- Slideover historial de pagos -->
     <USlideover
-      v-model:open="isHistorialOpen"
-      :title="historialHospedaje ? `Pagos — ${getNombreHotel(historialHospedaje.providerId)}` : 'Historial de Pagos'"
+      v-model:open="isHistoryOpen"
+      :title="historyAccommodation ? `Pagos — ${getHotelName(historyAccommodation.providerId)}` : 'Historial de Pagos'"
       description="Registro de pagos realizados al hotel"
       side="right"
       class="sm:max-w-lg"
     >
       <template #body>
         <QuotationAccommodationPaymentHistory
-          v-if="historialHospedaje"
-          :quotation-accommodation-id="historialHospedaje.id"
-          :hotel-name="getNombreHotel(historialHospedaje.providerId)"
+          v-if="historyAccommodation"
+          :quotation-accommodation-id="historyAccommodation.id"
+          :hotel-name="getHotelName(historyAccommodation.providerId)"
         />
       </template>
     </USlideover>
