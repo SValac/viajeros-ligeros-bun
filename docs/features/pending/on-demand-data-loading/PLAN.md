@@ -10,7 +10,7 @@ primera vez que se necesitan. La capa de caché la pone **Pinia Colada**.
 fases y la app funciona entre una fase y otra. Sin migraciones previstas (ver
 "Base de datos").
 
-**Estado:** En progreso — Fases 0 y 1 completadas y en producción (PR #122, 2026-10-10); piloto aprobado, se sigue con Colada. Fase 2 completada y en producción (PR #125, 2026-10-12): ningún listado usa `travelsStore.travels` y `fetchAll` de viajes ya no corre al arrancar. Fase 3 completa en la rama `feature/on-demand-loading-phase-3` (sin PR todavía): los viajeros se piden por viaje y `travelerStore.fetchAll()` ya no corre al arrancar.
+**Estado:** En progreso — Fases 0 y 1 completadas y en producción (PR #122, 2026-10-10); piloto aprobado, se sigue con Colada. Fase 2 completada y en producción (PR #125, 2026-10-12): ningún listado usa `travelsStore.travels` y `fetchAll` de viajes ya no corre al arrancar. Fase 3 completada y en producción (PR #126, 2026-10-12): los viajeros se piden por viaje y `travelerStore.fetchAll()` ya no corre al arrancar. Fase 4 partida en 4a y 4b: la 4a está completa en la rama `feature/on-demand-loading-phase-4a` (sin PR todavía) y `cotizacionStore.fetchAll()` ya no corre al arrancar; la 4b (cotización en Colada, sin puentes al viaje) sigue pendiente.
 
 ---
 
@@ -116,8 +116,8 @@ de [Production data safety](../../../claude/05-git-workflow.md#production-data-s
 | [fase0-setup.md](fase0-setup.md) | Subir Vue, instalar Colada + módulo Nuxt, defaults, convención de claves | Ninguna | Completada ✅ |
 | [fase1-detalle-viaje.md](fase1-detalle-viaje.md) | **Piloto**: viaje por id con `useQuery`; corrige el "no encontrado" tras 1000 viajes · punto de decisión | Fase 0 | Completada ✅ |
 | [fase2-listados-viajes.md](fase2-listados-viajes.md) | Listados ligeros + conteos en servidor: dashboard, calendario, `/quotations`, `/payments`; adiós `travelsStore.travels` | Fase 1 | Completa (PR #125) |
-| [fase3-viajeros.md](fase3-viajeros.md) | Viajeros y asignaciones de habitación por viaje; adiós `travelerStore.fetchAll()` | Fase 2 | Completa (rama, sin PR) |
-| [fase4-cotizaciones.md](fase4-cotizaciones.md) | Cotizaciones por viaje; el caché manual pasa a Colada; desacoplar cotización ↔ viaje | Fase 1 | Pendiente |
+| [fase3-viajeros.md](fase3-viajeros.md) | Viajeros y asignaciones de habitación por viaje; adiós `travelerStore.fetchAll()` | Fase 2 | Completa (PR #126) |
+| [fase4-cotizaciones.md](fase4-cotizaciones.md) | Cotizaciones por viaje; el caché manual pasa a Colada; desacoplar cotización ↔ viaje | Fase 1 | 4a completa (rama, sin PR) · 4b pendiente |
 | [fase5-catalogos.md](fase5-catalogos.md) | Proveedores, coordinadores, autobuses, habitaciones bajo demanda; borrar `init-stores.client.ts` | Fases 2-4 | Pendiente |
 | [fase6-verificacion.md](fase6-verificacion.md) | Prueba con >1000 filas, auditoría de red, docs de arquitectura, cierre | Todas | Pendiente |
 
