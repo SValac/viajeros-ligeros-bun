@@ -1,26 +1,30 @@
 import { defineStore } from 'pinia';
-import { computed, ref } from 'vue';
 
-import type { HotelRoomData, HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
+import type { HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
 import { validateTotalRoomsUpdate } from '~/composables/hotel-rooms/use-hotel-room-domain';
 import { useHotelRoomRepository } from '~/composables/hotel-rooms/use-hotel-room-repository';
+import { hotelRoomsCatalogQuery, useCatalogState, useHotelRoomsCatalog } from '~/queries/catalogs';
 import { calculateCostPerPerson, calculateTotalRoomsUsed } from '~/utils/hotel-room-helpers';
 
 /**
  * Hotel Room Store
- * Manages hotel room data and room types for providers.
- * Handles CRUD operations, state management, and validation for hotel rooms and their configurations.
+ * Room data (total rooms + room types) of accommodation providers, and its writes.
+ * `hotelRoomsData` reads its catalog query (`useHotelRoomsCatalog`, through `useCatalogState`);
+ * writes go through `useHotelRoomRepository` and then refetch it. Writes whose checks read the
+ * catalog wait for it first (`ensureFresh`).
  */
 export const useHotelRoomStore = defineStore('hotel-room', () => {
   const repository = useHotelRoomRepository();
+  const catalog = useCatalogState(useHotelRoomsCatalog, hotelRoomsCatalogQuery);
 
-  // State
-  const hotelRoomsData = ref<HotelRoomData[]>([]);
-  const loading = ref(false);
-  const error = ref<string | null>(null);
+  // State (writes only; the catalog's load state comes from `catalog`)
+  const loading = shallowRef(false);
+  const error = shallowRef<string | null>(null);
 
   // Getters
+  const hotelRoomsData = catalog.items;
+
   /**
    * Retrieves room data for a specific provider by ID
    * @param {string} id - The provider ID
@@ -63,41 +67,28 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
 
   // Actions
   /**
-   * Fetches all hotel room data from the repository
-   * Sets loading state during fetch and handles errors appropriately
-   */
-  async function fetchAll(): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      hotelRoomsData.value = await repository.fetchAll();
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al cargar habitaciones';
-    }
-    finally {
-      loading.value = false;
-    }
-  }
-
-  /**
    * Initializes room data for a new provider
-   * Only initializes if data doesn't already exist for the provider
+   * Only initializes if data doesn't already exist for the provider: `hotel_rooms` has no
+   * unique constraint on the provider, so the check reads the catalog as the server has it.
    * @param {string} providerId - The provider ID
    * @param {number} totalRooms - The initial total number of rooms
+   * @throws If the catalog can't be loaded or the insert fails (nothing is inserted blindly)
    */
   async function initRoomData(providerId: string, totalRooms: number): Promise<void> {
-    if (hasRoomData.value(providerId))
-      return;
-
     loading.value = true;
     error.value = null;
     try {
+      const roomsData = await catalog.ensureFresh();
+      if (roomsData.some(hrd => hrd.providerId === providerId))
+        return;
       const roomData = await repository.insertRoomData(providerId, totalRooms);
-      hotelRoomsData.value.push(roomData);
+      // In the catalog right away, so a failed refetch can't make the next check insert again.
+      catalog.setItems(items => [...items, roomData]);
+      await catalog.refresh();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al inicializar datos de habitaciones';
+      throw e;
     }
     finally {
       loading.value = false;
@@ -112,23 +103,23 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
    * @returns {Promise<boolean>} True if update succeeded, false otherwise
    */
   async function updateTotalRooms(providerId: string, total: number): Promise<boolean> {
-    const usedRooms = getUsedRoomsByProvider.value(providerId);
-    const validationError = validateTotalRoomsUpdate(total, usedRooms);
-    if (validationError) {
-      error.value = validationError;
-      return false;
-    }
-
-    const roomData = hotelRoomsData.value.find(hrd => hrd.providerId === providerId);
-    if (!roomData)
-      return false;
-
     loading.value = true;
     error.value = null;
     try {
-      const { totalRooms, updatedAt } = await repository.updateRoomTotal(roomData.id, total);
-      roomData.totalRooms = totalRooms;
-      roomData.updatedAt = updatedAt;
+      const roomData = (await catalog.ensureFresh()).find(hrd => hrd.providerId === providerId);
+      const validationError = validateTotalRoomsUpdate(total, calculateTotalRoomsUsed(roomData?.roomTypes ?? []));
+      if (validationError) {
+        error.value = validationError;
+        return false;
+      }
+
+      if (!roomData) {
+        error.value = 'Proveedor no encontrado';
+        return false;
+      }
+
+      await repository.updateRoomTotal(roomData.id, total);
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -149,18 +140,16 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
    * @throws {Error} If provider room data is not found
    */
   async function addRoomType(providerId: string, data: HotelRoomTypeFormData): Promise<HotelRoomType> {
-    const roomData = hotelRoomsData.value.find(hrd => hrd.providerId === providerId);
-    if (!roomData) {
-      throw new Error(`No room data found for provider ${providerId}`);
-    }
-
     loading.value = true;
     error.value = null;
     try {
+      const roomData = (await catalog.ensureFresh()).find(hrd => hrd.providerId === providerId);
+      if (!roomData)
+        throw new Error(`No room data found for provider ${providerId}`);
+
       const costPerPerson = calculateCostPerPerson(data.pricePerNight, data.maxOccupancy);
       const roomType = await repository.insertRoomType(roomData.id, data, costPerPerson);
-      roomData.roomTypes.push(roomType);
-      roomData.updatedAt = roomType.updatedAt;
+      await catalog.refresh();
       return roomType;
     }
     catch (e) {
@@ -175,29 +164,17 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
   /**
    * Updates an existing room type
    * Recalculates cost per person based on the updated data
-   * @param {string} providerId - The provider ID
    * @param {string} roomTypeId - The room type ID to update
    * @param {HotelRoomTypeFormData} data - The updated room type data
    * @returns {Promise<boolean>} True if update succeeded, false otherwise
    */
-  async function updateRoomType(providerId: string, roomTypeId: string, data: HotelRoomTypeFormData): Promise<boolean> {
-    const roomData = hotelRoomsData.value.find(hrd => hrd.providerId === providerId);
-    if (!roomData) {
-      error.value = 'Proveedor no encontrado';
-      return false;
-    }
-
+  async function updateRoomType(roomTypeId: string, data: HotelRoomTypeFormData): Promise<boolean> {
     loading.value = true;
     error.value = null;
     try {
       const costPerPerson = calculateCostPerPerson(data.pricePerNight, data.maxOccupancy);
-      const roomType = await repository.updateRoomType(roomTypeId, data, costPerPerson);
-      const index = roomData.roomTypes.findIndex(rt => rt.id === roomTypeId);
-      if (index !== -1) {
-        roomData.roomTypes[index] = roomType;
-      }
-      roomData.updatedAt = roomType.updatedAt;
-      error.value = null;
+      await repository.updateRoomType(roomTypeId, data, costPerPerson);
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -211,21 +188,15 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
 
   /**
    * Deletes a room type from a provider's configuration
-   * @param {string} providerId - The provider ID
    * @param {string} roomTypeId - The room type ID to delete
    * @returns {Promise<boolean>} True if deletion succeeded, false otherwise
    */
-  async function deleteRoomType(providerId: string, roomTypeId: string): Promise<boolean> {
+  async function deleteRoomType(roomTypeId: string): Promise<boolean> {
     loading.value = true;
     error.value = null;
     try {
       await repository.removeRoomType(roomTypeId);
-      const roomData = hotelRoomsData.value.find(hrd => hrd.providerId === providerId);
-      if (roomData) {
-        const index = roomData.roomTypes.findIndex(rt => rt.id === roomTypeId);
-        if (index !== -1)
-          roomData.roomTypes.splice(index, 1);
-      }
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -237,38 +208,24 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     }
   }
 
-  /**
-   * Removes all room data for a deleted provider
-   * Called by provider store after successful deletion from Supabase
-   * DB cascade handles hotel_rooms/hotel_room_types tables
-   * @param {string} providerId - The provider ID
-   */
-  // Called by provider store after it successfully deletes from Supabase.
-  // DB cascade handles hotel_rooms/hotel_room_types — this just clears local state.
-  function deleteProviderRooms(providerId: string): void {
-    const index = hotelRoomsData.value.findIndex(hrd => hrd.providerId === providerId);
-    if (index !== -1) {
-      hotelRoomsData.value.splice(index, 1);
-    }
-  }
-
   return {
     // State
-    hotelRoomsData,
     loading,
     error,
     // Getters
+    hotelRoomsData,
+    isLoaded: catalog.isLoaded,
+    loadError: catalog.loadError,
     getRoomDataByProviderId,
     hasRoomData,
     getTotalRoomsByProvider,
     getUsedRoomsByProvider,
     // Actions
-    fetchAll,
+    refetch: catalog.refetch,
     initRoomData,
     updateTotalRooms,
     addRoomType,
     updateRoomType,
     deleteRoomType,
-    deleteProviderRooms,
   };
 });

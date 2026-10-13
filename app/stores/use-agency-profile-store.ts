@@ -23,8 +23,8 @@ import { serializeHomePage } from '~/composables/agency-profile/use-home-page-do
 /**
  * Cache and orchestrator for the signed-in user's agency profile and the state catalog.
  * Delegates all Supabase I/O to `useAgencyProfileRepository`.
- * Loaded on demand (sidebar, profile page, travel form) instead of in `init-stores`, because
- * plugins run before the auth middleware and on the login page.
+ * Loaded on demand (sidebar, profile page, travel form), like every other store: nothing is
+ * fetched at app boot, which also runs on the login page, before the auth middleware.
  * @returns Store state, getters and actions
  */
 export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => {
