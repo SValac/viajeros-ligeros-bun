@@ -40,10 +40,9 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       color: 'success',
     });
 
-    // Full reload, not router.push: init-stores.client.ts only runs once at app boot,
-    // so a client-side navigation would leave every data store on its pre-login
-    // (or previous user's) state until a manual refresh. Same reasoning as the forced
-    // reload on logout in user-menu.vue.
+    // Full reload, not router.push: it empties every store and the Pinia Colada query
+    // cache in one go, so nothing loaded before login (or by the previous user) survives.
+    // Same reasoning as the forced reload on logout in user-menu.vue.
     window.location.href = '/';
   }
   catch (error) {
