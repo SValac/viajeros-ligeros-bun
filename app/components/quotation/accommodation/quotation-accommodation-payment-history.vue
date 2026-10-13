@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AccommodationPayment, AccommodationPaymentFormData } from '~/types/quotation';
+import type { AccommodationPayment, SupplierPaymentFields } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
@@ -51,7 +51,7 @@ function closeDeleteModal() {
   isDeleteModalOpen.value = false;
 }
 
-async function handleSubmit(data: AccommodationPaymentFormData) {
+async function handleSubmit(data: SupplierPaymentFields) {
   if (selectedPayment.value) {
     const result = await quotationStore.updateAccommodationPayment(selectedPayment.value.id, data);
     if (result) {
@@ -59,7 +59,7 @@ async function handleSubmit(data: AccommodationPaymentFormData) {
     }
   }
   else {
-    const result = await quotationStore.addAccommodationPayment(data);
+    const result = await quotationStore.addAccommodationPayment({ ...data, quotationAccommodationId });
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -202,8 +202,7 @@ async function confirmDelete() {
     class="sm:max-w-lg"
   >
     <template #body>
-      <QuotationAccommodationPaymentForm
-        :quotation-accommodation-id="quotationAccommodationId"
+      <QuotationPaymentForm
         :max-amount="selectedPayment ? selectedPayment.amount + pendingBalance : pendingBalance"
         :payment="selectedPayment"
         @submit="handleSubmit"

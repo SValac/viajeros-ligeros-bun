@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ProviderPayment, ProviderPaymentFormData } from '~/types/quotation';
+import type { ProviderPayment, SupplierPaymentFields } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
@@ -52,7 +52,7 @@ function closeDeleteModal() {
   isDeleteModalOpen.value = false;
 }
 
-async function handleSubmit(data: ProviderPaymentFormData) {
+async function handleSubmit(data: SupplierPaymentFields) {
   if (selectedPayment.value) {
     const result = await quotationStore.updateProviderPayment(selectedPayment.value.id, data);
     if (result) {
@@ -60,7 +60,7 @@ async function handleSubmit(data: ProviderPaymentFormData) {
     }
   }
   else {
-    const result = await quotationStore.addProviderPayment(data);
+    const result = await quotationStore.addProviderPayment({ ...data, quotationProviderId });
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -205,8 +205,7 @@ async function confirmDelete() {
     class="sm:max-w-lg"
   >
     <template #body>
-      <QuotationProviderPaymentForm
-        :quotation-provider-id="quotationProviderId"
+      <QuotationPaymentForm
         :max-amount="selectedPayment ? selectedPayment.amount + pendingBalance : pendingBalance"
         :payment="selectedPayment"
         @submit="handleSubmit"

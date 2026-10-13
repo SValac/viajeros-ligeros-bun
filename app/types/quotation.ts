@@ -85,6 +85,14 @@ export type ProviderOptOut = {
   travelId: string;
 };
 
+export type SupplierPaymentFields = {
+  amount: number;
+  paymentDate: string;
+  paymentType: PaymentType;
+  concept?: string;
+  notes?: string;
+};
+
 export type ProviderPayment = {
   id: string;
   quotationProviderId: string;
