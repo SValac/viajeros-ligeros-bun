@@ -192,21 +192,7 @@ function getActivityActions(activity: TravelActivity) {
     </div>
 
     <!-- Estado vacío -->
-    <div
-      v-else
-      class="text-center py-8 text-muted"
-    >
-      <Icon
-        name="i-lucide-calendar-days"
-        class="w-12 h-12 mx-auto mb-3 opacity-50"
-      />
-      <p class="text-sm">
-        No hay actividades en el itinerario
-      </p>
-      <p class="text-xs mt-1">
-        Haz clic en "Agregar Actividad" para comenzar
-      </p>
-    </div>
+    <EmptyState v-else section="activities" />
 
     <!-- Modal de formulario -->
     <UModal

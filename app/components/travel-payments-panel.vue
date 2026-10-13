@@ -8,6 +8,7 @@ import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/ty
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
@@ -26,7 +27,9 @@ const paymentStore = usePaymentStore();
 const cotizacionStore = useCotizacionStore();
 
 const travelId = computed(() => props.travelId);
-const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
+const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
+const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
+const travelersLoad = useQueryLoadState(travelersQuery);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 // The public prices (what each traveler is charged) live in the quotation.
 useQuery(() => quotationByTravelQuery(travelId.value));
@@ -407,55 +410,34 @@ watch(travelId, async (id) => {
     <!-- Travelers table -->
     <UCard>
       <!-- Until the travelers load (or if they fail), "no travelers" would be a lie -->
-      <div v-if="travelersStatus === 'pending' && !travelerData" class="flex justify-center py-12">
-        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-      </div>
-      <div
-        v-else-if="travelersStatus === 'error'"
-        class="flex flex-col items-center justify-center gap-4 py-12"
+      <LoadState
+        v-bind="travelersLoad"
+        label="los viajeros"
+        @retry="refetchTravelers()"
       >
-        <p class="text-muted">
-          No se pudieron cargar los viajeros
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="refetchTravelers()"
+        <template v-if="groupedFilteredTravelers.length === 0">
+          <EmptyState v-if="enrolledTravelers.length === 0" section="travelers" />
+          <EmptyState
+            v-else
+            section="noResults"
+            :actions="[{ label: 'Limpiar filtros', icon: 'i-lucide-filter-x', color: 'neutral', variant: 'outline', onClick: clearStatusFilter }]"
+          />
+        </template>
+        <UTable
+          v-else
+          v-model:expanded="expanded"
+          :columns="columns"
+          :data="groupedFilteredTravelers"
+          :get-row-id="(row) => row.id"
+          :get-sub-rows="(row) => row.children"
+          :ui="{
+            base: 'border-separate border-spacing-0',
+            tbody: '[&>tr]:last:[&>td]:border-b-0',
+            tr: 'group',
+            td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
+          }"
         />
-      </div>
-      <div v-else-if="groupedFilteredTravelers.length === 0" class="text-center py-12">
-        <UIcon name="i-lucide-users" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-        <template v-if="enrolledTravelers.length === 0">
-          <h3 class="text-lg font-medium mb-2">
-            No hay viajeros inscritos
-          </h3>
-          <p class="text-muted">
-            Registra viajeros en este viaje para gestionar sus pagos
-          </p>
-        </template>
-        <template v-else>
-          <h3 class="text-lg font-medium mb-2">
-            Sin resultados para los filtros aplicados
-          </h3>
-          <UButton icon="i-lucide-filter-x" @click="clearStatusFilter">
-            Limpiar filtros
-          </UButton>
-        </template>
-      </div>
-      <UTable
-        v-else
-        v-model:expanded="expanded"
-        :columns="columns"
-        :data="groupedFilteredTravelers"
-        :get-row-id="(row) => row.id"
-        :get-sub-rows="(row) => row.children"
-        :ui="{
-          base: 'border-separate border-spacing-0',
-          tbody: '[&>tr]:last:[&>td]:border-b-0',
-          tr: 'group',
-          td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
-        }"
-      />
+      </LoadState>
     </UCard>
 
     <!-- Payment Modal -->

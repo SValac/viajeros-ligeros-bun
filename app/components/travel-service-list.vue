@@ -176,15 +176,7 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
       </li>
     </ul>
 
-    <div v-else class="px-4 py-10 text-center text-muted">
-      <UIcon name="i-lucide-package" class="mx-auto mb-2 size-10 opacity-50" />
-      <p class="text-sm">
-        No hay servicios agregados
-      </p>
-      <p v-if="editable" class="mt-1 text-xs">
-        Agrega lo que incluye (o no incluye) el viaje; se muestra en la web.
-      </p>
-    </div>
+    <EmptyState v-else section="services" />
 
     <!-- Modal: agregar / editar -->
     <UModal

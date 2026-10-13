@@ -10,7 +10,7 @@ const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.BUS_AGEN
 </script>
 
 <template>
-  <CatalogLoadState
+  <LoadState
     :is-loaded="providerStore.isLoaded"
     :load-error="providerStore.loadError"
     label="los proveedores"
@@ -33,5 +33,5 @@ const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.BUS_AGEN
         <BusList :provider-id="provider.id" />
       </div>
     </div>
-  </CatalogLoadState>
+  </LoadState>
 </template>

@@ -173,19 +173,12 @@ async function confirmDelete() {
     </div>
 
     <!-- Estado vacío -->
-    <div v-else class="py-8 text-center bg-elevated/50 rounded-lg">
-      <UIcon name="i-lucide-receipt" class="w-10 h-10 text-muted mx-auto mb-2 block" />
-      <p class="text-muted text-sm">
-        No hay pagos registrados
-      </p>
-      <UButton
-        size="xs"
-        variant="ghost"
-        label="Registrar primer pago"
-        class="mt-2"
-        @click="openNewPago"
-      />
-    </div>
+    <EmptyState
+      v-else
+      section="payments"
+      compact
+      :actions="[{ label: 'Registrar pago', icon: 'i-lucide-plus', size: 'sm', variant: 'outline', onClick: openNewPago }]"
+    />
 
     <!-- Totales -->
     <div class="pt-2 border-t border-default space-y-1">

@@ -24,7 +24,7 @@
 ## Pinia
 
 - Un store por dominio, Composition API style
-- Los datos **no** están disponibles al montar: cada pantalla monta su query (o usa el store del catálogo) y muestra spinner → error + Reintentar → vacío → contenido. Un estado vacío antes de cargar sería mentira
+- Los datos **no** están disponibles al montar: cada pantalla monta su query (o usa el store del catálogo) y muestra spinner → error + Reintentar → vacío → contenido con `LoadState` y `EmptyState` ([04-data-flow](./04-data-flow.md#estados-de-carga-error-y-vacío)). Un estado vacío antes de cargar sería mentira
 - Redirecciones de "no encontrado" solo cuando la query resolvió (`status === 'success' && data === null`, o `isLoaded` en catálogos), con `watch` y no `watchEffect`
 - La cotización pasa por `quotationByTravelQuery`, que deduplica y copia el resultado al store (ver [Flujo de datos](./04-data-flow.md#carga-de-datos-con-pinia-colada))
 - Getters costosos (como `getTravelerPaymentSummary`) se ejecutan sin memoización — si hay problemas de performance, considerar `computed` en el componente

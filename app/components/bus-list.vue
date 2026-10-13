@@ -174,33 +174,18 @@ const columns: TableColumn<Bus>[] = [
         </UButton>
       </div>
 
-      <CatalogLoadState
+      <LoadState
         :is-loaded="busStore.isLoaded"
         :load-error="busStore.loadError"
         label="las unidades"
         @retry="busStore.refetch()"
       >
         <!-- Estado vacío -->
-        <div
+        <EmptyState
           v-if="buses.length === 0"
-          class="text-center py-8 bg-elevated rounded-lg"
-        >
-          <UIcon name="i-lucide-bus" class="w-12 h-12 text-muted mx-auto mb-3 block" />
-          <h4 class="font-medium mb-1">
-            No hay unidades registradas
-          </h4>
-          <p class="text-sm text-muted mb-4">
-            Agrega la primera unidad de este proveedor
-          </p>
-          <UButton
-            icon="i-lucide-plus"
-            variant="outline"
-            size="sm"
-            @click="openCreateModal"
-          >
-            Agregar Unidad
-          </UButton>
-        </div>
+          section="buses"
+          :actions="[{ label: 'Agregar unidad', icon: 'i-lucide-plus', onClick: openCreateModal }]"
+        />
 
         <!-- Tabla -->
         <UTable
@@ -208,7 +193,7 @@ const columns: TableColumn<Bus>[] = [
           :columns="columns"
           :data="buses"
         />
-      </CatalogLoadState>
+      </LoadState>
     </div>
 
     <!-- Modal -->

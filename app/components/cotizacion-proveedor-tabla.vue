@@ -521,20 +521,11 @@ function getProveedorActions(proveedor: QuotationProvider) {
     </div>
 
     <!-- Estado vacío -->
-    <div v-else class="py-10 text-center bg-elevated/50 rounded-lg">
-      <UIcon name="i-lucide-package-x" class="w-12 h-12 text-muted mx-auto mb-2 block" />
-      <p class="text-muted">
-        No hay proveedores en esta cotización
-      </p>
-      <UButton
-        v-if="!readonly"
-        variant="ghost"
-        size="sm"
-        label="Agregar primer proveedor"
-        class="mt-2"
-        @click="openNewProveedor"
-      />
-    </div>
+    <EmptyState
+      v-else
+      section="services"
+      :actions="readonly ? undefined : [{ label: 'Agregar proveedor', icon: 'i-lucide-plus', onClick: openNewProveedor }]"
+    />
   </div>
 
   <!-- Modal: form de proveedor -->

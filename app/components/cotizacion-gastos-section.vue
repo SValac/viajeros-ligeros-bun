@@ -199,20 +199,11 @@ function getActions(gasto: QuotationExpense) {
     </div>
 
     <!-- Estado vacío -->
-    <div v-else class="py-10 text-center bg-elevated/50 rounded-lg">
-      <UIcon name="i-lucide-receipt" class="w-12 h-12 text-muted mx-auto mb-2 block" />
-      <p class="text-muted">
-        No hay gastos adicionales en esta cotización
-      </p>
-      <UButton
-        v-if="!readonly"
-        variant="ghost"
-        size="sm"
-        label="Agregar primer gasto"
-        class="mt-2"
-        @click="openNew"
-      />
-    </div>
+    <EmptyState
+      v-else
+      section="expenses"
+      :actions="readonly ? undefined : [{ label: 'Agregar gasto', icon: 'i-lucide-plus', onClick: openNew }]"
+    />
   </UCard>
 
   <!-- Modal: form de gasto -->

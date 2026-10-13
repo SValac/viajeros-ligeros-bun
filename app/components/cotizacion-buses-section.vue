@@ -282,20 +282,11 @@ function getBusActions(bus: QuotationBus) {
     </div>
 
     <!-- Empty state -->
-    <div v-else class="py-10 text-center bg-elevated/50 rounded-lg">
-      <UIcon name="i-lucide-bus" class="w-12 h-12 text-muted mx-auto mb-2 block" />
-      <p class="text-muted">
-        No hay autobuses apartados en esta cotización
-      </p>
-      <UButton
-        v-if="!readonly"
-        variant="ghost"
-        size="sm"
-        label="Agregar primer autobús"
-        class="mt-2"
-        @click="$emit('agregarBus')"
-      />
-    </div>
+    <EmptyState
+      v-else
+      section="buses"
+      :actions="readonly ? undefined : [{ label: 'Agregar autobús', icon: 'i-lucide-plus', onClick: () => $emit('agregarBus') }]"
+    />
   </UCard>
 
   <!-- Slideover: historial de pagos -->
