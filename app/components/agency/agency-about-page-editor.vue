@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { PendingPageAction } from '~/components/agency-page-confirm-modal.vue';
+import type { PendingPageAction } from '~/components/agency/page/agency-page-confirm-modal.vue';
 import type { AboutPage } from '~/types/agency-profile';
 
 import {
