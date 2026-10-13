@@ -1,5 +1,5 @@
 import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
-import { useCotizacionStore } from '~/stores/use-cotizacion-store';
+import { useQuotationStore } from '~/stores/use-quotation-store';
 
 export const quotationKeys = {
   root: ['quotations'] as const,
@@ -26,7 +26,7 @@ export const quotationByTravelQuery = defineQueryOptions((travelId: string | und
     // An invalidation (after a write) aborts this fetch and starts a new one: the old
     // result may predate the write, so only the current fetch updates the store.
     if (!signal.aborted)
-      useCotizacionStore().hydrateTravel(travelId!, result);
+      useQuotationStore().hydrateTravel(travelId!, result);
     return result;
   },
   enabled: !!travelId,

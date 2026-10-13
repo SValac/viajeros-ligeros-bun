@@ -69,11 +69,11 @@ export const useProviderStore = defineStore('providers', () => {
 
   const filteredProviders = computed(() => filterProviders(providers.value, activeFilters.value));
 
-  const availableCiudades = computed(() =>
+  const availableCities = computed(() =>
     [...new Set(providers.value.filter(p => p.active).map(p => p.location.city))].sort(),
   );
 
-  const availableEstados = computed(() =>
+  const availableStates = computed(() =>
     [...new Set(providers.value.filter(p => p.active).map(p => p.location.state))].sort(),
   );
 
@@ -186,8 +186,8 @@ export const useProviderStore = defineStore('providers', () => {
     statsByCategory,
     totalProviders,
     filteredProviders,
-    availableCiudades,
-    availableEstados,
+    availableCities,
+    availableStates,
     filteredCount,
     hasActiveFilters,
     // Actions

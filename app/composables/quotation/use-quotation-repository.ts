@@ -438,7 +438,7 @@ export function useQuotationRepository() {
       throw error;
   }
 
-  async function toggleProviderConfirmado(id: string, confirmed: boolean): Promise<void> {
+  async function toggleProviderConfirmed(id: string, confirmed: boolean): Promise<void> {
     const { error } = await supabase
       .from('quotation_providers')
       .update({ confirmed })
@@ -986,7 +986,7 @@ export function useQuotationRepository() {
     insertProvider,
     updateProvider,
     deleteProvider,
-    toggleProviderConfirmado,
+    toggleProviderConfirmed,
     updateProviderCourtesy,
     fetchProviderPayableCosts,
     fetchProviderOptOuts,
