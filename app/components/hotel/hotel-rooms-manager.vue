@@ -171,26 +171,11 @@ async function handleDelete(rt: HotelRoomType) {
         />
 
         <!-- Empty state -->
-        <div v-if="roomTypes.length === 0" class="text-center py-12">
-          <UIcon
-            name="i-lucide-bed-single"
-            class="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3"
-          />
-          <p class="font-medium text-gray-900 dark:text-white">
-            Sin habitaciones configuradas
-          </p>
-          <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Agrega el primer tipo de habitación
-          </p>
-          <UButton
-            icon="i-lucide-plus"
-            variant="outline"
-            class="mt-4"
-            @click="openCreateForm"
-          >
-            Agregar tipo
-          </UButton>
-        </div>
+        <EmptyState
+          v-if="roomTypes.length === 0"
+          section="lodging"
+          :actions="[{ label: 'Agregar tipo de habitación', icon: 'i-lucide-plus', onClick: openCreateForm }]"
+        />
 
         <!-- Grupos por ocupación -->
         <div v-else class="space-y-6">
