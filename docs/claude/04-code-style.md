@@ -14,6 +14,10 @@ Uses **@antfu/eslint-config** with the following rules:
 | `console` | Allowed (`no-console` is off) |
 | `process.env` | Only `NODE_ENV` allowed (`node/no-process-env`) |
 
+## Language
+
+Code is in English: file names, identifiers (variables, functions, types, props, emits) and comments. Text the user sees (labels, toasts, error messages, `aria-label`) stays in Spanish, and so do data values stored in Spanish. When a comment quotes UI text, quote it as is. Use the glossary in [english-names/PLAN.md](../features/completed/english-names/PLAN.md) for domain terms (cotización → quotation, hospedaje → accommodation, saldo pendiente → pending balance…).
+
 ## Components
 
 `app/components/` is grouped by domain (`quotation/`, `travel/`, `agency/`…). Nuxt builds the name from folders + file name and drops repeated segments, so:
