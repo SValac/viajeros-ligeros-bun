@@ -9,7 +9,8 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Estado:** Pendiente (sin rama todavía).
+**Status:** In progress. PR (b) on branch `feature/shared-components-dedup-payments`
+(phases 1, 2, 8). Phase 1 done.
 
 ---
 
@@ -48,7 +49,11 @@ lleva el nombre completo con el prefijo de su carpeta.
 Después de cada fase: `bun run lint:fix`, `bun run typecheck` (en una copia del scratchpad si
 `nuxt dev` está corriendo) y revisar en el navegador las pantallas afectadas.
 
-### Fase 1 — Formularios de pago a proveedores + fecha de hoy (bugs)
+### Fase 1 — Formularios de pago a proveedores + fecha de hoy (bugs) ✅
+
+**Done (2026-10-13):** `todayISO()` in `utils/format-date.ts`; one `QuotationPaymentForm`
+that emits only `SupplierPaymentFields` (new type in `types/quotation.ts`); each history adds
+its parent id.
 
 Archivos: `quotation-bus-payment-form.vue`, `quotation-accommodation-payment-form.vue`, `quotation-provider-payment-form.vue`,
 `payment-form.vue`, `utils/format-date.ts`.
