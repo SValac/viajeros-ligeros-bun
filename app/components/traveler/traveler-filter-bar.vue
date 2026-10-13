@@ -20,7 +20,7 @@ const travelOptions = computed(() =>
   props.availableTravels.map(t => ({ label: t.label, value: t.id })),
 );
 
-const representanteOptions = computed(() =>
+const representativeOptions = computed(() =>
   (props.representatives ?? []).map(r => ({
     label: `${r.firstName} ${r.lastName}`,
     value: r.id,
@@ -30,10 +30,10 @@ const representanteOptions = computed(() =>
 // Opciones de camiones
 const busOptions = computed(() => {
   return props.availableBuses.map((b) => {
-    const agencia = providerStore.getProviderById(b.providerId)?.name;
+    const agency = providerStore.getProviderById(b.providerId)?.name;
     const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
     return {
-      label: agencia ? `${agencia} — ${busName}` : busName,
+      label: agency ? `${agency} — ${busName}` : busName,
       value: b.id,
     };
   });
@@ -48,7 +48,7 @@ function onBusChange(val: string | undefined) {
   filters.value = { ...filters.value, travelBusId: val };
 }
 
-function onRepresentanteChange(val: string | undefined) {
+function onRepresentativeChange(val: string | undefined) {
   filters.value = { ...filters.value, representativeId: val };
 }
 
@@ -87,14 +87,14 @@ const hasFilters = computed(() =>
     />
 
     <USelect
-      v-if="representanteOptions.length > 0"
+      v-if="representativeOptions.length > 0"
       :model-value="filters.representativeId"
-      :items="representanteOptions"
+      :items="representativeOptions"
       value-key="value"
       label-key="label"
       placeholder="Todos los grupos"
       class="w-56"
-      @update:model-value="onRepresentanteChange"
+      @update:model-value="onRepresentativeChange"
     />
 
     <UButton

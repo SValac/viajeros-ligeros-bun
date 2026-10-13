@@ -10,49 +10,49 @@ const emit = defineEmits<{
   confirmed: [];
 }>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const toast = useToast();
 
-const cotizacion = computed(() =>
-  cotizacionStore.cotizaciones.find(c => c.id === quotationId),
+const quotation = computed(() =>
+  quotationStore.quotations.find(c => c.id === quotationId),
 );
 
-const puedeConfirmar = computed(() => cotizacionStore.puedeConfirmar(quotationId));
+const canConfirm = computed(() => quotationStore.canConfirm(quotationId));
 
-const isConfirmarModalOpen = shallowRef(false);
-const isConfirmando = shallowRef(false);
-const isReabrirModalOpen = shallowRef(false);
-const isReabriendo = shallowRef(false);
+const isConfirmModalOpen = shallowRef(false);
+const isConfirming = shallowRef(false);
+const isReopenModalOpen = shallowRef(false);
+const isReopening = shallowRef(false);
 
-function openConfirmarModal() {
-  isConfirmarModalOpen.value = true;
+function openConfirmModal() {
+  isConfirmModalOpen.value = true;
 }
 
-function closeConfirmarModal() {
-  isConfirmarModalOpen.value = false;
+function closeConfirmModal() {
+  isConfirmModalOpen.value = false;
 }
 
-function getEstadoColor(status: string): 'warning' | 'success' {
+function getStatusColor(status: string): 'warning' | 'success' {
   return status === 'confirmed' ? 'success' : 'warning';
 }
 
-function getEstadoLabel(status: string): string {
+function getStatusLabel(status: string): string {
   return status === 'confirmed' ? 'Confirmada' : 'Borrador';
 }
 
-function openReabrirModal() {
-  isReabrirModalOpen.value = true;
+function openReopenModal() {
+  isReopenModalOpen.value = true;
 }
 
-function closeReabrirModal() {
-  isReabrirModalOpen.value = false;
+function closeReopenModal() {
+  isReopenModalOpen.value = false;
 }
 
-async function reabrirQuotation() {
-  isReabriendo.value = true;
-  const result = await cotizacionStore.reabrirQuotation(quotationId);
-  isReabriendo.value = false;
-  isReabrirModalOpen.value = false;
+async function reopenQuotation() {
+  isReopening.value = true;
+  const result = await quotationStore.reopenQuotation(quotationId);
+  isReopening.value = false;
+  isReopenModalOpen.value = false;
 
   if (result.success)
     toast.add({ title: 'Cotización reabierta', description: 'Vuelve a estar en borrador', color: 'success' });
@@ -60,11 +60,11 @@ async function reabrirQuotation() {
     toast.add({ title: 'Error al reabrir', description: result.error, color: 'error' });
 }
 
-async function confirmarQuotation() {
-  isConfirmando.value = true;
-  const result = await cotizacionStore.confirmarQuotation(quotationId);
-  isConfirmando.value = false;
-  isConfirmarModalOpen.value = false;
+async function confirmQuotation() {
+  isConfirming.value = true;
+  const result = await quotationStore.confirmQuotation(quotationId);
+  isConfirming.value = false;
+  isConfirmModalOpen.value = false;
 
   if (result.success) {
     toast.add({ title: 'Cotización confirmada', color: 'success' });
@@ -83,9 +83,9 @@ async function confirmarQuotation() {
     <div class="flex items-center gap-2">
       <span class="text-sm text-muted">Estado</span>
       <UBadge
-        v-if="cotizacion"
-        :label="getEstadoLabel(cotizacion.status)"
-        :color="getEstadoColor(cotizacion.status)"
+        v-if="quotation"
+        :label="getStatusLabel(quotation.status)"
+        :color="getStatusColor(quotation.status)"
         variant="subtle"
       />
     </div>
@@ -100,22 +100,22 @@ async function confirmarQuotation() {
         color="neutral"
         variant="outline"
         size="sm"
-        @click="openReabrirModal"
+        @click="openReopenModal"
       />
 
       <!-- Confirmar cotización -->
       <UTooltip
         v-else
-        :text="!puedeConfirmar ? 'Todos los proveedores deben estar confirmados' : ''"
-        :disabled="puedeConfirmar && !readonly"
+        :text="!canConfirm ? 'Todos los proveedores deben estar confirmados' : ''"
+        :disabled="canConfirm && !readonly"
       >
         <UButton
           icon="i-lucide-check-circle"
           label="Confirmar cotización"
           color="success"
           size="sm"
-          :disabled="readonly || !puedeConfirmar"
-          @click="openConfirmarModal"
+          :disabled="readonly || !canConfirm"
+          @click="openConfirmModal"
         />
       </UTooltip>
     </div>
@@ -123,7 +123,7 @@ async function confirmarQuotation() {
 
   <!-- Modal: confirmación -->
   <UModal
-    v-model:open="isConfirmarModalOpen"
+    v-model:open="isConfirmModalOpen"
     title="Confirmar Cotización"
     description="Al confirmar ya no se podrán editar proveedores, hospedaje ni autobuses. Los pagos a proveedores se siguen registrando normalmente, y puedes reabrirla si necesitas corregir algo."
   >
@@ -133,13 +133,13 @@ async function confirmarQuotation() {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="closeConfirmarModal"
+          @click="closeConfirmModal"
         />
         <UButton
           color="success"
           label="Confirmar"
-          :loading="isConfirmando"
-          @click="confirmarQuotation"
+          :loading="isConfirming"
+          @click="confirmQuotation"
         />
       </div>
     </template>
@@ -147,7 +147,7 @@ async function confirmarQuotation() {
 
   <!-- Modal: reabrir -->
   <UModal
-    v-model:open="isReabrirModalOpen"
+    v-model:open="isReopenModalOpen"
     title="Reabrir Cotización"
     description="La cotización vuelve a borrador para poder editar proveedores, hospedaje y autobuses. Los pagos registrados no cambian."
   >
@@ -157,13 +157,13 @@ async function confirmarQuotation() {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="closeReabrirModal"
+          @click="closeReopenModal"
         />
         <UButton
           icon="i-lucide-lock-open"
           label="Reabrir"
-          :loading="isReabriendo"
-          @click="reabrirQuotation"
+          :loading="isReopening"
+          @click="reopenQuotation"
         />
       </div>
     </template>

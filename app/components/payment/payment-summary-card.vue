@@ -8,7 +8,7 @@ defineProps<{
   travelerName: string;
 }>();
 
-function formatAjusteAmount(item: { amount: number; type: 'fixed' | 'percentage' }, appliedPrice: number) {
+function formatAdjustmentAmount(item: { amount: number; type: 'fixed' | 'percentage' }, appliedPrice: number) {
   return item.type === 'percentage'
     ? formatCurrency(appliedPrice * item.amount / 100)
     : formatCurrency(item.amount);
@@ -60,7 +60,7 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
           <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
           <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
-        <span>- {{ formatAjusteAmount(item, summary.appliedPrice) }}</span>
+        <span>- {{ formatAdjustmentAmount(item, summary.appliedPrice) }}</span>
       </div>
 
       <div
@@ -73,7 +73,7 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
           <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
           <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
-        <span>+ {{ formatAjusteAmount(item, summary.appliedPrice) }}</span>
+        <span>+ {{ formatAdjustmentAmount(item, summary.appliedPrice) }}</span>
       </div>
 
       <div class="flex justify-between font-medium border-t border-default pt-2">

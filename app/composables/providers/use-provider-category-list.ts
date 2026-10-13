@@ -36,10 +36,10 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
     return result;
   });
 
-  const availableCiudades = computed(() =>
+  const availableCities = computed(() =>
     [...new Set(categoryProviders.value.map(p => p.location.city))].sort(),
   );
-  const availableEstados = computed(() =>
+  const availableStates = computed(() =>
     [...new Set(categoryProviders.value.map(p => p.location.state))].sort(),
   );
 
@@ -170,8 +170,8 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
     localFilters,
     categoryProviders,
     providers,
-    availableCiudades,
-    availableEstados,
+    availableCities,
+    availableStates,
     hasLocalFilters,
     removeLocalFilter,
     clearLocalFilters,

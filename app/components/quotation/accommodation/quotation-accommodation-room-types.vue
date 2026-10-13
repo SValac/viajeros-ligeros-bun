@@ -20,19 +20,19 @@ const details = defineModel<QuotationAccommodationDetailFormData[]>({ required: 
 
 const selectedIds = computed(() => new Set(details.value.map(d => d.roomTypeId)));
 
-function toggle(tipo: HotelRoomType) {
-  if (selectedIds.value.has(tipo.id)) {
-    details.value = details.value.filter(d => d.roomTypeId !== tipo.id);
+function toggle(type: HotelRoomType) {
+  if (selectedIds.value.has(type.id)) {
+    details.value = details.value.filter(d => d.roomTypeId !== type.id);
     return;
   }
   details.value = [
     ...details.value,
-    { roomTypeId: tipo.id, pricePerNight: tipo.pricePerNight, maxOccupancy: tipo.maxOccupancy },
+    { roomTypeId: type.id, pricePerNight: type.pricePerNight, maxOccupancy: type.maxOccupancy },
   ];
 }
 
-function roomCount(tipoId: string): number {
-  return props.roomCounts?.get(tipoId) ?? 0;
+function roomCount(typeId: string): number {
+  return props.roomCounts?.get(typeId) ?? 0;
 }
 
 // Types unchecked here that still have rooms on the travel: saving deletes those rooms.
@@ -54,37 +54,37 @@ const droppedWithRooms = computed(() =>
 
     <div v-else class="space-y-3 max-h-80 overflow-y-auto border border-default rounded-lg p-4">
       <label
-        v-for="tipo in roomTypes"
-        :key="tipo.id"
+        v-for="type in roomTypes"
+        :key="type.id"
         class="flex items-start gap-3 border border-default rounded-lg p-4 cursor-pointer"
-        :class="selectedIds.has(tipo.id) ? 'border-primary bg-primary/5' : ''"
+        :class="selectedIds.has(type.id) ? 'border-primary bg-primary/5' : ''"
       >
         <UCheckbox
-          :model-value="selectedIds.has(tipo.id)"
-          @update:model-value="() => toggle(tipo)"
+          :model-value="selectedIds.has(type.id)"
+          @update:model-value="() => toggle(type)"
         />
         <div class="flex-1 min-w-0 space-y-0.5">
           <div class="flex flex-wrap items-center gap-2">
             <p class="font-medium">
-              {{ tipo.maxOccupancy }} persona{{ tipo.maxOccupancy === 1 ? '' : 's' }} · {{ formatCurrency(tipo.pricePerNight) }}/noche
+              {{ type.maxOccupancy }} persona{{ type.maxOccupancy === 1 ? '' : 's' }} · {{ formatCurrency(type.pricePerNight) }}/noche
             </p>
             <UBadge
               v-if="roomCounts"
-              :label="`${roomCount(tipo.id)} hab. en el viaje`"
-              :color="roomCount(tipo.id) > 0 ? 'primary' : 'neutral'"
+              :label="`${roomCount(type.id)} hab. en el viaje`"
+              :color="roomCount(type.id) > 0 ? 'primary' : 'neutral'"
               variant="subtle"
               size="sm"
             />
           </div>
           <p class="text-xs text-muted">
-            Cama(s): {{ formatBedConfiguration(tipo.beds) }}
+            Cama(s): {{ formatBedConfiguration(type.beds) }}
           </p>
-          <p v-if="tipo.additionalDetails" class="text-xs text-muted">
-            {{ tipo.additionalDetails }}
+          <p v-if="type.additionalDetails" class="text-xs text-muted">
+            {{ type.additionalDetails }}
           </p>
-          <p v-if="selectedIds.has(tipo.id)" class="text-xs text-toned pt-1">
-            {{ formatCurrency(tipo.pricePerNight / tipo.maxOccupancy) }} por persona/noche ·
-            {{ formatCurrency(tipo.pricePerNight * nightCount) }} por habitación ({{ nightCount }} noche{{ nightCount === 1 ? '' : 's' }})
+          <p v-if="selectedIds.has(type.id)" class="text-xs text-toned pt-1">
+            {{ formatCurrency(type.pricePerNight / type.maxOccupancy) }} por persona/noche ·
+            {{ formatCurrency(type.pricePerNight * nightCount) }} por habitación ({{ nightCount }} noche{{ nightCount === 1 ? '' : 's' }})
           </p>
         </div>
       </label>

@@ -9,61 +9,61 @@ type Props = {
 
 const { quotationId, travelersCollected } = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
-const cotizacion = computed(() =>
-  cotizacionStore.cotizaciones.find(c => c.id === quotationId),
+const quotation = computed(() =>
+  quotationStore.quotations.find(c => c.id === quotationId),
 );
-const coordinatorCount = useTravelCoordinatorCount(() => cotizacion.value?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(() => quotation.value?.travelId);
 
-const costoProveedores = computed(() => cotizacionStore.getCostoTotal(quotationId, coordinatorCount.value));
-const costoTipoMinimo = computed(() => cotizacionStore.getCostoTipoMinimo(quotationId));
-const costoTipoTotal = computed(() => cotizacionStore.getCostoTipoTotal(quotationId));
-const costoPorPersonaAsiento = computed(() => cotizacionStore.getCostoPorPersonaAsiento(quotationId));
-const costoHospedajes = computed(() => cotizacionStore.getTotalCostoHospedajes(quotationId));
-const costoBuses = computed(() => cotizacionStore.getTotalCostoBuses(quotationId));
-const costoBusesTipoMinimo = computed(() => cotizacionStore.getCostoBusesTipoMinimo(quotationId));
-const costoBusesTipoTotal = computed(() => cotizacionStore.getCostoBusesTipoTotal(quotationId));
-const costoGastos = computed(() => cotizacionStore.getTotalGastos(quotationId));
-const costoTotal = computed(() => costoProveedores.value + costoBuses.value + costoGastos.value);
-const costoMinimoConBuses = computed(() => costoTipoMinimo.value + costoBusesTipoMinimo.value + cotizacionStore.getGastosTipoMinimo(quotationId));
-const costoCapacidadConBuses = computed(() => costoTipoTotal.value + costoBusesTipoTotal.value + cotizacionStore.getGastosTipoTotal(quotationId));
-const gananciaProyectada = computed(() => cotizacionStore.getGananciaProyectada(quotationId, coordinatorCount.value));
-const asientoConGanancia = computed(() => cotizacionStore.getAsientoConGanancia(quotationId, coordinatorCount.value));
+const providersCost = computed(() => quotationStore.getProvidersFullBusCost(quotationId, coordinatorCount.value));
+const minimumSplitCost = computed(() => quotationStore.getProvidersMinimumSplitCost(quotationId));
+const totalSplitCost = computed(() => quotationStore.getProvidersTotalSplitCost(quotationId));
+const perPersonSeatCost = computed(() => quotationStore.getPerPersonSeatCost(quotationId));
+const accommodationsCost = computed(() => quotationStore.getAccommodationsTotalCost(quotationId));
+const busesCost = computed(() => quotationStore.getBusesTotalCost(quotationId));
+const busesMinimumSplitCost = computed(() => quotationStore.getBusesMinimumSplitCost(quotationId));
+const busesTotalSplitCost = computed(() => quotationStore.getBusesTotalSplitCost(quotationId));
+const expensesCost = computed(() => quotationStore.getExpensesTotal(quotationId));
+const totalCost = computed(() => providersCost.value + busesCost.value + expensesCost.value);
+const minimumCostWithBuses = computed(() => minimumSplitCost.value + busesMinimumSplitCost.value + quotationStore.getExpensesMinimumSplit(quotationId));
+const fullCapacityCostWithBuses = computed(() => totalSplitCost.value + busesTotalSplitCost.value + quotationStore.getExpensesTotalSplit(quotationId));
+const projectedProfit = computed(() => quotationStore.getProjectedProfit(quotationId, coordinatorCount.value));
+const breakEvenSeat = computed(() => quotationStore.getBreakEvenSeat(quotationId, coordinatorCount.value));
 // Total seats minus the coordinators when they take passenger seats.
-const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId, coordinatorCount.value));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoTotalPendiente(quotationId));
-const saldoPendienteHospedajes = computed(() => cotizacionStore.getSaldoTotalPendienteHospedajes(quotationId));
-const saldoPendienteBuses = computed(() => cotizacionStore.getSaldoTotalPendienteBuses(quotationId));
+const sellableSeats = computed(() => quotationStore.getSellableSeats(quotationId, coordinatorCount.value));
+const pendingBalance = computed(() => quotationStore.getTotalPendingBalanceProviders(quotationId));
+const accommodationsPendingBalance = computed(() => quotationStore.getTotalPendingBalanceAccommodations(quotationId));
+const busesPendingBalance = computed(() => quotationStore.getTotalPendingBalanceBuses(quotationId));
 
-const totalPorPagar = computed(() =>
-  saldoPendiente.value + saldoPendienteHospedajes.value + saldoPendienteBuses.value,
+const totalToPay = computed(() =>
+  pendingBalance.value + accommodationsPendingBalance.value + busesPendingBalance.value,
 );
 
 // Each pending balance row: what's owed to that kind of supplier. With no costs there's
 // nothing to settle, so it doesn't read "Liquidado".
-const porPagar = computed(() => [
-  { label: 'Servicios', icon: 'i-lucide-building', costo: costoProveedores.value, saldo: saldoPendiente.value },
-  { label: 'Hospedaje', icon: 'i-lucide-hotel', costo: costoHospedajes.value, saldo: saldoPendienteHospedajes.value },
-  { label: 'Autobuses', icon: 'i-lucide-bus', costo: costoBuses.value, saldo: saldoPendienteBuses.value },
+const toPay = computed(() => [
+  { label: 'Servicios', icon: 'i-lucide-building', cost: providersCost.value, balance: pendingBalance.value },
+  { label: 'Hospedaje', icon: 'i-lucide-hotel', cost: accommodationsCost.value, balance: accommodationsPendingBalance.value },
+  { label: 'Autobuses', icon: 'i-lucide-bus', cost: busesCost.value, balance: busesPendingBalance.value },
 ].map(item => ({
   ...item,
-  texto: item.costo === 0 ? 'Sin costos' : item.saldo > 0 ? formatCurrency(item.saldo) : 'Liquidado',
-  clase: item.costo === 0 ? 'text-muted' : saldoColor(item.saldo),
+  text: item.cost === 0 ? 'Sin costos' : item.balance > 0 ? formatCurrency(item.balance) : 'Liquidado',
+  className: item.cost === 0 ? 'text-muted' : balanceColor(item.balance),
 })));
 
 // El color solo marca estado: ganancia/pérdida y saldo pendiente/liquidado.
 // Costos, precios y totales van en texto normal.
-const gananciaColor = computed(() => {
-  if (gananciaProyectada.value > 0)
+const profitColor = computed(() => {
+  if (projectedProfit.value > 0)
     return 'text-success';
-  if (gananciaProyectada.value < 0)
+  if (projectedProfit.value < 0)
     return 'text-error';
   return 'text-highlighted';
 });
 
-function saldoColor(saldo: number): string {
-  return saldo > 0 ? 'text-warning' : 'text-success';
+function balanceColor(balance: number): string {
+  return balance > 0 ? 'text-warning' : 'text-success';
 }
 </script>
 
@@ -78,29 +78,29 @@ function saldoColor(saldo: number): string {
         <QuotationKpiCard
           label="Costo total"
           icon="i-lucide-wallet"
-          :value="formatCurrency(costoTotal)"
+          :value="formatCurrency(totalCost)"
         >
           <p>Servicios + autobuses + gastos</p>
         </QuotationKpiCard>
         <QuotationKpiCard
           label="Servicios"
           icon="i-lucide-building"
-          :value="formatCurrency(costoProveedores)"
+          :value="formatCurrency(providersCost)"
         />
         <QuotationKpiCard
           label="Autobuses"
           icon="i-lucide-bus"
-          :value="formatCurrency(costoBuses)"
+          :value="formatCurrency(busesCost)"
         />
         <QuotationKpiCard
           label="Gastos adicionales"
           icon="i-lucide-receipt"
-          :value="formatCurrency(costoGastos)"
+          :value="formatCurrency(expensesCost)"
         />
         <QuotationKpiCard
           label="Hospedaje"
           icon="i-lucide-door-open"
-          :value="formatCurrency(costoHospedajes)"
+          :value="formatCurrency(accommodationsCost)"
         >
           <p>No entra en el precio por asiento</p>
         </QuotationKpiCard>
@@ -116,43 +116,43 @@ function saldoColor(saldo: number): string {
         <QuotationKpiCard
           label="Precio por asiento"
           icon="i-lucide-armchair"
-          :value="formatCurrency(cotizacion?.seatPrice ?? 0)"
+          :value="formatCurrency(quotation?.seatPrice ?? 0)"
         >
           <p>
-            Reparto mínimo: <span class="font-medium tabular-nums">{{ formatCurrency(costoMinimoConBuses) }}</span>
-            ÷ {{ cotizacion?.minimumSeatTarget ?? 0 }} asientos
+            Reparto mínimo: <span class="font-medium tabular-nums">{{ formatCurrency(minimumCostWithBuses) }}</span>
+            ÷ {{ quotation?.minimumSeatTarget ?? 0 }} asientos
           </p>
           <p>
-            Reparto total: <span class="font-medium tabular-nums">{{ formatCurrency(costoCapacidadConBuses) }}</span>
-            ÷ {{ asientosVendibles }} asientos vendibles
+            Reparto total: <span class="font-medium tabular-nums">{{ formatCurrency(fullCapacityCostWithBuses) }}</span>
+            ÷ {{ sellableSeats }} asientos vendibles
           </p>
-          <p v-if="costoPorPersonaAsiento > 0">
-            Servicios por persona: + <span class="font-medium tabular-nums">{{ formatCurrency(costoPorPersonaAsiento) }}</span> por asiento
+          <p v-if="perPersonSeatCost > 0">
+            Servicios por persona: + <span class="font-medium tabular-nums">{{ formatCurrency(perPersonSeatCost) }}</span> por asiento
           </p>
         </QuotationKpiCard>
         <QuotationKpiCard
           label="Meta mínima de asientos"
           icon="i-lucide-target"
-          :value="String(cotizacion?.minimumSeatTarget ?? 0)"
+          :value="String(quotation?.minimumSeatTarget ?? 0)"
         >
-          <p v-if="asientoConGanancia === 0">
+          <p v-if="breakEvenSeat === 0">
             Sin precio por asiento todavía
           </p>
-          <p v-else-if="asientoConGanancia > asientosVendibles" class="text-error">
+          <p v-else-if="breakEvenSeat > sellableSeats" class="text-error">
             Sin ganancia aun con el autobús lleno
           </p>
           <p v-else>
-            Ganancia a partir del asiento {{ asientoConGanancia }}
+            Ganancia a partir del asiento {{ breakEvenSeat }}
           </p>
         </QuotationKpiCard>
         <QuotationKpiCard
           label="Ganancia proyectada"
-          :icon="gananciaProyectada < 0 ? 'i-lucide-trending-down' : 'i-lucide-trending-up'"
-          :value="formatCurrency(gananciaProyectada)"
-          :value-class="gananciaColor"
+          :icon="projectedProfit < 0 ? 'i-lucide-trending-down' : 'i-lucide-trending-up'"
+          :value="formatCurrency(projectedProfit)"
+          :value-class="profitColor"
         >
           <p>
-            {{ asientosVendibles }} asientos vendibles × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }} − costo total
+            {{ sellableSeats }} asientos vendibles × {{ formatCurrency(quotation?.seatPrice ?? 0) }} − costo total
           </p>
         </QuotationKpiCard>
       </div>
@@ -172,12 +172,12 @@ function saldoColor(saldo: number): string {
         <QuotationKpiCard
           label="Por pagar a proveedores"
           icon="i-lucide-clock"
-          :value="formatCurrency(totalPorPagar)"
-          :value-class="saldoColor(totalPorPagar)"
+          :value="formatCurrency(totalToPay)"
+          :value-class="balanceColor(totalToPay)"
         >
           <ul class="space-y-1">
             <li
-              v-for="item in porPagar"
+              v-for="item in toPay"
               :key="item.label"
               class="flex items-center justify-between gap-3"
             >
@@ -185,8 +185,8 @@ function saldoColor(saldo: number): string {
                 <UIcon :name="item.icon" class="size-3.5" />
                 {{ item.label }}
               </span>
-              <span class="font-medium tabular-nums" :class="item.clase">
-                {{ item.texto }}
+              <span class="font-medium tabular-nums" :class="item.className">
+                {{ item.text }}
               </span>
             </li>
           </ul>

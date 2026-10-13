@@ -113,15 +113,15 @@ const busOptions = computed(() => {
     : (selectedTravel.value?.buses ?? []);
 
   return buses.map((b) => {
-    const agencia = providerStore.getProviderById(b.providerId)?.name;
+    const agency = providerStore.getProviderById(b.providerId)?.name;
     const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
-    const label = agencia ? `${agencia} — ${busName}` : busName;
+    const label = agency ? `${agency} — ${busName}` : busName;
     return { value: b.id, label };
   });
 });
 
 // Opciones de representante: viajeros del mismo viaje y camión, excluyendo al propio viajero
-const representanteOptions = computed(() => {
+const representativeOptions = computed(() => {
   if (!state.value.travelId || !state.value.travelBusId)
     return [];
   return availableTravelers
@@ -297,9 +297,9 @@ function onCancel() {
     >
       <USelect
         v-model="state.representativeId"
-        :items="representanteOptions"
-        :placeholder="representanteOptions.length ? 'Seleccionar representante' : 'No hay representantes disponibles en este camión'"
-        :disabled="!state.travelBusId || representanteOptions.length === 0"
+        :items="representativeOptions"
+        :placeholder="representativeOptions.length ? 'Seleccionar representante' : 'No hay representantes disponibles en este camión'"
+        :disabled="!state.travelBusId || representativeOptions.length === 0"
       />
     </UFormField>
 

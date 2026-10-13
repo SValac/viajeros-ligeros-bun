@@ -18,9 +18,9 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const GRUPOS_ETARIOS = ['Todos', 'Adultos', 'Niños'] as const;
+const AGE_GROUPS = ['Todos', 'Adultos', 'Niños'] as const;
 
-const grupoEtarioOptions = GRUPOS_ETARIOS.map(grupo => ({ label: grupo, value: grupo }));
+const ageGroupOptions = AGE_GROUPS.map(group => ({ label: group, value: group }));
 
 const schema = z.object({
   priceType: businessNameSchema({ min: 1, max: 100 }),
@@ -28,28 +28,28 @@ const schema = z.object({
   description: textSchema({ min: 1, max: 500 }),
   pricePerPerson: z.number({ message: 'Ingresa el precio' }).positive('Debe ser mayor a 0'),
   roomType: businessNameSchema({ max: 100 }).optional().or(z.literal('')),
-  ageGroup: z.enum(GRUPOS_ETARIOS, { message: 'Selecciona un grupo etario' }),
+  ageGroup: z.enum(AGE_GROUPS, { message: 'Selecciona un grupo etario' }),
   notes: textSchema({ max: 500 }).optional(),
 });
 
 type FormSchema = z.output<typeof schema>;
 
 // Al editar manda el precio; al agregar, la plantilla (si la hay) y si no, valores vacíos
-const inicial = price ?? template;
+const initial = price ?? template;
 
 const state = reactive<Partial<FormSchema>>({
-  priceType: inicial?.priceType ?? '',
-  description: inicial?.description ?? '',
-  pricePerPerson: inicial?.pricePerPerson ?? 0,
-  roomType: inicial?.roomType ?? '',
-  ageGroup: (inicial?.ageGroup as FormSchema['ageGroup'] | undefined) ?? 'Todos',
-  notes: inicial?.notes ?? '',
+  priceType: initial?.priceType ?? '',
+  description: initial?.description ?? '',
+  pricePerPerson: initial?.pricePerPerson ?? 0,
+  roomType: initial?.roomType ?? '',
+  ageGroup: (initial?.ageGroup as FormSchema['ageGroup'] | undefined) ?? 'Todos',
+  notes: initial?.notes ?? '',
 });
 
 // Read-only: comes from the reference price used as template and is kept when editing.
 // Hand-written prices have none. The web groups prices into tabs by it.
-const maxOccupancy = inicial?.maxOccupancy;
-const ocupacionLabel = maxOccupancy
+const maxOccupancy = initial?.maxOccupancy;
+const occupancyLabel = maxOccupancy
   ? `${maxOccupancy} persona${maxOccupancy === 1 ? '' : 's'}`
   : 'Sin ocupación (no se creó desde un precio de referencia)';
 
@@ -119,7 +119,7 @@ function onSubmit() {
     >
       <URadioGroup
         v-model="state.ageGroup"
-        :items="grupoEtarioOptions"
+        :items="ageGroupOptions"
         orientation="horizontal"
         class="py-1.5"
       />
@@ -132,7 +132,7 @@ function onSubmit() {
       class="sm:col-span-2"
     >
       <p class="text-sm py-1.5">
-        {{ ocupacionLabel }}
+        {{ occupancyLabel }}
       </p>
     </UFormField>
 

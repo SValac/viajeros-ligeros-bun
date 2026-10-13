@@ -14,7 +14,7 @@ const props = defineProps<{
 }>();
 
 const coordinatorStore = useCoordinatorStore();
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
 const travelQuery = useQuery(() => travelDetailQuery(props.travelId));
 const { data: travel, refetch } = travelQuery;
@@ -37,8 +37,8 @@ useQuery(() => quotationByTravelQuery(props.travelId));
 
 // Lugares a la venta según la cotización; 0 si aún no hay cotización o autobuses
 const sellableSeats = computed(() => {
-  const cotizacion = cotizacionStore.getCotizacionByTravel(props.travelId);
-  return cotizacion ? cotizacionStore.getAsientosVendibles(cotizacion.id, travel.value?.coordinatorIds.length ?? 0) : 0;
+  const quotation = quotationStore.getQuotationByTravel(props.travelId);
+  return quotation ? quotationStore.getSellableSeats(quotation.id, travel.value?.coordinatorIds.length ?? 0) : 0;
 });
 
 type Detail = { icon: string; label: string; value: string };

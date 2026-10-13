@@ -27,8 +27,8 @@ const {
   localFilters,
   categoryProviders,
   providers,
-  availableCiudades,
-  availableEstados,
+  availableCities,
+  availableStates,
   hasLocalFilters,
   removeLocalFilter,
   clearLocalFilters,
@@ -84,10 +84,10 @@ const phoneColumn: TableColumn<Provider> = {
   id: 'phone',
   header: 'Teléfono',
   cell: ({ row }) => {
-    const telefono = row.original.contact.phone;
-    if (!telefono)
+    const phone = row.original.contact.phone;
+    if (!phone)
       return h('span', { class: 'text-sm text-gray-400' }, '-');
-    return h('span', { class: 'text-sm' }, formatPhone(telefono));
+    return h('span', { class: 'text-sm' }, formatPhone(phone));
   },
 };
 
@@ -156,8 +156,8 @@ const columns = computed<TableColumn<Provider>[]>(() => [
     <div class="space-y-2">
       <ProviderFilterBar
         v-model="localFilters"
-        :available-cities="availableCiudades"
-        :available-states="availableEstados"
+        :available-cities="availableCities"
+        :available-states="availableStates"
         :show-category-filter="false"
       />
       <ProviderActiveFilters

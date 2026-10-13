@@ -14,32 +14,32 @@ type Props = {
 
 const { quotation, readonly = false } = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const travelerStore = useTravelerStore();
 const queryCache = useQueryCache();
 const toast = useToast();
 
-const editandoParametros = shallowRef(false);
-const confirmarQuitarAsientos = shallowRef(false);
-const guardando = shallowRef(false);
+const isEditingParameters = shallowRef(false);
+const confirmRemoveSeats = shallowRef(false);
+const isSaving = shallowRef(false);
 
 const { data: travel } = useQuery(() => travelDetailQuery(quotation.travelId));
 
-const numCoordinadores = computed(() =>
+const coordinatorCount = computed(() =>
   travel.value?.coordinatorIds.length ?? 0,
 );
-const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotation.id, numCoordinadores.value));
-const origenVendibles = computed(() => {
-  if (!quotation.coordinatorsTakeSeats || numCoordinadores.value === 0)
+const sellableSeats = computed(() => quotationStore.getSellableSeats(quotation.id, coordinatorCount.value));
+const sellableSource = computed(() => {
+  if (!quotation.coordinatorsTakeSeats || coordinatorCount.value === 0)
     return 'Todos los asientos se venden';
-  const n = numCoordinadores.value;
+  const n = coordinatorCount.value;
   return `${quotation.totalSeats} − ${n} coordinador${n === 1 ? '' : 'es'}`;
 });
 
 // The total seats are the sum of the quotation's bus capacities (a DB trigger keeps them),
 // so they're shown read-only with where they come from.
-const origenCapacidad = computed(() => {
-  const n = cotizacionStore.getBusesByQuotation(quotation.id).length;
+const capacitySource = computed(() => {
+  const n = quotationStore.getBusesByQuotation(quotation.id).length;
   if (n === 0)
     return 'Agrega autobuses a la cotización para calcularla';
   return `Suma de ${n} autobús${n === 1 ? '' : 'es'}`;
@@ -51,35 +51,35 @@ const paramsState = reactive({
   notes: quotation.notes ?? '',
 });
 
-function openEditarParametros() {
+function openEditParameters() {
   paramsState.minimumSeatTarget = quotation.minimumSeatTarget;
   paramsState.coordinatorsTakeSeats = quotation.coordinatorsTakeSeats;
   paramsState.notes = quotation.notes ?? '';
-  editandoParametros.value = true;
+  isEditingParameters.value = true;
 }
 
-function cerrarEditarParametros() {
-  editandoParametros.value = false;
+function closeEditParameters() {
+  isEditingParameters.value = false;
 }
 
 // Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe (sin schema Zod para este form de edición rápida)
 const paramsNotesInput = useSanitizedModel(() => paramsState.notes ?? '', v => paramsState.notes = v, sanitizeText);
 
-function cancelarQuitarAsientos() {
-  confirmarQuitarAsientos.value = false;
+function cancelRemoveSeats() {
+  confirmRemoveSeats.value = false;
 }
 
 // When coordinators stop taking passenger seats, the ones already seated lose their seat
 // (their rooms stay). Asks first if anyone would be affected.
-async function guardarParametros() {
-  const quitaAsientos = quotation.coordinatorsTakeSeats && !paramsState.coordinatorsTakeSeats;
-  if (quitaAsientos && !confirmarQuitarAsientos.value) {
+async function saveParameters() {
+  const removesSeats = quotation.coordinatorsTakeSeats && !paramsState.coordinatorsTakeSeats;
+  if (removesSeats && !confirmRemoveSeats.value) {
     // Fresh from the server (fetch ignores staleTime): this decides whether to ask first.
     // If it can't be checked, stop: we'd take seats away without asking.
-    let sentados: Traveler[];
+    let seated: Traveler[];
     try {
       const { data } = await queryCache.fetch(queryCache.ensure(travelersByTravelQuery(quotation.travelId)));
-      sentados = (data?.travelers ?? []).filter(t => t.kind === 'coordinator' && t.seat !== null);
+      seated = (data?.travelers ?? []).filter(t => t.kind === 'coordinator' && t.seat !== null);
     }
     catch (e) {
       toast.add({
@@ -89,25 +89,25 @@ async function guardarParametros() {
       });
       return;
     }
-    if (sentados.length > 0) {
-      confirmarQuitarAsientos.value = true;
+    if (seated.length > 0) {
+      confirmRemoveSeats.value = true;
       return;
     }
   }
-  confirmarQuitarAsientos.value = false;
+  confirmRemoveSeats.value = false;
 
-  guardando.value = true;
+  isSaving.value = true;
   try {
-    if (quitaAsientos)
+    if (removesSeats)
       await travelerStore.clearCoordinatorSeats(quotation.travelId);
-    const updated = await cotizacionStore.updateQuotation(quotation.id, {
+    const updated = await quotationStore.updateQuotation(quotation.id, {
       minimumSeatTarget: paramsState.minimumSeatTarget,
       coordinatorsTakeSeats: paramsState.coordinatorsTakeSeats,
       notes: paramsState.notes,
     });
     if (!updated)
-      throw new Error(cotizacionStore.error ?? 'No se pudieron guardar los parámetros');
-    editandoParametros.value = false;
+      throw new Error(quotationStore.error ?? 'No se pudieron guardar los parámetros');
+    isEditingParameters.value = false;
     toast.add({ title: 'Parámetros actualizados', color: 'success' });
   }
   catch (e) {
@@ -118,7 +118,7 @@ async function guardarParametros() {
     });
   }
   finally {
-    guardando.value = false;
+    isSaving.value = false;
   }
 }
 </script>
@@ -132,18 +132,18 @@ async function guardarParametros() {
           Parámetros de la Cotización
         </h2>
         <UButton
-          v-if="!readonly && !editandoParametros"
+          v-if="!readonly && !isEditingParameters"
           icon="i-lucide-pencil"
           size="xs"
           variant="ghost"
           color="neutral"
           label="Editar"
-          @click="openEditarParametros"
+          @click="openEditParameters"
         />
       </div>
     </template>
 
-    <div v-if="!editandoParametros" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div v-if="!isEditingParameters" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <p class="text-xs text-muted mb-1">
           Capacidad total de asientos
@@ -152,7 +152,7 @@ async function guardarParametros() {
           {{ quotation.totalSeats }}
         </p>
         <p class="text-xs text-muted">
-          {{ origenCapacidad }}
+          {{ capacitySource }}
         </p>
       </div>
       <div>
@@ -160,10 +160,10 @@ async function guardarParametros() {
           Asientos vendibles
         </p>
         <p class="font-medium">
-          {{ asientosVendibles }}
+          {{ sellableSeats }}
         </p>
         <p class="text-xs text-muted">
-          {{ origenVendibles }}
+          {{ sellableSource }}
         </p>
       </div>
       <div>
@@ -199,7 +199,7 @@ async function guardarParametros() {
           help="Se calcula sola con los autobuses de la cotización."
         >
           <p class="py-1.5 font-medium">
-            {{ quotation.totalSeats }} · {{ origenCapacidad }}
+            {{ quotation.totalSeats }} · {{ capacitySource }}
           </p>
         </UFormField>
         <UFormField label="Meta mínima de asientos">
@@ -213,7 +213,7 @@ async function guardarParametros() {
       <USwitch
         v-model="paramsState.coordinatorsTakeSeats"
         label="Los coordinadores ocupan asiento"
-        :description="`Resta ${numCoordinadores} coordinador${numCoordinadores === 1 ? '' : 'es'} de los asientos vendibles y permite asignarles asiento. Si no, viajan sin asiento de pasajero (solo habitación).`"
+        :description="`Resta ${coordinatorCount} coordinador${coordinatorCount === 1 ? '' : 'es'} de los asientos vendibles y permite asignarles asiento. Si no, viajan sin asiento de pasajero (solo habitación).`"
       />
       <UFormField label="Notas">
         <UTextarea
@@ -227,18 +227,18 @@ async function guardarParametros() {
           variant="ghost"
           color="neutral"
           label="Cancelar"
-          @click="cerrarEditarParametros"
+          @click="closeEditParameters"
         />
         <UButton
           label="Guardar"
-          :loading="guardando"
-          @click="guardarParametros"
+          :loading="isSaving"
+          @click="saveParameters"
         />
       </div>
     </div>
 
     <UModal
-      v-model:open="confirmarQuitarAsientos"
+      v-model:open="confirmRemoveSeats"
       title="Quitar asientos a los coordinadores"
       description="Los coordinadores que ya tienen asiento lo van a perder. Sus habitaciones se conservan."
     >
@@ -248,13 +248,13 @@ async function guardarParametros() {
             variant="ghost"
             color="neutral"
             label="Cancelar"
-            @click="cancelarQuitarAsientos"
+            @click="cancelRemoveSeats"
           />
           <UButton
             color="warning"
             label="Quitar asientos y guardar"
-            :loading="guardando"
-            @click="guardarParametros"
+            :loading="isSaving"
+            @click="saveParameters"
           />
         </div>
       </template>

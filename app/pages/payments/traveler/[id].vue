@@ -19,7 +19,7 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 
 const travelerId = computed(() => route.params.id as string);
 const travelerQuery = useQuery(() => travelerDetailQuery(travelerId.value));
@@ -39,8 +39,8 @@ const travelerName = computed(() =>
 
 // One quotation per travel the traveler is in (for its public prices). The quotation query
 // skips the request when that travel's quotation is cached and fresh.
-async function ensureCotizacionesLoaded(travelIds: string[]) {
-  await Promise.all(travelIds.filter(Boolean).map(id => cotizacionStore.fetchByTravel(id)));
+async function ensureQuotationsLoaded(travelIds: string[]) {
+  await Promise.all(travelIds.filter(Boolean).map(id => quotationStore.fetchByTravel(id)));
 }
 
 // All travel IDs this traveler has account configs or payments for
@@ -208,11 +208,11 @@ const editingConfig = computed(() =>
     : undefined,
 );
 
-const editingConfigPreciosPublicos = computed(() => {
+const editingConfigPublicPrices = computed(() => {
   if (!editingConfigTravelId.value)
     return [];
-  const cotizacion = cotizacionStore.getCotizacionByTravel(editingConfigTravelId.value);
-  return cotizacion ? cotizacionStore.getPreciosPublicosByQuotation(cotizacion.id) : [];
+  const quotation = quotationStore.getQuotationByTravel(editingConfigTravelId.value);
+  return quotation ? quotationStore.getPublicPricesByQuotation(quotation.id) : [];
 });
 
 async function handleConfigSubmit(config: TravelerAccountConfig) {
@@ -235,11 +235,11 @@ const editMaxAmount = computed(() => {
 
 onMounted(async () => {
   await paymentStore.fetchByTraveler(travelerId.value);
-  await ensureCotizacionesLoaded(travelerTravelIds.value);
+  await ensureQuotationsLoaded(travelerTravelIds.value);
 });
 
 watch(travelerTravelIds, (ids) => {
-  void ensureCotizacionesLoaded(ids);
+  void ensureQuotationsLoaded(ids);
 });
 </script>
 
@@ -370,7 +370,7 @@ watch(travelerTravelIds, (ids) => {
             v-if="editingConfigTravelId"
             :traveler-id="travelerId"
             :travel-id="editingConfigTravelId"
-            :public-prices="editingConfigPreciosPublicos"
+            :public-prices="editingConfigPublicPrices"
             :config="editingConfig"
             @submit="handleConfigSubmit"
             @cancel="closeConfigModal"

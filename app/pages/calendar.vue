@@ -40,12 +40,12 @@ const visibleStatuses = computed<TravelStatus[]>(() => [
 
 const { loadState, refetch, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses, placeholder);
 
-// El viaje elegido vive en `?viaje=`: recargar o compartir el link conserva la selección.
+// El viaje elegido vive en `?travel=`: recargar o compartir el link conserva la selección.
 // `replace`: elegir viajes no llena el historial del navegador.
 const selectedTravelId = computed({
-  get: () => (typeof route.query.viaje === 'string' ? route.query.viaje : undefined),
+  get: () => (typeof route.query.travel === 'string' ? route.query.travel : undefined),
   set: (id: string | undefined) => {
-    router.replace({ query: { ...route.query, viaje: id } });
+    router.replace({ query: { ...route.query, travel: id } });
   },
 });
 
@@ -107,7 +107,7 @@ function goToToday() {
 }
 
 // Viaje elegido, sin importar el mes visible. Misma clave que el panel (TravelCalendarSummary):
-// Colada hace una sola petición para los dos. Sin `?viaje=` no pide nada (`enabled`).
+// Colada hace una sola petición para los dos. Sin `?travel=` no pide nada (`enabled`).
 const { data: selectedTravel } = useQuery(() => travelDetailQuery(selectedTravelId.value));
 
 // Si un filtro oculta el viaje elegido, se deselecciona (y sale del query)
@@ -117,7 +117,7 @@ watch(visibleStatuses, (statuses) => {
     selectedTravelId.value = undefined;
 });
 
-// Link directo con `?viaje=`: cuando llega ese viaje, abrir su mes y que los filtros no lo oculten.
+// Link directo con `?travel=`: cuando llega ese viaje, abrir su mes y que los filtros no lo oculten.
 // Solo una vez, para el id con el que se entró: elegir viajes después no mueve el calendario.
 // Bandera en vez de `stop()`: con `immediate` y el viaje ya en caché, el callback corre antes
 // de que `watch()` devuelva su handle.
@@ -127,7 +127,7 @@ watch(selectedTravel, (travel) => {
     return;
   }
   linkHandled = true;
-  // No existe o RLS lo oculta: se limpia `?viaje=` y el panel muestra su estado vacío
+  // No existe o RLS lo oculta: se limpia `?travel=` y el panel muestra su estado vacío
   if (travel === null) {
     selectedTravelId.value = undefined;
     return;

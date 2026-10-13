@@ -89,7 +89,7 @@ function onCancel() {
     <!-- Nombre del servicio -->
     <UFormField
       label="Nombre del servicio"
-      name="nombre"
+      name="name"
       required
     >
       <UInput
@@ -102,7 +102,7 @@ function onCancel() {
     <!-- Descripción (opcional) -->
     <UFormField
       label="Descripción"
-      name="descripcion"
+      name="description"
       description="Opcional - Detalles adicionales del servicio"
     >
       <UTextarea
@@ -115,7 +115,7 @@ function onCancel() {
     <!-- Incluido en el paquete -->
     <UFormField
       label="Estado"
-      name="incluido"
+      name="included"
     >
       <UCheckbox
         v-model="state.included"

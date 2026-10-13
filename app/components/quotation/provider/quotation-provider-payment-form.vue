@@ -19,7 +19,7 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const tipoPagoOptions = [
+const paymentTypeOptions = [
   { label: 'Efectivo', value: 'cash' },
   { label: 'Transferencia', value: 'transfer' },
 ];
@@ -96,7 +96,7 @@ function onSubmit() {
     <!-- Fecha de Pago -->
     <UFormField
       label="Fecha de Pago"
-      name="fechaPago"
+      name="paymentDate"
       required
     >
       <UInput
@@ -109,12 +109,12 @@ function onSubmit() {
     <!-- Tipo de Pago -->
     <UFormField
       label="Tipo de Pago"
-      name="tipoPago"
+      name="paymentType"
       required
     >
       <USelect
         v-model="state.paymentType"
-        :items="tipoPagoOptions"
+        :items="paymentTypeOptions"
         class="w-full"
       />
     </UFormField>
@@ -129,7 +129,7 @@ function onSubmit() {
     </UFormField>
 
     <!-- Notas -->
-    <UFormField label="Notas" name="notas">
+    <UFormField label="Notas" name="notes">
       <UTextarea
         v-model="notesInput"
         placeholder="Notas adicionales..."

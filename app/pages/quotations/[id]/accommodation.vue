@@ -10,7 +10,7 @@ const { quotation, readonly } = useQuotationRoute();
 // Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
 const quotationId = computed(() => quotation.value!.id);
 
-const isAgregarHospedajeModalOpen = shallowRef(false);
+const isAddAccommodationModalOpen = shallowRef(false);
 </script>
 
 <template>
@@ -18,13 +18,13 @@ const isAgregarHospedajeModalOpen = shallowRef(false);
     <QuotationAccommodationSection
       :quotation-id="quotationId"
       :readonly="readonly"
-      @add="isAgregarHospedajeModalOpen = true"
+      @add="isAddAccommodationModalOpen = true"
     />
 
     <QuotationAccommodationForm
-      :open="isAgregarHospedajeModalOpen"
+      :open="isAddAccommodationModalOpen"
       :quotation-id="quotationId"
-      @update:open="(v) => isAgregarHospedajeModalOpen = v"
+      @update:open="(v) => isAddAccommodationModalOpen = v"
     />
   </div>
 </template>

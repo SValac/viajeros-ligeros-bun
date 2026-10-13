@@ -11,38 +11,38 @@ type Props = {
 
 const { quotationId, readonly = false } = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
-const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const quotationStore = useQuotationStore();
+const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
 const coordinatorCount = useTravelCoordinatorCount(travelId);
 const toast = useToast();
 
-const gastos = computed(() => cotizacionStore.getGastosByQuotation(quotationId));
-const totalGastos = computed(() => cotizacionStore.getTotalGastos(quotationId));
-const totalPorAsiento = computed(() => gastos.value.reduce((sum, g) => sum + getCostoPorAsiento(g), 0));
+const expenses = computed(() => quotationStore.getExpensesByQuotation(quotationId));
+const expensesTotal = computed(() => quotationStore.getExpensesTotal(quotationId));
+const totalPerSeat = computed(() => expenses.value.reduce((sum, g) => sum + getCostPerSeat(g), 0));
 
 // Lo que suma un gasto al precio de cada asiento: su total entre el divisor de "Dividir entre".
-function getCostoPorAsiento(gasto: QuotationExpense): number {
-  const divisor = cotizacionStore.getDivisorCosto(quotationId, gasto.splitType, coordinatorCount.value);
-  return divisor > 0 ? gasto.totalCost / divisor : 0;
+function getCostPerSeat(expense: QuotationExpense): number {
+  const divisor = quotationStore.getCostDivisor(quotationId, expense.splitType, coordinatorCount.value);
+  return divisor > 0 ? expense.totalCost / divisor : 0;
 }
 
 const isFormOpen = shallowRef(false);
-const selectedGasto = shallowRef<QuotationExpense | null>(null);
+const selectedExpense = shallowRef<QuotationExpense | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const gastoToDelete = shallowRef<QuotationExpense | null>(null);
+const expenseToDelete = shallowRef<QuotationExpense | null>(null);
 
 function openNew() {
-  selectedGasto.value = null;
+  selectedExpense.value = null;
   isFormOpen.value = true;
 }
 
-function openEdit(gasto: QuotationExpense) {
-  selectedGasto.value = gasto;
+function openEdit(expense: QuotationExpense) {
+  selectedExpense.value = expense;
   isFormOpen.value = true;
 }
 
-function openDeleteConfirm(gasto: QuotationExpense) {
-  gastoToDelete.value = gasto;
+function openDeleteConfirm(expense: QuotationExpense) {
+  expenseToDelete.value = expense;
   isDeleteModalOpen.value = true;
 }
 
@@ -51,34 +51,34 @@ function closeDeleteModal() {
 }
 
 async function handleSubmit(data: QuotationExpenseFormData) {
-  const result = selectedGasto.value
-    ? await cotizacionStore.updateGasto(selectedGasto.value.id, data)
-    : await cotizacionStore.addGasto(data);
+  const result = selectedExpense.value
+    ? await quotationStore.updateExpense(selectedExpense.value.id, data)
+    : await quotationStore.addExpense(data);
   if ('error' in result) {
     toast.add({ title: 'No se pudo guardar el gasto', description: result.error, color: 'error' });
     return;
   }
-  toast.add({ title: selectedGasto.value ? 'Gasto actualizado' : 'Gasto agregado', color: 'success' });
+  toast.add({ title: selectedExpense.value ? 'Gasto actualizado' : 'Gasto agregado', color: 'success' });
   isFormOpen.value = false;
-  selectedGasto.value = null;
+  selectedExpense.value = null;
 }
 
 async function confirmDelete() {
-  if (!gastoToDelete.value)
+  if (!expenseToDelete.value)
     return;
-  const deleted = await cotizacionStore.deleteGasto(gastoToDelete.value.id);
+  const deleted = await quotationStore.deleteExpense(expenseToDelete.value.id);
   if (deleted)
     toast.add({ title: 'Gasto eliminado', color: 'warning' });
   else
-    toast.add({ title: 'No se pudo eliminar el gasto', description: cotizacionStore.error ?? undefined, color: 'error' });
+    toast.add({ title: 'No se pudo eliminar el gasto', description: quotationStore.error ?? undefined, color: 'error' });
   isDeleteModalOpen.value = false;
-  gastoToDelete.value = null;
+  expenseToDelete.value = null;
 }
 
-function getActions(gasto: QuotationExpense) {
+function getActions(expense: QuotationExpense) {
   return [
-    [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEdit(gasto) }],
-    [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => openDeleteConfirm(gasto) }],
+    [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEdit(expense) }],
+    [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => openDeleteConfirm(expense) }],
   ];
 }
 </script>
@@ -105,7 +105,7 @@ function getActions(gasto: QuotationExpense) {
       </div>
     </template>
 
-    <div v-if="gastos.length > 0" class="overflow-x-auto">
+    <div v-if="expenses.length > 0" class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-default text-left text-muted">
@@ -131,45 +131,45 @@ function getActions(gasto: QuotationExpense) {
         </thead>
         <tbody>
           <tr
-            v-for="gasto in gastos"
-            :key="gasto.id"
+            v-for="expense in expenses"
+            :key="expense.id"
             class="border-b border-default/50 hover:bg-elevated/50"
           >
             <td class="py-3 pr-4">
               <UBadge
-                :label="gasto.category"
+                :label="expense.category"
                 color="neutral"
                 variant="subtle"
               />
             </td>
             <td class="py-3 pr-4 max-w-60">
-              <span class="truncate block" :class="{ 'text-muted': !gasto.description }">
-                {{ gasto.description ?? '—' }}
+              <span class="truncate block" :class="{ 'text-muted': !expense.description }">
+                {{ expense.description ?? '—' }}
               </span>
             </td>
             <td class="py-3 pr-4">
               <UBadge
-                :label="gasto.splitType === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
-                :color="gasto.splitType === 'minimum' ? 'info' : 'neutral'"
+                :label="expense.splitType === 'minimum' ? 'Asientos min.' : 'Asientos vend.'"
+                :color="expense.splitType === 'minimum' ? 'info' : 'neutral'"
                 variant="subtle"
               />
             </td>
             <td class="py-3 pr-4 text-right tabular-nums">
               <p class="font-medium">
-                {{ formatCurrency(gasto.totalCost) }}
+                {{ formatCurrency(expense.totalCost) }}
               </p>
               <p
-                v-if="gasto.costType === 'per_person'"
+                v-if="expense.costType === 'per_person'"
                 class="text-xs text-muted whitespace-nowrap"
               >
-                {{ formatCurrency(gasto.unitCost ?? 0) }} × {{ gasto.personCount }} pers.
+                {{ formatCurrency(expense.unitCost ?? 0) }} × {{ expense.personCount }} pers.
               </p>
             </td>
             <td class="py-3 pr-4 text-right tabular-nums">
-              {{ formatCurrency(getCostoPorAsiento(gasto)) }}
+              {{ formatCurrency(getCostPerSeat(expense)) }}
             </td>
             <td v-if="!readonly" class="py-3 text-right">
-              <UDropdownMenu :items="getActions(gasto)">
+              <UDropdownMenu :items="getActions(expense)">
                 <UButton
                   icon="i-lucide-ellipsis-vertical"
                   variant="ghost"
@@ -187,10 +187,10 @@ function getActions(gasto: QuotationExpense) {
               Total
             </td>
             <td class="pt-3 pr-4 text-right tabular-nums">
-              {{ formatCurrency(totalGastos) }}
+              {{ formatCurrency(expensesTotal) }}
             </td>
             <td class="pt-3 pr-4 text-right tabular-nums">
-              {{ formatCurrency(totalPorAsiento) }}
+              {{ formatCurrency(totalPerSeat) }}
             </td>
             <td v-if="!readonly" />
           </tr>
@@ -209,14 +209,14 @@ function getActions(gasto: QuotationExpense) {
   <!-- Modal: form de gasto -->
   <UModal
     v-model:open="isFormOpen"
-    :title="selectedGasto ? 'Editar gasto' : 'Agregar gasto'"
+    :title="selectedExpense ? 'Editar gasto' : 'Agregar gasto'"
     description="Un gasto de la cotización que se reparte en el precio por asiento"
     class="sm:max-w-xl"
   >
     <template #body>
       <QuotationExpenseForm
         :quotation-id="quotationId"
-        :expense="selectedGasto"
+        :expense="selectedExpense"
         @submit="handleSubmit"
         @cancel="isFormOpen = false"
       />
@@ -227,7 +227,7 @@ function getActions(gasto: QuotationExpense) {
   <UModal
     v-model:open="isDeleteModalOpen"
     title="Eliminar gasto"
-    :description="gastoToDelete ? `¿Eliminar ${gastoToDelete.category} (${formatCurrency(gastoToDelete.totalCost)})? El precio por asiento se recalcula.` : undefined"
+    :description="expenseToDelete ? `¿Eliminar ${expenseToDelete.category} (${formatCurrency(expenseToDelete.totalCost)})? El precio por asiento se recalcula.` : undefined"
   >
     <template #footer>
       <div class="flex justify-end gap-3">
