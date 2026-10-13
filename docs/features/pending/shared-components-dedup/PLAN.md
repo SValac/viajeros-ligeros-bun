@@ -215,6 +215,31 @@ Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `payme
 - `getPaymentStatus` (`payments/use-payments-domain.ts`) y `calculatePaymentStatus`
   (`quotation/use-quotation-domain.ts`) son la misma función → dejar una (en `utils/` o en el
   dominio de pagos) y que la otra la importe.
+- **Added (2026-10-13):** `useSupplierPaymentColumns(kind)` in `composables/quotation/`: the
+  paid / pending (+ overpaid) / payment status columns that the bus, accommodation and provider
+  tables repeat. The generic column helpers (`actionsColumn`, badges) stay in phases 6 and 14,
+  in the components PR (d).
+
+**Implementation steps (agreed 2026-10-13, one commit each, mentor mode):**
+- 8.0 Before starting, write down paid / pending / status per row and the 3 pending totals of
+  the financial summary for a quotation with bus, accommodation and provider payments.
+- 8.1 `utils/payment-status.ts` with `getPaymentStatus(paid, total)` replaces both functions;
+  the 3 `…PaymentStatus` types become `PaymentStatus`; `BusPayment` etc. are
+  `SupplierPayment & { quotationBusId }`.
+- 8.2 Mappers: `mapSupplierPaymentRowFields`, `mapSupplierPaymentFieldsToRow`,
+  `mapSupplierPaymentToUpdate` (the 5 `if`s). One `Pick<Tables<'bus_payments'>, …>` fits the
+  3 tables without `any`.
+- 8.3 Repository uses `mapSupplierPaymentToUpdate`; insert/update/delete stay one per table
+  (a union table name breaks the Supabase types).
+- 8.4 Store: internal `createSupplierPaymentSlice({ payments, items, parentIdOf, costOf,
+  notFound, insert, update, remove })`; exported names don't change. `parentIdOf` function
+  instead of `keyof`. `Math.max(0, …)` and `getOverpayment` for the 3 (the only number that
+  may change vs 8.0). Keep today's error contract (phase 10). `replaceForParents(parentIds,
+  fetched)` fixes the `hydrateTravel(null)` payments bug of phase 9.
+- 8.5 `useSupplierPaymentApi(kind)` split out of `useSupplierPayments` (+ `overpayment`,
+  `status`); `useSupplierPaymentColumns(kind)` (Pagado, Pendiente + "Pagado de más", Estado
+  Pago) used by the 3 tables; "Anticipo" is `info` in the 3. Método and Confirmado stay in
+  phase 14.
 
 ### Fase 9 — Repetición interna de `use-quotation-store`
 
