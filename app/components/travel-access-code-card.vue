@@ -4,6 +4,8 @@ import { useClipboard } from '@vueuse/core';
 import type { TravelStatus } from '~/types/travel';
 
 import { buildWhatsAppShareUrl } from '~/composables/travel-access/use-travel-access-domain';
+import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatDate } from '~/utils/format-date';
 
 const props = defineProps<{
@@ -15,13 +17,14 @@ const props = defineProps<{
 type CardState = | 'not-eligible' | 'no-code' | 'active-hidden' | 'active-revealed';
 
 const travelAccessStore = useTravelAccessStore();
-const travelerStore = useTravelerStore();
 const { copy, copied } = useClipboard();
 const showRegenerateModal = shallowRef(false);
 
+const { data: travelerData } = useQuery(() => travelersByTravelQuery(props.travelId));
+
 const activeCode = computed(() => travelAccessStore.getActiveCode(props.travelId));
 const revealedCode = computed(() => travelAccessStore.getRevealedCode(props.travelId));
-const travelersForTravel = computed(() => travelerStore.getTravelersByTravel(props.travelId));
+const travelersForTravel = computed(() => selectPayingTravelers(travelerData.value?.travelers ?? []));
 
 const cardState = computed((): CardState => {
   if (props.travelStatus !== 'published' && props.travelStatus !== 'in_progress') {
@@ -76,10 +79,7 @@ function sendCode(phone: string, code: string | null, travelLabel: string) {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    travelerStore.fetchByTravel(props.travelId),
-    travelAccessStore.fetchActiveCode(props.travelId),
-  ]);
+  await travelAccessStore.fetchActiveCode(props.travelId);
 });
 </script>
 

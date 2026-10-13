@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
 
+import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
@@ -17,17 +18,17 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
-const travelerStore = useTravelerStore();
 const cotizacionStore = useCotizacionStore();
 
 const travelerId = computed(() => route.params.id as string);
-const traveler = computed(() => travelerStore.getTravelerById(travelerId.value));
+const { data: traveler, status, refetch } = useQuery(() => travelerDetailQuery(travelerId.value));
 
-watchEffect(() => {
-  if (!traveler.value && travelerId.value) {
+// Only once resolved: `undefined` is "still loading" or "the request failed", and neither
+// means the traveler doesn't exist.
+watch([status, traveler], ([currentStatus, value]) => {
+  if (currentStatus === 'success' && value === null)
     router.push({ name: 'payments-index' });
-  }
-});
+}, { immediate: true });
 
 const travelerName = computed(() =>
   traveler.value ? `${traveler.value.firstName} ${traveler.value.lastName}` : '',
@@ -250,7 +251,23 @@ watch(travelerTravelIds, (ids) => {
 </script>
 
 <template>
-  <div v-if="traveler" class="space-y-6">
+  <div v-if="status === 'pending' && !traveler" class="flex justify-center py-24">
+    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+  </div>
+  <div
+    v-else-if="status === 'error' && !traveler"
+    class="flex flex-col items-center justify-center gap-4 py-24"
+  >
+    <p class="text-muted">
+      No se pudo cargar el viajero
+    </p>
+    <UButton
+      label="Reintentar"
+      icon="i-lucide-refresh-cw"
+      @click="refetch()"
+    />
+  </div>
+  <div v-else-if="traveler" class="space-y-6">
     <!-- Header -->
     <div class="flex items-center gap-3">
       <UButton

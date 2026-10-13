@@ -10,7 +10,6 @@ const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const travelsStore = useTravelsStore();
-const travelerStore = useTravelerStore();
 
 const { travelId, travel, status, refetch } = useTravelRoute();
 
@@ -56,7 +55,7 @@ const tabs = computed<NavigationMenuItem[]>(() => {
     { label: 'Itinerario', icon: 'i-lucide-list-check', to: { name: 'travel-itinerary', params }, badge: count(travel.value?.itinerary.length ?? 0) },
     { label: 'Servicios', icon: 'i-lucide-package', to: { name: 'travel-services', params }, badge: count(travel.value?.services.length ?? 0) },
     { label: 'Galería', icon: 'i-lucide-images', to: { name: 'travel-gallery', params } },
-    { label: 'Viajeros', icon: 'i-lucide-users', to: { name: 'travel-travelers', params }, badge: count(travelerStore.getTravelersByTravel(travelId.value).length) },
+    { label: 'Viajeros', icon: 'i-lucide-users', to: { name: 'travel-travelers', params }, badge: count(travel.value?.travelerCount ?? 0) },
     { label: 'Habitaciones', icon: 'i-lucide-bed-double', to: { name: 'travel-habitaciones', params } },
     { label: 'Servicios por persona', icon: 'i-lucide-ticket-check', to: { name: 'travel-optional-services', params } },
     { label: 'Autobuses', icon: 'i-lucide-bus', to: { name: 'travel-buses', params } },
