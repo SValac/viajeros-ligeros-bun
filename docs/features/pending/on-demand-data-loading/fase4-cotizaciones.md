@@ -1,8 +1,58 @@
 # Fase 4 — Cotizaciones por viaje
 
-**Estado:** Pendiente
+**Estado:** Partida en dos PRs. **4a** completa en la rama `feature/on-demand-loading-phase-4a`
+(desde `main` 455042b), verificada en local. **4b** pendiente.
 **Dependencia:** Fase 1 (el detalle de viaje ya está en caché); puede ir en paralelo con 2-3
 **Migración:** No
+
+---
+
+## 4a — Sin `fetchAll` al arrancar
+
+Antes de quitar el `fetchAll` se revisó quién leía cotizaciones sin pedirlas: solo el panel del
+calendario. Todo lo demás ya llamaba `fetchByTravel` (las pestañas de la cotización a través de
+`quotations/[id].vue`).
+
+### Avance
+
+- [x] 1. `travel-calendar-summary` pide la cotización del viaje elegido con un `watch` sobre
+  `travelId` (el panel no se desmonta al cambiar de viaje) (dd91e6a)
+- [x] 2. `_syncSeatPrice` pide el detalle del viaje fresco (`queryCache.fetch`) antes de calcular:
+  el precio se guarda en la base y los coordinadores que resta salían de la caché, que sin
+  entrada contaba 0. Si falla, no se guarda el precio y el error llega al toast de la pantalla.
+  `syncSeatPriceForTravel` devuelve `false` en ese caso y la edición del viaje avisa (d3224d8)
+- [x] 3. Fuera `cotizacionStore.fetchAll()` del plugin, del store y del repositorio; fuera el
+  getter `hasQuotation`, sin uso (fb7d538)
+
+### Hallazgos
+
+- **El precio por asiento del seed (1524) estaba desactualizado:** con los datos del viaje de
+  prueba el cálculo da 3015 ((44,000 autobús + 6,300 gastos) / 20 + 500 por persona). Cualquier
+  guardado lo corrige; en la verificación se regresó a 1524.
+- **Los errores de Supabase no son `Error`:** el `catch` de las acciones muestra "Error
+  desconocido". Para el precio por asiento se lanza un mensaje propio; el resto queda igual
+  (pasa en toda la app).
+- **`/quotations/[id]` se queda en blanco si falla el detalle del viaje** (sin spinner ni
+  Reintentar). Se arregla en la 4b, cuando la cotización también pase a `useQuery`.
+
+### Verificación (2026-10-12, local, playwright-cli, viaje de prueba `ff000000-…-0001`)
+
+- [x] Carga completa de `/calendar?viaje=…`: ninguna petición de todas las cotizaciones; una de
+  `quotations?travel_id=eq.…`; el panel muestra "3 de 43 lugares".
+- [x] Parámetros → Guardar con la petición del detalle del viaje en 500: toast "No se pudo
+  recalcular el precio por asiento porque no cargó el viaje", `seat_price` sin cambios en SQL.
+- [x] Sin el 500: `seat_price` = 3015, igual al cálculo a mano. Con un gasto pasado a "total"
+  da 2962, que corresponde a 43 asientos vendibles (44 − la coordinadora; con 0 daría 2961).
+- Datos de prueba restaurados (`seat_price` 1524, gasto en "minimum").
+
+---
+
+## 4b — Cotización en Colada y sin puentes al viaje (pendiente)
+
+Lo que queda de los pasos de abajo: la query de la cotización por viaje en lugar de
+`travelFetchCache`, las escrituras invalidan, `getAsientosVendibles` y
+`getRoomCountsByQuotation` dejan de leer la caché del viaje (reciben el dato), `_deleteRooms`
+invalida directo, y estados de carga/error en las pantallas de la cotización.
 
 ---
 
@@ -65,7 +115,7 @@ store de viajes.
    habitaciones por tipo) pasan a recibir el dato como parámetro desde la query del viaje.
 5. Precios públicos usados en `/payments` (`cotizacion-precio-publico-section`): confirmar
    que invalidar la cotización también refresca lo que depende de ella en pagos.
-6. Quitar `cotizacionStore.fetchAll()` del plugin.
+6. Quitar `cotizacionStore.fetchAll()` del plugin. **(Hecho en la 4a)**
 
 Por tamaño, esta fase puede partirse en 4a (lecturas + caché) y 4b (escrituras +
 desacople) si al empezar se ve muy grande.

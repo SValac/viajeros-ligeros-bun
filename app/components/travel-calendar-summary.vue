@@ -27,6 +27,14 @@ const coordinatorNames = computed(() =>
 
 const travelerCount = computed (() => travel.value?.travelerCount ?? 0);
 
+// The panel stays mounted when another travel is picked: only `travelId` changes, so a
+// `watch` (not `onMounted`) loads each travel's quotation. Already loaded = no request.
+watch(() => props.travelId, async (id) => {
+  if (!id)
+    return;
+  await cotizacionStore.fetchByTravel(id);
+}, { immediate: true });
+
 // Lugares a la venta según la cotización; 0 si aún no hay cotización o autobuses
 const sellableSeats = computed(() => {
   const cotizacion = cotizacionStore.getCotizacionByTravel(props.travelId);
