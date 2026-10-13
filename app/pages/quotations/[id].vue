@@ -177,10 +177,10 @@ function handleCotizacionConfirmada() {
           <!-- Con cotización -->
           <template v-else>
             <!-- Estado + confirmar -->
-            <CotizacionHeaderActions
+            <QuotationHeaderActions
               :quotation-id="cotizacion.id"
               :readonly="readonly"
-              @cotizacion-confirmada="handleCotizacionConfirmada"
+              @confirmed="handleCotizacionConfirmada"
             />
 
             <UNavigationMenu
