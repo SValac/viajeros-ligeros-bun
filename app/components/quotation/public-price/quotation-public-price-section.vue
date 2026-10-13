@@ -19,6 +19,10 @@ const props = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
+// getMatrizPreciosReferencia reads these catalogs. Creating the stores here, in setup, keeps
+// their catalog queries from starting during render (Vue warns: no active component instance).
+useProviderStore();
+useHotelRoomStore();
 
 // Obtener matriz de precios de referencia
 const matrizPreciosReferencia = computed(() => {
