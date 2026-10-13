@@ -4,33 +4,27 @@ import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData, Pro
 
 import { filterProviders } from '~/composables/providers/use-provider-domain';
 import { useProviderRepository } from '~/composables/providers/use-provider-repository';
-import { catalogKeys, useProvidersCatalog } from '~/queries/catalogs';
+import { catalogKeys, providersCatalogQuery, useCatalogState, useProvidersCatalog } from '~/queries/catalogs';
 import { PROVIDER_CATEGORY } from '~/types/provider';
 
 /**
  * Provider catalog, its writes and the providers list filters.
- * `providers` reads the catalog query (`useProvidersCatalog`); writes go through `useProviderRepository`
- * and then refetch it.
+ * `providers` reads its catalog query (`useProvidersCatalog`, through `useCatalogState`);
+ * writes go through `useProviderRepository` and then refetch it.
  * @returns Store state, getters and actions
  */
 export const useProviderStore = defineStore('providers', () => {
   const repository = useProviderRepository();
   const queryCache = useQueryCache();
-  // A defined query, not `useQuery`: inside a store, `useQuery` would bind to the component that
-  // happened to create the store and go inactive when it unmounts. Here the query stays active
-  // while the store lives, so writes refetch it from any screen.
-  const query = useProvidersCatalog();
+  const catalog = useCatalogState(useProvidersCatalog, providersCatalogQuery);
 
-  // State (writes and filters; the catalog's own load state comes from the query)
+  // State (writes and filters; the catalog's load state comes from `catalog`)
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
   const activeFilters = ref<ProviderFilters>({});
 
   // Getters
-  const providers = computed(() => query.data.value ?? []);
-  /** `false` until the first load resolves: an empty `providers` before that is not "no providers". */
-  const isLoaded = computed(() => query.data.value !== undefined);
-  const loadError = computed(() => query.error.value);
+  const providers = catalog.items;
 
   const allProviders = computed(() => {
     return [...providers.value].sort((a, b) =>
@@ -90,26 +84,15 @@ export const useProviderStore = defineStore('providers', () => {
   );
 
   // Actions
-  /** Retries the catalog load (e.g. from an error state's "Reintentar"). */
-  function refetch() {
-    return query.refetch();
-  }
-
-  /**
-   * Refetches the catalog after a write, so the action resolves with fresh data (e.g. before
-   * navigating to the new provider's detail). A failed refetch keeps the previous data: the
-   * write itself succeeded.
-   */
-  async function refreshCatalog(): Promise<void> {
-    await queryCache.invalidateQueries({ key: catalogKeys.providers }).catch(() => {});
-  }
-
   async function addProvider(data: ProviderFormData): Promise<Provider> {
     loading.value = true;
     error.value = null;
     try {
       const provider = await repository.insert(data);
-      await refreshCatalog();
+      // Callers navigate to the new provider's detail: it must be in the catalog even if the
+      // refetch below fails.
+      catalog.setItems(items => [...items, provider]);
+      await catalog.refresh();
       return provider;
     }
     catch (e) {
@@ -126,7 +109,7 @@ export const useProviderStore = defineStore('providers', () => {
     error.value = null;
     try {
       await repository.update(id, data);
-      await refreshCatalog();
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -142,10 +125,12 @@ export const useProviderStore = defineStore('providers', () => {
     loading.value = true;
     error.value = null;
     try {
+      const isAccommodation = getProviderById.value(id)?.category === PROVIDER_CATEGORY.ACCOMMODATION;
       await repository.remove(id);
-      // The DB cascades the delete to the provider's hotel_rooms/hotel_room_types.
-      queryCache.invalidateQueries({ key: catalogKeys.hotelRooms }).catch(() => {});
-      await refreshCatalog();
+      // The DB cascades the delete to the hotel's hotel_rooms/hotel_room_types.
+      if (isAccommodation)
+        queryCache.invalidateQueries({ key: catalogKeys.hotelRooms }).catch(() => {});
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -192,8 +177,8 @@ export const useProviderStore = defineStore('providers', () => {
     activeFilters,
     // Getters
     providers,
-    isLoaded,
-    loadError,
+    isLoaded: catalog.isLoaded,
+    loadError: catalog.loadError,
     allProviders,
     activeProviders,
     getProviderById,
@@ -206,7 +191,7 @@ export const useProviderStore = defineStore('providers', () => {
     filteredCount,
     hasActiveFilters,
     // Actions
-    refetch,
+    refetch: catalog.refetch,
     addProvider,
     updateProvider,
     deleteProvider,

@@ -2,31 +2,24 @@ import type { Coordinator, CoordinatorFormData, CoordinatorUpdateData } from '~/
 
 import { toCoordinatorInviteError } from '~/composables/coordinators/use-coordinator-domain';
 import { useCoordinatorRepository } from '~/composables/coordinators/use-coordinator-repository';
-import { catalogKeys, useCoordinatorsCatalog } from '~/queries/catalogs';
+import { coordinatorsCatalogQuery, useCatalogState, useCoordinatorsCatalog } from '~/queries/catalogs';
 
 /**
  * Coordinator catalog and its writes.
- * `coordinators` reads the catalog query (`useCoordinatorsCatalog`); writes go through `useCoordinatorRepository`
+ * `coordinators` reads its catalog query (`useCoordinatorsCatalog`, through `useCatalogState`); writes go through `useCoordinatorRepository`
  * and then refetch it.
  * @returns Store state, getters and actions
  */
 export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
   const repository = useCoordinatorRepository();
-  const queryCache = useQueryCache();
-  // A defined query, not `useQuery`: inside a store, `useQuery` would bind to the component that
-  // happened to create the store and go inactive when it unmounts. Here the query stays active
-  // while the store lives, so writes refetch it from any screen.
-  const query = useCoordinatorsCatalog();
+  const catalog = useCatalogState(useCoordinatorsCatalog, coordinatorsCatalogQuery);
 
-  // State (writes only; the catalog's own load state comes from the query)
+  // State (writes only; the catalog's load state comes from `catalog`)
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
 
   // Getters
-  const coordinators = computed(() => query.data.value ?? []);
-  /** `false` until the first load resolves: an empty `coordinators` before that is not "no coordinators". */
-  const isLoaded = computed(() => query.data.value !== undefined);
-  const loadError = computed(() => query.error.value);
+  const coordinators = catalog.items;
 
   const allCoordinators = computed((): Coordinator[] => {
     return [...coordinators.value].sort((a, b) =>
@@ -41,19 +34,6 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
   });
 
   // Actions
-  /** Retries the catalog load (e.g. from an error state's "Reintentar"). */
-  function refetch() {
-    return query.refetch();
-  }
-
-  /**
-   * Refetches the catalog after a write, so the action resolves with fresh data.
-   * A failed refetch keeps the previous data: the write itself succeeded.
-   */
-  async function refreshCatalog(): Promise<void> {
-    await queryCache.invalidateQueries({ key: catalogKeys.coordinators }).catch(() => {});
-  }
-
   /**
    * Creates a new coordinator.
    * @param data - Form data for the new coordinator
@@ -65,7 +45,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     error.value = null;
     try {
       const coordinator = await repository.insert(data);
-      await refreshCatalog();
+      await catalog.refresh();
       return coordinator;
     }
     catch (e) {
@@ -88,7 +68,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     error.value = null;
     try {
       const coordinator = await repository.update(id, data);
-      await refreshCatalog();
+      await catalog.refresh();
       return coordinator;
     }
     catch (e) {
@@ -109,7 +89,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     error.value = null;
     try {
       await repository.remove(id);
-      await refreshCatalog();
+      await catalog.refresh();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al eliminar coordinador';
@@ -124,7 +104,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     error.value = null;
     try {
       await repository.invite(id);
-      await refreshCatalog();
+      await catalog.refresh();
     }
     catch (e) {
       const domainError = toCoordinatorInviteError(e);
@@ -141,7 +121,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     error.value = null;
     try {
       await repository.revokeAccess(id);
-      await refreshCatalog();
+      await catalog.refresh();
     }
     catch (e) {
       const domainError = toCoordinatorInviteError(e);
@@ -159,12 +139,12 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     error,
     // Getters
     coordinators,
-    isLoaded,
-    loadError,
+    isLoaded: catalog.isLoaded,
+    loadError: catalog.loadError,
     allCoordinators,
     getCoordinatorById,
     // Actions
-    refetch,
+    refetch: catalog.refetch,
     addCoordinator,
     updateCoordinator,
     inviteCoordinator,

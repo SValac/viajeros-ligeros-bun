@@ -4,32 +4,26 @@ import type { HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
 import { validateTotalRoomsUpdate } from '~/composables/hotel-rooms/use-hotel-room-domain';
 import { useHotelRoomRepository } from '~/composables/hotel-rooms/use-hotel-room-repository';
-import { catalogKeys, hotelRoomsCatalogQuery, useHotelRoomsCatalog } from '~/queries/catalogs';
+import { hotelRoomsCatalogQuery, useCatalogState, useHotelRoomsCatalog } from '~/queries/catalogs';
 import { calculateCostPerPerson, calculateTotalRoomsUsed } from '~/utils/hotel-room-helpers';
 
 /**
  * Hotel Room Store
  * Room data (total rooms + room types) of accommodation providers, and its writes.
- * `hotelRoomsData` reads the catalog query (`useHotelRoomsCatalog`); writes go through `useHotelRoomRepository`
- * and then refetch it.
+ * `hotelRoomsData` reads its catalog query (`useHotelRoomsCatalog`, through `useCatalogState`);
+ * writes go through `useHotelRoomRepository` and then refetch it. Writes whose checks read the
+ * catalog wait for it first (`ensureFresh`).
  */
 export const useHotelRoomStore = defineStore('hotel-room', () => {
   const repository = useHotelRoomRepository();
-  const queryCache = useQueryCache();
-  // A defined query, not `useQuery`: inside a store, `useQuery` would bind to the component that
-  // happened to create the store and go inactive when it unmounts. Here the query stays active
-  // while the store lives, so writes refetch it from any screen.
-  const query = useHotelRoomsCatalog();
+  const catalog = useCatalogState(useHotelRoomsCatalog, hotelRoomsCatalogQuery);
 
-  // State (writes only; the catalog's own load state comes from the query)
+  // State (writes only; the catalog's load state comes from `catalog`)
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
 
   // Getters
-  const hotelRoomsData = computed(() => query.data.value ?? []);
-  /** `false` until the first load resolves: no room data before that is not "no rooms". */
-  const isLoaded = computed(() => query.data.value !== undefined);
-  const loadError = computed(() => query.error.value);
+  const hotelRoomsData = catalog.items;
 
   /**
    * Retrieves room data for a specific provider by ID
@@ -72,48 +66,29 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
   });
 
   // Actions
-  /** Retries the catalog load (e.g. from an error state's "Reintentar"). */
-  function refetch() {
-    return query.refetch();
-  }
-
-  /**
-   * Refetches the catalog after a write, so the action resolves with fresh data.
-   * A failed refetch keeps the previous data: the write itself succeeded.
-   */
-  async function refreshCatalog(): Promise<void> {
-    await queryCache.invalidateQueries({ key: catalogKeys.hotelRooms }).catch(() => {});
-  }
-
-  /**
-   * Waits for the catalog when it hasn't loaded yet. Writes whose checks read it (does the
-   * provider have room data? how many rooms are used?) must not run against an empty list.
-   * @throws If the catalog can't be loaded
-   */
-  async function ensureLoaded(): Promise<void> {
-    if (!isLoaded.value)
-      await queryCache.fetch(queryCache.ensure(hotelRoomsCatalogQuery));
-  }
-
   /**
    * Initializes room data for a new provider
    * Only initializes if data doesn't already exist for the provider: `hotel_rooms` has no
-   * unique constraint on the provider, so the check waits for the catalog to load.
+   * unique constraint on the provider, so the check reads the catalog as the server has it.
    * @param {string} providerId - The provider ID
    * @param {number} totalRooms - The initial total number of rooms
+   * @throws If the catalog can't be loaded or the insert fails (nothing is inserted blindly)
    */
   async function initRoomData(providerId: string, totalRooms: number): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      await ensureLoaded();
-      if (hasRoomData.value(providerId))
+      const roomsData = await catalog.ensureFresh();
+      if (roomsData.some(hrd => hrd.providerId === providerId))
         return;
-      await repository.insertRoomData(providerId, totalRooms);
-      await refreshCatalog();
+      const roomData = await repository.insertRoomData(providerId, totalRooms);
+      // In the catalog right away, so a failed refetch can't make the next check insert again.
+      catalog.setItems(items => [...items, roomData]);
+      await catalog.refresh();
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al inicializar datos de habitaciones';
+      throw e;
     }
     finally {
       loading.value = false;
@@ -131,21 +106,20 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     loading.value = true;
     error.value = null;
     try {
-      await ensureLoaded();
-      const validationError = validateTotalRoomsUpdate(total, getUsedRoomsByProvider.value(providerId));
+      const roomData = (await catalog.ensureFresh()).find(hrd => hrd.providerId === providerId);
+      const validationError = validateTotalRoomsUpdate(total, calculateTotalRoomsUsed(roomData?.roomTypes ?? []));
       if (validationError) {
         error.value = validationError;
         return false;
       }
 
-      const roomData = getRoomDataByProviderId.value(providerId);
       if (!roomData) {
         error.value = 'Proveedor no encontrado';
         return false;
       }
 
       await repository.updateRoomTotal(roomData.id, total);
-      await refreshCatalog();
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -169,14 +143,13 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     loading.value = true;
     error.value = null;
     try {
-      await ensureLoaded();
-      const roomData = getRoomDataByProviderId.value(providerId);
+      const roomData = (await catalog.ensureFresh()).find(hrd => hrd.providerId === providerId);
       if (!roomData)
         throw new Error(`No room data found for provider ${providerId}`);
 
       const costPerPerson = calculateCostPerPerson(data.pricePerNight, data.maxOccupancy);
       const roomType = await repository.insertRoomType(roomData.id, data, costPerPerson);
-      await refreshCatalog();
+      await catalog.refresh();
       return roomType;
     }
     catch (e) {
@@ -201,7 +174,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     try {
       const costPerPerson = calculateCostPerPerson(data.pricePerNight, data.maxOccupancy);
       await repository.updateRoomType(roomTypeId, data, costPerPerson);
-      await refreshCatalog();
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -223,7 +196,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     error.value = null;
     try {
       await repository.removeRoomType(roomTypeId);
-      await refreshCatalog();
+      await catalog.refresh();
       return true;
     }
     catch (e) {
@@ -241,14 +214,14 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
     error,
     // Getters
     hotelRoomsData,
-    isLoaded,
-    loadError,
+    isLoaded: catalog.isLoaded,
+    loadError: catalog.loadError,
     getRoomDataByProviderId,
     hasRoomData,
     getTotalRoomsByProvider,
     getUsedRoomsByProvider,
     // Actions
-    refetch,
+    refetch: catalog.refetch,
     initRoomData,
     updateTotalRooms,
     addRoomType,

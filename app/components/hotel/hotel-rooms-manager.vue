@@ -42,9 +42,16 @@ const groupedByOccupancy = computed((): RoomTypesByOccupancy[] => {
   return [...map.values()].sort((a, b) => a.occupancy - b.occupancy);
 });
 
-// Creates the provider's room data if it has none. The store waits for the catalog before
-// checking, so a provider whose data hasn't loaded yet doesn't get a second record.
-onMounted(() => store.initRoomData(props.provider.id, 0));
+// Creates the provider's room data if it has none. The store checks the catalog as the server
+// has it first, so a provider whose data hasn't loaded yet doesn't get a second record.
+onMounted(async () => {
+  try {
+    await store.initRoomData(props.provider.id, 0);
+  }
+  catch {
+    toast.add({ title: 'Error', description: store.error ?? 'No se pudieron preparar las habitaciones del hotel', color: 'error' });
+  }
+});
 
 // Follows the saved total: it arrives with the catalog, after mount.
 watch(
@@ -78,26 +85,28 @@ function closeFormModal() {
   editingRoomType.value = null;
 }
 
+// The modal stays open until the save succeeds, so a failed save keeps what the user typed.
 async function handleFormSubmit(data: HotelRoomTypeFormData) {
   const roomTypeId = editingRoomType.value?.id;
-  closeFormModal();
 
   if (roomTypeId) {
-    const ok = await store.updateRoomType(roomTypeId, data);
-    if (ok)
-      toast.add({ title: 'Habitación actualizada', color: 'primary' });
-    else
+    if (!await store.updateRoomType(roomTypeId, data)) {
       toast.add({ title: 'Error', description: store.error ?? 'No se pudo actualizar la habitación', color: 'error' });
-    return;
+      return;
+    }
+    toast.add({ title: 'Habitación actualizada', color: 'primary' });
   }
-
-  try {
-    await store.addRoomType(props.provider.id, data);
+  else {
+    try {
+      await store.addRoomType(props.provider.id, data);
+    }
+    catch {
+      toast.add({ title: 'Error', description: store.error ?? 'No se pudo agregar la habitación', color: 'error' });
+      return;
+    }
     toast.add({ title: 'Habitación agregada', color: 'primary' });
   }
-  catch {
-    toast.add({ title: 'Error', description: store.error ?? 'No se pudo agregar la habitación', color: 'error' });
-  }
+  closeFormModal();
 }
 
 async function handleDelete(rt: HotelRoomType) {
