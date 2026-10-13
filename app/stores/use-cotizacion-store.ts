@@ -19,6 +19,7 @@ import type {
   QuotationBusFormData,
   QuotationExpense,
   QuotationExpenseFormData,
+  QuotationFetchResult,
   QuotationFormData,
   QuotationProvider,
   QuotationProviderFilters,
@@ -39,16 +40,17 @@ import {
   isPerPersonProvider,
 } from '~/composables/quotation/use-quotation-domain';
 import { useQuotationRepository } from '~/composables/quotation/use-quotation-repository';
+import { quotationByTravelQuery, quotationKeys } from '~/queries/quotations';
 import { travelDetailQuery, travelKeys } from '~/queries/travels';
-import { useTravelsStore } from '~/stores/use-travel-store';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
 export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   const queryCache = useQueryCache();
+  // Every write invalidates `quotationKeys.root` in its `finally`, even when it failed halfway
+  // (e.g. saved but the seat price couldn't be recomputed): the active quotation query
+  // refetches and copies the server's state back into the store.
   const repository = useQuotationRepository();
-  const travelFetchCache = new Set<string>();
-  const travelFetchInFlight = new Map<string, Promise<void>>();
 
   // State
   const quotations = ref<Quotation[]>([]);
@@ -707,94 +709,89 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
     const ids = rooms.map(room => room.id);
     await repository.deleteUnoccupiedAccommodations(ids);
-    useTravelsStore().updateLocalAccommodations(cotizacion.travelId);
+    // The travel's rooms changed: its detail (room list and counts) has to be fetched again.
+    queryCache.invalidateQueries({ key: travelKeys.detail(cotizacion.travelId), exact: true });
   }
 
   // Actions
 
-  async function fetchByTravel(travelId: string, options?: { force?: boolean }): Promise<void> {
-    const force = options?.force === true;
-
-    if (!force && travelFetchCache.has(travelId)) {
+  /**
+   * Copies a travel's quotation into the store, replacing what it had for that travel.
+   * Only quotationByTravelQuery calls it, each time it fetches.
+   * @param travelId - UUID of the travel
+   * @param result - The fetched quotation and its children, or `null` if it has none
+   */
+  function hydrateTravel(travelId: string, result: QuotationFetchResult | null): void {
+    if (!result) {
+      const existing = quotations.value.find(c => c.travelId === travelId);
+      if (existing) {
+        const qId = existing.id;
+        quotations.value = quotations.value.filter(c => c.id !== qId);
+        quotationProviders.value = quotationProviders.value.filter(p => p.quotationId !== qId);
+        providerPayments.value = providerPayments.value.filter(p =>
+          !quotationProviders.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
+        );
+        quotationAccommodations.value = quotationAccommodations.value.filter(h => h.quotationId !== qId);
+        accommodationPayments.value = accommodationPayments.value.filter(p =>
+          !quotationAccommodations.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
+        );
+        quotationPublicPrices.value = quotationPublicPrices.value.filter(p => p.quotationId !== qId);
+        quotationBuses.value = quotationBuses.value.filter(b => b.quotationId !== qId);
+        busPayments.value = busPayments.value.filter(p =>
+          !quotationBuses.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
+        );
+        quotationExpenses.value = quotationExpenses.value.filter(g => g.quotationId !== qId);
+      }
       return;
     }
 
-    if (!force) {
-      const inflight = travelFetchInFlight.get(travelId);
-      if (inflight) {
-        await inflight;
-        return;
-      }
+    const {
+      quotation,
+      providers,
+      providerPayments: fetchedProviderPayments,
+      providerAdjustments,
+      accommodations,
+      accommodationPayments: fetchedAccommodationPayments,
+      publicPrices,
+      buses,
+      busPayments: fetchedBusPayments,
+      expenses,
+    } = result;
+    const quotationId = quotation.id;
+
+    quotations.value = [...quotations.value.filter(c => c.travelId !== travelId), quotation];
+    quotationProviders.value = [...quotationProviders.value.filter(p => p.quotationId !== quotationId), ...providers];
+    providerPayments.value = [...providerPayments.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...fetchedProviderPayments];
+    providerPriceAdjustments.value = [...providerPriceAdjustments.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
+    quotationAccommodations.value = [...quotationAccommodations.value.filter(h => h.quotationId !== quotationId), ...accommodations];
+    accommodationPayments.value = [...accommodationPayments.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...fetchedAccommodationPayments];
+    quotationPublicPrices.value = [...quotationPublicPrices.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
+    quotationBuses.value = [...quotationBuses.value.filter(b => b.quotationId !== quotationId), ...buses];
+    busPayments.value = [...busPayments.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...fetchedBusPayments];
+    quotationExpenses.value = [...quotationExpenses.value.filter(g => g.quotationId !== quotationId), ...expenses];
+  }
+
+  /**
+   * Loads a travel's quotation into the store from code that can't use `useQuery` (actions,
+   * pages that load several travels). Cached and fresh = no request; `force` always asks the
+   * server. Screens that show the quotation mount quotationByTravelQuery with `useQuery`.
+   * @param travelId - UUID of the travel
+   * @param options - Fetch options
+   * @param options.force - Ignore `staleTime` and always ask the server
+   */
+  async function fetchByTravel(travelId: string, options?: { force?: boolean }): Promise<void> {
+    loading.value = true;
+    error.value = null;
+    try {
+      const entry = queryCache.ensure(quotationByTravelQuery(travelId));
+      await (options?.force ? queryCache.fetch(entry) : queryCache.refresh(entry));
     }
-
-    const run = async () => {
-      loading.value = true;
-      error.value = null;
-      try {
-        const result = await repository.fetchByTravel(travelId);
-
-        if (!result) {
-          const existing = quotations.value.find(c => c.travelId === travelId);
-          if (existing) {
-            const qId = existing.id;
-            quotations.value = quotations.value.filter(c => c.id !== qId);
-            quotationProviders.value = quotationProviders.value.filter(p => p.quotationId !== qId);
-            providerPayments.value = providerPayments.value.filter(p =>
-              !quotationProviders.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
-            );
-            quotationAccommodations.value = quotationAccommodations.value.filter(h => h.quotationId !== qId);
-            accommodationPayments.value = accommodationPayments.value.filter(p =>
-              !quotationAccommodations.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
-            );
-            quotationPublicPrices.value = quotationPublicPrices.value.filter(p => p.quotationId !== qId);
-            quotationBuses.value = quotationBuses.value.filter(b => b.quotationId !== qId);
-            busPayments.value = busPayments.value.filter(p =>
-              !quotationBuses.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
-            );
-            quotationExpenses.value = quotationExpenses.value.filter(g => g.quotationId !== qId);
-          }
-          travelFetchCache.add(travelId);
-          return;
-        }
-        const {
-          quotation,
-          providers,
-          providerPayments: fetchedProviderPayments,
-          providerAdjustments,
-          accommodations,
-          accommodationPayments: fetchedAccommodationPayments,
-          publicPrices,
-          buses,
-          busPayments: fetchedBusPayments,
-          expenses,
-        } = result;
-        const quotationId = quotation.id;
-
-        quotations.value = [...quotations.value.filter(c => c.travelId !== travelId), quotation];
-        quotationProviders.value = [...quotationProviders.value.filter(p => p.quotationId !== quotationId), ...providers];
-        providerPayments.value = [...providerPayments.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...fetchedProviderPayments];
-        providerPriceAdjustments.value = [...providerPriceAdjustments.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
-        quotationAccommodations.value = [...quotationAccommodations.value.filter(h => h.quotationId !== quotationId), ...accommodations];
-        accommodationPayments.value = [...accommodationPayments.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...fetchedAccommodationPayments];
-        quotationPublicPrices.value = [...quotationPublicPrices.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
-        quotationBuses.value = [...quotationBuses.value.filter(b => b.quotationId !== quotationId), ...buses];
-        busPayments.value = [...busPayments.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...fetchedBusPayments];
-        quotationExpenses.value = [...quotationExpenses.value.filter(g => g.quotationId !== quotationId), ...expenses];
-
-        travelFetchCache.add(travelId);
-      }
-      catch (e) {
-        error.value = e instanceof Error ? e.message : 'Error desconocido';
-      }
-      finally {
-        loading.value = false;
-      }
-    };
-
-    const pending = run();
-    travelFetchInFlight.set(travelId, pending);
-    await pending;
-    travelFetchInFlight.delete(travelId);
+    catch (e) {
+      error.value = e instanceof Error ? e.message : 'Error desconocido';
+    }
+    finally {
+      loading.value = false;
+    }
   }
 
   /**
@@ -804,7 +801,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
    * @returns `false` when the price couldn't be recomputed (the error is in `error`)
    */
   async function syncSeatPriceForTravel(travelId: string): Promise<boolean> {
-    await fetchByTravel(travelId);
+    await fetchByTravel(travelId, { force: true });
     const cotizacion = quotations.value.find(c => c.travelId === travelId);
     if (!cotizacion?.coordinatorsTakeSeats)
       return true;
@@ -829,7 +826,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     try {
       const quotation = await repository.insertQuotation(data);
       quotations.value.push(quotation);
-      travelFetchCache.add(data.travelId);
       return quotation;
     }
     catch (e) {
@@ -837,6 +833,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       throw e;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -869,6 +866,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return undefined;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -934,6 +932,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -967,6 +966,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return undefined;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -996,6 +996,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1027,6 +1028,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1103,6 +1105,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
       return error.value;
     }
+    finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
+    }
   }
 
   /**
@@ -1138,6 +1143,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
       return error.value;
+    }
+    finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
     }
   }
 
@@ -1183,6 +1191,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
       return error.value;
     }
+    finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
+    }
   }
 
   async function toggleConfirmadoProveedor(id: string): Promise<void> {
@@ -1208,6 +1219,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1237,6 +1249,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1262,6 +1275,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return undefined;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1281,6 +1295,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1318,6 +1333,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1355,6 +1371,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1395,6 +1412,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return error.value;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1445,6 +1463,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1473,6 +1492,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1498,6 +1518,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return undefined;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1517,6 +1538,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1542,6 +1564,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1567,6 +1590,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return undefined;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1582,6 +1606,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1625,6 +1650,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1653,6 +1679,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1679,6 +1706,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return false;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1718,6 +1746,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1761,6 +1790,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return undefined;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1794,6 +1824,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1822,6 +1853,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return { error: error.value };
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1847,6 +1879,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return undefined;
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1862,6 +1895,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       error.value = e instanceof Error ? e.message : 'Error desconocido';
     }
     finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
       loading.value = false;
     }
   }
@@ -1935,6 +1969,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     getGastosTipoTotal,
     // Actions
     fetchByTravel,
+    hydrateTravel,
     createQuotation,
     syncSeatPriceForTravel,
     updateQuotation,
