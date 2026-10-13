@@ -129,6 +129,7 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
 </script>
 
 <template>
+  <!-- Sin hospedajes no muestra nada: la tabla de arriba ya tiene el estado vacío -->
   <div v-if="hospedajes.length > 0" class="space-y-4">
     <!-- Resumen General -->
     <div class="bg-linear-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
@@ -195,13 +196,5 @@ function getDetalleRows(accommodation: QuotationAccommodation): DetalleRow[] {
         <span class="font-semibold">{{ formatCurrency(costoPromedioPorPersona) }}</span>
       </div>
     </div>
-  </div>
-
-  <!-- Sin hospedajes -->
-  <div v-else class="text-center py-8 text-muted">
-    <UIcon name="i-lucide-inbox" class="w-8 h-8 mx-auto mb-2 block opacity-50" />
-    <p class="text-sm">
-      No hay hospedajes agregados aún
-    </p>
   </div>
 </template>

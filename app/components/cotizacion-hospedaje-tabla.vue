@@ -299,12 +299,7 @@ async function eliminarHospedaje(id: string) {
     />
 
     <!-- Sin hospedajes -->
-    <div v-else class="text-center py-8 text-muted">
-      <UIcon name="i-lucide-inbox" class="w-8 h-8 mx-auto mb-2 block opacity-50" />
-      <p class="text-sm">
-        No hay hospedajes agregados
-      </p>
-    </div>
+    <EmptyState v-else section="lodging" />
 
     <!-- Modal de edición -->
     <UModal

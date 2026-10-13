@@ -535,12 +535,11 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       </div>
 
       <!-- Sin datos -->
-      <div v-else class="bg-muted/10 rounded-lg p-6 text-center text-muted">
-        <UIcon name="i-lucide-info" class="w-6 h-6 mx-auto mb-2 block" />
-        <p class="text-sm">
-          Agregue proveedores y hospedajes para ver los precios de referencia
-        </p>
-      </div>
+      <EmptyState
+        v-else
+        section="prices"
+        compact
+      />
 
       <!-- Sección para agregar precios de venta (T8) -->
       <div class="pt-6 border-t space-y-4">
@@ -585,12 +584,11 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
         </div>
 
         <!-- Sin precios agregados -->
-        <div v-else class="bg-muted/10 rounded-lg p-6 text-center text-muted">
-          <UIcon name="i-lucide-inbox" class="w-6 h-6 mx-auto mb-2 block opacity-50" />
-          <p class="text-sm">
-            No hay precios de venta agregados. Use «Usar como plantilla» en un precio de referencia para empezar.
-          </p>
-        </div>
+        <EmptyState
+          v-else
+          section="prices"
+          compact
+        />
       </div>
     </div>
 
