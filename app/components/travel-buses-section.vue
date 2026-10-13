@@ -331,23 +331,11 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
         </div>
       </template>
 
-      <div v-else class="p-8 text-center bg-elevated rounded-lg">
-        <UIcon name="i-lucide-bus" class="w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
-        <p class="text-muted font-medium mb-1">
-          Sin autobuses apartados
-        </p>
-        <p class="text-sm text-muted mb-3">
-          Los autobuses se apartan en la cotización del viaje.
-        </p>
-        <UButton
-          variant="outline"
-          size="sm"
-          label="Ir a la cotización"
-          icon="i-lucide-arrow-right"
-          trailing
-          :to="{ name: 'quotation-buses', params: { id: travelId } }"
-        />
-      </div>
+      <EmptyState
+        v-else
+        section="buses"
+        :actions="[{ label: 'Ir a la cotización', icon: 'i-lucide-arrow-right', trailing: true, color: 'neutral', variant: 'outline', to: { name: 'quotation-buses', params: { id: travelId } } }]"
+      />
     </LoadState>
   </div>
 </template>

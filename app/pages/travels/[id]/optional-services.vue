@@ -130,19 +130,10 @@ async function onChange(travelerIds: string[], toman: boolean) {
         @retry="refetchQuotation()"
       >
         <UCard v-if="services.length === 0">
-          <div class="text-center py-8 text-muted">
-            <UIcon name="i-lucide-ticket-check" class="size-10 mx-auto mb-2 opacity-40" />
-            <p>Este viaje no tiene servicios cobrados por persona.</p>
-            <p class="text-sm mt-1">
-              En la cotización, agrega un servicio con "Costo por persona" para pagarle al proveedor solo por los viajeros que lo toman.
-            </p>
-            <UButton
-              label="Ir a los servicios de la cotización"
-              variant="ghost"
-              class="mt-3"
-              :to="{ name: 'quotation-services', params: { id: travelId } }"
-            />
-          </div>
+          <EmptyState
+            section="services"
+            :actions="[{ label: 'Ir a los servicios de la cotización', icon: 'i-lucide-arrow-right', trailing: true, color: 'neutral', variant: 'outline', to: { name: 'quotation-services', params: { id: travelId } } }]"
+          />
         </UCard>
 
         <div v-else class="grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)] items-start">

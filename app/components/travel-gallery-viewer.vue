@@ -81,15 +81,7 @@ async function confirmDelete(item: TravelMedia) {
       </div>
     </div>
 
-    <div
-      v-else
-      class="p-8 text-center bg-elevated rounded-lg"
-    >
-      <UIcon name="i-lucide-images" class="w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
-      <p class="text-muted">
-        No hay fotos ni videos en la galería
-      </p>
-    </div>
+    <EmptyState v-else section="gallery" />
 
     <!-- Lightbox -->
     <UModal

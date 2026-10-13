@@ -434,13 +434,10 @@ async function updateAccommodation(
 
           <!-- Tabs por hotel -->
           <UCard v-if="hotelGroups.length === 0">
-            <div class="text-center py-8 text-muted">
-              <UIcon name="i-lucide-bed-double" class="size-10 mx-auto mb-2 opacity-40" />
-              <p>Este viaje aún no tiene hospedaje.</p>
-              <p class="text-sm mt-1">
-                Agrega los hoteles y sus tipos de habitación en la cotización; aquí defines cuántas habitaciones se apartan.
-              </p>
-            </div>
+            <EmptyState
+              section="lodging"
+              :actions="[{ label: 'Ir al hospedaje de la cotización', icon: 'i-lucide-arrow-right', trailing: true, color: 'neutral', variant: 'outline', to: { name: 'quotation-accommodation', params: { id: travelId } } }]"
+            />
           </UCard>
 
           <UTabs
