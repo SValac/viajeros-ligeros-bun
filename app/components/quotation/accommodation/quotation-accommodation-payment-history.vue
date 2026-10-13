@@ -11,17 +11,17 @@ type Props = {
 
 const { quotationAccommodationId, hotelName } = defineProps<Props>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const toast = useToast();
 
-const pagos = computed(() => cotizacionStore.getPagosByHospedaje(quotationAccommodationId));
-const anticipado = computed(() => cotizacionStore.getAnticipadoHospedaje(quotationAccommodationId));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteHospedaje(quotationAccommodationId));
+const payments = computed(() => quotationStore.getPaymentsByAccommodation(quotationAccommodationId));
+const paid = computed(() => quotationStore.getPaidByAccommodation(quotationAccommodationId));
+const pendingBalance = computed(() => quotationStore.getPendingBalanceByAccommodation(quotationAccommodationId));
 
 const isFormModalOpen = shallowRef(false);
-const selectedPago = shallowRef<AccommodationPayment | null>(null);
+const selectedPayment = shallowRef<AccommodationPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const pagoToDelete = shallowRef<AccommodationPayment | null>(null);
+const paymentToDelete = shallowRef<AccommodationPayment | null>(null);
 
 function formatDate(dateString: string): string {
   // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
@@ -32,18 +32,18 @@ function formatDate(dateString: string): string {
   });
 }
 
-function openNewPago() {
-  selectedPago.value = null;
+function openNewPayment() {
+  selectedPayment.value = null;
   isFormModalOpen.value = true;
 }
 
-function openEditPago(pago: AccommodationPayment) {
-  selectedPago.value = pago;
+function openEditPayment(payment: AccommodationPayment) {
+  selectedPayment.value = payment;
   isFormModalOpen.value = true;
 }
 
-function openDeleteConfirm(pago: AccommodationPayment) {
-  pagoToDelete.value = pago;
+function openDeleteConfirm(payment: AccommodationPayment) {
+  paymentToDelete.value = payment;
   isDeleteModalOpen.value = true;
 }
 
@@ -52,14 +52,14 @@ function closeDeleteModal() {
 }
 
 async function handleSubmit(data: AccommodationPaymentFormData) {
-  if (selectedPago.value) {
-    const result = await cotizacionStore.updatePagoHospedaje(selectedPago.value.id, data);
+  if (selectedPayment.value) {
+    const result = await quotationStore.updateAccommodationPayment(selectedPayment.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = await cotizacionStore.addPagoHospedaje(data);
+    const result = await quotationStore.addAccommodationPayment(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -68,16 +68,16 @@ async function handleSubmit(data: AccommodationPaymentFormData) {
     }
   }
   isFormModalOpen.value = false;
-  selectedPago.value = null;
+  selectedPayment.value = null;
 }
 
 async function confirmDelete() {
-  if (!pagoToDelete.value)
+  if (!paymentToDelete.value)
     return;
-  await cotizacionStore.deletePagoHospedaje(pagoToDelete.value.id);
+  await quotationStore.deleteAccommodationPayment(paymentToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
-  pagoToDelete.value = null;
+  paymentToDelete.value = null;
 }
 </script>
 
@@ -96,12 +96,12 @@ async function confirmDelete() {
         icon="i-lucide-plus"
         size="sm"
         label="Registrar pago"
-        @click="openNewPago"
+        @click="openNewPayment"
       />
     </div>
 
     <!-- Tabla de pagos -->
-    <div v-if="pagos.length > 0" class="overflow-x-auto">
+    <div v-if="payments.length > 0" class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-default text-left text-muted">
@@ -127,28 +127,28 @@ async function confirmDelete() {
         </thead>
         <tbody>
           <tr
-            v-for="pago in pagos"
-            :key="pago.id"
+            v-for="payment in payments"
+            :key="payment.id"
             class="border-b border-default/50 hover:bg-elevated/50"
           >
             <td class="py-2 pr-4">
-              {{ formatDate(pago.paymentDate) }}
+              {{ formatDate(payment.paymentDate) }}
             </td>
             <td class="py-2 pr-4">
-              {{ pago.concept || '—' }}
+              {{ payment.concept || '—' }}
             </td>
             <td class="py-2 pr-4">
               <UBadge
-                :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="pago.paymentType === 'cash' ? 'success' : 'info'"
+                :label="payment.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
+                :color="payment.paymentType === 'cash' ? 'success' : 'info'"
                 variant="subtle"
               />
             </td>
             <td class="py-2 pr-4 font-medium">
-              {{ formatCurrency(pago.amount) }}
+              {{ formatCurrency(payment.amount) }}
             </td>
             <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
-              {{ pago.notes || '—' }}
+              {{ payment.notes || '—' }}
             </td>
             <td class="py-2">
               <div class="flex items-center gap-1">
@@ -157,14 +157,14 @@ async function confirmDelete() {
                   size="xs"
                   variant="ghost"
                   color="neutral"
-                  @click="openEditPago(pago)"
+                  @click="openEditPayment(payment)"
                 />
                 <UButton
                   icon="i-lucide-trash-2"
                   size="xs"
                   variant="ghost"
                   color="error"
-                  @click="openDeleteConfirm(pago)"
+                  @click="openDeleteConfirm(payment)"
                 />
               </div>
             </td>
@@ -178,18 +178,18 @@ async function confirmDelete() {
       v-else
       section="payments"
       compact
-      :actions="[{ label: 'Registrar pago', icon: 'i-lucide-plus', size: 'sm', variant: 'outline', onClick: openNewPago }]"
+      :actions="[{ label: 'Registrar pago', icon: 'i-lucide-plus', size: 'sm', variant: 'outline', onClick: openNewPayment }]"
     />
 
     <!-- Footer: totales -->
     <div class="pt-2 border-t border-default flex items-center justify-between text-sm">
       <span class="text-muted">Total pagado</span>
-      <span class="font-semibold">{{ formatCurrency(anticipado) }}</span>
+      <span class="font-semibold">{{ formatCurrency(paid) }}</span>
     </div>
     <div class="flex items-center justify-between text-sm">
       <span class="text-muted">Saldo pendiente</span>
-      <span class="font-semibold" :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'">
-        {{ formatCurrency(saldoPendiente) }}
+      <span class="font-semibold" :class="pendingBalance > 0 ? 'text-warning' : 'text-success'">
+        {{ formatCurrency(pendingBalance) }}
       </span>
     </div>
   </div>
@@ -197,15 +197,15 @@ async function confirmDelete() {
   <!-- Modal: form de pago -->
   <UModal
     v-model:open="isFormModalOpen"
-    :title="selectedPago ? 'Editar Pago' : 'Registrar Pago'"
-    :description="selectedPago ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago al hotel'"
+    :title="selectedPayment ? 'Editar Pago' : 'Registrar Pago'"
+    :description="selectedPayment ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago al hotel'"
     class="sm:max-w-lg"
   >
     <template #body>
       <QuotationAccommodationPaymentForm
         :quotation-accommodation-id="quotationAccommodationId"
-        :max-amount="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
-        :payment="selectedPago"
+        :max-amount="selectedPayment ? selectedPayment.amount + pendingBalance : pendingBalance"
+        :payment="selectedPayment"
         @submit="handleSubmit"
         @cancel="isFormModalOpen = false"
       />

@@ -16,29 +16,29 @@ type Emits = {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const cotizacionStore = useCotizacionStore();
+const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
 
 // IDs de hoteles ya agregados a esta cotización
-const hotelsYaAgregados = computed(() => {
+const alreadyAddedHotels = computed(() => {
   return new Set(
-    cotizacionStore.getHospedajesByQuotation(props.quotationId).map(h => h.providerId),
+    quotationStore.getAccommodationsByQuotation(props.quotationId).map(h => h.providerId),
   );
 });
 
 // Hoteles disponibles (providers con categoría 'accommodation', activos y no duplicados)
-const hotelesDisponibles = computed(() => {
+const availableHotels = computed(() => {
   return providerStore.getProvidersByCategory('accommodation')
-    .filter(p => p.active && !hotelsYaAgregados.value.has(p.id));
+    .filter(p => p.active && !alreadyAddedHotels.value.has(p.id));
 });
 
-const hotelesSelectItems = computed(() =>
-  hotelesDisponibles.value.map(p => ({ value: p.id, label: p.name })),
+const hotelSelectItems = computed(() =>
+  availableHotels.value.map(p => ({ value: p.id, label: p.name })),
 );
 
-const metodoPagoOptions = [
+const paymentMethodOptions = [
   { label: 'Efectivo', value: 'cash' },
   { label: 'Transferencia', value: 'transfer' },
 ];
@@ -69,7 +69,7 @@ const formState = reactive<Partial<FormSchema>>({
 });
 
 // Tipos de habitación del hotel seleccionado
-const tiposHabitacionSeleccionado = computed(() => {
+const selectedRoomTypes = computed(() => {
   if (!formState.providerId)
     return [];
   const hotelRoomData = hotelRoomStore.getRoomDataByProviderId(formState.providerId);
@@ -94,7 +94,7 @@ async function handleSubmit() {
     return;
   }
 
-  const response = await cotizacionStore.addHospedajeQuotation(result.data as QuotationAccommodationFormData);
+  const response = await quotationStore.addQuotationAccommodation(result.data as QuotationAccommodationFormData);
   if ('error' in response) {
     toast.add({
       title: 'Error',
@@ -144,7 +144,7 @@ function handleCancel() {
         <!-- Seleccionar Hotel -->
         <UFormField label="Hotel" required>
           <UAlert
-            v-if="hotelesDisponibles.length === 0"
+            v-if="availableHotels.length === 0"
             icon="i-lucide-info"
             color="neutral"
             variant="subtle"
@@ -153,7 +153,7 @@ function handleCancel() {
           <USelect
             v-else
             v-model="formState.providerId"
-            :items="hotelesSelectItems"
+            :items="hotelSelectItems"
             placeholder="Selecciona un hotel"
           />
         </UFormField>
@@ -172,7 +172,7 @@ function handleCancel() {
         <UFormField label="Método de Pago" required>
           <USelect
             v-model="formState.paymentMethod"
-            :items="metodoPagoOptions"
+            :items="paymentMethodOptions"
           />
         </UFormField>
 
@@ -180,7 +180,7 @@ function handleCancel() {
         <QuotationAccommodationRoomTypes
           v-if="formState.providerId"
           :model-value="formState.details ?? []"
-          :room-types="tiposHabitacionSeleccionado"
+          :room-types="selectedRoomTypes"
           :night-count="formState.nightCount ?? 1"
           @update:model-value="(details) => formState.details = details"
         />
@@ -197,7 +197,7 @@ function handleCancel() {
           <UButton
             type="submit"
             label="Agregar Hospedaje"
-            :disabled="hotelesDisponibles.length === 0"
+            :disabled="availableHotels.length === 0"
           />
         </div>
       </form>

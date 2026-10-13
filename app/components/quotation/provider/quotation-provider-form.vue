@@ -18,12 +18,12 @@ const { quotationId, quotationProvider = null } = defineProps<Props>();
 
 const emit = defineEmits<{
   /** `ajustes` solo aplica a un servicio por persona; en costo total va vacío. */
-  submit: [data: QuotationProviderFormData, ajustes: ProviderPriceAdjustmentDraft[]];
+  submit: [data: QuotationProviderFormData, adjustments: ProviderPriceAdjustmentDraft[]];
   cancel: [];
 }>();
 
-const cotizacionStore = useCotizacionStore();
-const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const quotationStore = useQuotationStore();
+const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
 const coordinatorCount = useTravelCoordinatorCount(travelId);
 
 const costSchema = z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0');
@@ -63,17 +63,17 @@ type FormState = {
   confirmed: boolean;
 };
 
-const metodoPagoOptions = [
+const paymentMethodOptions = [
   { label: 'Efectivo', value: 'cash' },
   { label: 'Transferencia', value: 'transfer' },
 ];
 
-const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
+const splitTypeOptions: { label: string; value: CostSplitType }[] = [
   { label: 'Asientos mínimos objetivo', value: 'minimum' },
   { label: 'Asientos vendibles', value: 'total' },
 ];
 
-const tipoCostoOptions: { label: string; value: ProviderCostType }[] = [
+const costTypeOptions: { label: string; value: ProviderCostType }[] = [
   { label: 'Costo total', value: 'total' },
   { label: 'Costo por persona', value: 'per_person' },
 ];
@@ -92,28 +92,28 @@ const state = reactive<FormState>({
 });
 
 // Ajustes de precio por tipo de persona (copia editable; se guardan al enviar).
-const ajustes = ref<ProviderPriceAdjustmentDraft[]>(
+const adjustments = ref<ProviderPriceAdjustmentDraft[]>(
   quotationProvider
-    ? cotizacionStore.getAjustesByProveedor(quotationProvider.id).map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }))
+    ? quotationStore.getAdjustmentsByProvider(quotationProvider.id).map(({ id, label, kind, mode, value }) => ({ id, label, kind, mode, value }))
     : [],
 );
-const ajustesInvalidos = computed(() => ajustes.value.some(a => getPriceAdjustmentError(a) !== null));
+const invalidAdjustments = computed(() => adjustments.value.some(a => getPriceAdjustmentError(a) !== null));
 
 // Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
 const serviceDescriptionInput = useSanitizedModel(() => state.serviceDescription ?? '', v => state.serviceDescription = v, sanitizeText);
 const remarksInput = useSanitizedModel(() => state.remarks ?? '', v => state.remarks = v, sanitizeText);
 
 // Entre cuántas personas se reparte un costo total ("Dividir entre").
-const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotationId, state.splitType, coordinatorCount.value));
+const personDivisor = computed(() => quotationStore.getCostDivisor(quotationId, state.splitType, coordinatorCount.value));
 
 // Un servicio por persona suma su costo directo al asiento; su total de referencia es el
 // costo × asientos vendibles (lo que costaría con el autobús lleno).
-const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId, coordinatorCount.value));
+const sellableSeats = computed(() => quotationStore.getSellableSeats(quotationId, coordinatorCount.value));
 
 // Al pasar de "por persona" a "total" el total arranca con el de referencia.
 watch(() => state.costType, (costType) => {
   if (costType === 'total' && isValidAmount(state.unitCost))
-    state.totalCost = calculateProviderTotalCost(state.unitCost, asientosVendibles.value);
+    state.totalCost = calculateProviderTotalCost(state.unitCost, sellableSeats.value);
 });
 
 function isValidAmount(value: unknown): value is number {
@@ -124,7 +124,7 @@ function onSubmit() {
   const result = schema.safeParse(state);
   if (!result.success)
     return;
-  if (state.costType === 'per_person' && ajustesInvalidos.value)
+  if (state.costType === 'per_person' && invalidAdjustments.value)
     return;
 
   const form = result.data;
@@ -133,7 +133,7 @@ function onSubmit() {
     ? {
         costType: 'per_person',
         unitCost: form.unitCost,
-        totalCost: calculateProviderTotalCost(form.unitCost, asientosVendibles.value),
+        totalCost: calculateProviderTotalCost(form.unitCost, sellableSeats.value),
         coordinatorsCourtesy: form.coordinatorsCourtesy,
         splitType: 'total',
       }
@@ -156,7 +156,7 @@ function onSubmit() {
     ...(quotationProvider?.id ? { id: quotationProvider.id } : {}),
   };
 
-  emit('submit', data, form.costType === 'per_person' ? ajustes.value : []);
+  emit('submit', data, form.costType === 'per_person' ? adjustments.value : []);
 }
 </script>
 
@@ -200,7 +200,7 @@ function onSubmit() {
     >
       <URadioGroup
         v-model="state.costType"
-        :items="tipoCostoOptions"
+        :items="costTypeOptions"
         orientation="horizontal"
         class="py-1.5"
       />
@@ -241,7 +241,7 @@ function onSubmit() {
         />
       </UFormField>
 
-      <QuotationProviderAdjustmentsEditor v-model="ajustes" :unit-cost="state.unitCost" />
+      <QuotationProviderAdjustmentsEditor v-model="adjustments" :unit-cost="state.unitCost" />
     </div>
 
     <!-- Dividir entre: solo un costo total se reparte -->
@@ -249,12 +249,12 @@ function onSubmit() {
       v-if="state.costType === 'total'"
       label="Dividir entre"
       name="splitType"
-      :help="`Entre ${divisorPersonas} personas`"
+      :help="`Entre ${personDivisor} personas`"
       required
     >
       <USelect
         v-model="state.splitType"
-        :items="tipoDivisionOptions"
+        :items="splitTypeOptions"
         class="w-full"
       />
     </UFormField>
@@ -267,7 +267,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.paymentMethod"
-        :items="metodoPagoOptions"
+        :items="paymentMethodOptions"
         class="w-full"
       />
     </UFormField>
@@ -301,7 +301,7 @@ function onSubmit() {
       />
       <UButton
         type="submit"
-        :disabled="state.costType === 'per_person' && ajustesInvalidos"
+        :disabled="state.costType === 'per_person' && invalidAdjustments"
         :label="quotationProvider ? 'Actualizar' : 'Agregar Proveedor'"
       />
     </div>

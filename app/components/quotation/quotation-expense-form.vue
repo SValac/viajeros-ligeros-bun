@@ -20,12 +20,12 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const cotizacionStore = useCotizacionStore();
-const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const quotationStore = useQuotationStore();
+const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
 const coordinatorCount = useTravelCoordinatorCount(travelId);
 
 // Sugerencias de siempre; se suman las que la agencia ya usó y el usuario puede escribir otra.
-const CATEGORIAS_BASE = ['Publicidad', 'Viáticos', 'Comisiones', 'Box lunch', 'Otro'];
+const BASE_CATEGORIES = ['Publicidad', 'Viáticos', 'Comisiones', 'Box lunch', 'Otro'];
 
 const costSchema = z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0');
 
@@ -58,12 +58,12 @@ type FormState = {
   splitType: CostSplitType;
 };
 
-const tipoCostoOptions: { label: string; value: ProviderCostType }[] = [
+const costTypeOptions: { label: string; value: ProviderCostType }[] = [
   { label: 'Costo total', value: 'total' },
   { label: 'Costo por persona', value: 'per_person' },
 ];
 
-const tipoDivisionOptions: { label: string; value: CostSplitType }[] = [
+const splitTypeOptions: { label: string; value: CostSplitType }[] = [
   { label: 'Asientos mínimos objetivo', value: 'minimum' },
   { label: 'Asientos vendibles', value: 'total' },
 ];
@@ -78,16 +78,16 @@ const state = reactive<FormState>({
   splitType: expense?.splitType ?? 'minimum',
 });
 
-onMounted(() => cotizacionStore.fetchCategoriasGasto());
+onMounted(() => quotationStore.fetchExpenseCategories());
 
-const categoriaOptions = computed(() => {
-  const extra = [...cotizacionStore.categoriasGasto, state.category]
-    .filter((c): c is string => !!c && !CATEGORIAS_BASE.includes(c))
+const categoryOptions = computed(() => {
+  const extra = [...quotationStore.expenseCategories, state.category]
+    .filter((c): c is string => !!c && !BASE_CATEGORIES.includes(c))
     .sort((a, b) => a.localeCompare(b, 'es'));
-  return [...CATEGORIAS_BASE, ...new Set(extra)];
+  return [...BASE_CATEGORIES, ...new Set(extra)];
 });
 
-function onCreateCategoria(value: string) {
+function onCreateCategory(value: string) {
   const category = sanitizeText(value).trim();
   if (category)
     state.category = category;
@@ -96,26 +96,26 @@ function onCreateCategoria(value: string) {
 const descriptionInput = useSanitizedModel(() => state.description ?? '', v => state.description = v, sanitizeText);
 
 // Entre cuántas personas se reparte el gasto ("Dividir entre").
-const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotationId, state.splitType, coordinatorCount.value));
+const personDivisor = computed(() => quotationStore.getCostDivisor(quotationId, state.splitType, coordinatorCount.value));
 
 // Las personas siguen al divisor mientras el usuario no las cambie a mano (en un gasto
 // nuevo, o uno guardado con las personas del divisor de entonces).
-const personasTocadas = shallowRef(expense?.personCount !== undefined && expense.personCount !== divisorPersonas.value);
-watch(divisorPersonas, (divisor) => {
-  if (!personasTocadas.value)
+const peopleEdited = shallowRef(expense?.personCount !== undefined && expense.personCount !== personDivisor.value);
+watch(personDivisor, (divisor) => {
+  if (!peopleEdited.value)
     state.personCount = divisor;
 }, { immediate: true });
 
 function onPersonCountInput(value: number | null | undefined) {
   state.personCount = value ?? undefined;
-  personasTocadas.value = true;
+  peopleEdited.value = true;
 }
 
 function isValidAmount(value: unknown): value is number {
   return typeof value === 'number' && value > 0;
 }
 
-const totalPorPersona = computed(() =>
+const totalPerPerson = computed(() =>
   isValidAmount(state.unitCost) && isValidAmount(state.personCount)
     ? calculateProviderTotalCost(state.unitCost, state.personCount)
     : 0,
@@ -123,12 +123,12 @@ const totalPorPersona = computed(() =>
 
 // Al pasar de "por persona" a "total" el total arranca con el calculado.
 watch(() => state.costType, (costType) => {
-  if (costType === 'total' && totalPorPersona.value > 0)
-    state.totalCost = totalPorPersona.value;
+  if (costType === 'total' && totalPerPerson.value > 0)
+    state.totalCost = totalPerPerson.value;
 });
 
-const costoTotal = computed(() => state.costType === 'per_person' ? totalPorPersona.value : (state.totalCost ?? 0));
-const costoPorAsiento = computed(() => divisorPersonas.value > 0 ? costoTotal.value / divisorPersonas.value : 0);
+const totalCost = computed(() => state.costType === 'per_person' ? totalPerPerson.value : (state.totalCost ?? 0));
+const costPerSeat = computed(() => personDivisor.value > 0 ? totalCost.value / personDivisor.value : 0);
 
 function onSubmit() {
   const result = schema.safeParse(state);
@@ -176,11 +176,11 @@ function onSubmit() {
     >
       <USelectMenu
         v-model="state.category"
-        :items="categoriaOptions"
+        :items="categoryOptions"
         create-item
         placeholder="Selecciona o escribe una categoría"
         class="w-full"
-        @create="onCreateCategoria"
+        @create="onCreateCategory"
       />
     </UFormField>
 
@@ -201,7 +201,7 @@ function onSubmit() {
     >
       <URadioGroup
         v-model="state.costType"
-        :items="tipoCostoOptions"
+        :items="costTypeOptions"
         orientation="horizontal"
         class="py-1.5"
       />
@@ -245,22 +245,22 @@ function onSubmit() {
     <UFormField
       label="Dividir entre"
       name="splitType"
-      :help="`Entre ${divisorPersonas} personas`"
+      :help="`Entre ${personDivisor} personas`"
       required
     >
       <USelect
         v-model="state.splitType"
-        :items="tipoDivisionOptions"
+        :items="splitTypeOptions"
         class="w-full"
       />
     </UFormField>
 
     <UAlert
-      v-if="costoTotal > 0"
+      v-if="totalCost > 0"
       icon="i-lucide-calculator"
       color="info"
       variant="subtle"
-      :description="`Total ${formatCurrency(costoTotal)}: suma ${formatCurrency(costoPorAsiento)} al precio de cada asiento.`"
+      :description="`Total ${formatCurrency(totalCost)}: suma ${formatCurrency(costPerSeat)} al precio de cada asiento.`"
     />
 
     <!-- Acciones -->

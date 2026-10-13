@@ -19,7 +19,7 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-const tipoPagoOptions = [
+const paymentTypeOptions = [
   { label: 'Efectivo', value: 'cash' },
   { label: 'Transferencia', value: 'transfer' },
 ];
@@ -107,7 +107,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.paymentType"
-        :items="tipoPagoOptions"
+        :items="paymentTypeOptions"
         class="w-full"
       />
     </UFormField>
