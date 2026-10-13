@@ -65,9 +65,14 @@ const providers = ref<Provider[]>([]);
 async function fetchAll() { providers.value = await repository.fetchAll(); }
 
 // después
-const query = useProvidersCatalog(); // defineQuery(() => useQuery(providersCatalogQuery))
-const providers = computed(() => query.data.value ?? []);
+const catalog = useCatalogState(useProvidersCatalog, providersCatalogQuery);
+const providers = catalog.items; // computed sobre los datos de la query
 ```
+
+`useCatalogState` (en `app/queries/catalogs.ts`) junta lo que los cuatro stores necesitan:
+`items`, `isLoaded`, `loadError`, `refetch`, `refresh` (invalidar y esperar tras una
+escritura), `ensureFresh` (el catálogo como lo tiene el servidor, para validar antes de
+escribir) y `setItems` (meter un registro nuevo a la caché antes del refetch).
 
 - **La petición sale la primera vez que una pantalla usa el store**, no al arrancar. Desde
   ahí la query queda activa mientras vive el store (toda la sesión): las escrituras la
@@ -81,9 +86,13 @@ const providers = computed(() => query.data.value ?? []);
 - **Las escrituras esperan el refetch** (`await invalidateQueries`), así la acción termina con
   los datos nuevos (por ejemplo, antes de navegar al detalle del proveedor recién creado). Si el
   refetch falla, la escritura no se reporta como fallida: se queda lo que había.
-- **Las validaciones que leen el catálogo esperan a que cargue** (`ensureLoaded` en el store de
-  habitaciones): `initRoomData` revisa si el hotel ya tiene registro en `hotel_rooms` y
-  `updateTotalRooms` valida contra las habitaciones usadas.
+- **Las validaciones que leen el catálogo lo piden fresco** (`ensureFresh`: reusa una petición
+  en vuelo y vuelve a pedir si nunca cargó, falló o una escritura lo invalidó): `initRoomData`
+  revisa si el hotel ya tiene registro en `hotel_rooms`, `updateTotalRooms` valida contra las
+  habitaciones usadas. Si no lo consigue, lanza el error en vez de escribir a ciegas.
+- **Un registro nuevo entra a la caché antes del refetch** (`setItems`): el detalle del proveedor
+  recién creado lo encuentra aunque el refetch falle, y un `hotel_rooms` recién creado no se
+  vuelve a crear.
 - **Login y logout siguen recargando la página:** vacía a la vez los stores y la caché de Colada.
 
 ## Avance
@@ -98,6 +107,13 @@ const providers = computed(() => query.data.value ?? []);
   las habitaciones de un hotel. Los 7 detalles de proveedor redirigen a la lista solo cuando el
   catálogo ya cargó
 - [x] 4. Borrado `app/plugins/init-stores.client.ts`; comentarios de login/logout al día
+- [x] 5. Revisión de código (`/code-review`): `useCatalogState` para no repetir el cableado en
+  los cuatro stores y `useProviderDetail` para los 7 detalles; `ensureFresh` en lugar de un
+  `fetch` que cancelaba la petición en vuelo; Reintentar vuelve a mostrar el spinner; borrar un
+  proveedor solo invalida habitaciones si era hotel; el selector de proveedor de la cotización
+  toma la categoría cuando llega el catálogo (antes solo al montar, y quedaba vacío); el modal
+  de tipo de habitación no se cierra si falla el guardado; un hotel nuevo cuyo total de
+  habitaciones falla abre su detalle con un aviso
 
 ## Hallazgos
 
@@ -131,4 +147,7 @@ const providers = computed(() => query.data.value ?? []);
 - [x] `providers` y `coordinators` en 500: "No se pudieron cargar …" + Reintentar, que la
   recupera; nunca un "no hay proveedores" falso.
 - [x] `Habitaciones` del viaje de prueba: hotel y tipos de habitación con sus nombres.
+- [x] Después de la revisión: alta de hotel desde `/providers/accommodation/new` (un registro
+  con 15 habitaciones); `hotel_room_types` en 500 al agregar → error y el modal sigue abierto;
+  editar un servicio de la cotización abierta en frío → el selector muestra categoría y proveedor.
 - [x] `lint:fix` y `typecheck` limpios. Datos de prueba borrados.
