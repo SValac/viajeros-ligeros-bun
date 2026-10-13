@@ -13,6 +13,13 @@ app/
 │   ├── traveler.ts
 │   └── travel.ts
 │
+├── queries/                        # Pinia Colada: claves + queries por dominio
+│   ├── catalogs.ts                 # Catálogos (proveedores, coordinadores…) + useCatalogState
+│   ├── payments.ts
+│   ├── quotations.ts
+│   ├── travelers.ts
+│   └── travels.ts
+│
 ├── stores/                         # Pinia stores (9 stores)
 │   ├── use-auth-store.ts
 │   ├── use-bus-store.ts
@@ -56,8 +63,6 @@ app/
 ├── middleware/
 │   └── auth.global.ts              # Guard global de autenticación
 │
-├── plugins/
-│   └── init-stores.client.ts       # Carga inicial de todos los stores
 │
 ├── layouts/
 │   └── default.vue                 # Dashboard layout (UDashboardGroup)

@@ -12,21 +12,24 @@
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  PLUGIN: app/plugins/init-stores.client.ts                   │
-│  - Al montar la app, carga todos los stores en paralelo      │
-│  - fetchAll(): providers, buses, coordinators, hotelRooms,   │
-│    travels, travelers, cotizaciones                          │
+│  PÁGINAS / COMPONENTES                                       │
+│  - Leen con useQuery(...) o con el store del catálogo        │
+│  - Escriben con las actions de los stores                    │
 └────────────────┬────────────────────────────────────────────┘
                  │
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  PINIA STORES (9 stores)                                     │
-│  - Estado reactivo en memoria                                │
-│  - Getters para vistas derivadas (filtros, cálculos)         │
-│  - Actions async que llaman a Supabase                       │
+│  PINIA COLADA (app/queries/)                                 │
+│  - Caché por clave, dedupe, staleTime, refetch al volver     │
+│  - Se pide solo lo que la pantalla usa (un viaje, un mes,    │
+│    una página, un catálogo la primera vez que se necesita)   │
+│                                                              │
+│  PINIA STORES (app/stores/)                                  │
+│  - Escrituras: invalidan las queries que cambian             │
+│  - Catálogos: getters sobre la query del catálogo            │
 └────────────────┬────────────────────────────────────────────┘
                  │
-                 │ supabaseClient.from('tabla')
+                 │ repositorios → supabaseClient.from('tabla')
                  ▼
 ┌─────────────────────────────────────────────────────────────┐
 │  SUPABASE (PostgreSQL)                                       │
@@ -46,21 +49,22 @@
 1. Usuario accede a `/login`
 2. `auth-store.signIn()` llama a `supabase.auth.signInWithPassword()`
 3. Supabase devuelve `session`
-4. Middleware detecta sesión → redirige a `/`
-5. Plugin `init-stores` ejecuta `fetchAll()` en paralelo en todos los stores
-6. App lista para usar
+4. La página recarga completa (`window.location.href = '/'`): vacía los stores y la caché de
+   Colada, así nada de un usuario anterior sobrevive. El logout hace lo mismo hacia `/login`.
+5. Nada se carga al arrancar: cada pantalla pide lo suyo (ver abajo).
 
 ### Operación CRUD típica (ejemplo: crear viaje)
 
 1. Componente llama `travelsStore.addTravel(data)`
 2. Store ejecuta inserts en Supabase (tablas: `travels`, `travel_activities`, `travel_services`, `travel_buses`, `travel_coordinators`)
 3. Si hay error, store expone `error` y lanza excepción
-4. Si éxito, store agrega el nuevo objeto al array local `travels[]`
-5. Componente reacciona reactivamente (computed → template)
+4. Si éxito, store invalida `travelKeys.root`: las queries activas (listados, detalle) se vuelven
+   a pedir y las inactivas se piden la próxima vez que una pantalla las monte
+5. Componente reacciona reactivamente (computed sobre `data` de la query → template)
 
 ### Lectura de datos relacionados
 
-El store de viajes carga relaciones en `fetchAll()` con joins:
+`travelDetailQuery(id)` trae un viaje con sus relaciones en una sola consulta:
 
 ```
 travels
@@ -70,15 +74,14 @@ travels
   └─ travel_coordinators → coordinators (via join)
 ```
 
-La cotización (`fetchByTravel`) usa caché interno para evitar llamadas duplicadas si múltiples componentes la solicitan simultáneamente.
+Los listados (`travelListQuery`) traen solo las columnas de la tabla y el conteo de viajeros
+embebido (`travelers(count)`), paginados en el servidor.
 
 ---
 
-## Carga de datos con Pinia Colada (en migración)
+## Carga de datos con Pinia Colada
 
-> **Estado:** la app todavía carga todo al arrancar con `init-stores.client.ts` (ver arriba).
-> Pinia Colada se está introduciendo por fases; el plan está en
-> `docs/features/pending/on-demand-data-loading/`. Esta sección fija las convenciones.
+Historia y decisiones: `docs/features/completed/on-demand-data-loading/`.
 
 ### Qué es cada cosa
 
@@ -127,8 +130,27 @@ export const travelKeys = {
 | `gcTime` | 5 min | Al volver a una pantalla se ve el dato anterior mientras se refresca. |
 | `refetchOnMount` / `WindowFocus` / `Reconnect` | `true` | Refresca solo si el dato está viejo; cubre datos desactualizados entre usuarios. |
 
-Los catálogos (proveedores, coordinadores…) sobrescriben `staleTime` con un valor largo por
-query.
+Los catálogos (proveedores, coordinadores…) sobrescriben `staleTime` con 5 min por query.
+
+### Catálogos
+
+Proveedores, coordinadores, autobuses y habitaciones se cargan **completos** (son pocos y se usan
+en selects por toda la app), la primera vez que una pantalla usa su store. Cada store llama
+`useCatalogState(useXCatalog, xCatalogQuery)` (`app/queries/catalogs.ts`) en su setup:
+
+- `useXCatalog` es un `defineQuery`, no `useQuery`: dentro de un store, `useQuery` se ataría al
+  componente que creó el store y se apagaría al desmontarse. Así la query queda activa mientras
+  vive el store: las escrituras la invalidan y se vuelve a pedir desde cualquier pantalla.
+- Las pantallas que muestran un catálogo usan `CatalogLoadState` (spinner → error + Reintentar →
+  contenido): antes de cargar, una lista vacía o un registro faltante serían mentira.
+- Escrituras que validan contra el catálogo usan `ensureFresh()`; un alta mete el registro a la
+  caché con `setItems` antes del refetch.
+
+### Más de 1000 filas
+
+PostgREST corta en `max_rows = 1000` sin error. Lo que puede pasar de ahí se pide en tandas con
+`fetchInBatches` (`app/utils/fetch-in-batches.ts`): pagos y configuraciones de cuenta por viaje,
+viajeros y asignaciones de habitación de un viaje. Los listados de viajes se paginan.
 
 ## Mapeo BD ↔ Dominio
 
