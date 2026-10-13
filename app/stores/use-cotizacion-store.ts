@@ -137,7 +137,9 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     };
   });
 
-  // Matriz de precios de referencia: seatPrice + hospedaje agrupado por maxOccupancy
+  // Matriz de precios de referencia: seatPrice + hospedaje agrupado por maxOccupancy.
+  // Reads the provider and hotel-room catalogs: the calling component must create those stores
+  // in its setup, or their catalog queries start during render (Vue lifecycle warnings).
   const getMatrizPreciosReferencia = computed(() => {
     return (quotationId: string): Array<{
       maxOccupancy: number;
