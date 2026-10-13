@@ -3,7 +3,7 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { computed, h, reactive, ref, shallowRef } from 'vue';
 
-import type { PrecioPublicoAvisoAccion, ViajeroConPrecio } from '~/components/cotizacion-precio-publico-aviso-modal.vue';
+import type { PrecioPublicoAvisoAccion, ViajeroConPrecio } from '~/components/quotation/public-price/quotation-public-price-warning-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
 import { travelersByTravelQuery } from '~/queries/travelers';
@@ -600,7 +600,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       class="sm:max-w-2xl"
     >
       <template #body>
-        <CotizacionPrecioPublicoForm
+        <QuotationPublicPriceForm
           :quotation-id="quotationId"
           :precio="editingPrecio"
           :plantilla="plantilla"
@@ -610,7 +610,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       </template>
     </UModal>
 
-    <CotizacionPrecioPublicoAvisoModal
+    <QuotationPublicPriceWarningModal
       v-model:open="isAvisoOpen"
       :accion="avisoAccion"
       :precio="avisoPrecio"

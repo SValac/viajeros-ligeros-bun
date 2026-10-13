@@ -241,7 +241,7 @@ function onSubmit() {
         />
       </UFormField>
 
-      <CotizacionProveedorAjustesEditor v-model="ajustes" :unit-cost="state.unitCost" />
+      <QuotationProviderAdjustmentsEditor v-model="ajustes" :unit-cost="state.unitCost" />
     </div>
 
     <!-- Dividir entre: solo un costo total se reparte -->

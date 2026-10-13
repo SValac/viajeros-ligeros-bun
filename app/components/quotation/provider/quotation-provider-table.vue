@@ -536,7 +536,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
     class="sm:max-w-2xl"
   >
     <template #body>
-      <CotizacionProveedorForm
+      <QuotationProviderForm
         :quotation-id="quotationId"
         :proveedor-cotizacion="selectedProveedor"
         @submit="handleProveedorSubmit"
@@ -553,7 +553,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
     class="sm:max-w-2xl"
   >
     <template #body>
-      <CotizacionProveedorAjustesEditor
+      <QuotationProviderAdjustmentsEditor
         v-if="proveedorAjustes"
         v-model="ajustesDraft"
         :unit-cost="proveedorAjustes.unitCost"
@@ -583,7 +583,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
     description="Define si los coordinadores cuentan para el pago de este servicio"
   >
     <template #body>
-      <CotizacionProveedorCortesiaForm
+      <QuotationProviderCourtesyForm
         v-if="proveedorCortesia"
         :proveedor="proveedorCortesia"
         @submit="handleCortesiaSubmit"
@@ -601,7 +601,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
   >
     <template #body>
       <div class="p-4">
-        <PagoProveedorHistorial
+        <QuotationProviderPaymentHistory
           :quotation-provider-id="historialProveedorId"
           :proveedor-name="historialProveedorNombre"
         />

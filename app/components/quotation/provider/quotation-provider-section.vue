@@ -15,7 +15,7 @@ defineProps<Props>();
         Proveedores
       </h2>
     </template>
-    <CotizacionProveedorTabla
+    <QuotationProviderTable
       :quotation-id="quotationId"
       :readonly="readonly ?? false"
     />

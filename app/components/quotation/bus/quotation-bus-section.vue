@@ -298,7 +298,7 @@ function getBusActions(bus: QuotationBus) {
   >
     <template #body>
       <div class="p-4">
-        <PagoBusHistorial
+        <QuotationBusPaymentHistory
           v-if="selectedBus"
           :quotation-bus-id="selectedBus.id"
           :bus-label="selectedBus.unitNumber"
@@ -308,7 +308,7 @@ function getBusActions(bus: QuotationBus) {
   </USlideover>
 
   <!-- Modal: editar autobús (mismo formulario que agregar) -->
-  <CotizacionBusForm
+  <QuotationBusForm
     v-model:open="isDetallesFormOpen"
     :quotation-id="quotationId"
     :bus="selectedBus"

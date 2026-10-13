@@ -1,27 +1,27 @@
 <script setup lang="ts">
-import type { BusPayment, BusPaymentFormData } from '~/types/quotation';
+import type { AccommodationPayment, AccommodationPaymentFormData } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
 
 type Props = {
-  quotationBusId: string;
-  busLabel?: string;
+  quotationAccommodationId: string;
+  hotelName?: string;
 };
 
-const { quotationBusId, busLabel } = defineProps<Props>();
+const { quotationAccommodationId, hotelName } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 
-const pagos = computed(() => cotizacionStore.getPagosByBus(quotationBusId));
-const anticipado = computed(() => cotizacionStore.getAnticipadoBus(quotationBusId));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteBus(quotationBusId));
+const pagos = computed(() => cotizacionStore.getPagosByHospedaje(quotationAccommodationId));
+const anticipado = computed(() => cotizacionStore.getAnticipadoHospedaje(quotationAccommodationId));
+const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteHospedaje(quotationAccommodationId));
 
 const isFormModalOpen = shallowRef(false);
-const selectedPago = shallowRef<BusPayment | null>(null);
+const selectedPago = shallowRef<AccommodationPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const pagoToDelete = shallowRef<BusPayment | null>(null);
+const pagoToDelete = shallowRef<AccommodationPayment | null>(null);
 
 function formatDate(dateString: string): string {
   // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
@@ -37,12 +37,12 @@ function openNewPago() {
   isFormModalOpen.value = true;
 }
 
-function openEditPago(pago: BusPayment) {
+function openEditPago(pago: AccommodationPayment) {
   selectedPago.value = pago;
   isFormModalOpen.value = true;
 }
 
-function openDeleteConfirm(pago: BusPayment) {
+function openDeleteConfirm(pago: AccommodationPayment) {
   pagoToDelete.value = pago;
   isDeleteModalOpen.value = true;
 }
@@ -51,15 +51,15 @@ function closeDeleteModal() {
   isDeleteModalOpen.value = false;
 }
 
-async function handleSubmit(data: BusPaymentFormData) {
+async function handleSubmit(data: AccommodationPaymentFormData) {
   if (selectedPago.value) {
-    const result = await cotizacionStore.updateBusPayment(selectedPago.value.id, data);
+    const result = await cotizacionStore.updatePagoHospedaje(selectedPago.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = await cotizacionStore.addBusPayment(data);
+    const result = await cotizacionStore.addPagoHospedaje(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -74,7 +74,7 @@ async function handleSubmit(data: BusPaymentFormData) {
 async function confirmDelete() {
   if (!pagoToDelete.value)
     return;
-  await cotizacionStore.deleteBusPayment(pagoToDelete.value.id);
+  await cotizacionStore.deletePagoHospedaje(pagoToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   pagoToDelete.value = null;
@@ -88,13 +88,14 @@ async function confirmDelete() {
       <h3 class="font-semibold text-lg flex items-center gap-2">
         <UIcon name="i-lucide-receipt" class="w-5 h-5 text-muted" />
         Historial de Pagos
-        <span v-if="busLabel" class="text-muted font-normal">— {{ busLabel }}</span>
+        <span v-if="hotelName" class="text-muted font-normal">
+          — {{ hotelName }}
+        </span>
       </h3>
       <UButton
         icon="i-lucide-plus"
         size="sm"
         label="Registrar pago"
-        :disabled="saldoPendiente <= 0"
         @click="openNewPago"
       />
     </div>
@@ -180,18 +181,16 @@ async function confirmDelete() {
       :actions="[{ label: 'Registrar pago', icon: 'i-lucide-plus', size: 'sm', variant: 'outline', onClick: openNewPago }]"
     />
 
-    <!-- Totales -->
-    <div class="pt-2 border-t border-default space-y-1">
-      <div class="flex items-center justify-between text-sm">
-        <span class="text-muted">Total pagado</span>
-        <span class="font-semibold">{{ formatCurrency(anticipado) }}</span>
-      </div>
-      <div class="flex items-center justify-between text-sm">
-        <span class="text-muted">Saldo pendiente</span>
-        <span class="font-semibold" :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'">
-          {{ formatCurrency(saldoPendiente) }}
-        </span>
-      </div>
+    <!-- Footer: totales -->
+    <div class="pt-2 border-t border-default flex items-center justify-between text-sm">
+      <span class="text-muted">Total pagado</span>
+      <span class="font-semibold">{{ formatCurrency(anticipado) }}</span>
+    </div>
+    <div class="flex items-center justify-between text-sm">
+      <span class="text-muted">Saldo pendiente</span>
+      <span class="font-semibold" :class="saldoPendiente > 0 ? 'text-warning' : 'text-success'">
+        {{ formatCurrency(saldoPendiente) }}
+      </span>
     </div>
   </div>
 
@@ -199,11 +198,12 @@ async function confirmDelete() {
   <UModal
     v-model:open="isFormModalOpen"
     :title="selectedPago ? 'Editar Pago' : 'Registrar Pago'"
+    :description="selectedPago ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago al hotel'"
     class="sm:max-w-lg"
   >
     <template #body>
-      <PagoBusForm
-        :quotation-bus-id="quotationBusId"
+      <QuotationAccommodationPaymentForm
+        :quotation-accommodation-id="quotationAccommodationId"
         :max-monto="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
         :pago="selectedPago"
         @submit="handleSubmit"
@@ -216,7 +216,7 @@ async function confirmDelete() {
   <UModal
     v-model:open="isDeleteModalOpen"
     title="Eliminar Pago"
-    description="¿Estás seguro? Esta acción no se puede deshacer."
+    description="¿Estás seguro de que deseas eliminar este pago? Esta acción no se puede deshacer."
   >
     <template #footer>
       <div class="flex justify-end gap-3">

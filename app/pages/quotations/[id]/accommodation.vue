@@ -15,13 +15,13 @@ const isAgregarHospedajeModalOpen = shallowRef(false);
 
 <template>
   <div>
-    <CotizacionHospedajeSection
+    <QuotationAccommodationSection
       :quotation-id="quotationId"
       :readonly="readonly"
       @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
     />
 
-    <CotizacionHospedajeForm
+    <QuotationAccommodationForm
       :open="isAgregarHospedajeModalOpen"
       :quotation-id="quotationId"
       @update:open="(v) => isAgregarHospedajeModalOpen = v"

@@ -330,7 +330,7 @@ async function eliminarHospedaje(id: string) {
           </div>
 
           <!-- Tipos de habitación con checkboxes -->
-          <CotizacionHospedajeTipos
+          <QuotationAccommodationRoomTypes
             v-model="editFormState.details"
             :room-types="tiposHabitacionEdit"
             :night-count="editFormState.nightCount"
@@ -363,7 +363,7 @@ async function eliminarHospedaje(id: string) {
       class="sm:max-w-lg"
     >
       <template #body>
-        <PagoHospedajeHistorial
+        <QuotationAccommodationPaymentHistory
           v-if="historialHospedaje"
           :quotation-accommodation-id="historialHospedaje.id"
           :hotel-name="getNombreHotel(historialHospedaje.providerId)"

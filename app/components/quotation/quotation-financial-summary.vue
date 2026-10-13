@@ -70,50 +70,50 @@ function saldoColor(saldo: number): string {
 <template>
   <div class="space-y-8">
     <!-- 1. Costos -->
-    <CotizacionResumenSeccion
+    <QuotationSummarySection
       title="Costos del viaje"
       description="Lo que cuesta operar el viaje. El hospedaje se cobra aparte en los precios al público."
     >
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <CotizacionKpiCard
+        <QuotationKpiCard
           label="Costo total"
           icon="i-lucide-wallet"
           :value="formatCurrency(costoTotal)"
         >
           <p>Servicios + autobuses + gastos</p>
-        </CotizacionKpiCard>
-        <CotizacionKpiCard
+        </QuotationKpiCard>
+        <QuotationKpiCard
           label="Servicios"
           icon="i-lucide-building"
           :value="formatCurrency(costoProveedores)"
         />
-        <CotizacionKpiCard
+        <QuotationKpiCard
           label="Autobuses"
           icon="i-lucide-bus"
           :value="formatCurrency(costoBuses)"
         />
-        <CotizacionKpiCard
+        <QuotationKpiCard
           label="Gastos adicionales"
           icon="i-lucide-receipt"
           :value="formatCurrency(costoGastos)"
         />
-        <CotizacionKpiCard
+        <QuotationKpiCard
           label="Hospedaje"
           icon="i-lucide-door-open"
           :value="formatCurrency(costoHospedajes)"
         >
           <p>No entra en el precio por asiento</p>
-        </CotizacionKpiCard>
+        </QuotationKpiCard>
       </div>
-    </CotizacionResumenSeccion>
+    </QuotationSummarySection>
 
     <!-- 2. Precio y ganancia -->
-    <CotizacionResumenSeccion
+    <QuotationSummarySection
       title="Precio y ganancia"
       description="Cuánto se cobra por asiento, desde qué asiento se gana y cuánto deja el viaje lleno."
     >
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <CotizacionKpiCard
+        <QuotationKpiCard
           label="Precio por asiento"
           icon="i-lucide-armchair"
           :value="formatCurrency(cotizacion?.seatPrice ?? 0)"
@@ -129,8 +129,8 @@ function saldoColor(saldo: number): string {
           <p v-if="costoPorPersonaAsiento > 0">
             Servicios por persona: + <span class="font-medium tabular-nums">{{ formatCurrency(costoPorPersonaAsiento) }}</span> por asiento
           </p>
-        </CotizacionKpiCard>
-        <CotizacionKpiCard
+        </QuotationKpiCard>
+        <QuotationKpiCard
           label="Meta mínima de asientos"
           icon="i-lucide-target"
           :value="String(cotizacion?.minimumSeatTarget ?? 0)"
@@ -144,8 +144,8 @@ function saldoColor(saldo: number): string {
           <p v-else>
             Ganancia a partir del asiento {{ asientoConGanancia }}
           </p>
-        </CotizacionKpiCard>
-        <CotizacionKpiCard
+        </QuotationKpiCard>
+        <QuotationKpiCard
           label="Ganancia proyectada"
           :icon="gananciaProyectada < 0 ? 'i-lucide-trending-down' : 'i-lucide-trending-up'"
           :value="formatCurrency(gananciaProyectada)"
@@ -154,22 +154,22 @@ function saldoColor(saldo: number): string {
           <p>
             {{ asientosVendibles }} asientos vendibles × {{ formatCurrency(cotizacion?.seatPrice ?? 0) }} − costo total
           </p>
-        </CotizacionKpiCard>
+        </QuotationKpiCard>
       </div>
-    </CotizacionResumenSeccion>
+    </QuotationSummarySection>
 
     <!-- 3. Pagos -->
-    <CotizacionResumenSeccion
+    <QuotationSummarySection
       title="Pagos"
       description="Lo que ya pagaron los viajeros y lo que falta pagar a proveedores."
     >
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <CotizacionKpiCard
+        <QuotationKpiCard
           label="Cobrado a viajeros"
           icon="i-lucide-users"
           :value="formatCurrency(acumuladoViajeros)"
         />
-        <CotizacionKpiCard
+        <QuotationKpiCard
           label="Por pagar a proveedores"
           icon="i-lucide-clock"
           :value="formatCurrency(totalPorPagar)"
@@ -190,8 +190,8 @@ function saldoColor(saldo: number): string {
               </span>
             </li>
           </ul>
-        </CotizacionKpiCard>
+        </QuotationKpiCard>
       </div>
-    </CotizacionResumenSeccion>
+    </QuotationSummarySection>
   </div>
 </template>

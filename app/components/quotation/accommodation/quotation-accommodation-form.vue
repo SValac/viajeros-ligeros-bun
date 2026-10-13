@@ -177,7 +177,7 @@ function handleCancel() {
         </UFormField>
 
         <!-- Tipos de Habitación -->
-        <CotizacionHospedajeTipos
+        <QuotationAccommodationRoomTypes
           v-if="formState.providerId"
           :model-value="formState.details ?? []"
           :room-types="tiposHabitacionSeleccionado"

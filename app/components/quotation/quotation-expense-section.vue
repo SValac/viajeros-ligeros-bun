@@ -214,7 +214,7 @@ function getActions(gasto: QuotationExpense) {
     class="sm:max-w-xl"
   >
     <template #body>
-      <CotizacionGastoForm
+      <QuotationExpenseForm
         :quotation-id="quotationId"
         :gasto="selectedGasto"
         @submit="handleSubmit"

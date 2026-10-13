@@ -1,27 +1,28 @@
 <script setup lang="ts">
-import type { AccommodationPayment, AccommodationPaymentFormData } from '~/types/quotation';
+import type { ProviderPayment, ProviderPaymentFormData } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
 
 type Props = {
-  quotationAccommodationId: string;
-  hotelName?: string;
+  quotationProviderId: string;
+  proveedorNombre?: string;
 };
 
-const { quotationAccommodationId, hotelName } = defineProps<Props>();
+const { quotationProviderId, proveedorNombre } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
 const toast = useToast();
 
-const pagos = computed(() => cotizacionStore.getPagosByHospedaje(quotationAccommodationId));
-const anticipado = computed(() => cotizacionStore.getAnticipadoHospedaje(quotationAccommodationId));
-const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteHospedaje(quotationAccommodationId));
+const pagos = computed(() => cotizacionStore.getPagosByProveedor(quotationProviderId));
+const anticipado = computed(() => cotizacionStore.getAnticipadoProveedor(quotationProviderId));
+const saldoPendiente = computed(() => cotizacionStore.getSaldoPendienteProveedor(quotationProviderId));
 
+// Modal state
 const isFormModalOpen = shallowRef(false);
-const selectedPago = shallowRef<AccommodationPayment | null>(null);
+const selectedPago = shallowRef<ProviderPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
-const pagoToDelete = shallowRef<AccommodationPayment | null>(null);
+const pagoToDelete = shallowRef<ProviderPayment | null>(null);
 
 function formatDate(dateString: string): string {
   // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
@@ -37,12 +38,12 @@ function openNewPago() {
   isFormModalOpen.value = true;
 }
 
-function openEditPago(pago: AccommodationPayment) {
+function openEditPago(pago: ProviderPayment) {
   selectedPago.value = pago;
   isFormModalOpen.value = true;
 }
 
-function openDeleteConfirm(pago: AccommodationPayment) {
+function openDeleteConfirm(pago: ProviderPayment) {
   pagoToDelete.value = pago;
   isDeleteModalOpen.value = true;
 }
@@ -51,15 +52,15 @@ function closeDeleteModal() {
   isDeleteModalOpen.value = false;
 }
 
-async function handleSubmit(data: AccommodationPaymentFormData) {
+async function handleSubmit(data: ProviderPaymentFormData) {
   if (selectedPago.value) {
-    const result = await cotizacionStore.updatePagoHospedaje(selectedPago.value.id, data);
+    const result = await cotizacionStore.updateProviderPayment(selectedPago.value.id, data);
     if (result) {
       toast.add({ title: 'Pago actualizado', color: 'success' });
     }
   }
   else {
-    const result = await cotizacionStore.addPagoHospedaje(data);
+    const result = await cotizacionStore.addProviderPayment(data);
     if ('error' in result) {
       toast.add({ title: 'Error', description: result.error, color: 'error' });
     }
@@ -74,7 +75,7 @@ async function handleSubmit(data: AccommodationPaymentFormData) {
 async function confirmDelete() {
   if (!pagoToDelete.value)
     return;
-  await cotizacionStore.deletePagoHospedaje(pagoToDelete.value.id);
+  await cotizacionStore.deleteProviderPayment(pagoToDelete.value.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
   isDeleteModalOpen.value = false;
   pagoToDelete.value = null;
@@ -88,8 +89,8 @@ async function confirmDelete() {
       <h3 class="font-semibold text-lg flex items-center gap-2">
         <UIcon name="i-lucide-receipt" class="w-5 h-5 text-muted" />
         Historial de Pagos
-        <span v-if="hotelName" class="text-muted font-normal">
-          — {{ hotelName }}
+        <span v-if="proveedorNombre" class="text-muted font-normal">
+          — {{ proveedorNombre }}
         </span>
       </h3>
       <UButton
@@ -101,76 +102,78 @@ async function confirmDelete() {
     </div>
 
     <!-- Tabla de pagos -->
-    <div v-if="pagos.length > 0" class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-default text-left text-muted">
-            <th class="pb-2 pr-4 font-medium">
-              Fecha
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Concepto
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Tipo
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Monto
-            </th>
-            <th class="pb-2 pr-4 font-medium">
-              Notas
-            </th>
-            <th class="pb-2 font-medium">
-              Acciones
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="pago in pagos"
-            :key="pago.id"
-            class="border-b border-default/50 hover:bg-elevated/50"
-          >
-            <td class="py-2 pr-4">
-              {{ formatDate(pago.paymentDate) }}
-            </td>
-            <td class="py-2 pr-4">
-              {{ pago.concept || '—' }}
-            </td>
-            <td class="py-2 pr-4">
-              <UBadge
-                :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
-                :color="pago.paymentType === 'cash' ? 'success' : 'info'"
-                variant="subtle"
-              />
-            </td>
-            <td class="py-2 pr-4 font-medium">
-              {{ formatCurrency(pago.amount) }}
-            </td>
-            <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
-              {{ pago.notes || '—' }}
-            </td>
-            <td class="py-2">
-              <div class="flex items-center gap-1">
-                <UButton
-                  icon="i-lucide-pencil"
-                  size="xs"
-                  variant="ghost"
-                  color="neutral"
-                  @click="openEditPago(pago)"
+    <div v-if="pagos.length > 0">
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-default text-left text-muted">
+              <th class="pb-2 pr-4 font-medium">
+                Fecha
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Concepto
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Tipo
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Monto
+              </th>
+              <th class="pb-2 pr-4 font-medium">
+                Notas
+              </th>
+              <th class="pb-2 font-medium">
+                Acciones
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="pago in pagos"
+              :key="pago.id"
+              class="border-b border-default/50 hover:bg-elevated/50"
+            >
+              <td class="py-2 pr-4">
+                {{ formatDate(pago.paymentDate) }}
+              </td>
+              <td class="py-2 pr-4">
+                {{ pago.concept || '—' }}
+              </td>
+              <td class="py-2 pr-4">
+                <UBadge
+                  :label="pago.paymentType === 'cash' ? 'Efectivo' : 'Transferencia'"
+                  :color="pago.paymentType === 'cash' ? 'success' : 'info'"
+                  variant="subtle"
                 />
-                <UButton
-                  icon="i-lucide-trash-2"
-                  size="xs"
-                  variant="ghost"
-                  color="error"
-                  @click="openDeleteConfirm(pago)"
-                />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+              </td>
+              <td class="py-2 pr-4 font-medium">
+                {{ formatCurrency(pago.amount) }}
+              </td>
+              <td class="py-2 pr-4 text-muted text-xs max-w-32 truncate">
+                {{ pago.notes || '—' }}
+              </td>
+              <td class="py-2">
+                <div class="flex items-center gap-1">
+                  <UButton
+                    icon="i-lucide-pencil"
+                    size="xs"
+                    variant="ghost"
+                    color="neutral"
+                    @click="openEditPago(pago)"
+                  />
+                  <UButton
+                    icon="i-lucide-trash-2"
+                    size="xs"
+                    variant="ghost"
+                    color="error"
+                    @click="openDeleteConfirm(pago)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
 
     <!-- Estado vacío -->
@@ -198,12 +201,12 @@ async function confirmDelete() {
   <UModal
     v-model:open="isFormModalOpen"
     :title="selectedPago ? 'Editar Pago' : 'Registrar Pago'"
-    :description="selectedPago ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago al hotel'"
+    :description="selectedPago ? 'Modifica los datos del pago registrado' : 'Ingresa los datos del nuevo pago al proveedor'"
     class="sm:max-w-lg"
   >
     <template #body>
-      <PagoHospedajeForm
-        :quotation-accommodation-id="quotationAccommodationId"
+      <QuotationProviderPaymentForm
+        :quotation-provider-id="quotationProviderId"
         :max-monto="selectedPago ? selectedPago.amount + saldoPendiente : saldoPendiente"
         :pago="selectedPago"
         @submit="handleSubmit"
