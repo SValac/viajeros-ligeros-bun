@@ -55,6 +55,7 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `quotation-extra-expenses.md` — Gastos adicionales de la cotización (publicidad, viáticos, comisiones…): categoría libre, costo total o por persona, repartidos en el precio por asiento
 - `travel-calendar.md` — Calendario de viajes (`/calendar`): mes sobre `UCalendar` con barras por viaje y resumen al elegir uno
 - `on-demand-data-loading/PLAN.md` — Carga bajo demanda con Pinia Colada: nada al arrancar, cada pantalla pide su alcance, catálogos la primera vez que se usan, sin cortes silenciosos a 1000 filas
+- `shared-load-states/PLAN.md` — `LoadState` (carga y error con Reintentar) y `EmptyState` (un vacío por sección) compartidos por todas las pantallas
 
 ---
 

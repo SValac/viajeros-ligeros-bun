@@ -38,7 +38,7 @@ const visibleStatuses = computed<TravelStatus[]>(() => [
   ...(showCancelled.value ? ['cancelled' as const] : []),
 ]);
 
-const { status: travelStatus, refetch, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses, placeholder);
+const { loadState, refetch, travelLanes, getTravelsOnDay, getTravelsInMonth } = useTravelCalendar(visibleStatuses, placeholder);
 
 // El viaje elegido vive en `?viaje=`: recargar o compartir el link conserva la selección.
 // `replace`: elegir viajes no llena el historial del navegador.
@@ -201,145 +201,135 @@ watch(selectedTravel, (travel) => {
         </div>
       </div>
 
-      <div v-if="travelStatus === 'pending'" class="flex justify-center py-24">
-        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-      </div>
-      <div
-        v-else-if="travelStatus === 'error'"
-        class="flex h-full items-center justify-center flex-col gap-4"
+      <LoadState
+        v-bind="loadState"
+        label="los viajes"
+        @retry="refetch()"
       >
-        <p class="text-muted">
-          No se pudieron cargar los viajes
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="refetch()"
-        />
-      </div>
-      <div v-else class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
-        <!-- Calendario -->
-        <UCard class="lg:col-span-2">
-          <TravelCalendar
-            v-model:placeholder="placeholder"
-            :model-value="selectedDay"
-            :get-travels-on-day="getTravelsOnDay"
-            :travel-lanes="travelLanes"
-            :selected-travel-id="selectedTravelId"
-            :get-holiday-on-day="getHolidayOnDay"
-            @update:model-value="selectDay"
-          />
-        </UCard>
+        <div class="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+          <!-- Calendario -->
+          <UCard class="lg:col-span-2">
+            <TravelCalendar
+              v-model:placeholder="placeholder"
+              :model-value="selectedDay"
+              :get-travels-on-day="getTravelsOnDay"
+              :travel-lanes="travelLanes"
+              :selected-travel-id="selectedTravelId"
+              :get-holiday-on-day="getHolidayOnDay"
+              @update:model-value="selectDay"
+            />
+          </UCard>
 
-        <!-- Panel derecho -->
-        <div class="space-y-6 lg:sticky lg:top-6">
-          <!-- Viajes del día / del mes en una sola card: sin scroll para ver ambas listas -->
-          <UCard :ui="{ header: 'px-4 pt-2 pb-0 sm:px-4', body: 'p-4 sm:p-4' }">
-            <template #header>
-              <UTabs
-                v-model="listTab"
-                :items="listTabs"
-                :content="false"
-                variant="link"
-                size="sm"
-                class="w-full"
-              />
-            </template>
-
-            <template v-if="listTab === 'day'">
-              <template v-if="selectedDay">
-                <!-- El festivo va en la fila del título: no agrega alto ni empuja el resumen -->
-                <div class="mb-2 flex items-center justify-between gap-2">
-                  <h2 class="truncate text-sm font-semibold text-highlighted">
-                    Viajes del {{ dayLabel }}
-                  </h2>
-                  <UTooltip
-                    v-if="selectedDayHoliday"
-                    :text="`${selectedDayHoliday.name} · ${HOLIDAY_KIND_LABELS[selectedDayHoliday.kind]}`"
-                  >
-                    <UBadge
-                      :label="selectedDayHoliday.shortName"
-                      icon="i-lucide-party-popper"
-                      :color="selectedDayHoliday.kind === 'official' ? 'error' : 'neutral'"
-                      variant="subtle"
-                      size="sm"
-                      class="shrink-0"
-                    />
-                  </UTooltip>
-                </div>
-                <TravelCalendarList
-                  v-if="dayTravels.length > 0"
-                  :travels="dayTravels"
-                  :selected-travel-id="selectedTravelId"
-                  @select="selectTravelFromDay"
+          <!-- Panel derecho -->
+          <div class="space-y-6 lg:sticky lg:top-6">
+            <!-- Viajes del día / del mes en una sola card: sin scroll para ver ambas listas -->
+            <UCard :ui="{ header: 'px-4 pt-2 pb-0 sm:px-4', body: 'p-4 sm:p-4' }">
+              <template #header>
+                <UTabs
+                  v-model="listTab"
+                  :items="listTabs"
+                  :content="false"
+                  variant="link"
+                  size="sm"
+                  class="w-full"
                 />
+              </template>
+
+              <template v-if="listTab === 'day'">
+                <template v-if="selectedDay">
+                  <!-- El festivo va en la fila del título: no agrega alto ni empuja el resumen -->
+                  <div class="mb-2 flex items-center justify-between gap-2">
+                    <h2 class="truncate text-sm font-semibold text-highlighted">
+                      Viajes del {{ dayLabel }}
+                    </h2>
+                    <UTooltip
+                      v-if="selectedDayHoliday"
+                      :text="`${selectedDayHoliday.name} · ${HOLIDAY_KIND_LABELS[selectedDayHoliday.kind]}`"
+                    >
+                      <UBadge
+                        :label="selectedDayHoliday.shortName"
+                        icon="i-lucide-party-popper"
+                        :color="selectedDayHoliday.kind === 'official' ? 'error' : 'neutral'"
+                        variant="subtle"
+                        size="sm"
+                        class="shrink-0"
+                      />
+                    </UTooltip>
+                  </div>
+                  <TravelCalendarList
+                    v-if="dayTravels.length > 0"
+                    :travels="dayTravels"
+                    :selected-travel-id="selectedTravelId"
+                    @select="selectTravelFromDay"
+                  />
+                  <p v-else class="text-sm text-muted">
+                    Sin viajes este día
+                  </p>
+                </template>
                 <p v-else class="text-sm text-muted">
-                  Sin viajes este día
+                  Elige un día en el calendario
                 </p>
               </template>
-              <p v-else class="text-sm text-muted">
-                Elige un día en el calendario
-              </p>
-            </template>
 
-            <template v-else>
-              <!-- Festivos del mes en la fila del título (detalle en el popover): no empujan el resumen -->
-              <div class="mb-2 flex items-center justify-between gap-2">
-                <h2 class="truncate text-sm font-semibold text-highlighted">
-                  Viajes de {{ monthLabel }}
-                </h2>
-                <!-- Botón (no hover): en tablet se abre con un toque -->
-                <UPopover
-                  v-if="monthHolidays.length > 0"
-                  :content="{ align: 'end' }"
-                >
-                  <UButton
-                    :label="`${monthHolidays.length} festivo${monthHolidays.length === 1 ? '' : 's'}`"
-                    icon="i-lucide-party-popper"
-                    color="neutral"
-                    variant="soft"
-                    size="xs"
-                    class="shrink-0"
-                  />
-                  <template #content>
-                    <ul class="space-y-1 p-3 text-xs font-medium" aria-label="Días festivos del mes">
-                      <li
-                        v-for="holiday in monthHolidays"
-                        :key="holiday.date.toString()"
-                        class="flex items-center gap-1.5"
-                        :class="HOLIDAY_KIND_TEXT_CLASSES[holiday.kind]"
-                      >
-                        <UIcon name="i-lucide-party-popper" class="size-3.5 shrink-0" />
-                        {{ holiday.date.day }} · {{ holiday.name }}
-                      </li>
-                    </ul>
-                  </template>
-                </UPopover>
+              <template v-else>
+                <!-- Festivos del mes en la fila del título (detalle en el popover): no empujan el resumen -->
+                <div class="mb-2 flex items-center justify-between gap-2">
+                  <h2 class="truncate text-sm font-semibold text-highlighted">
+                    Viajes de {{ monthLabel }}
+                  </h2>
+                  <!-- Botón (no hover): en tablet se abre con un toque -->
+                  <UPopover
+                    v-if="monthHolidays.length > 0"
+                    :content="{ align: 'end' }"
+                  >
+                    <UButton
+                      :label="`${monthHolidays.length} festivo${monthHolidays.length === 1 ? '' : 's'}`"
+                      icon="i-lucide-party-popper"
+                      color="neutral"
+                      variant="soft"
+                      size="xs"
+                      class="shrink-0"
+                    />
+                    <template #content>
+                      <ul class="space-y-1 p-3 text-xs font-medium" aria-label="Días festivos del mes">
+                        <li
+                          v-for="holiday in monthHolidays"
+                          :key="holiday.date.toString()"
+                          class="flex items-center gap-1.5"
+                          :class="HOLIDAY_KIND_TEXT_CLASSES[holiday.kind]"
+                        >
+                          <UIcon name="i-lucide-party-popper" class="size-3.5 shrink-0" />
+                          {{ holiday.date.day }} · {{ holiday.name }}
+                        </li>
+                      </ul>
+                    </template>
+                  </UPopover>
+                </div>
+                <TravelCalendarList
+                  v-if="monthTravels.length > 0"
+                  :travels="monthTravels"
+                  :selected-travel-id="selectedTravelId"
+                  @select="selectTravelFromMonth"
+                />
+                <p v-else class="text-sm text-muted">
+                  No hay viajes este mes
+                </p>
+              </template>
+            </UCard>
+
+            <TravelCalendarSummary v-if="selectedTravelId" :travel-id="selectedTravelId" />
+
+            <UCard v-else>
+              <div class="flex flex-col items-center gap-3 py-6 text-center">
+                <UIcon name="i-lucide-calendar-search" class="size-10 text-dimmed" />
+                <p class="text-sm text-muted">
+                  Elige un viaje para ver su resumen
+                </p>
               </div>
-              <TravelCalendarList
-                v-if="monthTravels.length > 0"
-                :travels="monthTravels"
-                :selected-travel-id="selectedTravelId"
-                @select="selectTravelFromMonth"
-              />
-              <p v-else class="text-sm text-muted">
-                No hay viajes este mes
-              </p>
-            </template>
-          </UCard>
-
-          <TravelCalendarSummary v-if="selectedTravelId" :travel-id="selectedTravelId" />
-
-          <UCard v-else>
-            <div class="flex flex-col items-center gap-3 py-6 text-center">
-              <UIcon name="i-lucide-calendar-search" class="size-10 text-dimmed" />
-              <p class="text-sm text-muted">
-                Elige un viaje para ver su resumen
-              </p>
-            </div>
-          </UCard>
+            </UCard>
+          </div>
         </div>
-      </div>
+      </LoadState>
     </div>
   </div>
 </template>

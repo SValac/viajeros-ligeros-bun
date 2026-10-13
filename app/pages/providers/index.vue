@@ -25,7 +25,7 @@ const categories = Object.values(PROVIDER_CATEGORY_META);
       </p>
     </div>
 
-    <CatalogLoadState
+    <LoadState
       :is-loaded="providerStore.isLoaded"
       :load-error="providerStore.loadError"
       label="los proveedores"
@@ -76,6 +76,6 @@ const categories = Object.values(PROVIDER_CATEGORY_META);
           </UCard>
         </NuxtLink>
       </div>
-    </CatalogLoadState>
+    </LoadState>
   </div>
 </template>

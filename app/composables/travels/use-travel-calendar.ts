@@ -5,6 +5,7 @@ import { endOfMonth, startOfMonth } from '@internationalized/date';
 
 import type { TravelStatus, TravelSummary } from '~/types/travel';
 
+import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
 import { assignTravelLanes, getCalendarGridRange, getTravelDateRange, isTravelInRange } from '~/utils/travel-calendar';
 
@@ -14,7 +15,7 @@ import { assignTravelLanes, getCalendarGridRange, getTravelDateRange, isTravelIn
 export function useTravelCalendar(visibleStatuses: MaybeRefOrGetter<TravelStatus[]>, month: MaybeRefOrGetter<DateValue>) {
   const range = computed(() => getCalendarGridRange(toValue(month)));
 
-  const { data, status, refetch } = useQuery(() => ({
+  const query = useQuery(() => ({
     ...travelListQuery({
       overlapsFrom: range.value.start.toString(),
       overlapsTo: range.value.end.toString(),
@@ -22,6 +23,9 @@ export function useTravelCalendar(visibleStatuses: MaybeRefOrGetter<TravelStatus
     // Al cambiar de mes, sigue mostrando el anterior hasta que llegue el nuevo (sin parpadeo a vacío)
     placeholderData: previousList => previousList,
   }));
+  const { data, refetch } = query;
+  /** Props for `<LoadState>` around the calendar. */
+  const loadState = useQueryLoadState(query);
 
   const travels = computed(() => data.value?.items ?? []);
 
@@ -62,7 +66,7 @@ export function useTravelCalendar(visibleStatuses: MaybeRefOrGetter<TravelStatus
   }
 
   return {
-    status,
+    loadState,
     visibleTravels,
     travelLanes,
     refetch,

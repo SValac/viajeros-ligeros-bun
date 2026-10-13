@@ -4,6 +4,7 @@ import { useBusRepository } from '~/composables/buses/use-bus-repository';
 import { useCoordinatorRepository } from '~/composables/coordinators/use-coordinator-repository';
 import { useHotelRoomRepository } from '~/composables/hotel-rooms/use-hotel-room-repository';
 import { useProviderRepository } from '~/composables/providers/use-provider-repository';
+import { useQueryLoadState } from '~/queries/load-state';
 
 export const catalogKeys = {
   root: ['catalog'] as const,
@@ -79,10 +80,12 @@ export function useCatalogState<T>(
 
   /** The catalog; empty until the first load resolves. */
   const items = computed(() => query.data.value ?? []);
+  // Computed (not refs) so the stores expose them as getters, not state
+  const loadState = useQueryLoadState(query);
   /** `false` until the first load resolves: an empty `items` before that is not "no records". */
-  const isLoaded = computed(() => query.data.value !== undefined);
+  const isLoaded = computed(() => loadState.isLoaded);
   /** The last load's error, hidden while a retry runs so the screen shows the spinner again. */
-  const loadError = computed(() => (query.asyncStatus.value === 'loading' ? null : query.error.value));
+  const loadError = computed(() => loadState.loadError);
 
   /** Retries the load (e.g. from an error state's "Reintentar"). */
   function refetch() {

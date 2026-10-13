@@ -9,6 +9,7 @@ import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErr
 import BusSeatMap from '~/components/bus-seat-map.vue';
 import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 
@@ -76,7 +77,9 @@ const seatingCoordinator = shallowRef<Traveler | null>(null);
 const filters = ref<TravelerFilters>({});
 
 // Datos derivados
-const { data: travelerData, status: travelersStatus, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
+const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
+const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
+const travelersLoad = useQueryLoadState(travelersQuery);
 // Every traveler row of the travel, coordinators included (seats and rooms need them all)
 const occupantsOfTravel = computed(() => travelerData.value?.travelers ?? []);
 const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel.value));
@@ -140,9 +143,13 @@ const seatChangeAlertDescription = computed(() => {
     + ` Puedes elegir un asiento libre para mover o uno ocupado para intercambiar.`;
 });
 
+function clearFilters() {
+  filters.value = {};
+}
+
 // Another travel starts with no filters and no seat change in progress
 watch(travelId, () => {
-  filters.value = {};
+  clearFilters();
   clearSeatChangeState();
 }, { immediate: true });
 
@@ -719,22 +726,11 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     </div>
 
     <!-- Until the travelers load (or if they fail), stats, table and seat maps would show nobody -->
-    <div v-if="travelersStatus === 'pending' && !travelerData" class="flex justify-center py-12">
-      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-    </div>
-    <UCard v-else-if="travelersStatus === 'error'">
-      <div class="flex flex-col items-center justify-center gap-4 py-12">
-        <p class="text-muted">
-          No se pudieron cargar los viajeros
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="refetchTravelers()"
-        />
-      </div>
-    </UCard>
-    <template v-else>
+    <LoadState
+      v-bind="travelersLoad"
+      label="los viajeros"
+      @retry="refetchTravelers()"
+    >
       <!-- Estadísticas -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <UCard>
@@ -837,37 +833,18 @@ const columns: TableColumn<TravelerWithChildren>[] = [
             />
 
             <UCard>
-              <div v-if="travelers.length === 0" class="text-center py-12">
-                <UIcon
-                  name="i-lucide-inbox"
-                  class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
+              <template v-if="travelers.length === 0">
+                <EmptyState
+                  v-if="filters.travelBusId || filters.representativeId"
+                  section="noResults"
+                  :actions="[{ label: 'Limpiar filtros', icon: 'i-lucide-filter-x', color: 'neutral', variant: 'outline', onClick: clearFilters }]"
                 />
-                <template v-if="filters.travelBusId || filters.representativeId">
-                  <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    Sin resultados para los filtros aplicados
-                  </h3>
-                  <p class="text-gray-500 dark:text-gray-400 mb-4">
-                    Intenta con otros criterios de búsqueda
-                  </p>
-                  <UButton
-                    icon="i-lucide-filter-x"
-                    @click="filters = {}"
-                  >
-                    Limpiar filtros
-                  </UButton>
-                </template>
-                <template v-else>
-                  <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                    No hay viajeros en este viaje
-                  </h3>
-                  <p class="text-gray-500 dark:text-gray-400 mb-4">
-                    Comienza registrando el primer viajero
-                  </p>
-                  <UButton icon="i-lucide-plus" @click="openCreateModal">
-                    Agregar Primer Viajero
-                  </UButton>
-                </template>
-              </div>
+                <EmptyState
+                  v-else
+                  section="travelers"
+                  :actions="[{ label: 'Agregar viajero', icon: 'i-lucide-plus', onClick: openCreateModal }]"
+                />
+              </template>
               <UTable
                 v-else
                 v-model:expanded="expanded"
@@ -926,7 +903,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           </div>
         </template>
       </UTabs>
-    </template>
+    </LoadState>
 
     <!-- Modal de formulario -->
     <UModal
