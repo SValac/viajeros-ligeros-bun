@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
 
+import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
@@ -21,7 +22,9 @@ const paymentStore = usePaymentStore();
 const cotizacionStore = useCotizacionStore();
 
 const travelerId = computed(() => route.params.id as string);
-const { data: traveler, status, refetch } = useQuery(() => travelerDetailQuery(travelerId.value));
+const travelerQuery = useQuery(() => travelerDetailQuery(travelerId.value));
+const { data: traveler, status, refetch } = travelerQuery;
+const travelerLoad = useQueryLoadState(travelerQuery);
 
 // Only once resolved: `undefined` is "still loading" or "the request failed", and neither
 // means the traveler doesn't exist.
@@ -241,172 +244,162 @@ watch(travelerTravelIds, (ids) => {
 </script>
 
 <template>
-  <div v-if="status === 'pending' && !traveler" class="flex justify-center py-24">
-    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-  </div>
-  <div
-    v-else-if="status === 'error' && !traveler"
-    class="flex flex-col items-center justify-center gap-4 py-24"
+  <LoadState
+    v-bind="travelerLoad"
+    label="el viajero"
+    @retry="refetch()"
   >
-    <p class="text-muted">
-      No se pudo cargar el viajero
-    </p>
-    <UButton
-      label="Reintentar"
-      icon="i-lucide-refresh-cw"
-      @click="refetch()"
-    />
-  </div>
-  <div v-else-if="traveler" class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center gap-3">
-      <UButton
-        icon="i-lucide-arrow-left"
-        variant="ghost"
-        color="neutral"
-        size="sm"
-        @click="goToPaymentsIndex"
-      />
-      <div>
-        <h1 class="text-3xl font-bold">
-          {{ travelerName }}
-        </h1>
-        <p class="text-muted mt-0.5">
-          Historial de pagos
+    <div v-if="traveler" class="space-y-6">
+      <!-- Header -->
+      <div class="flex items-center gap-3">
+        <UButton
+          icon="i-lucide-arrow-left"
+          variant="ghost"
+          color="neutral"
+          size="sm"
+          @click="goToPaymentsIndex"
+        />
+        <div>
+          <h1 class="text-3xl font-bold">
+            {{ travelerName }}
+          </h1>
+          <p class="text-muted mt-0.5">
+            Historial de pagos
+          </p>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="flex flex-wrap gap-3">
+        <USelect
+          v-model="travelFilter"
+          :items="travelOptions"
+          value-key="value"
+          label-key="label"
+          class="w-52"
+        />
+        <UInput
+          v-model="dateFrom"
+          type="date"
+          class="w-44"
+        />
+        <UInput
+          v-model="dateTo"
+          type="date"
+          class="w-44"
+        />
+        <UButton
+          v-if="travelFilter !== 'all' || dateFrom || dateTo"
+          icon="i-lucide-filter-x"
+          variant="ghost"
+          color="neutral"
+          @click="() => { travelFilter = 'all'; dateFrom = ''; dateTo = ''; }"
+        >
+          Limpiar
+        </UButton>
+      </div>
+
+      <!-- Per-travel sections -->
+      <template v-for="id in travelerTravelIds" :key="id">
+        <template v-if="travelFilter === 'all' || travelFilter === id">
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <h2 class="text-xl font-semibold flex items-center gap-2">
+                <UIcon name="i-lucide-map-pin" class="w-5 h-5 text-primary" />
+                {{ getTravelName(id) }}
+              </h2>
+              <div class="flex items-center gap-2">
+                <UButton
+                  size="sm"
+                  variant="ghost"
+                  color="neutral"
+                  icon="i-lucide-settings"
+                  @click="openConfigModal(id)"
+                >
+                  Configurar cuenta
+                </UButton>
+                <UButton
+                  size="sm"
+                  variant="outline"
+                  icon="i-lucide-credit-card"
+                  @click="goToTravelPayments(id)"
+                >
+                  Ver pagos del viaje
+                </UButton>
+              </div>
+            </div>
+
+            <!-- Summary card -->
+            <PaymentSummaryCard
+              :summary="paymentStore.getTravelerPaymentSummary(travelerId, id)"
+              :traveler-name="travelerName"
+            />
+
+            <!-- Payment history -->
+            <UCard>
+              <template #header>
+                <span class="text-sm font-medium text-muted">Historial de pagos</span>
+              </template>
+              <div
+                v-if="filteredPayments.filter((p: Payment) => p.travelId === id).length === 0"
+                class="text-center py-8 text-muted"
+              >
+                Sin pagos registrados para este viaje
+              </div>
+              <UTable
+                v-else
+                :columns="columns"
+                :data="filteredPayments.filter((p: Payment) => p.travelId === id)"
+              />
+            </UCard>
+          </div>
+        </template>
+      </template>
+
+      <!-- Empty state -->
+      <div v-if="travelerTravelIds.length === 0" class="text-center py-12">
+        <UIcon name="i-lucide-credit-card" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+        <h3 class="text-lg font-medium mb-2">
+          Sin pagos registrados
+        </h3>
+        <p class="text-muted">
+          Este viajero no tiene pagos ni cuentas configuradas
         </p>
       </div>
-    </div>
 
-    <!-- Filters -->
-    <div class="flex flex-wrap gap-3">
-      <USelect
-        v-model="travelFilter"
-        :items="travelOptions"
-        value-key="value"
-        label-key="label"
-        class="w-52"
-      />
-      <UInput
-        v-model="dateFrom"
-        type="date"
-        class="w-44"
-      />
-      <UInput
-        v-model="dateTo"
-        type="date"
-        class="w-44"
-      />
-      <UButton
-        v-if="travelFilter !== 'all' || dateFrom || dateTo"
-        icon="i-lucide-filter-x"
-        variant="ghost"
-        color="neutral"
-        @click="() => { travelFilter = 'all'; dateFrom = ''; dateTo = ''; }"
+      <!-- Account Config Modal -->
+      <UModal
+        v-model:open="isConfigModalOpen"
+        title="Configurar cuenta"
+        :description="editingConfigTravelId ? getTravelName(editingConfigTravelId) : ''"
       >
-        Limpiar
-      </UButton>
-    </div>
-
-    <!-- Per-travel sections -->
-    <template v-for="id in travelerTravelIds" :key="id">
-      <template v-if="travelFilter === 'all' || travelFilter === id">
-        <div class="space-y-3">
-          <div class="flex items-center justify-between">
-            <h2 class="text-xl font-semibold flex items-center gap-2">
-              <UIcon name="i-lucide-map-pin" class="w-5 h-5 text-primary" />
-              {{ getTravelName(id) }}
-            </h2>
-            <div class="flex items-center gap-2">
-              <UButton
-                size="sm"
-                variant="ghost"
-                color="neutral"
-                icon="i-lucide-settings"
-                @click="openConfigModal(id)"
-              >
-                Configurar cuenta
-              </UButton>
-              <UButton
-                size="sm"
-                variant="outline"
-                icon="i-lucide-credit-card"
-                @click="goToTravelPayments(id)"
-              >
-                Ver pagos del viaje
-              </UButton>
-            </div>
-          </div>
-
-          <!-- Summary card -->
-          <PaymentSummaryCard
-            :summary="paymentStore.getTravelerPaymentSummary(travelerId, id)"
-            :traveler-name="travelerName"
+        <template #body>
+          <PaymentAccountConfigForm
+            v-if="editingConfigTravelId"
+            :traveler-id="travelerId"
+            :travel-id="editingConfigTravelId"
+            :precios-publicos="editingConfigPreciosPublicos"
+            :config="editingConfig"
+            @submit="handleConfigSubmit"
+            @cancel="closeConfigModal"
           />
+        </template>
+      </UModal>
 
-          <!-- Payment history -->
-          <UCard>
-            <template #header>
-              <span class="text-sm font-medium text-muted">Historial de pagos</span>
-            </template>
-            <div
-              v-if="filteredPayments.filter((p: Payment) => p.travelId === id).length === 0"
-              class="text-center py-8 text-muted"
-            >
-              Sin pagos registrados para este viaje
-            </div>
-            <UTable
-              v-else
-              :columns="columns"
-              :data="filteredPayments.filter((p: Payment) => p.travelId === id)"
-            />
-          </UCard>
-        </div>
-      </template>
-    </template>
-
-    <!-- Empty state -->
-    <div v-if="travelerTravelIds.length === 0" class="text-center py-12">
-      <UIcon name="i-lucide-credit-card" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-      <h3 class="text-lg font-medium mb-2">
-        Sin pagos registrados
-      </h3>
-      <p class="text-muted">
-        Este viajero no tiene pagos ni cuentas configuradas
-      </p>
+      <!-- Edit Modal -->
+      <UModal v-model:open="isEditModalOpen" title="Editar pago">
+        <template #body>
+          <PaymentForm
+            v-if="editingPayment"
+            :payment="editingPayment"
+            :traveler-id="travelerId"
+            :travel-id="editingPayment.travelId"
+            :max-amount="editMaxAmount"
+            @submit="handleEditSubmit"
+            @cancel="closeEditModal"
+          />
+        </template>
+      </UModal>
     </div>
-
-    <!-- Account Config Modal -->
-    <UModal
-      v-model:open="isConfigModalOpen"
-      title="Configurar cuenta"
-      :description="editingConfigTravelId ? getTravelName(editingConfigTravelId) : ''"
-    >
-      <template #body>
-        <PaymentAccountConfigForm
-          v-if="editingConfigTravelId"
-          :traveler-id="travelerId"
-          :travel-id="editingConfigTravelId"
-          :precios-publicos="editingConfigPreciosPublicos"
-          :config="editingConfig"
-          @submit="handleConfigSubmit"
-          @cancel="closeConfigModal"
-        />
-      </template>
-    </UModal>
-
-    <!-- Edit Modal -->
-    <UModal v-model:open="isEditModalOpen" title="Editar pago">
-      <template #body>
-        <PaymentForm
-          v-if="editingPayment"
-          :payment="editingPayment"
-          :traveler-id="travelerId"
-          :travel-id="editingPayment.travelId"
-          :max-amount="editMaxAmount"
-          @submit="handleEditSubmit"
-          @cancel="closeEditModal"
-        />
-      </template>
-    </UModal>
-  </div>
+  </LoadState>
 </template>
