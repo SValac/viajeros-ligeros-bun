@@ -1,7 +1,8 @@
 # Fase 4 — Cotizaciones por viaje
 
-**Estado:** Partida en dos PRs. **4a** completa en la rama `feature/on-demand-loading-phase-4a`
-(desde `main` 455042b), verificada en local. **4b** pendiente.
+**Estado:** Partida en dos PRs, ambas completas y verificadas en local. **4a** en la rama
+`feature/on-demand-loading-phase-4a` (desde `main` 455042b); **4b** en
+`feature/on-demand-loading-phase-4b` (desde la 4a, fddce4b). Falta abrir los PRs.
 **Dependencia:** Fase 1 (el detalle de viaje ya está en caché); puede ir en paralelo con 2-3
 **Migración:** No
 
@@ -47,12 +48,77 @@ calendario. Todo lo demás ya llamaba `fetchByTravel` (las pestañas de la cotiz
 
 ---
 
-## 4b — Cotización en Colada y sin puentes al viaje (pendiente)
+## 4b — Cotización en Colada y sin puentes al viaje
 
-Lo que queda de los pasos de abajo: la query de la cotización por viaje en lugar de
-`travelFetchCache`, las escrituras invalidan, `getAsientosVendibles` y
-`getRoomCountsByQuotation` dejan de leer la caché del viaje (reciben el dato), `_deleteRooms`
-invalida directo, y estados de carga/error en las pantallas de la cotización.
+### Decisión: Colada decide cuándo pedir, el store guarda la copia
+
+`quotationByTravelQuery(travelId)` envuelve `repository.fetchByTravel` y, cada vez que pide,
+**copia el resultado al store** (`hydrateTravel`). Los ~45 getters y ~30 acciones de escritura
+siguen trabajando sobre esa copia, así que las ~25 pantallas no cambiaron cómo leen.
+
+Se descartó que todo leyera directo de la query (como viajeros en la Fase 3): los getters y
+las validaciones de las escrituras buscan por id de proveedor, pago, hospedaje o autobús, sin
+saber el viaje, y habría que reescribir el store completo y todas las pantallas que lo usan.
+Lo que se buscaba en esta fase sí se consigue: no hay caché a mano, las peticiones iguales
+se juntan, la cotización se vuelve a pedir al regresar a la pestaña del navegador, y después
+de cada escritura.
+
+- **Solo la petición vigente escribe en el store:** una invalidación aborta la petición en
+  vuelo (`signal.aborted`); su resultado podría ser de antes de la escritura.
+- **Las escrituras invalidan en el `finally`:** también cuando la escritura entró a la base
+  pero algo posterior falló (por ejemplo, recalcular el precio por asiento). La query vuelve a
+  pedir la cotización y el store queda igual que el servidor.
+- **El store y la caché viven lo mismo:** el logout recarga la página. Si un día deja de
+  hacerlo, hay que vaciar los dos juntos.
+
+### Avance
+
+- [x] 1. `quotationKeys` + `quotationByTravelQuery`; `fetchByTravel` pasa por la caché
+  (`refresh`; `force` = `fetch`); fuera `travelFetchCache`/`travelFetchInFlight`. Las 32
+  escrituras invalidan `['quotations']`; alta/baja de viajeros y habitaciones del viaje también
+  (la base recalcula lo que se le debe a cada servicio por persona y el costo de cada hotel).
+  `_deleteRooms` invalida el detalle del viaje directo, sin pasar por el store de viajes (404b839)
+- [x] 2. `getAsientosVendibles` y los getters que dependen de él reciben `coordinatorCount`;
+  las pantallas lo leen de `travelDetailQuery` (`useTravelCoordinatorCount`). Fuera
+  `getRoomCountsByQuotation`: hospedaje cuenta las habitaciones del detalle del viaje. El store
+  de cotizaciones ya no lee la caché del viaje (58e3fc4)
+- [x] 3. Las pantallas montan la query con `useQuery` en lugar de llamar `fetchByTravel` al
+  montar. Spinner y "No se pudo cargar la cotización" + Reintentar donde la falta de cotización
+  mentiría (la cotización, Autobuses, Habitaciones y Servicios opcionales del viaje).
+  `/quotations/[id]` muestra error + Reintentar si falla el viaje (antes se quedaba girando).
+  `/payments/traveler/[id]` sigue cargando una cotización por viaje con `fetchByTravel` (dbfff9f)
+
+### Hallazgos
+
+- **Un error en un refetch no tapa la pantalla:** los estados de error se muestran solo si nunca
+  hubo datos (`status === 'error' && data === undefined`). Si falla el refetch al regresar a la
+  pestaña, se queda lo que ya se veía.
+- **Un cambio externo no recalcula el precio por asiento:** si otro usuario cambia un gasto, aquí
+  se ve el gasto nuevo, pero el `seat_price` guardado solo cambia con la siguiente escritura de
+  la cotización (igual que antes; el precio lo calcula el cliente).
+- **`refreshProviderPayableCosts` al abrir la cotización y Servicios opcionales ya no hace falta:**
+  la query trae `payable_cost`, y las altas/bajas de viajeros la invalidan.
+
+### Verificación (2026-10-12, local, playwright-cli, viaje de prueba `ff000000-…-0001`)
+
+- [x] Abrir la cotización: una petición de `quotations?travel_id=eq.…` (más sus tablas hijas);
+  resumen con "43 asientos vendibles" (44 − la coordinadora).
+- [x] Cotización en 500 → "No se pudo cargar la cotización"; Reintentar la recupera. Lo mismo en
+  Autobuses, Habitaciones y Servicios opcionales del viaje (sin estados vacíos falsos).
+- [x] Gasto cambiado por SQL (como otro usuario): la pestaña sigue con el valor en caché; al
+  simular el regreso a la pestaña (`visibilitychange`, pasados los 30 s de `staleTime`) muestra
+  el nuevo.
+- [x] Marcar un proveedor sin confirmar y de nuevo confirmado: PATCH y luego se vuelve a pedir la
+  cotización; la tabla y SQL coinciden.
+- [x] Hospedaje: 20 habitaciones en el viaje (= SQL). Autobuses: costo por persona 2,200
+  (44,000 ÷ 20). Resumen del viaje: 43 vendibles. Habitaciones 20/3/1. Servicios opcionales con
+  "43 asientos vendibles". Pagos del viaje y del viajero con su precio público. Calendario
+  "3 de 43 lugares".
+- [x] Guardar parámetros con un gasto en "total": `seat_price` 2962 (43 vendibles).
+- Datos de prueba restaurados (`seat_price` 1524, gasto 2000 en "minimum", proveedor confirmado).
+- [ ] Sin probar en el navegador: borrar un hotel con habitaciones vacías (`_deleteRooms`) y el
+  aviso de "Precio por asiento sin recalcular" al cambiar coordinadores en la edición del viaje.
+  Los dos cambios son de una línea; quedan para la verificación de la Fase 6.
 
 ---
 
@@ -116,6 +182,9 @@ store de viajes.
 5. Precios públicos usados en `/payments` (`cotizacion-precio-publico-section`): confirmar
    que invalidar la cotización también refresca lo que depende de ella en pagos.
 6. Quitar `cotizacionStore.fetchAll()` del plugin. **(Hecho en la 4a)**
+
+Los pasos 1-5 quedaron en la 4b (arriba). El paso 2 no hizo falta: toda pantalla que lee por
+`quotationId` está dentro de una que ya cargó la cotización de su viaje.
 
 Por tamaño, esta fase puede partirse en 4a (lecturas + caché) y 4b (escrituras +
 desacople) si al empezar se ve muy grande.
