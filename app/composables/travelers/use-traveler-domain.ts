@@ -136,3 +136,13 @@ export function toRoomAssignmentErrorMessage(error: unknown): string {
   }
   return 'Error al asignar la habitación';
 }
+
+/**
+ * Keeps only the paying travelers, dropping the travel's coordinators. Use it for payments,
+ * groups and counts; seats and rooms need every occupant, coordinators included.
+ * @param travelers - Every traveler of a travel, as `travelersByTravelQuery` returns them
+ * @returns The travelers whose `kind` is `'traveler'`
+ */
+export function selectPayingTravelers(travelers: Traveler[]): Traveler[] {
+  return travelers.filter(traveler => traveler.kind === 'traveler');
+}

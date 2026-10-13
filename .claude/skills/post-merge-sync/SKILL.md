@@ -1,6 +1,6 @@
 ---
 name: post-merge-sync
-description: Close out a PR after the user merged it into main in this repo — pull main, merge main into qa and stage and push them, check migrations reached every database, check Vercel deploys, and mark the GitHub project #3 item Done. Use when the user says a PR was merged ("ya mergeé", "ya se mergeó el PR", "merged #NN"). Optional argument is the PR number.
+description: Close out a PR after the user merged it into main in this repo — pull main, merge main into qa and stage and push them, check migrations reached every database, check Vercel deploys, mark the GitHub project #3 item Done, and save the PR to engram. Use when the user says a PR was merged ("ya mergeé", "ya se mergeó el PR", "merged #NN"). Optional argument is the PR number.
 ---
 
 # Post-merge sync
@@ -85,7 +85,18 @@ gh project item-edit --project-id PVT_kwHOAEdRCM4Bmbm0 --id <item-id> \
 
 Status option IDs: Backlog `f75ad846`, Ready `61e4505c`, In progress `47fc9ee4`, In review `df73e18b`, Done `98236657`. If no item matches the PR clearly, or several do, ask instead of guessing. If the token lacks the `project` scope, give the user `! gh auth refresh -h github.com -s project`.
 
-## 8. Report
+## 8. Engram history
+
+Engram is the history archive: one entry per merged PR, nothing else during the session. If the `mcp__engram__*` tools are not available, skip this step and say so in the report.
+
+1. Save the PR with `mem_save`:
+   - `title`: `PR #<number>: <title>`
+   - `type`: `bugfix` for a fix, `decision` otherwise
+   - `topic_key`: `pr/<number>` (re-running the skill updates the same entry instead of duplicating it)
+   - `content`: **What** shipped, **Why** (the problem or request), **Where** (main files, migrations and the environments they reached), **Learned** (decisions taken during the PR, gotchas, follow-ups and their project #3 item). Take it from the PR body, its commits and the feature's file memory. Use repo-relative paths.
+2. If the feature has a file memory that only tracked its progress, it is finished now: archive it (`engram save "Archived: <title>" "<file body>" --project viajeros-ligeros-bun`), delete the file and its `MEMORY.md` line. Keep anything that is still a rule, gotcha or open contract in file memory.
+
+## 9. Report
 
 Short summary for the user:
 
@@ -94,4 +105,5 @@ Short summary for the user:
 - Migrations: which environments have them, or "no migrations".
 - Vercel: main/qa/stage status.
 - Project #3 item moved to Done (or why not).
+- Engram: observation saved (id), file memory archived (or why not).
 - Anything left for the user (a `! bun run db:push:prod` line, a failed deploy, a doc to move).
