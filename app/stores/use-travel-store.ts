@@ -3,6 +3,7 @@ import type { Travel, TravelAccommodation, TravelBus, TravelFormData, TravelStat
 import { toTravelSaveErrorMessage } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 import { useTravelRepository } from '~/composables/travels/use-travel-repository';
+import { quotationKeys } from '~/queries/quotations';
 import { travelerKeys } from '~/queries/travelers';
 import { travelKeys } from '~/queries/travels';
 
@@ -242,12 +243,13 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
   }
 
   /**
-   * Refreshes a travel's detail after a write to `travel_accommodations` (the room
-   * actions above, or the quotation store through its own repository).
+   * Refreshes a travel's detail after a write to `travel_accommodations` by the room
+   * actions above, and its quotation: the database recomputes each hotel's cost from the rooms.
    * @param travelId - UUID of the travel
    */
   function updateLocalAccommodations(travelId: string): void {
     queryCache.invalidateQueries({ key: travelKeys.detail(travelId), exact: true });
+    queryCache.invalidateQueries({ key: quotationKeys.byTravel(travelId) });
   }
 
   return {
@@ -263,6 +265,5 @@ export const useTravelsStore = defineStore('useTravelsStore', () => {
     updateTravelAccommodation,
     addTravelRooms,
     deleteTravelRoom,
-    updateLocalAccommodations,
   };
 });

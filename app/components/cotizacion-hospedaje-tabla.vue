@@ -6,7 +6,8 @@ import { z } from 'zod';
 
 import type { AccommodationPaymentStatus, QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
 
-import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -22,6 +23,11 @@ const cotizacionStore = useCotizacionStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
+
+// Rooms the travel holds per hotel room type: they're added on the travel's rooms page.
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId)?.travelId);
+const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
+const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
 
 // Hospedajes de la cotización
 const hospedajes = computed(() => {
@@ -60,15 +66,13 @@ const roomCountsEdit = computed(() => {
   const hospedaje = editingHospedaje.value;
   if (!hospedaje)
     return new Map<string, number>();
-  const counts = cotizacionStore.getRoomCountsByQuotation(props.quotationId);
-  return new Map(tiposHabitacionEdit.value.map(t => [t.id, counts.get(roomTypeKey(hospedaje.providerId, t.id)) ?? 0]));
+  return new Map(tiposHabitacionEdit.value.map(t => [t.id, roomCounts.value.get(roomTypeKey(hospedaje.providerId, t.id)) ?? 0]));
 });
 
 // Rooms the travel holds in a quoted hotel (only its quoted types count toward the cost)
 function getHabitacionesViaje(accommodation: QuotationAccommodation): number {
-  const counts = cotizacionStore.getRoomCountsByQuotation(props.quotationId);
   return accommodation.details.reduce(
-    (sum, d) => sum + (counts.get(roomTypeKey(accommodation.providerId, d.roomTypeId)) ?? 0),
+    (sum, d) => sum + (roomCounts.value.get(roomTypeKey(accommodation.providerId, d.roomTypeId)) ?? 0),
     0,
   );
 }

@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { CostSplitType, ProviderCostType, QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
 import { calculateProviderTotalCost } from '~/composables/quotation/use-quotation-domain';
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -20,6 +21,8 @@ const emit = defineEmits<{
 }>();
 
 const cotizacionStore = useCotizacionStore();
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(travelId);
 
 // Sugerencias de siempre; se suman las que la agencia ya usó y el usuario puede escribir otra.
 const CATEGORIAS_BASE = ['Publicidad', 'Viáticos', 'Comisiones', 'Box lunch', 'Otro'];
@@ -93,7 +96,7 @@ function onCreateCategoria(value: string) {
 const descriptionInput = useSanitizedModel(() => state.description ?? '', v => state.description = v, sanitizeText);
 
 // Entre cuántas personas se reparte el gasto ("Dividir entre").
-const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotationId, state.splitType));
+const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotationId, state.splitType, coordinatorCount.value));
 
 // Las personas siguen al divisor mientras el usuario no las cambie a mano (en un gasto
 // nuevo, o uno guardado con las personas del divisor de entonces).

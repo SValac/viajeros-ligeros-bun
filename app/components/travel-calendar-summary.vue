@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatDate } from '~/utils/format-date';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
@@ -27,18 +28,14 @@ const coordinatorNames = computed(() =>
 
 const travelerCount = computed (() => travel.value?.travelerCount ?? 0);
 
-// The panel stays mounted when another travel is picked: only `travelId` changes, so a
-// `watch` (not `onMounted`) loads each travel's quotation. Already loaded = no request.
-watch(() => props.travelId, async (id) => {
-  if (!id)
-    return;
-  await cotizacionStore.fetchByTravel(id);
-}, { immediate: true });
+// The sellable seats come from the quotation. The getter follows `props.travelId`, so
+// picking another travel loads its quotation (already cached = no request).
+useQuery(() => quotationByTravelQuery(props.travelId));
 
 // Lugares a la venta según la cotización; 0 si aún no hay cotización o autobuses
 const sellableSeats = computed(() => {
   const cotizacion = cotizacionStore.getCotizacionByTravel(props.travelId);
-  return cotizacion ? cotizacionStore.getAsientosVendibles(cotizacion.id) : 0;
+  return cotizacion ? cotizacionStore.getAsientosVendibles(cotizacion.id, travel.value?.coordinatorIds.length ?? 0) : 0;
 });
 
 type Detail = { icon: string; label: string; value: string };

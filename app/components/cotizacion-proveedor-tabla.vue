@@ -2,6 +2,7 @@
 import type { ProviderPaymentStatus, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -50,6 +51,7 @@ const proveedorCortesia = shallowRef<QuotationProvider | null>(null);
 
 // El viaje de la cotización, para enlazar a su pestaña de servicios por persona.
 const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(travelId);
 
 // Filter options
 const estadoPagoOptions = [
@@ -98,7 +100,7 @@ function isProviderInactive(providerId: string): boolean {
 
 // Costo con el autobús lleno: en un servicio por persona, costo × asientos vendibles.
 function getQuotedCost(proveedor: QuotationProvider): number {
-  return calculateProviderQuotedCost(proveedor, cotizacionStore.getAsientosVendibles(proveedor.quotationId));
+  return calculateProviderQuotedCost(proveedor, cotizacionStore.getAsientosVendibles(proveedor.quotationId, coordinatorCount.value));
 }
 
 // Cuántos viajeros cuentan para el pago de un servicio por persona.
@@ -426,7 +428,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
                 v-if="isPerPersonProvider(proveedor)"
                 class="text-xs text-muted whitespace-nowrap"
               >
-                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ cotizacionStore.getAsientosVendibles(proveedor.quotationId) }} asientos
+                {{ formatCurrency(proveedor.unitCost ?? 0) }} × {{ cotizacionStore.getAsientosVendibles(proveedor.quotationId, coordinatorCount) }} asientos
               </p>
               <button
                 v-if="isPerPersonProvider(proveedor) && cotizacionStore.getAjustesByProveedor(proveedor.id).length > 0"
@@ -454,7 +456,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
 
             <!-- Costo/persona -->
             <td class="py-3 pr-4">
-              {{ formatCurrency(cotizacionStore.getCostoPerPersonaProveedor(proveedor.id)) }}
+              {{ formatCurrency(cotizacionStore.getCostoPerPersonaProveedor(proveedor.id, coordinatorCount)) }}
             </td>
 
             <!-- Pagado -->
