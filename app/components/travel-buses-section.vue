@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
+import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeName } from '~/utils/form-validation';
@@ -31,11 +32,9 @@ const operatorDraft = reactive<Record<string, OperatorDraft>>({});
 const { data: travel } = useQuery(() => travelDetailQuery(travelId));
 // The buses (and their coordinators) live in the quotation; the query copies it to the store
 // and refetches it when the browser tab regains focus, so buses added elsewhere show up.
-const {
-  data: quotationData,
-  status: quotationStatus,
-  refetch: refetchQuotation,
-} = useQuery(() => quotationByTravelQuery(travelId));
+const quotationQuery = useQuery(() => quotationByTravelQuery(travelId));
+const { refetch: refetchQuotation } = quotationQuery;
+const quotationLoad = useQueryLoadState(quotationQuery);
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId));
 const buses = computed(() => {
   if (!cotizacion.value)
@@ -185,120 +184,54 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
 <template>
   <div>
     <!-- Until the quotation loads (or if it fails), "no buses" would be a lie -->
-    <div v-if="quotationStatus === 'pending' && quotationData === undefined" class="flex justify-center py-12">
-      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-    </div>
-    <div
-      v-else-if="quotationStatus === 'error' && quotationData === undefined"
-      class="flex flex-col items-center justify-center gap-4 py-12"
+    <LoadState
+      v-bind="quotationLoad"
+      label="la cotización"
+      @retry="refetchQuotation()"
     >
-      <p class="text-muted">
-        No se pudo cargar la cotización
-      </p>
-      <UButton
-        label="Reintentar"
-        icon="i-lucide-refresh-cw"
-        @click="refetchQuotation()"
-      />
-    </div>
-
-    <template v-else-if="cotizacion && buses.length > 0">
-      <div class="space-y-3">
-        <UCard
-          v-for="bus in buses"
-          :key="bus.id"
-        >
-          <template #header>
-            <div class="flex justify-between items-center gap-4">
-              <div class="flex items-center gap-2">
-                <UIcon name="i-lucide-bus" class="w-4 h-4 text-muted" />
-                <span class="font-medium">{{ getProviderName(bus.providerId) }}</span>
-                <span v-if="bus.unitNumber" class="text-sm text-muted">· Unidad {{ bus.unitNumber }}</span>
-              </div>
-              <div class="flex items-center gap-2 shrink-0">
-                <div class="flex items-center gap-1 text-sm text-muted">
-                  <UIcon name="i-lucide-users" class="w-3.5 h-3.5" />
-                  <span>{{ bus.capacity }}</span>
+      <template v-if="cotizacion && buses.length > 0">
+        <div class="space-y-3">
+          <UCard
+            v-for="bus in buses"
+            :key="bus.id"
+          >
+            <template #header>
+              <div class="flex justify-between items-center gap-4">
+                <div class="flex items-center gap-2">
+                  <UIcon name="i-lucide-bus" class="w-4 h-4 text-muted" />
+                  <span class="font-medium">{{ getProviderName(bus.providerId) }}</span>
+                  <span v-if="bus.unitNumber" class="text-sm text-muted">· Unidad {{ bus.unitNumber }}</span>
                 </div>
-                <UBadge
-                  :label="getEstadoLabel(bus.status)"
-                  :color="getEstadoColor(bus.status)"
-                  variant="subtle"
-                />
+                <div class="flex items-center gap-2 shrink-0">
+                  <div class="flex items-center gap-1 text-sm text-muted">
+                    <UIcon name="i-lucide-users" class="w-3.5 h-3.5" />
+                    <span>{{ bus.capacity }}</span>
+                  </div>
+                  <UBadge
+                    :label="getEstadoLabel(bus.status)"
+                    :color="getEstadoColor(bus.status)"
+                    variant="subtle"
+                  />
+                </div>
               </div>
-            </div>
-          </template>
+            </template>
 
-          <!-- Coordinadores (modo editable) -->
-          <div v-if="editable">
-            <div class="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
-              Coordinadores (máx. 2)
-            </div>
-            <USelectMenu
-              :model-value="getBusCoordinadorIds(bus.id)"
-              :items="getCoordinadorOptions(bus.id)"
-              value-key="value"
-              multiple
-              placeholder="Seleccionar coordinadores"
-              @update:model-value="(val) => onCoordinadoresChange(bus.id, val)"
-            />
-            <div v-if="getBusCoordinadorIds(bus.id).length > 0" class="flex items-center gap-3 mt-3">
-              <div
-                v-for="cId in getBusCoordinadorIds(bus.id)"
-                :key="cId"
-                class="flex items-center gap-2"
-              >
-                <UAvatar
-                  :alt="getCoordinadorName(cId)"
-                  size="sm"
-                  color="primary"
-                  variant="soft"
-                />
-                <span class="text-sm font-medium">{{ getCoordinadorName(cId) }}</span>
-              </div>
-            </div>
-
-            <!-- Operadores -->
-            <div v-if="operatorDraft[bus.id]" class="mt-4">
+            <!-- Coordinadores (modo editable) -->
+            <div v-if="editable">
               <div class="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
-                Operadores
+                Coordinadores (máx. 2)
               </div>
-              <div class="space-y-2">
-                <div class="grid grid-cols-2 gap-2">
-                  <UInput
-                    v-model="operatorDraft[bus.id]!.operator1Name"
-                    placeholder="Nombre operador 1"
-                  />
-                  <PhoneInput v-model="operatorDraft[bus.id]!.operator1Phone" aria-label="Teléfono operador 1" />
-                </div>
-                <div class="grid grid-cols-2 gap-2">
-                  <UInput
-                    v-model="operatorDraft[bus.id]!.operator2Name"
-                    placeholder="Nombre operador 2 (opcional)"
-                  />
-                  <PhoneInput v-model="operatorDraft[bus.id]!.operator2Phone" aria-label="Teléfono operador 2" />
-                </div>
-                <div class="flex justify-end">
-                  <UButton
-                    size="xs"
-                    icon="i-lucide-save"
-                    label="Guardar operadores"
-                    @click="saveOperators(bus)"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Coordinadores + Operadores (modo lectura) -->
-          <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <div class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
-                Coordinadores
-              </div>
-              <div class="space-y-2">
+              <USelectMenu
+                :model-value="getBusCoordinadorIds(bus.id)"
+                :items="getCoordinadorOptions(bus.id)"
+                value-key="value"
+                multiple
+                placeholder="Seleccionar coordinadores"
+                @update:model-value="(val) => onCoordinadoresChange(bus.id, val)"
+              />
+              <div v-if="getBusCoordinadorIds(bus.id).length > 0" class="flex items-center gap-3 mt-3">
                 <div
-                  v-for="cId in bus.coordinatorIds"
+                  v-for="cId in getBusCoordinadorIds(bus.id)"
                   :key="cId"
                   class="flex items-center gap-2"
                 >
@@ -310,56 +243,99 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
                   />
                   <span class="text-sm font-medium">{{ getCoordinadorName(cId) }}</span>
                 </div>
-                <p v-if="!bus.coordinatorIds || bus.coordinatorIds.length === 0" class="text-sm text-muted italic">
-                  Sin coordinadores asignados
-                </p>
               </div>
-            </div>
-            <div>
-              <div class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
-                Operadores
-              </div>
-              <div class="space-y-1">
-                <div
-                  v-for="op in getOperadores(bus)"
-                  :key="op.nombre"
-                  class="flex items-center gap-3 text-sm"
-                >
-                  <UIcon name="i-lucide-user" class="w-3.5 h-3.5 text-muted shrink-0" />
-                  <span class="font-medium">{{ op.nombre }}</span>
-                  <UIcon name="i-lucide-phone" class="w-3.5 h-3.5 text-muted shrink-0" />
-                  <span class="text-muted">{{ formatPhone(op.telefono) }}</span>
+
+              <!-- Operadores -->
+              <div v-if="operatorDraft[bus.id]" class="mt-4">
+                <div class="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
+                  Operadores
                 </div>
-                <p v-if="getOperadores(bus).length === 0" class="text-sm text-muted italic">
-                  Sin operadores asignados
-                </p>
+                <div class="space-y-2">
+                  <div class="grid grid-cols-2 gap-2">
+                    <UInput
+                      v-model="operatorDraft[bus.id]!.operator1Name"
+                      placeholder="Nombre operador 1"
+                    />
+                    <PhoneInput v-model="operatorDraft[bus.id]!.operator1Phone" aria-label="Teléfono operador 1" />
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <UInput
+                      v-model="operatorDraft[bus.id]!.operator2Name"
+                      placeholder="Nombre operador 2 (opcional)"
+                    />
+                    <PhoneInput v-model="operatorDraft[bus.id]!.operator2Phone" aria-label="Teléfono operador 2" />
+                  </div>
+                  <div class="flex justify-end">
+                    <UButton
+                      size="xs"
+                      icon="i-lucide-save"
+                      label="Guardar operadores"
+                      @click="saveOperators(bus)"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <p v-if="bus.notes || bus.remarks" class="text-sm text-muted mt-2 italic">
-            {{ bus.notes || bus.remarks }}
-          </p>
-        </UCard>
-      </div>
-    </template>
+            <!-- Coordinadores + Operadores (modo lectura) -->
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <div class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+                  Coordinadores
+                </div>
+                <div class="space-y-2">
+                  <div
+                    v-for="cId in bus.coordinatorIds"
+                    :key="cId"
+                    class="flex items-center gap-2"
+                  >
+                    <UAvatar
+                      :alt="getCoordinadorName(cId)"
+                      size="sm"
+                      color="primary"
+                      variant="soft"
+                    />
+                    <span class="text-sm font-medium">{{ getCoordinadorName(cId) }}</span>
+                  </div>
+                  <p v-if="!bus.coordinatorIds || bus.coordinatorIds.length === 0" class="text-sm text-muted italic">
+                    Sin coordinadores asignados
+                  </p>
+                </div>
+              </div>
+              <div>
+                <div class="text-xs font-medium text-muted uppercase tracking-wide mb-2">
+                  Operadores
+                </div>
+                <div class="space-y-1">
+                  <div
+                    v-for="op in getOperadores(bus)"
+                    :key="op.nombre"
+                    class="flex items-center gap-3 text-sm"
+                  >
+                    <UIcon name="i-lucide-user" class="w-3.5 h-3.5 text-muted shrink-0" />
+                    <span class="font-medium">{{ op.nombre }}</span>
+                    <UIcon name="i-lucide-phone" class="w-3.5 h-3.5 text-muted shrink-0" />
+                    <span class="text-muted">{{ formatPhone(op.telefono) }}</span>
+                  </div>
+                  <p v-if="getOperadores(bus).length === 0" class="text-sm text-muted italic">
+                    Sin operadores asignados
+                  </p>
+                </div>
+              </div>
+            </div>
 
-    <div v-else class="p-8 text-center bg-elevated rounded-lg">
-      <UIcon name="i-lucide-bus" class="w-12 h-12 text-muted mx-auto mb-2 block opacity-50" />
-      <p class="text-muted font-medium mb-1">
-        Sin autobuses apartados
-      </p>
-      <p class="text-sm text-muted mb-3">
-        Los autobuses se apartan en la cotización del viaje.
-      </p>
-      <UButton
-        variant="outline"
-        size="sm"
-        label="Ir a la cotización"
-        icon="i-lucide-arrow-right"
-        trailing
-        :to="{ name: 'quotation-buses', params: { id: travelId } }"
+            <p v-if="bus.notes || bus.remarks" class="text-sm text-muted mt-2 italic">
+              {{ bus.notes || bus.remarks }}
+            </p>
+          </UCard>
+        </div>
+      </template>
+
+      <EmptyState
+        v-else
+        section="buses"
+        :actions="[{ label: 'Ir a la cotización', icon: 'i-lucide-arrow-right', trailing: true, color: 'neutral', variant: 'outline', to: { name: 'quotation-buses', params: { id: travelId } } }]"
       />
-    </div>
+    </LoadState>
   </div>
 </template>

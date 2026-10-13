@@ -11,7 +11,7 @@ const router = useRouter();
 const toast = useToast();
 const travelsStore = useTravelsStore();
 
-const { travelId, travel, status, refetch } = useTravelRoute();
+const { travelId, travel, status, refetch, loadState } = useTravelRoute();
 
 // The edit page renders inside this layout; no "Editar" button while on it
 const isEditing = computed(() => route.name === 'travel-edit');
@@ -108,114 +108,103 @@ async function deleteTravel() {
 </script>
 
 <template>
-  <div v-if="travel" class="h-full overflow-auto">
-    <div class="max-w-6xl mx-auto p-6 space-y-6">
-      <!-- Header -->
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <div class="flex items-start gap-3 min-w-0">
-          <UButton
-            icon="i-lucide-arrow-left"
-            variant="ghost"
-            color="neutral"
-            aria-label="Volver a viajes"
-            :to="{ name: 'travels-dashboard' }"
-          />
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <h1 class="text-2xl font-bold wrap-break-word">
-                {{ travel.label }}
-              </h1>
-              <UBadge
-                :label="getTravelStatusLabel(travel.status)"
-                :color="getTravelStatusColor(travel.status)"
-                variant="subtle"
-              />
+  <LoadState
+    v-bind="loadState"
+    label="el viaje"
+    fill
+    @retry="refetch()"
+  >
+    <div v-if="travel" class="h-full overflow-auto">
+      <div class="max-w-6xl mx-auto p-6 space-y-6">
+        <!-- Header -->
+        <div class="flex flex-wrap items-start justify-between gap-4">
+          <div class="flex items-start gap-3 min-w-0">
+            <UButton
+              icon="i-lucide-arrow-left"
+              variant="ghost"
+              color="neutral"
+              aria-label="Volver a viajes"
+              :to="{ name: 'travels-dashboard' }"
+            />
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <h1 class="text-2xl font-bold wrap-break-word">
+                  {{ travel.label }}
+                </h1>
+                <UBadge
+                  :label="getTravelStatusLabel(travel.status)"
+                  :color="getTravelStatusColor(travel.status)"
+                  variant="subtle"
+                />
+              </div>
+              <p class="text-muted text-sm">
+                <template v-if="travel.destination">
+                  {{ travel.destination }} ·
+                </template>
+                {{ dateRange }}
+              </p>
             </div>
-            <p class="text-muted text-sm">
-              <template v-if="travel.destination">
-                {{ travel.destination }} ·
-              </template>
-              {{ dateRange }}
-            </p>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <UButton
+              icon="i-lucide-calculator"
+              label="Cotización"
+              variant="outline"
+              color="neutral"
+              :to="{ name: 'quotation-detail', params: { id: travelId } }"
+            />
+            <UButton
+              v-if="!isEditing"
+              icon="i-lucide-pencil"
+              label="Editar"
+              :to="{ name: 'travel-edit', params: { id: travelId } }"
+            />
+            <UDropdownMenu :items="moreActions">
+              <UButton
+                icon="i-lucide-ellipsis-vertical"
+                variant="ghost"
+                color="neutral"
+                aria-label="Más acciones"
+              />
+            </UDropdownMenu>
           </div>
         </div>
 
-        <div class="flex items-center gap-2">
-          <UButton
-            icon="i-lucide-calculator"
-            label="Cotización"
-            variant="outline"
-            color="neutral"
-            :to="{ name: 'quotation-detail', params: { id: travelId } }"
-          />
-          <UButton
-            v-if="!isEditing"
-            icon="i-lucide-pencil"
-            label="Editar"
-            :to="{ name: 'travel-edit', params: { id: travelId } }"
-          />
-          <UDropdownMenu :items="moreActions">
-            <UButton
-              icon="i-lucide-ellipsis-vertical"
-              variant="ghost"
-              color="neutral"
-              aria-label="Más acciones"
-            />
-          </UDropdownMenu>
-        </div>
+        <UNavigationMenu
+          :items="tabs"
+          highlight
+          class="border-b border-default -mx-1 overflow-x-auto"
+          :ui="{ root: '[&>div]:min-w-max' }"
+        />
+
+        <NuxtPage />
       </div>
 
-      <UNavigationMenu
-        :items="tabs"
-        highlight
-        class="border-b border-default -mx-1 overflow-x-auto"
-        :ui="{ root: '[&>div]:min-w-max' }"
-      />
-
-      <NuxtPage />
+      <!-- Modal: eliminar viaje -->
+      <UModal
+        v-model:open="isDeleteModalOpen"
+        title="Eliminar viaje"
+        :description="`¿Eliminar ${travel.label}? Se borran también su cotización, viajeros, pagos, habitaciones y fotos. Esta acción no se puede deshacer.`"
+      >
+        <template #footer>
+          <div class="flex w-full justify-end gap-3">
+            <UButton
+              variant="ghost"
+              color="neutral"
+              label="Cancelar"
+              @click="closeDeleteModal"
+            />
+            <UButton
+              color="error"
+              icon="i-lucide-trash-2"
+              label="Eliminar"
+              :loading="isDeleting"
+              @click="deleteTravel"
+            />
+          </div>
+        </template>
+      </UModal>
     </div>
-
-    <!-- Modal: eliminar viaje -->
-    <UModal
-      v-model:open="isDeleteModalOpen"
-      title="Eliminar viaje"
-      :description="`¿Eliminar ${travel.label}? Se borran también su cotización, viajeros, pagos, habitaciones y fotos. Esta acción no se puede deshacer.`"
-    >
-      <template #footer>
-        <div class="flex w-full justify-end gap-3">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            label="Cancelar"
-            @click="closeDeleteModal"
-          />
-          <UButton
-            color="error"
-            icon="i-lucide-trash-2"
-            label="Eliminar"
-            :loading="isDeleting"
-            @click="deleteTravel"
-          />
-        </div>
-      </template>
-    </UModal>
-  </div>
-
-  <div
-    v-else-if="status === 'error'"
-    class="flex h-full items-center justify-center flex-col gap-4"
-  >
-    <p class="text-muted">
-      No se pudo cargar el viaje
-    </p>
-    <UButton
-      label="Reintentar"
-      icon="i-lucide-refresh-cw"
-      @click="refetch()"
-    />
-  </div>
-
-  <div v-else class="flex h-full items-center justify-center">
-    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-  </div>
+  </LoadState>
 </template>

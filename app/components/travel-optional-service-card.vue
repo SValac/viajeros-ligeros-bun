@@ -215,9 +215,11 @@ function setAll(toman: boolean) {
         </div>
       </div>
 
-      <p v-if="occupants.length === 0" class="text-sm text-muted text-center py-4">
-        Este viaje aún no tiene viajeros.
-      </p>
+      <EmptyState
+        v-if="occupants.length === 0"
+        section="travelers"
+        compact
+      />
 
       <ul
         v-else

@@ -10,7 +10,7 @@ const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.FOOD_SER
 </script>
 
 <template>
-  <CatalogLoadState
+  <LoadState
     :is-loaded="providerStore.isLoaded"
     :load-error="providerStore.loadError"
     label="los proveedores"
@@ -30,5 +30,5 @@ const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.FOOD_SER
         <ProviderDetailCard :provider="provider" />
       </div>
     </div>
-  </CatalogLoadState>
+  </LoadState>
 </template>

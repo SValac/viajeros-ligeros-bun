@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { TravelStatus } from '~/types/travel';
 
+import { useQueryLoadState } from '~/queries/load-state';
 import { travelPaymentTotalsQuery } from '~/queries/payments';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
@@ -25,15 +26,19 @@ const EMPTY_TOTALS: TravelPaymentTotals = { totalExpected: 0, totalCollected: 0,
 
 const page = shallowRef(1);
 
-const { data: list, status: listStatus, refetch: refetchList } = useQuery(() => ({
+const listQuery = useQuery(() => ({
   ...travelListQuery({ statuses: PAYABLE_STATUSES, page: page.value, pageSize: PAGE_SIZE }),
   placeholderData: previousList => previousList,
 }));
+const { data: list, refetch: refetchList } = listQuery;
+const listLoad = useQueryLoadState(listQuery);
 const pageTravelIds = computed(() => (list.value?.items ?? []).map(travel => travel.id).sort());
-const { data: totals, status: totalStatus, refetch: refetchTotals } = useQuery(() => ({
+const totalsQuery = useQuery(() => ({
   ...travelPaymentTotalsQuery(pageTravelIds.value),
   placeholderData: previousPayments => previousPayments,
 }));
+const { data: totals, refetch: refetchTotals } = totalsQuery;
+const totalsLoad = useQueryLoadState(totalsQuery);
 
 const { data: activeList } = useQuery(() => travelListQuery({ statuses: ACTIVE_STATUSES }));
 const activeTravelIds = computed(() => (activeList.value?.items ?? []).map(travel => travel.id).sort());
@@ -44,12 +49,6 @@ const pageRows = computed(() => (list.value?.items ?? []).map(travel => ({
   travelerCount: travel.travelerCount,
   ...(totals.value?.[travel.id] ?? EMPTY_TOTALS),
 })));
-
-// Si falló la lista, los totales están desactivados (sin ids): se disparan solos cuando vuelva
-function retry() {
-  refetchList();
-  refetchTotals();
-}
 
 const globalStats = computed(() => {
   // Todavía no llegó la lista de activos
@@ -237,48 +236,36 @@ const columns: TableColumn<TravelSummaryRow>[] = [
         </h2>
       </template>
 
-      <div
-        v-if="(listStatus === 'pending' && !list) || (totalStatus === 'pending' && !totals)"
-        class="flex justify-center py-12"
+      <LoadState
+        v-bind="listLoad"
+        label="los viajes"
+        @retry="refetchList()"
       >
-        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-      </div>
-      <div
-        v-else-if="listStatus === 'error' || totalStatus === 'error'"
-        class="flex flex-col items-center justify-center gap-4 py-12"
-      >
-        <p class="text-muted">
-          No se pudieron cargar los viajes
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="retry"
-        />
-      </div>
-      <div v-else-if="pageRows.length === 0" class="text-center py-12">
-        <UIcon name="i-lucide-inbox" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-        <h3 class="text-lg font-medium mb-2">
-          No hay viajes con pagos
-        </h3>
-        <p class="text-muted mb-4">
-          Publica un viaje para gestionar sus pagos
-        </p>
-        <UButton icon="i-lucide-map" @click="goToTravelsDashboard">
-          Ir a Viajes
-        </UButton>
-      </div>
-
-      <template v-else>
-        <UTable :columns="columns" :data="pageRows" />
-        <div v-if="list && list.total > PAGE_SIZE" class="flex justify-end border-t border-default pt-4">
-          <UPagination
-            v-model:page="page"
-            :total="list.total"
-            :items-per-page="PAGE_SIZE"
+        <!-- Sin viajes en la página, los totales están desactivados (sin ids) y no van a llegar -->
+        <LoadState
+          v-bind="totalsLoad"
+          :is-loaded="totalsLoad.isLoaded || pageTravelIds.length === 0"
+          label="los pagos"
+          @retry="refetchTotals()"
+        >
+          <EmptyState
+            v-if="pageRows.length === 0"
+            section="payments"
+            :actions="[{ label: 'Ir a Viajes', icon: 'i-lucide-map', onClick: goToTravelsDashboard }]"
           />
-        </div>
-      </template>
+
+          <template v-else>
+            <UTable :columns="columns" :data="pageRows" />
+            <div v-if="list && list.total > PAGE_SIZE" class="flex justify-end border-t border-default pt-4">
+              <UPagination
+                v-model:page="page"
+                :total="list.total"
+                :items-per-page="PAGE_SIZE"
+              />
+            </div>
+          </template>
+        </LoadState>
+      </LoadState>
     </UCard>
   </div>
 </template>
