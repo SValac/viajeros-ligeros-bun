@@ -18,7 +18,7 @@ const isAgregarHospedajeModalOpen = shallowRef(false);
     <QuotationAccommodationSection
       :quotation-id="quotationId"
       :readonly="readonly"
-      @agregar-hospedaje="isAgregarHospedajeModalOpen = true"
+      @add="isAgregarHospedajeModalOpen = true"
     />
 
     <QuotationAccommodationForm

@@ -10,7 +10,7 @@ type Props = {
 };
 
 type Emits = {
-  (e: 'agregarBus'): void;
+  (e: 'add'): void;
 };
 
 const { quotationId, readonly = false } = defineProps<Props>();
@@ -143,7 +143,7 @@ function getBusActions(bus: QuotationBus) {
           icon="i-lucide-plus"
           size="xs"
           label="Agregar Autobús"
-          @click="$emit('agregarBus')"
+          @click="$emit('add')"
         />
       </div>
     </template>
@@ -285,7 +285,7 @@ function getBusActions(bus: QuotationBus) {
     <EmptyState
       v-else
       section="buses"
-      :actions="readonly ? undefined : [{ label: 'Agregar autobús', icon: 'i-lucide-plus', onClick: () => $emit('agregarBus') }]"
+      :actions="readonly ? undefined : [{ label: 'Agregar autobús', icon: 'i-lucide-plus', onClick: () => $emit('add') }]"
     />
   </UCard>
 

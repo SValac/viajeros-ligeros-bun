@@ -603,7 +603,7 @@ function getProveedorActions(proveedor: QuotationProvider) {
       <div class="p-4">
         <QuotationProviderPaymentHistory
           :quotation-provider-id="historialProveedorId"
-          :proveedor-name="historialProveedorNombre"
+          :provider-name="historialProveedorNombre"
         />
       </div>
     </template>

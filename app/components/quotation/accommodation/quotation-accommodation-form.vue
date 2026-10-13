@@ -10,7 +10,7 @@ type Props = {
 
 type Emits = {
   (e: 'update:open', value: boolean): void;
-  (e: 'hospedajeAgregado'): void;
+  (e: 'added'): void;
 };
 
 const props = defineProps<Props>();
@@ -117,7 +117,7 @@ async function handleSubmit() {
   formState.paymentMethod = 'cash';
   formState.details = [];
 
-  emit('hospedajeAgregado');
+  emit('added');
   emit('update:open', false);
 }
 

@@ -17,8 +17,8 @@ type Props = {
 
 type Emits = {
   (e: 'update:open', value: boolean): void;
-  (e: 'busAgregado'): void;
-  (e: 'busActualizado'): void;
+  (e: 'added'): void;
+  (e: 'updated'): void;
 };
 
 const props = defineProps<Props>();
@@ -215,7 +215,7 @@ async function handleSubmit() {
 
   toast.add({ title: 'Autobús agregado', color: 'success' });
   resetForm();
-  emit('busAgregado');
+  emit('added');
   emit('update:open', false);
 }
 
@@ -256,7 +256,7 @@ async function submitEdit(bus: QuotationBus, data: BusSchema) {
   }
 
   toast.add({ title: 'Autobús actualizado', color: 'success' });
-  emit('busActualizado');
+  emit('updated');
   emit('update:open', false);
 }
 

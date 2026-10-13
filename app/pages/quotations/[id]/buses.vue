@@ -21,7 +21,7 @@ const isAgregarBusModalOpen = shallowRef(false);
     <QuotationBusSection
       :quotation-id="quotationId"
       :readonly="readonly"
-      @agregar-bus="isAgregarBusModalOpen = true"
+      @add="isAgregarBusModalOpen = true"
     />
 
     <!-- Operadores y coordinadores: son del viaje, se asignan en su pestaña Autobuses -->
@@ -39,7 +39,7 @@ const isAgregarBusModalOpen = shallowRef(false);
       :open="isAgregarBusModalOpen"
       :quotation-id="quotationId"
       @update:open="(v) => isAgregarBusModalOpen = v"
-      @bus-agregado="isAgregarBusModalOpen = false"
+      @added="isAgregarBusModalOpen = false"
     />
   </div>
 </template>

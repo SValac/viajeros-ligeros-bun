@@ -5,7 +5,7 @@ type Props = {
 };
 
 type Emits = {
-  (e: 'agregarHospedaje'): void;
+  (e: 'add'): void;
 };
 
 defineProps<Props>();
@@ -25,7 +25,7 @@ defineEmits<Emits>();
           icon="i-lucide-plus"
           size="xs"
           label="Agregar Hospedaje"
-          @click="$emit('agregarHospedaje')"
+          @click="$emit('add')"
         />
       </div>
     </template>
