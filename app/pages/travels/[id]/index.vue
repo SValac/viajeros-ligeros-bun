@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { quotationByTravelQuery } from '~/queries/quotations';
 
 definePageMeta({
   name: 'travel-detail',
@@ -11,7 +12,7 @@ const cotizacionStore = useCotizacionStore();
 const { travelId, travel } = useTravelRoute();
 
 // The seat figures live in the quotation (they drive its seat price)
-watch(travelId, id => cotizacionStore.fetchByTravel(id), { immediate: true });
+useQuery(() => quotationByTravelQuery(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 
 const coordinadores = computed(() =>

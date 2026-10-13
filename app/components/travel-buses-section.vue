@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
+import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeName } from '~/utils/form-validation';
 
@@ -28,6 +29,13 @@ type OperatorDraft = {
 const operatorDraft = reactive<Record<string, OperatorDraft>>({});
 
 const { data: travel } = useQuery(() => travelDetailQuery(travelId));
+// The buses (and their coordinators) live in the quotation; the query copies it to the store
+// and refetches it when the browser tab regains focus, so buses added elsewhere show up.
+const {
+  data: quotationData,
+  status: quotationStatus,
+  refetch: refetchQuotation,
+} = useQuery(() => quotationByTravelQuery(travelId));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId));
 const buses = computed(() => {
   if (!cotizacion.value)
@@ -176,7 +184,25 @@ async function onCoordinadoresChange(busId: string, selected: string[]) {
 
 <template>
   <div>
-    <template v-if="cotizacion && buses.length > 0">
+    <!-- Until the quotation loads (or if it fails), "no buses" would be a lie -->
+    <div v-if="quotationStatus === 'pending' && quotationData === undefined" class="flex justify-center py-12">
+      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+    </div>
+    <div
+      v-else-if="quotationStatus === 'error' && quotationData === undefined"
+      class="flex flex-col items-center justify-center gap-4 py-12"
+    >
+      <p class="text-muted">
+        No se pudo cargar la cotización
+      </p>
+      <UButton
+        label="Reintentar"
+        icon="i-lucide-refresh-cw"
+        @click="refetchQuotation()"
+      />
+    </div>
+
+    <template v-else-if="cotizacion && buses.length > 0">
       <div class="space-y-3">
         <UCard
           v-for="bus in buses"

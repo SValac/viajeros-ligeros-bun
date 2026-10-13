@@ -4,6 +4,7 @@ import type { QuotationProvider } from '~/types/quotation';
 
 import { isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 
 definePageMeta({
@@ -21,6 +22,13 @@ const cotizacionStore = useCotizacionStore();
 
 const { travelId, travel } = useTravelRoute();
 
+// Los servicios salen de la cotización. La query la copia al store y la vuelve a pedir tras
+// agregar o borrar viajeros, que cambian lo que se le debe a cada servicio.
+const {
+  data: quotationData,
+  status: quotationStatus,
+  refetch: refetchQuotation,
+} = useQuery(() => quotationByTravelQuery(travelId.value));
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 
 const services = computed<QuotationProvider[]>(() => {
@@ -74,12 +82,9 @@ watch(travelId, async (id) => {
   if (!id)
     return;
   await Promise.all([
-    cotizacionStore.fetchByTravel(id),
     cotizacionStore.fetchProviderOptOuts(id),
     cotizacionStore.fetchTravelerAdjustments(id),
   ]);
-  // Viajeros agregados o borrados desde la última carga cambian lo que se debe.
-  await cotizacionStore.refreshProviderPayableCosts(id);
 }, { immediate: true });
 
 function getProviderName(providerId: string): string {
@@ -117,7 +122,25 @@ async function onChange(travelerIds: string[], toman: boolean) {
   <div>
     <!-- El encabezado y la navegación los pone app/pages/travels/[id].vue -->
     <div class="space-y-6">
-      <UCard v-if="services.length === 0">
+      <!-- Hasta que la cotización cargue (o si falla), "sin servicios" sería mentira -->
+      <div v-if="quotationStatus === 'pending' && quotationData === undefined" class="flex justify-center py-12">
+        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+      </div>
+      <div
+        v-else-if="quotationStatus === 'error' && quotationData === undefined"
+        class="flex flex-col items-center justify-center gap-4 py-12"
+      >
+        <p class="text-muted">
+          No se pudo cargar la cotización
+        </p>
+        <UButton
+          label="Reintentar"
+          icon="i-lucide-refresh-cw"
+          @click="refetchQuotation()"
+        />
+      </div>
+
+      <UCard v-else-if="services.length === 0">
         <div class="text-center py-8 text-muted">
           <UIcon name="i-lucide-ticket-check" class="size-10 mx-auto mb-2 opacity-40" />
           <p>Este viaje no tiene servicios cobrados por persona.</p>
