@@ -248,18 +248,11 @@ const columns: TableColumn<TravelSummaryRow>[] = [
           label="los pagos"
           @retry="refetchTotals()"
         >
-          <div v-if="pageRows.length === 0" class="text-center py-12">
-            <UIcon name="i-lucide-inbox" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-            <h3 class="text-lg font-medium mb-2">
-              No hay viajes con pagos
-            </h3>
-            <p class="text-muted mb-4">
-              Publica un viaje para gestionar sus pagos
-            </p>
-            <UButton icon="i-lucide-map" @click="goToTravelsDashboard">
-              Ir a Viajes
-            </UButton>
-          </div>
+          <EmptyState
+            v-if="pageRows.length === 0"
+            section="payments"
+            :actions="[{ label: 'Ir a Viajes', icon: 'i-lucide-map', onClick: goToTravelsDashboard }]"
+          />
 
           <template v-else>
             <UTable :columns="columns" :data="pageRows" />

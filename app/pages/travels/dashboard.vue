@@ -297,40 +297,17 @@ const columns: TableColumn<TravelSummary>[] = [
         @retry="refetch()"
       >
         <!-- La agencia no tiene ningún viaje -->
-        <div v-if="travels.length === 0 && stats?.total === 0" class="text-center py-12">
-          <UIcon
-            name="i-lucide-inbox"
-            class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
-          />
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No hay viajes aún
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Comienza creando tu primer viaje
-          </p>
-          <UButton
-            icon="i-lucide-plus"
-            @click="navigateToCreate"
-          >
-            Crear Primer Viaje
-          </UButton>
-        </div>
+        <EmptyState
+          v-if="travels.length === 0 && stats?.total === 0"
+          section="travels"
+          :actions="[{ label: 'Crear viaje', icon: 'i-lucide-plus', onClick: navigateToCreate }]"
+        />
         <!-- Hay viajes, pero ninguno con los estatus marcados -->
-        <div v-else-if="travels.length === 0" class="text-center py-12">
-          <UIcon
-            name="i-lucide-search-x"
-            class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4"
-          />
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-4">
-            Ningún viaje con estos estatus
-          </h3>
-          <UButton
-            label="Restablecer filtros"
-            variant="outline"
-            color="neutral"
-            @click="resetStatuses"
-          />
-        </div>
+        <EmptyState
+          v-else-if="travels.length === 0"
+          section="noResults"
+          :actions="[{ label: 'Restablecer filtros', icon: 'i-lucide-filter-x', color: 'neutral', variant: 'outline', onClick: resetStatuses }]"
+        />
         <template v-else>
           <UTable
             :columns="columns"

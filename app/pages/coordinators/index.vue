@@ -188,30 +188,16 @@ const columns: TableColumn<Coordinator>[] = [
         label="los coordinadores"
         @retry="coordinatorStore.refetch()"
       >
-        <div v-if="coordinatorStore.allCoordinators.length === 0" class="text-center py-12">
-          <UIcon name="i-lucide-user-star" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            No hay coordinadores registrados aún
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Comienza agregando tu primer coordinador de viaje
-          </p>
-          <UButton icon="i-lucide-plus" @click="openCreateModal">
-            Agregar Coordinador
-          </UButton>
-        </div>
-        <div v-else-if="coordinators.length === 0" class="text-center py-12">
-          <UIcon name="i-lucide-search-x" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-            Sin resultados
-          </h3>
-          <p class="text-gray-500 dark:text-gray-400 mb-4">
-            Intenta con otros términos de búsqueda
-          </p>
-          <UButton icon="i-lucide-filter-x" @click="clearSearch">
-            Limpiar búsqueda
-          </UButton>
-        </div>
+        <EmptyState
+          v-if="coordinatorStore.allCoordinators.length === 0"
+          section="coordinators"
+          :actions="[{ label: 'Agregar coordinador', icon: 'i-lucide-plus', onClick: openCreateModal }]"
+        />
+        <EmptyState
+          v-else-if="coordinators.length === 0"
+          section="noResults"
+          :actions="[{ label: 'Limpiar búsqueda', icon: 'i-lucide-filter-x', color: 'neutral', variant: 'outline', onClick: clearSearch }]"
+        />
         <UTable
           v-else
           :columns="columns"

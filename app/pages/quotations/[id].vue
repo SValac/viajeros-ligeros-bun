@@ -167,22 +167,12 @@ function handleCotizacionConfirmada() {
           @retry="refetchQuotation()"
         >
           <!-- Sin cotización -->
-          <div v-if="!cotizacion">
-            <UCard class="text-center py-12">
-              <UIcon name="i-lucide-file-plus" class="w-16 h-16 text-muted mx-auto mb-4 block" />
-              <h2 class="text-xl font-semibold mb-2">
-                Sin cotización
-              </h2>
-              <p class="text-muted mb-6">
-                Este viaje aún no tiene una cotización. Crea una para gestionar costos de proveedores.
-              </p>
-              <UButton
-                icon="i-lucide-plus"
-                label="Crear cotización"
-                @click="openCrearModal"
-              />
-            </UCard>
-          </div>
+          <UCard v-if="!cotizacion">
+            <EmptyState
+              section="quotation"
+              :actions="[{ label: 'Crear cotización', icon: 'i-lucide-plus', onClick: openCrearModal }]"
+            />
+          </UCard>
 
           <!-- Con cotización -->
           <template v-else>

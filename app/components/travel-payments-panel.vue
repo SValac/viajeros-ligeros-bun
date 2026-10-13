@@ -415,25 +415,14 @@ watch(travelId, async (id) => {
         label="los viajeros"
         @retry="refetchTravelers()"
       >
-        <div v-if="groupedFilteredTravelers.length === 0" class="text-center py-12">
-          <UIcon name="i-lucide-users" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-          <template v-if="enrolledTravelers.length === 0">
-            <h3 class="text-lg font-medium mb-2">
-              No hay viajeros inscritos
-            </h3>
-            <p class="text-muted">
-              Registra viajeros en este viaje para gestionar sus pagos
-            </p>
-          </template>
-          <template v-else>
-            <h3 class="text-lg font-medium mb-2">
-              Sin resultados para los filtros aplicados
-            </h3>
-            <UButton icon="i-lucide-filter-x" @click="clearStatusFilter">
-              Limpiar filtros
-            </UButton>
-          </template>
-        </div>
+        <template v-if="groupedFilteredTravelers.length === 0">
+          <EmptyState v-if="enrolledTravelers.length === 0" section="travelers" />
+          <EmptyState
+            v-else
+            section="noResults"
+            :actions="[{ label: 'Limpiar filtros', icon: 'i-lucide-filter-x', color: 'neutral', variant: 'outline', onClick: clearStatusFilter }]"
+          />
+        </template>
         <UTable
           v-else
           v-model:expanded="expanded"

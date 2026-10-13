@@ -190,18 +190,11 @@ const columns: TableColumn<TravelSummary>[] = [
 
       <!-- Quotations table -->
       <UCard>
-        <div v-if="travels.length === 0" class="text-center py-12">
-          <UIcon name="i-lucide-inbox" class="w-16 h-16 text-muted mx-auto mb-4" />
-          <h3 class="text-lg font-medium mb-2">
-            No hay viajes registrados
-          </h3>
-          <p class="text-muted mb-4">
-            Primero registra un viaje para crear su cotización
-          </p>
-          <UButton icon="i-lucide-map" @click="goToTravelsDashboard">
-            Ir a Viajes
-          </UButton>
-        </div>
+        <EmptyState
+          v-if="travels.length === 0"
+          section="travels"
+          :actions="[{ label: 'Ir a Viajes', icon: 'i-lucide-map', onClick: goToTravelsDashboard }]"
+        />
 
         <UTable
           v-else

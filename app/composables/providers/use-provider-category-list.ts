@@ -153,7 +153,6 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
   }
 
   const headerCreateButtonLabel = 'Nuevo Proveedor';
-  const emptyStateButtonLabel = 'Agregar Proveedor';
   const modalCreateTitle = 'Nuevo Proveedor';
   const modalEditTitle = 'Editar Proveedor';
   const modalDescription = computed(() =>
@@ -164,8 +163,6 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
     const plural = n !== 1;
     return `${n} proveedor${plural ? 'es' : ''} ${plural ? 'registrados' : 'registrado'}`;
   });
-  const emptyStateTitle = 'No hay proveedores registrados aún';
-  const emptyStateDescription = 'Comienza agregando tu primer proveedor';
 
   return {
     isFormModalOpen,
@@ -186,12 +183,9 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
     handleToggleStatus,
     getRowActions,
     headerCreateButtonLabel,
-    emptyStateButtonLabel,
     modalCreateTitle,
     modalEditTitle,
     modalDescription,
     countText,
-    emptyStateTitle,
-    emptyStateDescription,
   };
 }

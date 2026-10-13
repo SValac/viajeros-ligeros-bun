@@ -357,15 +357,7 @@ watch(travelerTravelIds, (ids) => {
       </template>
 
       <!-- Empty state -->
-      <div v-if="travelerTravelIds.length === 0" class="text-center py-12">
-        <UIcon name="i-lucide-credit-card" class="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
-        <h3 class="text-lg font-medium mb-2">
-          Sin pagos registrados
-        </h3>
-        <p class="text-muted">
-          Este viajero no tiene pagos ni cuentas configuradas
-        </p>
-      </div>
+      <EmptyState v-if="travelerTravelIds.length === 0" section="payments" />
 
       <!-- Account Config Modal -->
       <UModal
