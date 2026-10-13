@@ -4,6 +4,7 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 import { z } from 'zod';
 
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
+import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
@@ -22,13 +23,13 @@ const { travelId, quotation: cotizacion, readonly } = useQuotationRoute();
 // La cotización se copia al store en cada petición; las pestañas leen del store. La query
 // la vuelve a pedir al regresar a la pestaña del navegador y tras cada escritura, así que
 // también trae lo que se le debe a cada servicio opcional (cambia con los viajeros).
-const {
-  data: quotationData,
-  status: quotationStatus,
-  refetch: refetchQuotation,
-} = useQuery(() => quotationByTravelQuery(travelId.value));
+const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
+const { refetch: refetchQuotation } = quotationQuery;
+const quotationLoad = useQueryLoadState(quotationQuery);
 
-const { data: travel, status, refetch: refetchTravel } = useQuery(() => travelDetailQuery(travelId.value));
+const travelQuery = useQuery(() => travelDetailQuery(travelId.value));
+const { data: travel, status, refetch: refetchTravel } = travelQuery;
+const travelLoad = useQueryLoadState(travelQuery);
 
 // Redirect if travel not found.
 // `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
@@ -123,157 +124,135 @@ function handleCotizacionConfirmada() {
 </script>
 
 <template>
-  <div v-if="travel" class="h-full overflow-auto">
-    <div class="max-w-6xl mx-auto p-6 space-y-6">
-      <!-- Header -->
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <UButton
-            icon="i-lucide-arrow-left"
-            variant="ghost"
-            color="neutral"
-            @click="goToQuotations"
-          />
-          <div>
-            <h1 class="text-2xl font-bold">
-              Cotización
-            </h1>
-            <p class="text-muted text-sm">
-              {{ travel.label }}
-            </p>
-          </div>
-        </div>
-        <UButton
-          icon="i-lucide-map"
-          label="Ver viaje"
-          variant="outline"
-          color="neutral"
-          @click="goToTravelDetail"
-        />
-      </div>
-
-      <!-- Hasta que la cotización cargue (o si falla la primera vez), "Sin cotización" sería
-           mentira. Si falla un refetch posterior, se queda lo que ya se tenía. -->
-      <div v-if="quotationStatus === 'pending' && quotationData === undefined" class="flex justify-center py-12">
-        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-      </div>
-      <div
-        v-else-if="quotationStatus === 'error' && quotationData === undefined"
-        class="flex flex-col items-center justify-center gap-4 py-12"
-      >
-        <p class="text-muted">
-          No se pudo cargar la cotización
-        </p>
-        <UButton
-          label="Reintentar"
-          icon="i-lucide-refresh-cw"
-          @click="refetchQuotation()"
-        />
-      </div>
-
-      <!-- Sin cotización -->
-      <div v-else-if="!cotizacion">
-        <UCard class="text-center py-12">
-          <UIcon name="i-lucide-file-plus" class="w-16 h-16 text-muted mx-auto mb-4 block" />
-          <h2 class="text-xl font-semibold mb-2">
-            Sin cotización
-          </h2>
-          <p class="text-muted mb-6">
-            Este viaje aún no tiene una cotización. Crea una para gestionar costos de proveedores.
-          </p>
-          <UButton
-            icon="i-lucide-plus"
-            label="Crear cotización"
-            @click="openCrearModal"
-          />
-        </UCard>
-      </div>
-
-      <!-- Con cotización -->
-      <template v-else>
-        <!-- Estado + confirmar -->
-        <CotizacionHeaderActions
-          :quotation-id="cotizacion.id"
-          :readonly="readonly"
-          @cotizacion-confirmada="handleCotizacionConfirmada"
-        />
-
-        <UNavigationMenu
-          :items="tabs"
-          highlight
-          class="border-b border-default overflow-x-auto"
-          :ui="{ root: '[&>div]:min-w-max' }"
-        />
-
-        <NuxtPage />
-      </template>
-    </div>
-
-    <!-- Modal: crear cotización -->
-    <UModal
-      v-model:open="isCrearModalOpen"
-      title="Crear Cotización"
-      description="Define los parámetros iniciales de la cotización"
-      class="sm:max-w-lg"
-    >
-      <template #body>
-        <UForm
-          :schema="crearSchema"
-          :state="crearState"
-          class="space-y-4"
-          @submit="handleCrearCotizacion"
-        >
-          <UFormField label="Meta mínima de asientos" name="minimumSeatTarget">
-            <UInput
-              v-model.number="crearState.minimumSeatTarget"
-              type="number"
-              placeholder="Ej. 30"
-              class="w-full"
-            />
-          </UFormField>
-
-          <UFormField label="Notas" name="notas">
-            <UTextarea
-              v-model="crearNotesInput"
-              placeholder="Observaciones sobre esta cotización..."
-              :rows="3"
-              class="w-full"
-            />
-          </UFormField>
-
-          <div class="flex justify-end gap-3 pt-2">
+  <LoadState
+    v-bind="travelLoad"
+    label="el viaje"
+    fill
+    @retry="refetchTravel()"
+  >
+    <div v-if="travel" class="h-full overflow-auto">
+      <div class="max-w-6xl mx-auto p-6 space-y-6">
+        <!-- Header -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-3">
             <UButton
-              type="button"
+              icon="i-lucide-arrow-left"
               variant="ghost"
               color="neutral"
-              label="Cancelar"
-              @click="closeCrearModal"
+              @click="goToQuotations"
             />
-            <UButton
-              type="submit"
-              label="Crear Cotización"
-            />
+            <div>
+              <h1 class="text-2xl font-bold">
+                Cotización
+              </h1>
+              <p class="text-muted text-sm">
+                {{ travel.label }}
+              </p>
+            </div>
           </div>
-        </UForm>
-      </template>
-    </UModal>
-  </div>
+          <UButton
+            icon="i-lucide-map"
+            label="Ver viaje"
+            variant="outline"
+            color="neutral"
+            @click="goToTravelDetail"
+          />
+        </div>
 
-  <div
-    v-else-if="status === 'error'"
-    class="flex h-full flex-col items-center justify-center gap-4"
-  >
-    <p class="text-muted">
-      No se pudo cargar el viaje
-    </p>
-    <UButton
-      label="Reintentar"
-      icon="i-lucide-refresh-cw"
-      @click="refetchTravel()"
-    />
-  </div>
+        <!-- Hasta que la cotización cargue (o si falla la primera vez), "Sin cotización" sería
+           mentira. Si falla un refetch posterior, se queda lo que ya se tenía. -->
+        <LoadState
+          v-bind="quotationLoad"
+          label="la cotización"
+          @retry="refetchQuotation()"
+        >
+          <!-- Sin cotización -->
+          <div v-if="!cotizacion">
+            <UCard class="text-center py-12">
+              <UIcon name="i-lucide-file-plus" class="w-16 h-16 text-muted mx-auto mb-4 block" />
+              <h2 class="text-xl font-semibold mb-2">
+                Sin cotización
+              </h2>
+              <p class="text-muted mb-6">
+                Este viaje aún no tiene una cotización. Crea una para gestionar costos de proveedores.
+              </p>
+              <UButton
+                icon="i-lucide-plus"
+                label="Crear cotización"
+                @click="openCrearModal"
+              />
+            </UCard>
+          </div>
 
-  <div v-else class="flex h-full items-center justify-center">
-    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-  </div>
+          <!-- Con cotización -->
+          <template v-else>
+            <!-- Estado + confirmar -->
+            <CotizacionHeaderActions
+              :quotation-id="cotizacion.id"
+              :readonly="readonly"
+              @cotizacion-confirmada="handleCotizacionConfirmada"
+            />
+
+            <UNavigationMenu
+              :items="tabs"
+              highlight
+              class="border-b border-default overflow-x-auto"
+              :ui="{ root: '[&>div]:min-w-max' }"
+            />
+
+            <NuxtPage />
+          </template>
+        </LoadState>
+      </div>
+
+      <!-- Modal: crear cotización -->
+      <UModal
+        v-model:open="isCrearModalOpen"
+        title="Crear Cotización"
+        description="Define los parámetros iniciales de la cotización"
+        class="sm:max-w-lg"
+      >
+        <template #body>
+          <UForm
+            :schema="crearSchema"
+            :state="crearState"
+            class="space-y-4"
+            @submit="handleCrearCotizacion"
+          >
+            <UFormField label="Meta mínima de asientos" name="minimumSeatTarget">
+              <UInput
+                v-model.number="crearState.minimumSeatTarget"
+                type="number"
+                placeholder="Ej. 30"
+                class="w-full"
+              />
+            </UFormField>
+
+            <UFormField label="Notas" name="notas">
+              <UTextarea
+                v-model="crearNotesInput"
+                placeholder="Observaciones sobre esta cotización..."
+                :rows="3"
+                class="w-full"
+              />
+            </UFormField>
+
+            <div class="flex justify-end gap-3 pt-2">
+              <UButton
+                type="button"
+                variant="ghost"
+                color="neutral"
+                label="Cancelar"
+                @click="closeCrearModal"
+              />
+              <UButton
+                type="submit"
+                label="Crear Cotización"
+              />
+            </div>
+          </UForm>
+        </template>
+      </UModal>
+    </div>
+  </LoadState>
 </template>

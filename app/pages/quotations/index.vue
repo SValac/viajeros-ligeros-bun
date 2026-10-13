@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { TravelSummary } from '~/types/travel';
 
+import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
 
 definePageMeta({
@@ -13,7 +14,9 @@ definePageMeta({
 
 const router = useRouter();
 
-const { data, status, refetch } = useQuery(() => travelListQuery({}));
+const travelsQuery = useQuery(() => travelListQuery({}));
+const { data, refetch } = travelsQuery;
+const travelsLoad = useQueryLoadState(travelsQuery);
 
 const travels = computed(() => data.value?.items ?? []);
 
@@ -109,116 +112,103 @@ const columns: TableColumn<TravelSummary>[] = [
 </script>
 
 <template>
-  <div
-    v-if="status === 'success'"
-    class="space-y-6"
+  <LoadState
+    v-bind="travelsLoad"
+    label="los viajes"
+    fill
+    @retry="refetch()"
   >
-    <!-- Header -->
-    <div>
-      <h1 class="text-3xl font-bold">
-        Cotizaciones
-      </h1>
-      <p class="text-muted mt-1">
-        Costos de proveedores, hospedaje, autobuses y precios al público por viaje. Uso interno, no se publica en la web.
-      </p>
-    </div>
-
-    <!-- Stats cards -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Viajes
-            </p>
-            <p class="text-2xl font-bold mt-1">
-              {{ stats.totalTravels }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-map" class="w-10 h-10 text-muted" />
-        </div>
-      </UCard>
-
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Con cotización
-            </p>
-            <p class="text-2xl font-bold text-primary mt-1">
-              {{ stats.withQuotation }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-file-text" class="w-10 h-10 text-primary opacity-60" />
-        </div>
-      </UCard>
-
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Borradores
-            </p>
-            <p class="text-2xl font-bold text-warning mt-1">
-              {{ stats.draft }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-file-pen" class="w-10 h-10 text-warning opacity-60" />
-        </div>
-      </UCard>
-
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Confirmadas
-            </p>
-            <p class="text-2xl font-bold text-success mt-1">
-              {{ stats.confirmed }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-file-check" class="w-10 h-10 text-success opacity-60" />
-        </div>
-      </UCard>
-    </div>
-
-    <!-- Quotations table -->
-    <UCard>
-      <div v-if="travels.length === 0" class="text-center py-12">
-        <UIcon name="i-lucide-inbox" class="w-16 h-16 text-muted mx-auto mb-4" />
-        <h3 class="text-lg font-medium mb-2">
-          No hay viajes registrados
-        </h3>
-        <p class="text-muted mb-4">
-          Primero registra un viaje para crear su cotización
+    <div class="space-y-6">
+      <!-- Header -->
+      <div>
+        <h1 class="text-3xl font-bold">
+          Cotizaciones
+        </h1>
+        <p class="text-muted mt-1">
+          Costos de proveedores, hospedaje, autobuses y precios al público por viaje. Uso interno, no se publica en la web.
         </p>
-        <UButton icon="i-lucide-map" @click="goToTravelsDashboard">
-          Ir a Viajes
-        </UButton>
       </div>
 
-      <UTable
-        v-else
-        :columns="columns"
-        :data="travels"
-      />
-    </UCard>
-  </div>
-  <div
-    v-else-if="status === 'error'"
-    class="flex h-full items-center justify-center flex-col gap-4"
-  >
-    <p class="text-muted">
-      No se pudieron cargar los viajes
-    </p>
-    <UButton
-      label="Reintentar"
-      icon="i-lucide-refresh-cw"
-      @click="refetch()"
-    />
-  </div>
+      <!-- Stats cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <UCard>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted">
+                Viajes
+              </p>
+              <p class="text-2xl font-bold mt-1">
+                {{ stats.totalTravels }}
+              </p>
+            </div>
+            <UIcon name="i-lucide-map" class="w-10 h-10 text-muted" />
+          </div>
+        </UCard>
 
-  <div v-else class="flex h-full items-center justify-center">
-    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-  </div>
+        <UCard>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted">
+                Con cotización
+              </p>
+              <p class="text-2xl font-bold text-primary mt-1">
+                {{ stats.withQuotation }}
+              </p>
+            </div>
+            <UIcon name="i-lucide-file-text" class="w-10 h-10 text-primary opacity-60" />
+          </div>
+        </UCard>
+
+        <UCard>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted">
+                Borradores
+              </p>
+              <p class="text-2xl font-bold text-warning mt-1">
+                {{ stats.draft }}
+              </p>
+            </div>
+            <UIcon name="i-lucide-file-pen" class="w-10 h-10 text-warning opacity-60" />
+          </div>
+        </UCard>
+
+        <UCard>
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-muted">
+                Confirmadas
+              </p>
+              <p class="text-2xl font-bold text-success mt-1">
+                {{ stats.confirmed }}
+              </p>
+            </div>
+            <UIcon name="i-lucide-file-check" class="w-10 h-10 text-success opacity-60" />
+          </div>
+        </UCard>
+      </div>
+
+      <!-- Quotations table -->
+      <UCard>
+        <div v-if="travels.length === 0" class="text-center py-12">
+          <UIcon name="i-lucide-inbox" class="w-16 h-16 text-muted mx-auto mb-4" />
+          <h3 class="text-lg font-medium mb-2">
+            No hay viajes registrados
+          </h3>
+          <p class="text-muted mb-4">
+            Primero registra un viaje para crear su cotización
+          </p>
+          <UButton icon="i-lucide-map" @click="goToTravelsDashboard">
+            Ir a Viajes
+          </UButton>
+        </div>
+
+        <UTable
+          v-else
+          :columns="columns"
+          :data="travels"
+        />
+      </UCard>
+    </div>
+  </LoadState>
 </template>
