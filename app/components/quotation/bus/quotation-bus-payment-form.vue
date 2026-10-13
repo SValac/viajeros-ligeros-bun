@@ -53,7 +53,7 @@ const state = reactive<FormSchema>({
   notes: payment?.notes ?? '',
 });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const conceptInput = useSanitizedModel(() => state.concept ?? '', v => state.concept = v, sanitizeText);
 const notesInput = useSanitizedModel(() => state.notes ?? '', v => state.notes = v, sanitizeText);
 

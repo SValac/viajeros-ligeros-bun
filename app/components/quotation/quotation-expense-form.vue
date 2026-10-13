@@ -24,7 +24,7 @@ const quotationStore = useQuotationStore();
 const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
 const coordinatorCount = useTravelCoordinatorCount(travelId);
 
-// Sugerencias de siempre; se suman las que la agencia ya usó y el usuario puede escribir otra.
+// Usual suggestions; the ones the agency already used are added, and the user can type another.
 const BASE_CATEGORIES = ['Publicidad', 'Viáticos', 'Comisiones', 'Box lunch', 'Otro'];
 
 const costSchema = z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0');
@@ -35,7 +35,7 @@ const baseSchema = z.object({
   splitType: z.enum(['minimum', 'total']),
 });
 
-// Cada tipo de costo valida solo sus campos; los del otro tipo se descartan.
+// Each cost type validates only its own fields; the other type's are discarded.
 const schema = z.discriminatedUnion('costType', [
   baseSchema.extend({
     costType: z.literal('total'),
@@ -95,11 +95,11 @@ function onCreateCategory(value: string) {
 
 const descriptionInput = useSanitizedModel(() => state.description ?? '', v => state.description = v, sanitizeText);
 
-// Entre cuántas personas se reparte el gasto ("Dividir entre").
+// How many people the expense is split among ("Dividir entre").
 const personDivisor = computed(() => quotationStore.getCostDivisor(quotationId, state.splitType, coordinatorCount.value));
 
-// Las personas siguen al divisor mientras el usuario no las cambie a mano (en un gasto
-// nuevo, o uno guardado con las personas del divisor de entonces).
+// People follow the divisor while the user doesn't change them by hand (in a new
+// expense, or one saved with the divisor's people at the time).
 const peopleEdited = shallowRef(expense?.personCount !== undefined && expense.personCount !== personDivisor.value);
 watch(personDivisor, (divisor) => {
   if (!peopleEdited.value)
@@ -121,7 +121,7 @@ const totalPerPerson = computed(() =>
     : 0,
 );
 
-// Al pasar de "por persona" a "total" el total arranca con el calculado.
+// When switching from "per person" to "total", the total starts from the calculated one.
 watch(() => state.costType, (costType) => {
   if (costType === 'total' && totalPerPerson.value > 0)
     state.totalCost = totalPerPerson.value;
@@ -167,7 +167,7 @@ function onSubmit() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Categoría -->
+    <!-- Category -->
     <UFormField
       label="Categoría"
       name="category"
@@ -184,7 +184,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Descripción -->
+    <!-- Description -->
     <UFormField label="Descripción" name="description">
       <UInput
         v-model="descriptionInput"
@@ -193,7 +193,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Tipo de costo -->
+    <!-- Cost type -->
     <UFormField
       label="Tipo de costo"
       name="costType"
@@ -207,7 +207,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Costo total -->
+    <!-- Total cost -->
     <UFormField
       v-if="state.costType === 'total'"
       label="Costo total"
@@ -217,7 +217,7 @@ function onSubmit() {
       <MoneyInput v-model="state.totalCost" />
     </UFormField>
 
-    <!-- Costo por persona × personas -->
+    <!-- Cost per person × people -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <UFormField
         label="Costo por persona"
@@ -241,7 +241,7 @@ function onSubmit() {
       </UFormField>
     </div>
 
-    <!-- Dividir entre -->
+    <!-- Split among -->
     <UFormField
       label="Dividir entre"
       name="splitType"
@@ -263,7 +263,7 @@ function onSubmit() {
       :description="`Total ${formatCurrency(totalCost)}: suma ${formatCurrency(costPerSeat)} al precio de cada asiento.`"
     />
 
-    <!-- Acciones -->
+    <!-- Actions -->
     <div class="flex justify-end gap-3 pt-2">
       <UButton
         type="button"

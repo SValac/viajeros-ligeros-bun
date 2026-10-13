@@ -5,8 +5,8 @@ import { calculateAdjustedUnitCost, getPriceAdjustmentError } from '~/composable
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText } from '~/utils/form-validation';
 
-// Lista editable de ajustes de precio de un servicio por persona (Niño -10%, Adulto mayor
-// -$50...). Solo cambian lo que se le paga al proveedor; el asiento usa el precio base.
+// Editable list of price adjustments of a per-person service (Niño -10%, Adulto mayor
+// -$50...). They only change what the provider is paid; the seat uses the base price.
 
 type Props = {
   unitCost?: number;

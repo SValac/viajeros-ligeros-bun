@@ -11,7 +11,7 @@ import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } fr
 type Props = {
   quotationId: string;
   open: boolean;
-  /** Bus a editar; sin él, el modal agrega uno nuevo */
+  /** Bus to edit; without it, the modal adds a new one */
   bus?: QuotationBus | null;
 };
 
@@ -31,7 +31,7 @@ const toast = useToast();
 
 const isEditing = computed(() => !!props.bus);
 
-// Agencias de autobús disponibles
+// Available bus agencies
 const availableAgencies = computed(() =>
   providerStore.getProvidersByCategory('bus_agencies').filter(p => p.active),
 );
@@ -84,23 +84,23 @@ const formState = reactive<Partial<BusSchema>>({
   notes: '',
 });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const unitNumberInput = useSanitizedModel(() => formState.unitNumber ?? '', v => formState.unitNumber = v, sanitizeBusinessName);
 const remarksInput = useSanitizedModel(() => formState.remarks ?? '', v => formState.remarks = v, sanitizeText);
 
 const selectedBus = ref<Bus | null>(null);
-// Al editar, la unidad guardada no viene del catálogo: se conserva hasta que el usuario elija otra
+// When editing, the saved unit doesn't come from the catalog: it's kept until the user picks another
 const keepsCurrentUnit = shallowRef(false);
 const hasUnit = computed(() => !!selectedBus.value || keepsCurrentUnit.value);
 
-// Unidades del catálogo para la agencia seleccionada
+// Catalog units for the selected agency
 const agencyUnits = computed<Bus[]>(() => {
   if (!formState.providerId)
     return [];
   return busStore.getBusesByProvider(formState.providerId);
 });
 
-// Asiento más alto ocupado en el bus del viaje: al editar, no se puede cambiar a una unidad más chica
+// Highest occupied seat on the travel's bus: when editing, it can't switch to a smaller unit
 const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const { data: travelerData, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
@@ -115,10 +115,10 @@ const highestOccupiedSeat = computed(() => {
     .reduce((max, t) => Math.max(max, t.seat ?? 0), 0);
 });
 
-// Entre cuántas personas se reparte el costo: asientos mínimos objetivo o asientos vendibles
+// How many people the cost is split among: minimum target seats or sellable seats
 const personDivisor = computed(() => quotationStore.getCostDivisor(props.quotationId, formState.splitType ?? 'minimum', travel.value?.coordinatorIds.length ?? 0));
 
-// Llenar el formulario al abrir (agregar: vacío; editar: datos del bus)
+// Fill the form when it opens (add: empty; edit: the bus data)
 watch(() => props.open, (open) => {
   if (!open)
     return;
@@ -138,7 +138,7 @@ watch(() => props.open, (open) => {
   }
 }, { immediate: true });
 
-// Al cambiar agencia (solo por el usuario), limpiar selección de unidad
+// When the agency changes (only by the user), clear the unit selection
 function onAgencyChange(providerId: string) {
   if (providerId === formState.providerId)
     return;
@@ -276,7 +276,7 @@ function handleCancel() {
   >
     <template #body>
       <form class="space-y-5" @submit.prevent="handleSubmit">
-        <!-- Agencia -->
+        <!-- Agency -->
         <UFormField label="Agencia de Autobús" required>
           <UAlert
             v-if="availableAgencies.length === 0"
@@ -294,12 +294,12 @@ function handleCancel() {
           />
         </UFormField>
 
-        <!-- Unidades de la agencia -->
+        <!-- Agency units -->
         <template v-if="formState.providerId">
           <div class="space-y-3">
             <label class="text-sm font-medium">Unidad <span class="text-error">*</span></label>
 
-            <!-- Unidad seleccionada (del catálogo o la guardada al editar) -->
+            <!-- Selected unit (from the catalog or the one saved when editing) -->
             <div
               v-if="hasUnit"
               class="border border-primary rounded-lg p-4 bg-primary/5"
@@ -324,7 +324,7 @@ function handleCancel() {
               </div>
             </div>
 
-            <!-- Sin unidades -->
+            <!-- No units -->
             <UAlert
               v-else-if="agencyUnits.length === 0"
               icon="i-lucide-bus-front"
@@ -348,7 +348,7 @@ function handleCancel() {
               </template>
             </UAlert>
 
-            <!-- Selector de unidades -->
+            <!-- Unit selector -->
             <div v-else class="border rounded-lg divide-y max-h-52 overflow-y-auto">
               <button
                 v-for="unit in agencyUnits"
@@ -375,7 +375,7 @@ function handleCancel() {
           </div>
         </template>
 
-        <!-- Campos visibles después de seleccionar unidad -->
+        <!-- Fields shown after picking a unit -->
         <template v-if="hasUnit">
           <USeparator label="Identificación" />
 
@@ -383,7 +383,7 @@ function handleCancel() {
             <UInput v-model="unitNumberInput" placeholder="Ej. BUS-001 o Marca Modelo" />
           </UFormField>
 
-          <!-- La capacidad no se edita: viene de la unidad del catálogo (se ve en la tarjeta de arriba) -->
+          <!-- Capacity isn't editable: it comes from the catalog unit (shown in the card above) -->
           <UFormField label="Estado">
             <USelect v-model="formState.status" :items="statusOptions" />
           </UFormField>
@@ -419,7 +419,7 @@ function handleCancel() {
           </UFormField>
         </template>
 
-        <!-- Acciones -->
+        <!-- Actions -->
         <div class="flex justify-end gap-3 pt-2">
           <UButton
             type="button"

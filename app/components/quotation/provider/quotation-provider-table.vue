@@ -49,7 +49,7 @@ const invalidAdjustments = computed(() => adjustmentsDraft.value.some(a => getPr
 const isCourtesyOpen = shallowRef(false);
 const courtesyProvider = shallowRef<QuotationProvider | null>(null);
 
-// El viaje de la cotización, para enlazar a su pestaña de servicios por persona.
+// The quotation's travel, to link to its per-person services tab.
 const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
 const coordinatorCount = useTravelCoordinatorCount(travelId);
 
@@ -98,12 +98,12 @@ function isProviderInactive(providerId: string): boolean {
   return provider ? !provider.active : false;
 }
 
-// Costo con el autobús lleno: en un servicio por persona, costo × asientos vendibles.
+// Cost with a full bus: for a per-person service, cost × sellable seats.
 function getQuotedCost(provider: QuotationProvider): number {
   return calculateProviderQuotedCost(provider, quotationStore.getSellableSeats(provider.quotationId, coordinatorCount.value));
 }
 
-// Cuántos viajeros cuentan para el pago de un servicio por persona.
+// How many travelers count for the payment of a per-person service.
 function getTakersCount(provider: QuotationProvider): number {
   return provider.unitCost ? Math.round(provider.payableCost / provider.unitCost) : 0;
 }
@@ -203,7 +203,7 @@ async function handleProviderSubmit(data: QuotationProviderFormData, adjustments
       toast.add({ title: 'Proveedor agregado', color: 'success' });
     }
   }
-  // Los ajustes van aparte; en costo total se borran los que hubiera.
+  // Adjustments go separately; for a total cost any existing ones are deleted.
   if (saved && (adjustments.length > 0 || quotationStore.getAdjustmentsByProvider(saved.id).length > 0)) {
     const error = await quotationStore.saveProviderAdjustments(saved.id, adjustments);
     if (error)
@@ -242,8 +242,8 @@ function getProviderActions(provider: QuotationProvider) {
       disabled: quotationStore.getPendingBalanceByProvider(provider.id) <= 0,
       onSelect: () => openRecordPayment(provider),
     },
-    // La cortesía no cambia el precio del asiento, así que también se puede con la
-    // cotización confirmada.
+    // The courtesy doesn't change the seat price, so it's also allowed on a
+    // confirmed quotation.
     ...(isPerPersonProvider(provider)
       ? [{
           label: 'Precios por tipo de persona',
@@ -288,7 +288,7 @@ function getProviderActions(provider: QuotationProvider) {
 
 <template>
   <div class="space-y-4">
-    <!-- Barra de filtros -->
+    <!-- Filter bar -->
     <div class="flex flex-wrap gap-3 items-end">
       <div class="flex-1 min-w-32">
         <p class="text-xs text-muted mb-1">
@@ -328,7 +328,7 @@ function getProviderActions(provider: QuotationProvider) {
       />
     </div>
 
-    <!-- Tabla -->
+    <!-- Table -->
     <div v-if="providers.length > 0" class="overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
@@ -377,7 +377,7 @@ function getProviderActions(provider: QuotationProvider) {
             :key="provider.id"
             class="border-b border-default/50 hover:bg-elevated/50"
           >
-            <!-- Proveedor -->
+            <!-- Provider -->
             <td class="py-3 pr-4">
               <div class="flex items-center gap-1.5">
                 <UIcon
@@ -390,7 +390,7 @@ function getProviderActions(provider: QuotationProvider) {
               </div>
             </td>
 
-            <!-- Servicio -->
+            <!-- Service -->
             <td class="py-3 pr-4 max-w-40">
               <span class="truncate block">{{ provider.serviceDescription }}</span>
               <UBadge
@@ -403,7 +403,7 @@ function getProviderActions(provider: QuotationProvider) {
               />
             </td>
 
-            <!-- División -->
+            <!-- Split -->
             <td class="py-3 pr-4">
               <UBadge
                 v-if="isPerPersonProvider(provider)"
@@ -419,7 +419,7 @@ function getProviderActions(provider: QuotationProvider) {
               />
             </td>
 
-            <!-- Costo Total: en un servicio por persona, con el autobús lleno -->
+            <!-- Total Cost: for a per-person service, with a full bus -->
             <td class="py-3 pr-4">
               <p class="font-medium">
                 {{ formatCurrency(getQuotedCost(provider)) }}
@@ -440,7 +440,7 @@ function getProviderActions(provider: QuotationProvider) {
               </button>
             </td>
 
-            <!-- A pagar: en un opcional, solo por los viajeros que lo toman -->
+            <!-- To pay: for an optional one, only for the travelers who take it -->
             <td class="py-3 pr-4">
               <p class="font-medium">
                 {{ formatCurrency(provider.payableCost) }}
@@ -454,17 +454,17 @@ function getProviderActions(provider: QuotationProvider) {
               </ULink>
             </td>
 
-            <!-- Costo/persona -->
+            <!-- Cost/person -->
             <td class="py-3 pr-4">
               {{ formatCurrency(quotationStore.getProviderCostPerPerson(provider.id, coordinatorCount)) }}
             </td>
 
-            <!-- Pagado -->
+            <!-- Paid -->
             <td class="py-3 pr-4">
               {{ formatCurrency(quotationStore.getPaidByProvider(provider.id)) }}
             </td>
 
-            <!-- Pendiente -->
+            <!-- Pending -->
             <td class="py-3 pr-4">
               <span :class="quotationStore.getPendingBalanceByProvider(provider.id) > 0 ? 'text-warning' : 'text-success'">
                 {{ formatCurrency(quotationStore.getPendingBalanceByProvider(provider.id)) }}
@@ -477,7 +477,7 @@ function getProviderActions(provider: QuotationProvider) {
               </p>
             </td>
 
-            <!-- Método -->
+            <!-- Method -->
             <td class="py-3 pr-4">
               <UBadge
                 :label="provider.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia'"
@@ -486,7 +486,7 @@ function getProviderActions(provider: QuotationProvider) {
               />
             </td>
 
-            <!-- Estado Pago -->
+            <!-- Payment Status -->
             <td class="py-3 pr-4">
               <UBadge
                 :label="getPaymentStatusLabel(quotationStore.getProviderPaymentStatus(provider.id))"
@@ -495,7 +495,7 @@ function getProviderActions(provider: QuotationProvider) {
               />
             </td>
 
-            <!-- Confirmado -->
+            <!-- Confirmed -->
             <td class="py-3 pr-4">
               <UBadge
                 :label="provider.confirmed ? 'Sí' : 'No'"
@@ -504,7 +504,7 @@ function getProviderActions(provider: QuotationProvider) {
               />
             </td>
 
-            <!-- Acciones -->
+            <!-- Actions -->
             <td class="py-3">
               <UDropdownMenu :items="getProviderActions(provider)">
                 <UButton
@@ -520,7 +520,7 @@ function getProviderActions(provider: QuotationProvider) {
       </table>
     </div>
 
-    <!-- Estado vacío -->
+    <!-- Empty state -->
     <EmptyState
       v-else
       section="services"
@@ -528,7 +528,7 @@ function getProviderActions(provider: QuotationProvider) {
     />
   </div>
 
-  <!-- Modal: form de proveedor -->
+  <!-- Modal: provider form -->
   <UModal
     v-model:open="isProviderFormOpen"
     :title="selectedProvider ? 'Editar Proveedor' : 'Agregar Proveedor'"
@@ -545,7 +545,7 @@ function getProviderActions(provider: QuotationProvider) {
     </template>
   </UModal>
 
-  <!-- Modal: precios por tipo de persona -->
+  <!-- Modal: prices by type of person -->
   <UModal
     v-model:open="isAdjustmentsOpen"
     title="Precios por tipo de persona"
@@ -576,7 +576,7 @@ function getProviderActions(provider: QuotationProvider) {
     </template>
   </UModal>
 
-  <!-- Modal: cortesía para coordinadores -->
+  <!-- Modal: courtesy for coordinators -->
   <UModal
     v-model:open="isCourtesyOpen"
     title="Cortesía para coordinadores"
@@ -592,7 +592,7 @@ function getProviderActions(provider: QuotationProvider) {
     </template>
   </UModal>
 
-  <!-- Drawer/modal: historial de pagos -->
+  <!-- Drawer/modal: payment history -->
   <USlideover
     v-model:open="isHistoryOpen"
     :title="`Pagos — ${historyProviderName}`"
@@ -609,7 +609,7 @@ function getProviderActions(provider: QuotationProvider) {
     </template>
   </USlideover>
 
-  <!-- Modal: confirmar eliminación -->
+  <!-- Modal: confirm deletion -->
   <UModal
     v-model:open="isDeleteModalOpen"
     title="Eliminar Proveedor"

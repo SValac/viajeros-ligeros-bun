@@ -62,7 +62,7 @@ function closeEditParameters() {
   isEditingParameters.value = false;
 }
 
-// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe (sin schema Zod para este form de edición rápida)
+// Sanitized proxy: filters out invalid characters while the user types (no Zod schema for this quick-edit form)
 const paramsNotesInput = useSanitizedModel(() => paramsState.notes ?? '', v => paramsState.notes = v, sanitizeText);
 
 function cancelRemoveSeats() {

@@ -17,8 +17,8 @@ import {
 } from '~/utils/travel-calendar';
 import { getTravelStatusColor } from '~/utils/travel-status';
 
-// Mes completo sobre UCalendar: cada día lista sus viajes como barras de color por estado.
-// Las barras son <span>: el día ya es el elemento clicable (role="button"), sin botones anidados.
+// Full month over UCalendar: each day lists its travels as bars colored by status.
+// The bars are <span>: the day is already the clickable element (role="button"), with no nested buttons.
 
 const props = defineProps<{
   getTravelsOnDay: (day: DateValue) => TravelSummary[];
@@ -30,19 +30,19 @@ const props = defineProps<{
 const selectedDay = defineModel<DateValue | undefined>();
 const placeholder = defineModel<DateValue>('placeholder', { required: true });
 
-// Barras por día; el resto se resume en "+N más"
+// Bars per day; the rest is summarized as "+N más"
 const MAX_BARS = 2;
 
 type DayBars = {
   bars: (TravelSummary | null)[];
-  // Por carril: cuántos días ocupa el nombre desde aquí (0 = sin nombre, lo lleva un día anterior)
+  // Per lane: how many days the name spans from here (0 = no name, an earlier day carries it)
   labelSpans: number[];
   hiddenCount: number;
   holiday?: MexicanHoliday;
 };
 
-// Cada viaje va en su carril (misma altura todos sus días). Un hueco libre se deja vacío para
-// no desalinear; si un viaje de un carril alto no cabe y hay hueco, lo ocupa.
+// Each travel goes in its lane (same height on all its days). A free gap is left empty so
+// nothing misaligns; if a travel from a higher lane doesn't fit and there's a gap, it takes it.
 function getDayBars(day: DateValue): DayBars {
   const travels = props.getTravelsOnDay(day);
   const bars: (TravelSummary | null)[] = Array.from({ length: MAX_BARS }, () => null);
@@ -65,7 +65,7 @@ function getDayBars(day: DateValue): DayBars {
       bars[free] = travel;
   }
 
-  // Quita los huecos del final: solo ocupan alto
+  // Drop the trailing gaps: they only take up height
   while (bars.length > 0 && bars.at(-1) === null)
     bars.pop();
 
@@ -77,16 +77,16 @@ function getDayBars(day: DateValue): DayBars {
   };
 }
 
-// Barras (y festivo) de los 42 días visibles, por `YYYY-MM-DD`: una vez por mes/datos, no por render de celda
+// Bars (and holiday) of the 42 visible days, by `YYYY-MM-DD`: once per month/data change, not per cell render
 const barsByDay = computed(() => {
   const days: [string, DayBars][] = [];
   let day = getCalendarGridRange(placeholder.value).start;
   for (let i = 0; i < GRID_DAYS; i++, day = day.add({ days: 1 }))
     days.push([day.toString(), getDayBars(day)]);
 
-  // El nombre va al inicio de cada tramo (días seguidos de la misma semana con el viaje en el
-  // mismo carril) y se extiende sobre todo el tramo. Así un viaje que entra a un hueco libre a
-  // media semana también lleva su nombre.
+  // The name goes at the start of each span (consecutive days of the same week with the travel in the
+  // same lane) and stretches over the whole span. That way a travel that moves into a free gap
+  // mid-week also carries its name.
   const sameTravel = (index: number, lane: number, travelId: string) =>
     days[index]?.[1].bars[lane]?.id === travelId;
   days.forEach(([, dayBars], index) => {
@@ -123,8 +123,8 @@ function getBarClasses(travel: TravelSummary, day: DateValue): string[] {
 
 const timeZone = getLocalTimeZone();
 
-// Número del día: círculo si es hoy; si no, rojo en festivos oficiales del mes visible
-// (los días de otro mes se quedan atenuados como el resto de su celda)
+// Day number: a circle if it's today; otherwise red on official holidays of the visible month
+// (days from another month stay dimmed like the rest of their cell)
 function getDayNumberClasses(day: DateValue, holiday: MexicanHoliday | undefined): string {
   if (isToday(day, timeZone))
     return 'bg-primary font-semibold text-inverted';
@@ -168,7 +168,7 @@ const calendarUi = {
         >
           {{ day.day }}
         </span>
-        <!-- 0 o 1 festivo: el v-for da una variable tipada sin repetir la búsqueda -->
+        <!-- 0 or 1 holiday: the v-for gives a typed variable without repeating the lookup -->
         <span
           v-for="holiday in getDayHolidays(day)"
           :key="holiday.date.toString()"
@@ -187,8 +187,7 @@ const calendarUi = {
           :class="getBarClasses(travel, day)"
           :title="travel.label"
         >
-          <!-- El nombre se extiende sobre los días siguientes del tramo: z-10 para quedar sobre sus barras
-               y pointer-events-none para que el clic llegue al día de abajo, no al de la etiqueta -->
+          <!-- The name stretches over the span's next days: z-10 to sit above their bars and pointer-events-none so the click reaches the day below, not the label -->
           <span
             v-if="getBars(day).labelSpans[lane]"
             class="pointer-events-none relative z-10 block truncate"

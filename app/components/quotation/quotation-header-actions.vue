@@ -78,8 +78,8 @@ async function confirmQuotation() {
 
 <template>
   <div class="flex flex-wrap items-center justify-between gap-3">
-    <!-- Estado badge -->
-    <!-- Sin título propio: la página ya muestra "Cotización" como <h1> -->
+    <!-- Status badge -->
+    <!-- No title of its own: the page already shows "Cotización" as the <h1> -->
     <div class="flex items-center gap-2">
       <span class="text-sm text-muted">Estado</span>
       <UBadge
@@ -90,9 +90,9 @@ async function confirmQuotation() {
       />
     </div>
 
-    <!-- Acciones -->
+    <!-- Actions -->
     <div class="flex items-center gap-2">
-      <!-- Reabrir cotización (vuelve a borrador) -->
+      <!-- Reopen quotation (back to draft) -->
       <UButton
         v-if="readonly"
         icon="i-lucide-lock-open"
@@ -103,7 +103,7 @@ async function confirmQuotation() {
         @click="openReopenModal"
       />
 
-      <!-- Confirmar cotización -->
+      <!-- Confirm quotation -->
       <UTooltip
         v-else
         :text="!canConfirm ? 'Todos los proveedores deben estar confirmados' : ''"
@@ -121,7 +121,7 @@ async function confirmQuotation() {
     </div>
   </div>
 
-  <!-- Modal: confirmación -->
+  <!-- Modal: confirmation -->
   <UModal
     v-model:open="isConfirmModalOpen"
     title="Confirmar Cotización"
@@ -145,7 +145,7 @@ async function confirmQuotation() {
     </template>
   </UModal>
 
-  <!-- Modal: reabrir -->
+  <!-- Modal: reopen -->
   <UModal
     v-model:open="isReopenModalOpen"
     title="Reabrir Cotización"

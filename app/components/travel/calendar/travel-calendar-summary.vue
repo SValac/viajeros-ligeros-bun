@@ -6,8 +6,8 @@ import { formatDate } from '~/utils/format-date';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
-// Resumen del viaje elegido en el calendario (app/pages/calendar.vue). Recibe solo el id y lee
-// travelDetailQuery, así sigue abierto aunque el viaje no esté en el mes visible.
+// Summary of the travel picked in the calendar (app/pages/calendar.vue). It gets only the id and reads
+// travelDetailQuery, so it stays open even when the travel isn't in the visible month.
 
 const props = defineProps<{
   travelId: string;
@@ -35,7 +35,7 @@ const travelerCount = computed (() => travel.value?.travelerCount ?? 0);
 // picking another travel loads its quotation (already cached = no request).
 useQuery(() => quotationByTravelQuery(props.travelId));
 
-// Lugares a la venta según la cotización; 0 si aún no hay cotización o autobuses
+// Seats for sale according to the quotation; 0 if there's no quotation or buses yet
 const sellableSeats = computed(() => {
   const quotation = quotationStore.getQuotationByTravel(props.travelId);
   return quotation ? quotationStore.getSellableSeats(quotation.id, travel.value?.coordinatorIds.length ?? 0) : 0;

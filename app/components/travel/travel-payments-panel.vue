@@ -67,7 +67,7 @@ const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
   const result: TravelerWithChildren[] = [];
 
   for (const t of all) {
-    // Acompañantes are embedded as children — skip them as root rows.
+    // Companions are embedded as children — skip them as root rows.
     if (companionIds.has(t.id))
       continue;
 
@@ -98,7 +98,7 @@ watchEffect(() => {
   expanded.value = newExpanded;
 });
 
-// Caja del viaje
+// Travel cash
 const cashSummary = computed(() => {
   const summaries = enrolledTravelers.value
     .filter((t: Traveler) => !!paymentStore.getAccountConfig(t.id, travelId.value)?.publicPriceId)
@@ -346,7 +346,7 @@ watch(travelId, async (id) => {
 
 <template>
   <div v-if="travel" class="space-y-6">
-    <!-- Caja del viaje -->
+    <!-- Travel cash -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <UCard>
         <div class="flex justify-between items-center">
