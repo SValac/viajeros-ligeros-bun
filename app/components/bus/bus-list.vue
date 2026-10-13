@@ -180,14 +180,14 @@ const columns: TableColumn<Bus>[] = [
         label="las unidades"
         @retry="busStore.refetch()"
       >
-        <!-- Estado vacío -->
+        <!-- Empty state -->
         <EmptyState
           v-if="buses.length === 0"
           section="buses"
           :actions="[{ label: 'Agregar unidad', icon: 'i-lucide-plus', onClick: openCreateModal }]"
         />
 
-        <!-- Tabla -->
+        <!-- Table -->
         <UTable
           v-else
           :columns="columns"

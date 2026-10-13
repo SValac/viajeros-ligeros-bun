@@ -37,7 +37,7 @@ const toast = useToast();
 const router = useRouter();
 const { signUp } = useAuthStore();
 
-// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
+// Sanitized proxy: filters out invalid characters while the user types
 const nameInput = useSanitizedModel(() => state.value.name ?? '', v => state.value.name = v, sanitizeName);
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {

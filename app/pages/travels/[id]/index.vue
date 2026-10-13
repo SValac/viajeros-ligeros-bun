@@ -51,7 +51,7 @@ const details = computed<Detail[]>(() => {
 
 <template>
   <div v-if="travel" class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-    <!-- Contenido público -->
+    <!-- Public content -->
     <div class="space-y-6 lg:col-span-2">
       <img
         v-if="travel.imageUrl"
@@ -90,7 +90,7 @@ const details = computed<Detail[]>(() => {
       </UCard>
     </div>
 
-    <!-- Datos del viaje -->
+    <!-- Travel data -->
     <div class="space-y-6">
       <UCard>
         <template #header>

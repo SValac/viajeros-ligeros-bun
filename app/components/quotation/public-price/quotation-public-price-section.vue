@@ -24,18 +24,18 @@ const toast = useToast();
 useProviderStore();
 useHotelRoomStore();
 
-// Obtener matriz de precios de referencia
+// Get the reference price matrix
 const referencePriceMatrix = computed(() => {
   return quotationStore.getReferencePriceMatrix(props.quotationId);
 });
 
-// Obtener precios públicos agregados
+// Get the added public prices
 const publicPrices = computed(() => {
   return quotationStore.getPublicPricesByQuotation(props.quotationId);
 });
 
 // ============================================================================
-// Visibilidad del tipo de habitación y descripción en la web
+// Visibility of the room type and description on the web
 // ============================================================================
 
 const quotation = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId));
@@ -78,14 +78,14 @@ async function setPublicVisibility(field: PublicVisibilityField, value: boolean)
   });
 }
 
-// Helper para formatear moneda
-// Determinar si hay datos
+// Helper to format currency
+// Whether there is data
 const hasData = computed(() => {
   return referencePriceMatrix.value.length > 0;
 });
 
 // ============================================================================
-// Selección de tipo de habitación por hotel
+// Room type selection per hotel
 // ============================================================================
 
 type GroupEntry = { roomType: string; nightCount: number; costPerPerson: number; additionalDetails?: string };
@@ -137,7 +137,7 @@ function selectedTotalPrice(price: ReferencePrice): number {
 }
 
 // ============================================================================
-// CRUD de Precios de Venta
+// Sale price CRUD
 // ============================================================================
 
 // Modal state
@@ -153,15 +153,15 @@ const modalDescription = computed(() => {
   return 'Define un nuevo precio de venta para los viajeros';
 });
 
-// Abrir formulario para agregar
+// Open the form to add
 function openForm() {
   editingPrice.value = null;
   template.value = null;
   isFormModalOpen.value = true;
 }
 
-// Los valores precargados no pasan por los proxies sanitizados, así que se limpian aquí
-// para que no fallen la validación al guardar (p. ej. el '+' de las camas combinadas).
+// Prefilled values don't go through the sanitized proxies, so they're cleaned here
+// so they don't fail validation on save (e.g. the '+' of combined beds).
 function toBusinessName(value: string, max: number): string {
   return sanitizeBusinessName(value).replace(/\s+/g, ' ').trim().slice(0, max);
 }
@@ -174,7 +174,7 @@ function nightsLabel(nightCount: number): string {
   return `${nightCount} noche${nightCount !== 1 ? 's' : ''}`;
 }
 
-// "Detalles adicionales" de los tipos de habitación seleccionados; con varios hoteles, uno por línea con su nombre
+// The "Detalles adicionales" of the selected room types; with several hotels, one per line with its name
 function descriptionFromRooms(accommodation: Array<GroupEntry & { hotelName: string }>): string {
   const withDetails = accommodation.filter(entry => entry.additionalDetails?.trim());
   const lines = withDetails.length === 1
@@ -183,7 +183,7 @@ function descriptionFromRooms(accommodation: Array<GroupEntry & { hotelName: str
   return sanitizeText(lines.join('\n')).slice(0, 500);
 }
 
-// Abrir formulario para agregar, precargado con un precio de referencia
+// Open the form to add, prefilled from a reference price
 function openFromTemplate(price: ReferencePrice) {
   const accommodation = selectedAccommodation(price);
   const roomTypes = [...new Set(accommodation.map(entry => entry.roomType.replaceAll(' + ', ' y ')))];
@@ -203,16 +203,16 @@ function closeForm() {
   isFormModalOpen.value = false;
 }
 
-// Abrir formulario para editar
+// Open the form to edit
 function openEdit(price: QuotationPublicPrice) {
   editingPrice.value = price;
   template.value = null;
   isFormModalOpen.value = true;
 }
 
-// Guardar (crear o actualizar). El formulario ya validó los datos.
+// Save (create or update). The form already validated the data.
 // ============================================================================
-// Viajeros que tienen cada precio (para avisar antes de editarlo o eliminarlo)
+// Travelers who have each price (to warn before editing or deleting it)
 // ============================================================================
 
 const paymentStore = usePaymentStore();
@@ -313,7 +313,7 @@ async function savePrice(data: QuotationPublicPriceFormData) {
       return;
   }
   else {
-    // Crear
+    // Create
     const response = await quotationStore.addPublicPrice(data);
 
     if ('error' in response) {
@@ -339,7 +339,7 @@ function deletePrice(price: QuotationPublicPrice) {
   openWarning('delete', price);
 }
 
-// Acciones por fila
+// Row actions
 function getRowActions(price: QuotationPublicPrice) {
   return [
     [
@@ -360,7 +360,7 @@ function getRowActions(price: QuotationPublicPrice) {
   ];
 }
 
-// Columnas de la tabla
+// Table columns
 const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
   return [
     {
@@ -420,7 +420,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       </h2>
     </template>
     <div class="space-y-6">
-      <!-- Precios de referencia basados en costos -->
+      <!-- Reference prices based on costs -->
       <div v-if="hasData" class="space-y-3">
         <h3 class="text-sm font-semibold text-muted">
           Precios de Referencia (Costo base)
@@ -451,7 +451,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
             </template>
 
             <div class="space-y-3 text-sm">
-              <!-- Precio asiento -->
+              <!-- Seat price -->
               <div class="flex justify-between items-center">
                 <span class="text-muted">Precio Asiento Base</span>
                 <span class="font-medium">{{ formatCurrency(price.breakdown.seatPrice) }}</span>
@@ -459,7 +459,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
 
               <USeparator />
 
-              <!-- Hospedaje por hotel -->
+              <!-- Accommodation per hotel -->
               <div class="space-y-2">
                 <p class="text-xs font-semibold text-muted uppercase tracking-wide">
                   Hospedaje por Hotel
@@ -469,7 +469,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                   :key="hotelName"
                   class="space-y-1"
                 >
-                  <!-- Un solo tipo: sin radio -->
+                  <!-- A single type: no radio -->
                   <template v-if="types.length === 1">
                     <div class="flex justify-between items-center pl-2">
                       <span class="text-muted">
@@ -479,7 +479,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
                       <span class="font-medium">{{ formatCurrency(types[0]!.costPerPerson) }}</span>
                     </div>
                   </template>
-                  <!-- Múltiples tipos: radio para elegir -->
+                  <!-- Several types: radio to pick one -->
                   <template v-else>
                     <div
                       v-for="(type, localIdx) in types"
@@ -509,7 +509,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
 
               <USeparator />
 
-              <!-- Total hospedaje -->
+              <!-- Accommodation total -->
               <div class="flex justify-between items-center font-semibold">
                 <span>Total Hospedaje</span>
                 <span class="text-primary">{{ formatCurrency(selectedAccommodationTotal(price)) }}</span>
@@ -538,14 +538,14 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
         </div>
       </div>
 
-      <!-- Sin datos -->
+      <!-- No data -->
       <EmptyState
         v-else
         section="prices"
         compact
       />
 
-      <!-- Sección para agregar precios de venta (T8) -->
+      <!-- Section to add sale prices (T8) -->
       <div class="pt-6 border-t space-y-4">
         <div class="flex items-center justify-between">
           <h3 class="text-sm font-semibold text-muted">
@@ -579,7 +579,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
           />
         </div>
 
-        <!-- Tabla de precios de venta -->
+        <!-- Sale prices table -->
         <div v-if="publicPrices.length > 0">
           <UTable
             :data="publicPrices"
@@ -587,7 +587,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
           />
         </div>
 
-        <!-- Sin precios agregados -->
+        <!-- No prices added -->
         <EmptyState
           v-else
           section="prices"
@@ -596,7 +596,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       </div>
     </div>
 
-    <!-- Modal: Agregar/Editar Precio -->
+    <!-- Modal: Add/Edit Price -->
     <UModal
       v-model:open="isFormModalOpen"
       :title="editingPrice ? 'Editar Precio' : 'Agregar Precio de Venta'"

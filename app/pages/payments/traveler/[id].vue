@@ -125,7 +125,7 @@ async function handleDelete(payment: Payment) {
 }
 
 function formatDate(dateString: string) {
-  // Fecha sin hora (`YYYY-MM-DD`): con `new Date()` saldría un día antes en México
+  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
   return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
     day: 'numeric',
     month: 'short',

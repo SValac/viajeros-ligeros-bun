@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { DEFAULT_PHONE_COUNTRY, extractNationalDigits, getPhoneCountry, isValidPhone, parsePhone, PHONE_COUNTRIES, toE164 } from '~/utils/phone';
 
-// Teléfono con selector de código de país. El v-model va en E.164 (`+523121273023`) o `''`;
-// el campo muestra el número nacional formateado mientras se escribe (`(312) 127 3023`).
+// Phone with a country code selector. The v-model is E.164 (`+523121273023`) or `''`;
+// the field shows the national number formatted while typing (`(312) 127 3023`).
 
 const { placeholder, ariaLabel, disabled = false } = defineProps<{
   placeholder?: string;
-  // Solo cuando no está dentro de un UFormField con label
+  // Only when it's not inside a UFormField with a label
   ariaLabel?: string;
   disabled?: boolean;
 }>();
@@ -21,20 +21,20 @@ const country = computed(() => getPhoneCountry(countryCode.value));
 const countryItems = PHONE_COUNTRIES.map(c => ({ label: `+${c.dialCode}`, value: c.code, description: c.name }));
 const display = computed(() => country.value.format(digits.value));
 
-// Un registro viejo (`312-127-3023`) se guarda en E.164 aunque no se toque el campo
+// An old record (`312-127-3023`) is saved as E.164 even if the field isn't touched
 if (parsed.country && isValidPhone(model.value) && model.value !== toE164(parsed.country, parsed.digits))
   model.value = toE164(parsed.country, parsed.digits);
 
-// Cada control con su id: el último que lo declara (el número) se queda con el <label> del UFormField
+// Each control with its own id: the last one to declare it (the number) keeps the UFormField's <label>
 const countryId = useId();
 const numberId = useId();
 const input = useTemplateRef('input');
 
 function onInput(value: string | number) {
-  // Acepta que se escriba o pegue con código de país (`+52 312…`)
+  // Accepts typing or pasting it with the country code (`+52 312…`)
   digits.value = extractNationalDigits(country.value, String(value));
   model.value = toE164(country.value, digits.value);
-  // Si se escribió algo que no es dígito, `display` no cambia y el campo se quedaría con ese carácter
+  // If something that isn't a digit was typed, `display` doesn't change and the field would keep that character
   nextTick(() => {
     const el = input.value?.inputRef;
     if (el && el.value !== display.value)
@@ -47,7 +47,7 @@ watch(countryCode, () => {
   model.value = toE164(country.value, digits.value);
 });
 
-// Cambios desde fuera (registro cargado, formulario reiniciado)
+// Changes from outside (record loaded, form reset)
 watch(model, (value) => {
   if ((value ?? '') === toE164(country.value, digits.value))
     return;

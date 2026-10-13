@@ -56,6 +56,8 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `travel-calendar.md` — Calendario de viajes (`/calendar`): mes sobre `UCalendar` con barras por viaje y resumen al elegir uno
 - `on-demand-data-loading/PLAN.md` — Carga bajo demanda con Pinia Colada: nada al arrancar, cada pantalla pide su alcance, catálogos la primera vez que se usan, sin cortes silenciosos a 1000 filas
 - `shared-load-states/PLAN.md` — `LoadState` (carga y error con Reintentar) y `EmptyState` (un vacío por sección) compartidos por todas las pantallas
+- `components-by-domain/PLAN.md` — Componentes agrupados por dominio con la convención de nombres de Nuxt
+- `english-names/PLAN.md` — Archivos, identificadores y comentarios en inglés (los textos de la UI siguen en español)
 
 ---
 

@@ -51,7 +51,7 @@ const state = ref<HotelRoomTypeFormData>({
   additionalDetails: props.roomType?.additionalDetails ?? '',
 });
 
-// Proxy sanitizado: filtra caracteres inválidos mientras el usuario escribe
+// Sanitized proxy: filters out invalid characters while the user types
 const additionalDetailsInput = useSanitizedModel(() => state.value.additionalDetails ?? '', v => state.value.additionalDetails = v, sanitizeText);
 
 function addBed() {

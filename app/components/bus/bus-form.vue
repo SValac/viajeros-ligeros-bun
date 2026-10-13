@@ -47,7 +47,7 @@ const state = ref<Schema>({
   active: props.bus?.active ?? true,
 });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const brandInput = useSanitizedModel(() => state.value.brand ?? '', v => state.value.brand = v, sanitizeBusinessName);
 const modelInput = useSanitizedModel(() => state.value.model ?? '', v => state.value.model = v, sanitizeBusinessName);
 
@@ -76,7 +76,7 @@ function onCancel() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Marca y Modelo -->
+    <!-- Brand and Model -->
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Marca"
@@ -99,7 +99,7 @@ function onCancel() {
       </UFormField>
     </div>
 
-    <!-- Año, Asientos -->
+    <!-- Year, Seats -->
     <div class="grid grid-cols-2 gap-4">
       <UFormField
         label="Año"
@@ -125,7 +125,7 @@ function onCancel() {
       </UFormField>
     </div>
 
-    <!-- Estado -->
+    <!-- Status -->
     <USeparator label="Estado" />
 
     <UFormField name="active">
@@ -135,7 +135,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Botones -->
+    <!-- Buttons -->
     <div class="flex justify-end gap-3 pt-4">
       <UButton
         type="button"

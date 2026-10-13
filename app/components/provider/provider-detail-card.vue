@@ -85,7 +85,7 @@ async function handleDelete() {
         </div>
       </div>
 
-      <!-- Acciones -->
+      <!-- Actions -->
       <div class="flex items-center gap-2">
         <UButton
           v-if="!isEditingProvider"

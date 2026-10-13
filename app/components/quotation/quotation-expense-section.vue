@@ -20,7 +20,7 @@ const expenses = computed(() => quotationStore.getExpensesByQuotation(quotationI
 const expensesTotal = computed(() => quotationStore.getExpensesTotal(quotationId));
 const totalPerSeat = computed(() => expenses.value.reduce((sum, g) => sum + getCostPerSeat(g), 0));
 
-// Lo que suma un gasto al precio de cada asiento: su total entre el divisor de "Dividir entre".
+// What an expense adds to the price of each seat: its total over the "Dividir entre" divisor.
 function getCostPerSeat(expense: QuotationExpense): number {
   const divisor = quotationStore.getCostDivisor(quotationId, expense.splitType, coordinatorCount.value);
   return divisor > 0 ? expense.totalCost / divisor : 0;
@@ -198,7 +198,7 @@ function getActions(expense: QuotationExpense) {
       </table>
     </div>
 
-    <!-- Estado vacío -->
+    <!-- Empty state -->
     <EmptyState
       v-else
       section="expenses"
@@ -206,7 +206,7 @@ function getActions(expense: QuotationExpense) {
     />
   </UCard>
 
-  <!-- Modal: form de gasto -->
+  <!-- Modal: expense form -->
   <UModal
     v-model:open="isFormOpen"
     :title="selectedExpense ? 'Editar gasto' : 'Agregar gasto'"
@@ -223,7 +223,7 @@ function getActions(expense: QuotationExpense) {
     </template>
   </UModal>
 
-  <!-- Modal: confirmar eliminación -->
+  <!-- Modal: confirm deletion -->
   <UModal
     v-model:open="isDeleteModalOpen"
     title="Eliminar gasto"

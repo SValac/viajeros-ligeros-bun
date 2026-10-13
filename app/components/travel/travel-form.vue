@@ -45,14 +45,14 @@ const MAX_LENGTH = {
   internalNotes: 500,
 } as const;
 
-// Schema de validación Zod
+// Zod validation schema
 const schema = z.object({
   label: businessNameSchema({ min: 3, max: MAX_LENGTH.label }),
   destination: businessNameSchema({ min: 1, max: MAX_LENGTH.destination }).optional().or(z.literal('')),
   coordinatorIds: z.array(z.string()).min(1, 'Selecciona al menos un coordinador'),
   startDate: z.string().min(1, 'Fecha requerida'),
   endDate: z.string().min(1, 'Fecha requerida'),
-  // Contenido HTML del editor enriquecido: solo se despojan caracteres de control, no se restringe el charset.
+  // HTML content of the rich editor: only control characters are stripped, the charset isn't restricted.
   description: textSchema({ min: 10, max: MAX_LENGTH.description }),
   status: z.enum(['pending', 'published', 'in_progress', 'completed', 'cancelled']),
   departureFrom: businessNameSchema({ min: 1, max: MAX_LENGTH.departureFrom }).optional().or(z.literal('')),
@@ -67,7 +67,7 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-// Estado inicial del formulario
+// Initial form state
 const initialState = computed((): Schema => {
   if (travel) {
     return {
@@ -141,14 +141,14 @@ onUnmounted(() => {
 
 const state = ref<Schema>({ ...initialState.value });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const labelInput = useSanitizedModel(() => state.value.label, v => state.value.label = v, sanitizeBusinessName);
 const destinationInput = useSanitizedModel(() => state.value.destination ?? '', v => state.value.destination = v, sanitizeBusinessName);
 const departureFromInput = useSanitizedModel(() => state.value.departureFrom ?? '', v => state.value.departureFrom = v, sanitizeBusinessName);
 const summaryInput = useSanitizedModel(() => state.value.summary ?? '', v => state.value.summary = v, sanitizeText);
 const internalNotesInput = useSanitizedModel(() => state.value.internalNotes ?? '', v => state.value.internalNotes = v, sanitizeText);
 
-// UInputTags entrega el array completo en cada cambio; se sanitiza cada entrada y se descartan las vacías.
+// UInputTags returns the whole array on every change; each entry is sanitized and empty ones are dropped.
 const highlightsInput = computed<string[]>({
   get: () => state.value.highlights,
   set: (value) => {
@@ -168,13 +168,13 @@ watch(dateRange, (range) => {
   state.value.endDate = range.end?.toString() ?? '';
 });
 
-// Publicar exige perfil de agencia completo (lo hace cumplir también un trigger en la base).
-// Un viaje que ya está publicado conserva la opción: el trigger solo revisa la transición.
+// Publishing requires a complete agency profile (a DB trigger enforces it too).
+// An already published travel keeps the option: the trigger only checks the transition.
 const agencyProfileStore = useAgencyProfileStore();
 onMounted(() => agencyProfileStore.fetchProfile());
 const canPublish = computed(() => agencyProfileStore.isComplete || travel?.status === 'published');
 
-// Opciones de estado para el select
+// Status options for the select
 const statusOptions = computed<SelectItem[]>(() => [
   { value: 'pending', label: 'Pendiente' },
   { value: 'published', label: 'Publicado', disabled: !canPublish.value },
@@ -229,8 +229,8 @@ function onCancel() {
     class="grid grid-cols-1 xl:grid-cols-2 gap-4"
     @submit="onSubmit"
   >
-    <!-- Nombre y Destino -->
-    <!-- Descripción -->
+    <!-- Name and Destination -->
+    <!-- Description -->
     <section id="datos-generales">
       <UCard>
         <template #header>
@@ -284,7 +284,7 @@ function onCancel() {
             />
           </UFormField>
 
-          <!-- Coordinadores -->
+          <!-- Coordinators -->
           <UFormField
             label="Coordinadores"
             name="coordinatorIds"
@@ -370,7 +370,7 @@ function onCancel() {
             </template>
           </UFormField>
 
-          <!-- Fechas del Viaje -->
+          <!-- Travel Dates -->
           <UFormField
             label="Fechas del Viaje"
             name="startDate"
@@ -405,7 +405,7 @@ function onCancel() {
             </UInputDate>
           </UFormField>
 
-          <!-- Estado -->
+          <!-- Status -->
           <UFormField
             label="Estado"
             name="status"
@@ -437,7 +437,7 @@ function onCancel() {
           <h2>Sitio público y contenido</h2>
         </template>
         <div class="flex flex-col gap-4">
-          <!-- Sitio público -->
+          <!-- Public site -->
           <div class="flex flex-col gap-4">
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-globe" class="w-4 h-4 text-muted" />
@@ -486,7 +486,7 @@ function onCancel() {
             </UFormField>
           </div>
 
-          <!-- Imagen de portada -->
+          <!-- Cover image -->
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium">Imagen de portada</label>
             <div
@@ -522,7 +522,7 @@ function onCancel() {
               {{ displayBannerUrl ? 'Cambiar imagen' : 'Seleccionar imagen' }}
             </UButton>
           </div>
-          <!-- Notas Internas -->
+          <!-- Internal Notes -->
           <UFormField
             label="Notas Internas"
             name="internalNotes"
@@ -556,7 +556,7 @@ function onCancel() {
       </UCard>
     </section>
 
-    <!-- Botones de acción -->
+    <!-- Action buttons -->
     <div class="flex col-span-1 xl:col-span-2 items-center justify-center gap-3 pt-4">
       <UButton
         type="button"

@@ -29,7 +29,7 @@ const emit = defineEmits<{
   cancel: [];
 }>();
 
-// Schema de validación
+// Validation schema
 const schema = z.object({
   name: businessNameSchema({ min: 3, max: 100 }),
 
@@ -81,7 +81,7 @@ const schema = z.object({
 
 type Schema = z.output<typeof schema>;
 
-// Estado inicial del formulario
+// Initial form state
 const state = ref<Schema>({
   name: props.provider?.name || '',
   category: props.provider?.category || props.fixedCategory || 'other',
@@ -101,10 +101,10 @@ const state = ref<Schema>({
   active: props.provider?.active ?? true,
 });
 
-// Opciones de categoría
+// Category options
 const categoryOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ value: meta.category, label: meta.label }));
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeBusinessName);
 const cityInput = useSanitizedModel(() => state.value.location.city, v => state.value.location.city = v, sanitizeName);
 const stateInput = useSanitizedModel(() => state.value.location.state, v => state.value.location.state = v, sanitizeName);
@@ -147,7 +147,7 @@ function onCancel() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Información Básica -->
+    <!-- Basic Information -->
     <UFormField
       label="Nombre del Proveedor"
       name="name"
@@ -197,7 +197,7 @@ function onCancel() {
 
     <slot name="extra-fields" />
 
-    <!-- Ubicación -->
+    <!-- Location -->
     <USeparator label="Ubicación" />
 
     <UFormField
@@ -246,7 +246,7 @@ function onCancel() {
       </UFormField>
     </div>
 
-    <!-- Información de Contacto -->
+    <!-- Contact Information -->
     <USeparator label="Información de Contacto" />
 
     <UFormField
@@ -293,7 +293,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Estado -->
+    <!-- Status -->
     <USeparator label="Estado" />
 
     <UFormField
@@ -305,7 +305,7 @@ function onCancel() {
       />
     </UFormField>
 
-    <!-- Botones -->
+    <!-- Buttons -->
     <div v-if="!disabled" class="flex justify-end gap-3 pt-4">
       <UButton
         type="button"

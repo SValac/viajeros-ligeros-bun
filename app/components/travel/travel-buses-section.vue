@@ -42,8 +42,8 @@ const buses = computed(() => {
   return quotationStore.getBusesByQuotation(quotation.value.id);
 });
 
-// El vínculo real es quotation_bus_id; el texto (proveedor + unidad) solo sirve para filas sin vínculo,
-// porque el modelo se puede editar del lado del viaje y dos buses pueden compartir proveedor y unidad
+// The real link is quotation_bus_id; the text (provider + unit) only serves rows with no link,
+// because the model can be edited on the travel side and two buses can share provider and unit
 function getTravelBusForQuotationBus(bus: QuotationBus) {
   const travelBuses = travel.value?.buses ?? [];
   return travelBuses.find(b => b.quotationBusId === bus.id)
@@ -60,8 +60,8 @@ function getOperators(bus: QuotationBus) {
   return ops;
 }
 
-// Espera también a los buses del viaje: al abrir el link directo la cotización puede cargar
-// antes que el viaje, y el borrador quedaría vacío aunque el bus ya tenga operadores
+// Also waits for the travel's buses: when opening a direct link the quotation can load
+// before the travel, and the draft would be empty even if the bus already has operators
 watch(
   [buses, () => travel.value?.buses],
   ([newBuses]) => {
@@ -80,7 +80,7 @@ watch(
   { immediate: true },
 );
 
-// Sanea los nombres de operador mientras el usuario escribe (sin dígitos); el teléfono lo controla <PhoneInput>
+// Sanitizes operator names while the user types (no digits); <PhoneInput> handles the phone
 watch(operatorDraft, (drafts) => {
   Object.values(drafts).forEach((draft) => {
     const cleanOperator1Name = sanitizeName(draft.operator1Name);
@@ -121,14 +121,14 @@ async function saveOperators(bus: QuotationBus) {
   }
 }
 
-// IDs de coordinadores ya asignados a algún bus (excluyendo el bus actual)
+// IDs of coordinators already assigned to some bus (excluding the current bus)
 function occupiedCoordinators(excludeBusId: string): string[] {
   return buses.value
     .filter(b => b.id !== excludeBusId)
     .flatMap(b => b.coordinatorIds ?? []);
 }
 
-// Opciones filtradas: solo coordinadores del viaje, no ocupados en otros buses
+// Filtered options: only the travel's coordinators, not taken on other buses
 function getCoordinatorOptions(busId: string) {
   const ofTravel = travel.value?.coordinatorIds ?? [];
   const occupied = occupiedCoordinators(busId);
@@ -216,7 +216,7 @@ async function onCoordinatorsChange(busId: string, selected: string[]) {
               </div>
             </template>
 
-            <!-- Coordinadores (modo editable) -->
+            <!-- Coordinators (edit mode) -->
             <div v-if="editable">
               <div class="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
                 Coordinadores (máx. 2)
@@ -245,7 +245,7 @@ async function onCoordinatorsChange(busId: string, selected: string[]) {
                 </div>
               </div>
 
-              <!-- Operadores -->
+              <!-- Operators -->
               <div v-if="operatorDraft[bus.id]" class="mt-4">
                 <div class="text-xs font-medium text-muted uppercase tracking-wide mb-1.5">
                   Operadores
@@ -277,7 +277,7 @@ async function onCoordinatorsChange(busId: string, selected: string[]) {
               </div>
             </div>
 
-            <!-- Coordinadores + Operadores (modo lectura) -->
+            <!-- Coordinators + Operators (read mode) -->
             <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <div class="text-xs font-medium text-muted uppercase tracking-wide mb-2">

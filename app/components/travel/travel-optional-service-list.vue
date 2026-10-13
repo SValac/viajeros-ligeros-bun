@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { formatCurrency } from '~/utils/currency';
 
-// Lista compacta de los servicios por persona del viaje para elegir cuál editar. En
-// escritorio es una columna; en tablet, una fila con scroll horizontal para no empujar
-// la tarjeta hacia abajo.
+// Compact list of the travel's per-person services to pick which one to edit. On
+// desktop it's a column; on tablet, a horizontally scrolling row so it doesn't push
+// the card down.
 
 export type OptionalServiceListItem = {
   id: string;

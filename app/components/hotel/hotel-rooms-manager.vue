@@ -177,7 +177,7 @@ async function handleDelete(rt: HotelRoomType) {
           :actions="[{ label: 'Agregar tipo de habitación', icon: 'i-lucide-plus', onClick: openCreateForm }]"
         />
 
-        <!-- Grupos por ocupación -->
+        <!-- Groups by occupancy -->
         <div v-else class="space-y-6">
           <div
             v-for="group in groupedByOccupancy"
@@ -208,7 +208,7 @@ async function handleDelete(rt: HotelRoomType) {
       </div>
     </LoadState>
 
-    <!-- Modal de formulario -->
+    <!-- Form modal -->
     <UModal
       v-model:open="isFormModalOpen"
       :title="isEditing ? 'Editar habitación' : 'Nueva habitación'"

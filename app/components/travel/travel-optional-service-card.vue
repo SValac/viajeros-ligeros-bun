@@ -5,21 +5,21 @@ import type { Traveler } from '~/types/traveler';
 import { calculateAdjustedUnitCost, formatPriceAdjustment } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
 
-// Un servicio opcional del viaje: quién lo toma y cuánto se le debe al proveedor.
-// Todos lo toman salvo los desmarcados; el padre guarda los cambios.
+// An optional service of the travel: who takes it and how much is owed to the provider.
+// Everyone takes it except the unchecked ones; the parent saves the changes.
 
 type Props = {
   service: QuotationProvider;
   providerName: string;
   occupants: Traveler[];
-  /** Ids de los viajeros que no lo toman. */
+  /** Ids of the travelers who don't take it. */
   optedOut: Set<string>;
   paid: number;
-  /** Para el costo de referencia con el autobús lleno. */
+  /** For the reference cost with a full bus. */
   sellableSeats: number;
-  /** Precios por tipo de persona del servicio (Niño -10%...). */
+  /** The service's prices by type of person (Niño -10%...). */
   adjustments?: ProviderPriceAdjustment[];
-  /** travelerId → id del ajuste que paga; sin entrada = precio base. */
+  /** travelerId → id of the adjustment they pay; no entry = base price. */
   adjustmentByTraveler?: Map<string, string>;
   busy?: boolean;
 };
@@ -33,7 +33,7 @@ const emit = defineEmits<{
 
 const BASE = 'base';
 
-// Opciones del select de precio de cada viajero.
+// Options of each traveler's price select.
 const priceOptions = computed(() => [
   { label: `Precio base · ${formatCurrency(service.unitCost ?? 0)}`, value: BASE },
   ...adjustments.map(a => ({
@@ -47,7 +47,7 @@ function priceOf(traveler: Traveler): number {
   return calculateAdjustedUnitCost(service.unitCost ?? 0, adjustment);
 }
 
-// Con cortesía, los coordinadores no cuentan para el pago y no se marcan.
+// With a courtesy, coordinators don't count for the payment and aren't checked.
 function isCourtesy(traveler: Traveler): boolean {
   return service.coordinatorsCourtesy && traveler.kind === 'coordinator';
 }
@@ -55,7 +55,7 @@ function isCourtesy(traveler: Traveler): boolean {
 const selectable = computed(() => occupants.filter(t => !isCourtesy(t)));
 const takers = computed(() => selectable.value.filter(t => !optedOut.has(t.id)));
 
-// "2 × $150 + 1 × $135": cuántos pagan cada precio.
+// "2 × $150 + 1 × $135": how many pay each price.
 const breakdown = computed(() => {
   const counts = new Map<number, number>();
   for (const traveler of takers.value)
@@ -82,14 +82,14 @@ function byName(a: Traveler, b: Traveler): number {
 
 type Row = {
   traveler: Traveler;
-  /** Solo en acompañantes: a quién acompañan. */
+  /** Companions only: who they come with. */
   representativeName?: string;
   takes: boolean;
   courtesy: boolean;
 };
 
-// Quienes vienen con el mismo representante van juntos: el representante y después sus
-// acompañantes, por nombre del representante. Los coordinadores al final.
+// Those who come with the same representative go together: the representative and then their
+// companions, by representative name. Coordinators at the end.
 const rows = computed<Row[]>(() => {
   const travelers = occupants.filter(t => t.kind === 'traveler');
   const byId = new Map(travelers.map(t => [t.id, t]));
@@ -141,7 +141,7 @@ function setAll(takes: boolean) {
     </template>
 
     <div class="space-y-4">
-      <!-- Cifras -->
+      <!-- Figures -->
       <dl class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
         <div>
           <dt class="text-muted">
@@ -191,7 +191,7 @@ function setAll(takes: boolean) {
 
       <USeparator />
 
-      <!-- Quién lo toma -->
+      <!-- Who takes it -->
       <div class="flex flex-wrap items-center justify-between gap-2">
         <p class="text-sm text-muted">
           Desmarca a quien no toma el servicio.
@@ -240,7 +240,7 @@ function setAll(takes: boolean) {
               @update:model-value="value => emit('change', [row.traveler.id], value === true)"
             >
               <template #label>
-                <!-- Mismo ícono de coordinador que en Habitaciones -->
+                <!-- Same coordinator icon as in Habitaciones -->
                 <UIcon
                   v-if="row.traveler.kind === 'coordinator'"
                   name="i-lucide-user-cog"

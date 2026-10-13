@@ -53,7 +53,7 @@ const state = reactive<FormSchema>({
   notes: payment?.notes ?? '',
 });
 
-// Proxies sanitizados: filtran caracteres inválidos mientras el usuario escribe
+// Sanitized proxies: filter out invalid characters while the user types
 const conceptInput = useSanitizedModel(() => state.concept ?? '', v => state.concept = v, sanitizeText);
 const notesInput = useSanitizedModel(() => state.notes ?? '', v => state.notes = v, sanitizeText);
 
@@ -79,7 +79,7 @@ function onSubmit() {
     class="space-y-4"
     @submit="onSubmit"
   >
-    <!-- Monto -->
+    <!-- Amount -->
     <UFormField
       label="Monto"
       name="amount"
@@ -93,7 +93,7 @@ function onSubmit() {
       </template>
     </UFormField>
 
-    <!-- Fecha de Pago -->
+    <!-- Payment Date -->
     <UFormField
       label="Fecha de Pago"
       name="paymentDate"
@@ -106,7 +106,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Tipo de Pago -->
+    <!-- Payment Type -->
     <UFormField
       label="Tipo de Pago"
       name="paymentType"
@@ -119,7 +119,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Concepto -->
+    <!-- Concept -->
     <UFormField label="Concepto" name="concept">
       <UInput
         v-model="conceptInput"
@@ -128,7 +128,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Notas -->
+    <!-- Notes -->
     <UFormField label="Notas" name="notes">
       <UTextarea
         v-model="notesInput"
@@ -138,7 +138,7 @@ function onSubmit() {
       />
     </UFormField>
 
-    <!-- Acciones -->
+    <!-- Actions -->
     <div class="flex justify-end gap-3 pt-2">
       <UButton
         type="button"

@@ -39,7 +39,7 @@ function getHotelName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
-// Items del accordion — uno por hospedaje
+// Accordion items — one per accommodation
 function getRoomBreakdown(accommodation: QuotationAccommodation): string {
   return accommodation.details
     .map(d => `${getRoomCount(accommodation, d.roomTypeId)} hab (${d.maxOccupancy} p)`)
@@ -129,9 +129,9 @@ function getDetailRows(accommodation: QuotationAccommodation): DetailRow[] {
 </script>
 
 <template>
-  <!-- Sin hospedajes no muestra nada: la tabla de arriba ya tiene el estado vacío -->
+  <!-- With no accommodations it shows nothing: the table above already has the empty state -->
   <div v-if="accommodations.length > 0" class="space-y-4">
-    <!-- Resumen General -->
+    <!-- Overall Summary -->
     <div class="bg-linear-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div>
@@ -161,7 +161,7 @@ function getDetailRows(accommodation: QuotationAccommodation): DetailRow[] {
       </div>
     </div>
 
-    <!-- Desglose por Hotel (Accordion) -->
+    <!-- Breakdown by Hotel (Accordion) -->
     <div>
       <h4 class="text-sm font-semibold flex items-center gap-2 mb-2">
         <UIcon name="i-lucide-building" class="w-4 h-4" />
@@ -189,7 +189,7 @@ function getDetailRows(accommodation: QuotationAccommodation): DetailRow[] {
       </UAccordion>
     </div>
 
-    <!-- Costo Promedio -->
+    <!-- Average Cost -->
     <div class="bg-secondary/10 rounded-lg p-3 text-sm border border-secondary/20">
       <div class="flex justify-between items-center">
         <span class="text-muted">Costo Promedio por Persona (hospedaje)</span>

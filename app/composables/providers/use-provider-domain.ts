@@ -38,8 +38,8 @@ export function matchesProviderSearch(provider: Provider, term: string): boolean
   if (textMatch)
     return true;
 
-  // El teléfono se muestra con formato ("(812) 123 4567") pero se guarda en E.164: se
-  // compara solo por dígitos para encontrarlo como sea que se escriba.
+  // The phone is shown formatted ("(812) 123 4567") but stored as E.164: compare
+  // digits only so it's found however it was typed.
   const digits = term.replace(/\D/g, '');
   return digits.length >= 3 && !!contact.phone && contact.phone.replace(/\D/g, '').includes(digits);
 }

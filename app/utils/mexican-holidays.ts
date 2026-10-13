@@ -1,8 +1,8 @@
 import { CalendarDate } from '@internationalized/date';
 
-// Días festivos de México, calculados localmente (sin API): fechas fijas, lunes móviles de la
-// Ley Federal del Trabajo (art. 74) y la Semana Santa a partir de la Pascua.
-// El día de elecciones también es de descanso, pero no tiene fecha fija: no se incluye.
+// Mexican public holidays, computed locally (no API): fixed dates, the movable Mondays of the
+// Ley Federal del Trabajo (art. 74) and Holy Week based on Easter.
+// Election day is also a day off, but it has no fixed date: it's not included.
 
 export type HolidayKind = 'official' | 'traditional';
 
@@ -18,34 +18,34 @@ export const HOLIDAY_KIND_LABELS: Record<HolidayKind, string> = {
   traditional: 'Tradicional',
 };
 
-// Clases completas y estáticas: Tailwind no genera clases armadas en runtime
+// Full, static classes: Tailwind doesn't generate classes built at runtime
 export const HOLIDAY_KIND_TEXT_CLASSES: Record<HolidayKind, string> = {
   official: 'text-error',
   traditional: 'text-muted',
 };
 
-// Año del primer cambio de gobierno el 1 de octubre (reforma de 2014); luego cada 6 años
+// Year of the first change of government on October 1 (2014 reform); then every 6 years
 const FIRST_OCTOBER_TRANSITION_YEAR = 2024;
 
 /**
- * @param year - Año
- * @param month - Mes (1-12)
- * @param weekday - Día de la semana (0 = domingo, 1 = lunes, …)
- * @param n - Ocurrencia (1 = primero)
- * @returns El n-ésimo `weekday` del mes, p. ej. el tercer lunes de marzo
+ * @param year - Year
+ * @param month - Month (1-12)
+ * @param weekday - Day of the week (0 = Sunday, 1 = Monday, …)
+ * @param n - Occurrence (1 = first)
+ * @returns The nth `weekday` of the month, e.g. the third Monday of March
  */
 export function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: number): CalendarDate {
   const first = new CalendarDate(year, month, 1);
-  // En UTC: el día de la semana no depende del locale ni de la zona horaria
+  // In UTC: the day of the week doesn't depend on the locale or the time zone
   const firstWeekday = first.toDate('UTC').getUTCDay();
   const offset = (weekday - firstWeekday + 7) % 7;
   return first.add({ days: offset + (n - 1) * 7 });
 }
 
 /**
- * Domingo de Pascua (calendario gregoriano), algoritmo anónimo de Meeus/Jones/Butcher.
- * @param year - Año
- * @returns Fecha del domingo de Pascua
+ * Easter Sunday (Gregorian calendar), anonymous Meeus/Jones/Butcher algorithm.
+ * @param year - Year
+ * @returns Date of Easter Sunday
  */
 export function getEasterSunday(year: number): CalendarDate {
   const a = year % 19;
@@ -66,8 +66,8 @@ export function getEasterSunday(year: number): CalendarDate {
 }
 
 /**
- * @param year - Año
- * @returns Festivos oficiales y tradicionales del año, en orden de fecha
+ * @param year - Year
+ * @returns The year's official and traditional holidays, in date order
  */
 export function getMexicanHolidays(year: number): MexicanHoliday[] {
   const easter = getEasterSunday(year);
@@ -99,8 +99,8 @@ export function getMexicanHolidays(year: number): MexicanHoliday[] {
 }
 
 /**
- * @param years - Años a incluir
- * @returns Festivos por día (`YYYY-MM-DD`)
+ * @param years - Years to include
+ * @returns Holidays by day (`YYYY-MM-DD`)
  */
 export function getMexicanHolidaysByDay(years: number[]): Map<string, MexicanHoliday> {
   const byDay = new Map<string, MexicanHoliday>();

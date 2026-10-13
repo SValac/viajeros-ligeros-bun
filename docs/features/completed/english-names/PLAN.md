@@ -1,4 +1,4 @@
-> **Status:** PR 1 (files, functions, variables) on branch `refactor/english-identifiers`. PR 2 (comments) pending.
+> **Status:** completed. PR 1 (files, functions, variables): #134. PR 2 (comments): branch `docs/english-comments`.
 
 # Convertir a inglés los nombres de archivos, funciones, variables y comentarios
 
