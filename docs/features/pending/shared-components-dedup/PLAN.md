@@ -3,8 +3,11 @@
 **Objetivo:** Lo que está igual en 2 o más lugares vive en un solo componente, composable o util.
 No cambia el comportamiento, salvo los bugs que salieron al comparar las copias (fase 1).
 
-**Complejidad:** Media-alta — ~50 archivos, pero cada fase es independiente y casi todo es de
-plantilla.
+**Complejidad:** Muy alta — casi todo `app/`. Las fases 1-7 y 14-17 son de UI; las 8-13
+tocan stores y repositorios (la 10 cambia el contrato de errores). Cada fase es independiente.
+Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a punta
+(1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
+(9-13). La 7 puede ir sola.
 
 **Estado:** Pendiente (sin rama todavía).
 
@@ -83,6 +86,13 @@ Archivos: `pago-bus-historial.vue`, `pago-hospedaje-historial.vue`,
   `grep -rln 'label="Cancelar"' app | xargs grep -l UModal`.
 - No tocar modales que no son de borrar (`travel-access-code-card`,
   `cotizacion-precio-publico-aviso-modal`, `unsaved-changes-modal`).
+- Además hay 9 borrados con el `confirm()` nativo del navegador (`bus-list`,
+  `travel-activity-list`, `coordinator-invite-button`, `provider-detail-card`,
+  `payments/traveler/[id]`, `hotel/hotel-rooms-manager`, `coordinators/index`,
+  `travels/[id]/travelers/index`, `travels/dashboard`): dos formas distintas de pedir lo mismo.
+  Pasarlos al mismo modal. Con `useOverlay` de Nuxt UI se puede abrir desde una función
+  (`await confirmDelete({ title, description })`), que reemplaza al `confirm()` sin cambiar el
+  flujo de cada handler.
 
 ### Fase 4 — Páginas de proveedores por categoría
 
@@ -150,10 +160,259 @@ mover a otra tarea si la rama crece mucho.
   envuelve dos veces) o un helper que devuelva `{ ...query, loadState }` para no repetir las 3
   líneas en ~15 lugares.
 
+## Segunda pasada: stores, repositorios, mappers y dominio (2026-10-13)
+
+`jscpd` casi no ve duplicados en esta capa porque las copias cambian nombres (bus / hospedaje /
+proveedor). Se leyeron a mano todos los stores, los repositorios, `utils/mappers.ts`, los
+`*-domain.ts` y `queries/`. Las fases 8-13 salen de esa lectura. La 8 conviene hacerla junto con
+la 1 y la 2 (son los mismos pagos, de la UI a la base de datos).
+
+### Fase 8 — Pagos de cotización en store, repositorio y mappers
+
+Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `paymentType`,
+`concept`, `notes`); solo cambia la llave del padre.
+
+- `use-cotizacion-store.ts`: 5 getters × 3 (`getPagosByX` ordenado, `getAnticipadoX`,
+  `getSaldoPendienteX`, `getXPaymentStatus`, `getSaldoTotalPendienteX`) y 3 acciones × 3
+  (`add/update/delete…Payment`, con la misma validación de monto y saldo) → una función interna
+  que los arme por tipo (`_paymentSlice(payments, items, parentKey, cost)`), sin cambiar los
+  nombres que exporta el store (los usan las pantallas).
+- Diferencias sin razón que se unifican al juntarlas:
+  - `getSaldoPendienteProveedor` usa `Math.max(0, …)`; los de bus y hospedaje pueden dar
+    negativo (y ese negativo llega como `maxMonto` al formulario).
+  - Bus usa `bus.totalCost ?? 0` en el estado y `bus.totalCost` en el saldo.
+- `use-quotation-repository.ts`: `insert/update/delete…Payment` × 3, el `update` con los mismos
+  5 `if` → una función por tabla (`'provider_payments' | 'accommodation_payments' | 'bus_payments'`).
+- `utils/mappers.ts`: `map…PaymentRowToDomain` y `map…PaymentToInsert` × 3 → los campos comunes
+  en un helper (`mapSupplierPaymentFields`) + la llave del padre. Tipos: un
+  `SupplierPayment` base en `types/quotation.ts` del que salen los 3.
+- `getPaymentStatus` (`payments/use-payments-domain.ts`) y `calculatePaymentStatus`
+  (`quotation/use-quotation-domain.ts`) son la misma función → dejar una (en `utils/` o en el
+  dominio de pagos) y que la otra la importe.
+
+### Fase 9 — Repetición interna de `use-cotizacion-store`
+
+Sin cambiar lo que exporta el store:
+
+- `_runWrite(fn)`: `loading`, `error`, `catch` y el `invalidateQueries(quotationKeys.root)` del
+  `finally` se repiten en ~25 acciones.
+- `_editableQuotation(id)`: "buscar la cotización y rechazar si está confirmada" se repite ~12
+  veces con el mismo mensaje.
+- `toggleConfirmadoProveedor` / `toggleConfirmadoHospedaje`: iguales.
+- `refreshProviderPayableCosts` / `refreshHospedajeCosts`: misma forma (leer costos y mezclarlos
+  por id).
+- Sumas por reparto: `getCostoTipoMinimo/Total`, `getCostoBusesTipoMinimo/Total`,
+  `getGastosTipoMinimo/Total` → un `sumBySplit(items, splitType)`; `(splitType ?? 'minimum')`
+  queda en un solo lugar.
+- `getCostoPerPersonaBus` reimplementa `getDivisorCosto` → usarlo.
+- `quotations.value.find(c => c.id === id)` aparece ~20 veces → `_quotation(id)`.
+- **Bug menor:** en `hydrateTravel` con `result === null`, los pagos se filtran después de
+  quitar sus padres, así que la condición nunca se cumple y los pagos de la cotización borrada
+  se quedan en el store. Tampoco limpia `providerPriceAdjustments`. Hoy no se ve porque nadie
+  los lee sin su padre, pero se arregla al pasar a `_paymentSlice`.
+
+### Fase 10 — Contrato de errores de los stores (`toErrorMessage` + regla de `standardize-store-error-handling`)
+
+`completed/standardize-store-error-handling.md` fijó la regla: nunca `Promise<boolean>`, el
+`catch` siempre relanza. Hoy no se cumple:
+
+- Devuelven `boolean`: `use-bus-store` (update, delete, toggle), `use-provider-store` (update,
+  delete, toggle), `use-hotel-room-store` (updateTotalRooms, updateRoomType, deleteRoomType),
+  `use-travel-store` (update, delete, updateTravelBus, updateTravelAccommodation, addTravelRooms,
+  deleteTravelRoom), `use-agency-profile-store` (los 4 `save*` y las imágenes).
+- Tragan el error (`void` sin relanzar): `deleteTraveler`, `deleteCoordinator`,
+  `deletePayment`, `setAccountConfig`, `fetchByTravels`, y casi todas las de
+  `use-cotizacion-store` (que además mezcla `undefined`, `{ error }` y `string | null`).
+- `e instanceof Error ? e.message : '…'` está 85 veces → `toErrorMessage(e, fallback)` en
+  `utils/`.
+- Decidir al empezar: aplicar la regla tal cual (cambia a todos los que llaman, hay que
+  revisarlos uno por uno) o actualizar la regla al estilo que ya domina (`{ error }`). Es la fase
+  con más riesgo; va en commits por store y con prueba en el navegador de cada pantalla que
+  llama.
+
+### Fase 11 — Repositorios: helpers de Supabase
+
+- `delete().eq('id', id)` + `if (error) throw` está ~15 veces (bus, provider, coordinator,
+  traveler, payments, hotel room types, quotation ×8, travel media). Solo `removeTravel` y
+  `removeFromRoom` usan `.select().single()`, que convierte un borrado bloqueado por RLS (0
+  filas, sin error) en error; los demás fallan en silencio (mismo problema que el bug de
+  "revoke coordinator"). → `deleteById(table, id)` que siempre lo detecta.
+- `insert(…).select().single()` + `throw` + map, y lo mismo con `update`, se repiten en todos
+  los repositorios → `insertOne` / `updateOne` (opcional, si el tipado de Supabase lo permite
+  sin `any`).
+- `use-travel-repository.ts`: `removeActivities/Services/Buses/Accommodations` (iguales salvo
+  la tabla) y `replaceActivities/Services/Buses/Accommodations` (iguales salvo las funciones) →
+  `deleteByTravel(table, travelId)` y un `replaceChildren`.
+- Los repositorios de catálogo (`bus`, `provider`, `coordinator`) tienen la misma forma
+  `fetchAll / insert / update / remove`; con los helpers de arriba quedan cortos. No hace falta
+  una fábrica genérica.
+
+### Fase 12 — Storage y perfil de agencia
+
+- Subir archivo + `getPublicUrl` está 3 veces (`use-travel-media-repository` `upload` y
+  `uploadBanner`, `use-agency-profile-repository` `uploadImage`); borrar un archivo 3 veces
+  (`remove`, `removeFile`, `removeImage`); la extensión con `file.name.split('.').pop()` 2 veces.
+  → `utils/storage.ts` (`uploadPublicFile(bucket, path, file)`, `removeStorageFile`).
+- `getGalleryStoragePath` (travel domain) y `getSiteImageStoragePath` (agency domain) son la
+  misma función con otro bucket → `storagePathFromPublicUrl(url, bucket)`.
+- `use-agency-profile-store.ts`: `saveProfile`, `saveAboutPage`, `saveHomePage`, `saveSeo` son
+  iguales salvo el `update` y el mensaje → un `_save(update, message)`.
+
+### Fase 13 — Piezas chicas de datos
+
+- Orden de pagos por fecha descendente: 4 veces (`use-payment-store` y 3 en cotización) →
+  `sortByDateDesc`.
+- "Reemplazar la parte de la lista que pertenece a X": `use-payment-store`
+  (`fetchByTravels`, `fetchByTraveler`) y `hydrateTravel` → `replaceWhere(list, belongs, items)`.
+- `costPerPerson: d.price_per_night / d.max_occupancy` 2 veces en `use-quotation-repository`
+  → `calculateCostPerPerson` (ya existe en `utils/hotel-room-helpers.ts`), mejor dentro de
+  `mapQuotationAccommodationDetailRowToDomain`.
+- `use-hotel-room-repository`: `insertRoomType` y `updateRoomType` mapean los mismos 6 campos
+  → mapper.
+- `use-provider-repository.update` copia los campos de ubicación y contacto de
+  `mapProviderToInsert` → reutilizar el mapper.
+- `use-travel-repository`: los `insert` de services, buses y accommodations mapean en línea →
+  moverlos a `utils/mappers.ts` como los demás; `mapRowToDomain` de travel media también.
+
+## Tercera pasada: páginas y componentes leídos a mano (2026-10-13)
+
+Se leyeron los scripts de las páginas y componentes grandes y medianos (cotización, viajeros,
+habitaciones, pagos, viajes, calendario, proveedores, coordinadores, perfil de agencia,
+galería) y se buscó con grep cada patrón en el resto. Fases 14-17.
+
+### Bugs encontrados en esta pasada (arreglar en la fase que toca el archivo, o antes)
+
+- `pages/coordinators/index.vue`: `handleFormSubmit` llama a `addCoordinator` /
+  `updateCoordinator` sin `await`, así que el `try/catch` nunca atrapa nada: siempre muestra
+  "Coordinador creado/actualizado" y cierra el modal aunque falle. `handleDelete` igual con
+  `deleteCoordinator` (que además se traga el error): siempre dice "eliminado".
+- `components/bus-list.vue`: si `updateBus` o `deleteBus` fallan (devuelven `false`) no hay
+  ningún toast; el modal se queda abierto sin explicación.
+- `pages/quotations/[id].vue` `handleCrearCotizacion`: `createQuotation` relanza el error y no
+  hay `catch` → promesa rechazada sin aviso al usuario.
+- 6 de los 14 menús con "Eliminar" no llevan `color: 'error'` (travelers, coordinators,
+  dashboard, bus-list, payments/traveler, travel-activity-list): la misma acción se ve distinta
+  según la pantalla.
+- Ícono de coordinador inconsistente: `i-lucide-user-star` en sidebar, dashboard y
+  coordinadores, pero `i-lucide-user-cog` en habitaciones, asientos y servicios opcionales,
+  donde `user-star` significa "representante".
+- `use-payment-store`: `allPayments`, `getPaymentById`, `filteredPayments` y los `filters` no
+  los usa nadie (código muerto; verificar con grep antes de borrar).
+- `TravelerFilterBar`: el filtro de viaje siempre está oculto (`hide-travel-filter` y
+  `available-travels="[]"` en su único uso) → quitarlo.
+
+### Fase 14 — Etiquetas, opciones y formatos en `utils/`
+
+Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
+
+- **Estado de pago a proveedores** (Pendiente / Anticipo / Liquidado): copiado en
+  `cotizacion-proveedor-tabla`, `cotizacion-buses-section`, `cotizacion-hospedaje-tabla` y
+  `cotizacion-resumen-financiero`; en hospedaje "Anticipo" es `neutral` y en los otros `info`.
+- **Estado de pago de viajeros** (Pendiente / Parcial o "Abono parcial" / Pagado): en
+  `travel-payments-panel` (dos veces, con textos distintos) y `payment-summary-card`.
+  → `utils/payment-status.ts` + `PaymentStatusBadge`.
+- **Método de pago** (Efectivo / Transferencia): las opciones están en 8 archivos y la
+  etiqueta del badge en 5 (+ `paymentTypeLabel` en `payments/traveler/[id]`).
+- **Reparto** ("Asientos mínimos objetivo" / "Asientos vendibles"): opciones ×3, badge
+  "Asientos min./vend." ×3; **tipo de costo** (total / por persona) ×2.
+- **Estado de cotización** (Borrador / Confirmada): `quotations/index` y
+  `cotizacion-header-actions`.
+- **Estado de viaje**: `travel-form` vuelve a escribir las etiquetas de `TRAVEL_STATUS_LABELS`
+  → armar las opciones desde `TRAVEL_STATUSES`; el badge de estado está en 8 lugares →
+  `TravelStatusBadge`.
+- **Tipo de viajero** (Adulto / Niño) ×4; **íconos por tipo** (viajero, representante,
+  coordinador) → un mapa y arreglar la inconsistencia de arriba.
+- **Plural**: `${n} día${n === 1 ? '' : 's'}` y parecidos, 25 veces en 18 archivos →
+  `pluralize(n, 'día')`.
+- **Nombre completo** `${firstName} ${lastName}` en 9 archivos → `formatTravelerName`.
+- **Fechas**: 5 `formatDate` locales (los 3 historiales, `payments/traveler/[id]`,
+  `dashboard`) con `month: 'short'` y dos estilos de día; rangos de fechas en `dashboard`,
+  `quotations/index` (con mes largo) y `travels/[id]` → `formatShortDate` y
+  `formatDateRange` en `utils/format-date.ts`. La duración del viaje ya existe
+  (`getTravelDurationDays` en `utils/travel-calendar.ts`) pero se reimplementa en
+  `travels/[id].vue`, `travels/[id]/index.vue` y `travel-activity-list` (esta con
+  `new Date('YYYY-MM-DD')`).
+- **Nombre de proveedor** `getProviderById(id)?.name ?? '…'` ×8 con 4 textos de respaldo
+  distintos → getter `getProviderName` en `use-provider-store`.
+- **Etiqueta de camión del viaje** (`agencia — marca modelo`) ×3 (travelers, `traveler-form`,
+  `traveler-filter-bar`) → `formatTravelBusLabel`.
+- **Coordinadores por ids** `ids.map(id => getCoordinatorById(id))` ×5 → getter.
+
+### Fase 15 — Composables de pantalla
+
+- `useQuotationContext(quotationId)`: `cotizaciones.find(c => c.id === quotationId)?.travelId`
+  + `useTravelCoordinatorCount` en 11 componentes de cotización.
+- `useTravelQuotation(travelId)`: `useQuery(quotationByTravelQuery)` +
+  `getCotizacionByTravel` + `useQueryLoadState` en 8 lugares.
+- `useQuotationRoomCounts(quotationId)`: `travelDetailQuery` + `countRoomsByType` +
+  `roomTypeKey` en `cotizacion-hospedaje-tabla` y `cotizacion-hospedaje-resumen`.
+- `useRedirectIfMissing(query, { to, message })`: el `watch([status, data])` de "no
+  encontrado" (con la nota del bucle de `watchEffect`) está en `travels/[id]`,
+  `quotations/[id]`, `payments/travel/[id]` y `payments/traveler/[id]`.
+- `useFormModal<T>()`: `isOpen` + `editing` + `openNew` / `openEdit` / `close` en 15 archivos.
+- `useValidTab(tabs, fallback)` (travelers y habitaciones) y `useExpandedGroups(rows)` (el
+  `watchEffect` que expande grupos, en travelers y `travel-payments-panel`).
+- Pagos de un viaje: `watch(travelId, () => paymentStore.fetchByTravel(id))` en 4 lugares →
+  `useTravelPayments(travelId)` (o pasar esos datos a una query de Pinia Colada como el resto).
+- `useSiteImageActions()`: subir/quitar imagen con sus toasts en `profile/index`,
+  `profile/home` y `profile/seo`.
+- VueUse en lugar de código a mano: el debounce de `provider-filter-bar` (`refDebounced`) y
+  las `URL.createObjectURL/revokeObjectURL` de `travel-form` y `travel-gallery-upload`
+  (`useObjectUrl`).
+- Búsqueda: `coordinators/index` filtra con otras reglas que `matchesProviderSearch` (sin
+  quitar acentos, teléfono desde 1 dígito) → un `matchesSearch(fields, term, phone?)` en
+  `utils/`.
+
+### Fase 16 — Componentes y piezas de tabla
+
+- `PageHeader` (título, descripción, volver, acciones): ~20 `<h1>` con 4 estilos
+  (`text-3xl`/`text-2xl`, `text-gray-900 dark:text-white`/`text-highlighted`).
+- Celdas de tabla repetidas con `h(...)`: link con ícono de etiqueta al viaje ×3
+  (`dashboard`, `quotations/index`, `payments/index`), nombre con botón de expandir grupo ×2
+  (travelers, `travel-payments-panel`), y un helper `deleteAction(onSelect)` para que
+  "Eliminar" siempre lleve el mismo ícono y color.
+- `cotizacion-proveedor-tabla`, `cotizacion-buses-section` y `cotizacion-hospedaje-tabla`
+  repiten el grupo de acciones de pago, la de confirmar y los badges; las dos primeras usan
+  `<table>` a mano y la de hospedaje `UTable`. Al juntar los badges (fase 14) y las acciones,
+  decidir una sola forma de tabla.
+- `agency-about-page-form` y `agency-home-page-form` son iguales salvo los nombres →
+  `AgencyPageForm` que reciba el esquema, `clone` y `serialize` del dominio. Los editores
+  (`agency-about-page-editor` / `agency-home-page-editor`) comparten el estado vacío y la barra
+  de plantilla/restaurar → un contenedor con slots.
+- `travel-activity-list` y `travel-service-list`: misma lista editable (copia local del
+  `v-model`, `watch` para sincronizar, agregar/editar/borrar con modal) → `useEditableList`.
+  Ojo: la de actividades guarda ella misma en el store y la de servicios deja que guarde el
+  padre; elegir una.
+- El banner de `travel-form` reimplementa lo que ya hace `AgencyImageUpload` (input oculto,
+  vista previa, quitar) → generalizarlo a `ImageUpload` (o usar `UFileUpload` de Nuxt UI).
+- `v-model`: 5 componentes usan `modelValue` + `emit('update:modelValue')` y 20 `defineModel`
+  → pasar los 5 a `defineModel` (por ejemplo `provider-filter-bar`, con un
+  `setFilter(key, value)` en vez de un handler por campo).
+
+### Fase 17 — Lógica de dominio repetida en componentes
+
+- Agrupar por representante: `groupTravelersByRepresentative` ya existe, pero
+  `travel-payments-panel` lo reimplementa, `travel-optional-service-card` arma sus filas igual,
+  y travelers y habitaciones hacen cada uno su mapa de nombres de representante → una función
+  del dominio (con variante plana para listas).
+- `getSeatChangeErrorMessage` en travelers vuelve a traducir los códigos que
+  `toTravelerSeatChangeError` ya convierte en mensaje (con otros textos) → usar `error.message`.
+- `formatAjusteAmount` (`payment-summary-card`) = `calcAdjustmentAmount` del dominio de pagos.
+- Viajeros que toman un servicio `unitCost ? Math.round(payableCost / unitCost) : 0` ×2
+  (`cotizacion-proveedor-tabla`, `travels/[id]/optional-services`), y
+  `travel-optional-service-card` recalcula pendiente y sobrepago que ya dan
+  `getSaldoPendienteProveedor` / `getSobrepagoProveedor` → getters del store.
+- `cotizacion-gastos-section` calcula el costo por asiento de cada gasto a mano; proveedores y
+  autobuses tienen getter (`getCostoPerPersonaProveedor/Bus`) → agregar el de gastos.
+- Los toasts de "guardado / no se pudo" después de cada acción del store se escriben a mano
+  en casi todas las pantallas; se simplifican solos cuando el contrato de errores de la
+  fase 10 sea uno solo.
+
 ## Fuera de alcance (repetido, pero no vale la pena ahora)
 
-- Stores: el bloque `loading = true; error = null; try … catch` se repite ~75 veces (30 en
-  `use-cotizacion-store`). Un helper `runAction()` toca todos los stores → tarea aparte.
+- Los `update` de los repositorios (`if (data.x !== undefined) update.y = data.x`) se repiten en
+  todos, pero cada uno decide distinto entre `!== undefined` y `'x' in data` (borrar vs. no
+  tocar). Un helper genérico escondería esa diferencia.
 - `cotizacion-gasto-form` / `cotizacion-proveedor-form`: comparten ~20 líneas de campos
   (descripción, tipo de costo); dependen del contexto.
 - `agency-about-page-editor` / `agency-home-page-editor`: barra de plantilla/restaurar (~20
@@ -169,4 +428,11 @@ mover a otra tarea si la rama crece mucho.
   unidades).
 - Fases 5-6: revisión visual de dashboard, pagos, cotizaciones, viajeros, habitaciones, login y
   registro (desktop y tablet).
+- Fases 8-9: en una cotización, agregar/editar/borrar proveedor, hospedaje, autobús y gasto;
+  el precio por asiento, la ganancia y los saldos dan lo mismo que antes (anotar los números
+  de una cotización real de stage antes de empezar y comparar).
+- Fase 10: en cada pantalla que llama a un store cambiado, provocar un error (por ejemplo, sin
+  red) y ver el toast; y que el caso bueno siga cerrando modales y navegando.
+- Fases 11-12: borrar algo bloqueado por RLS (otra agencia) da error en vez de "éxito";
+  subir y quitar logo, favicon, banner y fotos de la galería.
 - Volver a correr `jscpd`: los grupos de este plan ya no aparecen.
