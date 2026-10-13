@@ -9,6 +9,7 @@ import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErr
 import BusSeatMap from '~/components/bus-seat-map.vue';
 import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 
 definePageMeta({
@@ -89,6 +90,8 @@ const isSeatChangeModeActive = computed(() => seatChangeContext.value !== null);
 // Coordinators travel in their own travelers rows: no payments or groups, but a seat (when
 // the quotation counts them as passengers) and rooms like anyone else.
 const coordinatorsOfTravel = computed(() => occupantsOfTravel.value.filter(t => t.kind === 'coordinator'));
+// Whether coordinators take seats, and which bus each one rides, live in the quotation.
+useQuery(() => quotationByTravelQuery(travelId.value));
 const coordinatorsTakeSeats = computed(() =>
   cotizacionStore.getCotizacionByTravel(travelId.value)?.coordinatorsTakeSeats ?? false,
 );
@@ -138,10 +141,9 @@ const seatChangeAlertDescription = computed(() => {
 });
 
 // Another travel starts with no filters and no seat change in progress
-watch(travelId, async (id) => {
+watch(travelId, () => {
   filters.value = {};
   clearSeatChangeState();
-  await cotizacionStore.fetchByTravel(id);
 }, { immediate: true });
 
 watch(tabs, (availableTabs) => {

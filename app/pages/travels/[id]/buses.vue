@@ -5,12 +5,7 @@ definePageMeta({
   name: 'travel-buses',
 });
 
-const cotizacionStore = useCotizacionStore();
-
 const { travelId } = useTravelRoute();
-
-// Los autobuses (y sus coordinadores) viven en la cotización: cargarla al abrir la pestaña
-watch(travelId, id => cotizacionStore.fetchByTravel(id), { immediate: true });
 </script>
 
 <template>

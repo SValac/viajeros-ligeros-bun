@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { BusPaymentStatus, QuotationBus } from '~/types/quotation';
 
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -17,6 +18,8 @@ const { quotationId, readonly = false } = defineProps<Props>();
 defineEmits<Emits>();
 
 const cotizacionStore = useCotizacionStore();
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(travelId);
 const providerStore = useProviderStore();
 const toast = useToast();
 
@@ -220,7 +223,7 @@ function getBusActions(bus: QuotationBus) {
 
             <!-- Costo/persona -->
             <td class="py-3 pr-4">
-              {{ formatCurrency(cotizacionStore.getCostoPerPersonaBus(bus.id)) }}
+              {{ formatCurrency(cotizacionStore.getCostoPerPersonaBus(bus.id, coordinatorCount)) }}
             </td>
 
             <!-- Pagado -->

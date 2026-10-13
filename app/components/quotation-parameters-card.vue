@@ -28,7 +28,7 @@ const { data: travel } = useQuery(() => travelDetailQuery(quotation.travelId));
 const numCoordinadores = computed(() =>
   travel.value?.coordinatorIds.length ?? 0,
 );
-const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotation.id));
+const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotation.id, numCoordinadores.value));
 const origenVendibles = computed(() => {
   if (!quotation.coordinatorsTakeSeats || numCoordinadores.value === 0)
     return 'Todos los asientos se venden';

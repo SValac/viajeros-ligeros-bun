@@ -4,6 +4,7 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 import { z } from 'zod';
 
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
+import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -18,13 +19,16 @@ const cotizacionStore = useCotizacionStore();
 
 const { travelId, quotation: cotizacion, readonly } = useQuotationRoute();
 
-onMounted(async () => {
-  await cotizacionStore.fetchByTravel(travelId.value);
-  // Lo que se le debe a un servicio opcional cambia con los viajeros del viaje.
-  await cotizacionStore.refreshProviderPayableCosts(travelId.value);
-});
+// La cotización se copia al store en cada petición; las pestañas leen del store. La query
+// la vuelve a pedir al regresar a la pestaña del navegador y tras cada escritura, así que
+// también trae lo que se le debe a cada servicio opcional (cambia con los viajeros).
+const {
+  data: quotationData,
+  status: quotationStatus,
+  refetch: refetchQuotation,
+} = useQuery(() => quotationByTravelQuery(travelId.value));
 
-const { data: travel, status } = useQuery(() => travelDetailQuery(travelId.value));
+const { data: travel, status, refetch: refetchTravel } = useQuery(() => travelDetailQuery(travelId.value));
 
 // Redirect if travel not found.
 // `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
@@ -148,8 +152,27 @@ function handleCotizacionConfirmada() {
         />
       </div>
 
+      <!-- Hasta que la cotización cargue (o si falla la primera vez), "Sin cotización" sería
+           mentira. Si falla un refetch posterior, se queda lo que ya se tenía. -->
+      <div v-if="quotationStatus === 'pending' && quotationData === undefined" class="flex justify-center py-12">
+        <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
+      </div>
+      <div
+        v-else-if="quotationStatus === 'error' && quotationData === undefined"
+        class="flex flex-col items-center justify-center gap-4 py-12"
+      >
+        <p class="text-muted">
+          No se pudo cargar la cotización
+        </p>
+        <UButton
+          label="Reintentar"
+          icon="i-lucide-refresh-cw"
+          @click="refetchQuotation()"
+        />
+      </div>
+
       <!-- Sin cotización -->
-      <div v-if="!cotizacion">
+      <div v-else-if="!cotizacion">
         <UCard class="text-center py-12">
           <UIcon name="i-lucide-file-plus" class="w-16 h-16 text-muted mx-auto mb-4 block" />
           <h2 class="text-xl font-semibold mb-2">
@@ -234,6 +257,20 @@ function handleCotizacionConfirmada() {
         </UForm>
       </template>
     </UModal>
+  </div>
+
+  <div
+    v-else-if="status === 'error'"
+    class="flex h-full flex-col items-center justify-center gap-4"
+  >
+    <p class="text-muted">
+      No se pudo cargar el viaje
+    </p>
+    <UButton
+      label="Reintentar"
+      icon="i-lucide-refresh-cw"
+      @click="refetchTravel()"
+    />
   </div>
 
   <div v-else class="flex h-full items-center justify-center">

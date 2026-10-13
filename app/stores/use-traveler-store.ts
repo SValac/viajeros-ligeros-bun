@@ -4,6 +4,7 @@ import type { Traveler, TravelerFormData, TravelerSeatChangeResult, TravelerUpda
 import { isTravelerSeatChangeResult, toRoomAssignmentErrorMessage, toTravelerSeatChangeError } from '~/composables/travelers/use-traveler-domain';
 import { useTravelerRepository } from '~/composables/travelers/use-traveler-repository';
 import { paymentKeys } from '~/queries/payments';
+import { quotationKeys } from '~/queries/quotations';
 import { travelerKeys } from '~/queries/travelers';
 import { travelKeys } from '~/queries/travels';
 import { TravelerSeatChangeError } from '~/types/traveler';
@@ -36,6 +37,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       const traveler = await repository.insert(data);
       queryCache.invalidateQueries({ key: travelerKeys.root }); // traveler list changed
       queryCache.invalidateQueries({ key: travelKeys.root }); // traveler count
+      // What's owed to per-person providers is recomputed in the DB from the travelers.
+      queryCache.invalidateQueries({ key: quotationKeys.byTravel(traveler.travelId) });
       return traveler;
     }
     catch (e) {
@@ -90,6 +93,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       queryCache.invalidateQueries({ key: travelKeys.root }); // traveler count
       // The DB cascades the traveler's room assignments too.
       queryCache.invalidateQueries({ key: travelerKeys.root }); // traveler list changed
+      // What's owed to per-person providers is recomputed in the DB from the travelers.
+      queryCache.invalidateQueries({ key: quotationKeys.root });
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error desconocido';

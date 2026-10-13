@@ -5,6 +5,7 @@ import type { PaymentType } from '~/types/payment';
 import type { CostSplitType, ProviderCostType, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { calculateProviderTotalCost, getPriceAdjustmentError } from '~/composables/quotation/use-quotation-domain';
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -22,6 +23,8 @@ const emit = defineEmits<{
 }>();
 
 const cotizacionStore = useCotizacionStore();
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(travelId);
 
 const costSchema = z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0');
 
@@ -101,11 +104,11 @@ const serviceDescriptionInput = useSanitizedModel(() => state.serviceDescription
 const remarksInput = useSanitizedModel(() => state.remarks ?? '', v => state.remarks = v, sanitizeText);
 
 // Entre cuántas personas se reparte un costo total ("Dividir entre").
-const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotationId, state.splitType));
+const divisorPersonas = computed(() => cotizacionStore.getDivisorCosto(quotationId, state.splitType, coordinatorCount.value));
 
 // Un servicio por persona suma su costo directo al asiento; su total de referencia es el
 // costo × asientos vendibles (lo que costaría con el autobús lleno).
-const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId));
+const asientosVendibles = computed(() => cotizacionStore.getAsientosVendibles(quotationId, coordinatorCount.value));
 
 // Al pasar de "por persona" a "total" el total arranca con el de referencia.
 watch(() => state.costType, (costType) => {
