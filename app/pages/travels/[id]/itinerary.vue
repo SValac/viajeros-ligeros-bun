@@ -10,7 +10,7 @@ const { travelId, travel } = useTravelRoute();
 
 <template>
   <UCard v-if="travel">
-    <!-- Con travelId, la lista guarda cada cambio al momento -->
+    <!-- With travelId, the list saves each change right away -->
     <TravelActivityList
       :model-value="travel.itinerary"
       :start-date="travel.startDate"

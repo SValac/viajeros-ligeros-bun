@@ -62,7 +62,7 @@ type SeatSelectionPayload = {
   passengerName?: string;
 };
 
-// Estado local
+// Local state
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
 const createTravelerInitialValues = shallowRef<Partial<TravelerFormData> | null>(null);
@@ -76,7 +76,7 @@ const seatingCoordinator = shallowRef<Traveler | null>(null);
 // Bus and representative filters of the table; the travel is the route's.
 const filters = ref<TravelerFilters>({});
 
-// Datos derivados
+// Derived data
 const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
 const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
 const travelersLoad = useQueryLoadState(travelersQuery);
@@ -714,7 +714,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
 
 <template>
   <div class="space-y-6">
-    <!-- Acciones (el encabezado y la navegación los pone app/pages/travels/[id].vue) -->
+    <!-- Actions (the header and navigation come from app/pages/travels/[id].vue) -->
     <div class="flex justify-end">
       <!-- The form checks seats and lists representatives from the loaded travelers -->
       <UButton
@@ -731,7 +731,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       label="los viajeros"
       @retry="refetchTravelers()"
     >
-      <!-- Estadísticas -->
+      <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <UCard>
           <div class="flex items-center justify-between">
@@ -905,7 +905,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       </UTabs>
     </LoadState>
 
-    <!-- Modal de formulario -->
+    <!-- Form modal -->
     <UModal
       v-model:open="isFormModalOpen"
       :title="editingTraveler ? 'Editar Viajero' : 'Nuevo Viajero'"

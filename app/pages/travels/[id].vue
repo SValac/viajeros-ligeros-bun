@@ -3,8 +3,8 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 
-// Padre de las pestañas del viaje (app/pages/travels/[id]/*). Muestra el encabezado, las
-// acciones y la navegación; cada pestaña es una ruta hija que se renderiza en <NuxtPage />.
+// Parent of the travel tabs (app/pages/travels/[id]/*). Shows the header, the
+// actions and the navigation; each tab is a child route rendered in <NuxtPage />.
 
 const route = useRoute();
 const router = useRouter();
@@ -20,10 +20,10 @@ const isDeleteModalOpen = shallowRef(false);
 const isDeleting = shallowRef(false);
 
 // Redirect to dashboard if travel not found.
-// `watch` con fuente explícita, no `watchEffect`: toast.add() lee estado reactivo interno
-// y el efecto se volvería a disparar en bucle (toast + router.push infinitos).
-// Solo con la query resuelta y `null` estricto: `undefined` es "todavía cargando" (link
-// directo) o "falló la petición", y ninguno de los dos significa que el viaje no exista.
+// `watch` with an explicit source, not `watchEffect`: toast.add() reads internal reactive state
+// and the effect would retrigger in a loop (endless toast + router.push).
+// Only once the query resolved and with a strict `null`: `undefined` is "still loading" (direct
+// link) or "the request failed", and neither means the travel doesn't exist.
 watch([status, travel], ([currentStatus, value]) => {
   if (currentStatus === 'success' && value === null && travelId.value && !isDeleting.value) {
     toast.add({
@@ -45,7 +45,7 @@ const dateRange = computed(() => {
   return `${format(travel.value.startDate)} – ${format(travel.value.endDate)} · ${days} día${days === 1 ? '' : 's'}`;
 });
 
-// Para agregar una pestaña: crear app/pages/travels/[id]/<name>.vue y agregarla aquí.
+// To add a tab: create app/pages/travels/[id]/<name>.vue and add it here.
 const tabs = computed<NavigationMenuItem[]>(() => {
   const params = { id: travelId.value };
   const count = (n: number) => (n > 0 ? String(n) : undefined);
@@ -181,7 +181,7 @@ async function deleteTravel() {
         <NuxtPage />
       </div>
 
-      <!-- Modal: eliminar viaje -->
+      <!-- Modal: delete travel -->
       <UModal
         v-model:open="isDeleteModalOpen"
         title="Eliminar viaje"

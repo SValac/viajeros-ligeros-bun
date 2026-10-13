@@ -20,7 +20,7 @@ const coordinators = computed(() => {
   const term = searchTerm.value.toLowerCase();
   if (!term)
     return coordinatorStore.allCoordinators;
-  // El teléfono se compara por dígitos: se guarda en E.164 y se escribe como se ve, "(312) 127…"
+  // The phone is compared by digits: it's stored as E.164 and typed as shown, "(312) 127…"
   const termDigits = term.replace(/\D/g, '');
   return coordinatorStore.allCoordinators.filter(
     c =>

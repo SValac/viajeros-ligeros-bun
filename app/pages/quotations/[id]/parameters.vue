@@ -7,12 +7,12 @@ definePageMeta({
 
 const { quotation, readonly } = useQuotationRoute();
 
-// Renderizada por app/pages/quotations/[id].vue solo cuando la cotización existe.
+// Rendered by app/pages/quotations/[id].vue only when the quotation exists.
 const loadedQuotation = computed(() => quotation.value!);
 </script>
 
 <template>
-  <!-- Editables solo en borrador; confirmada se ven de solo lectura -->
+  <!-- Editable only in draft; once confirmed they're shown read-only -->
   <QuotationParametersCard
     :quotation="loadedQuotation"
     :readonly="readonly"
