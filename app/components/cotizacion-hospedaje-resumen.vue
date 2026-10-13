@@ -5,7 +5,8 @@ import { h } from 'vue';
 
 import type { QuotationAccommodation } from '~/types/quotation';
 
-import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 
@@ -22,7 +23,9 @@ const hotelRoomStore = useHotelRoomStore();
 const hospedajes = computed(() => cotizacionStore.getHospedajesByQuotation(props.quotationId));
 const totalCosto = computed(() => cotizacionStore.getTotalCostoHospedajes(props.quotationId));
 // Room counts come from the travel's rooms page, not from the quotation.
-const roomCounts = computed(() => cotizacionStore.getRoomCountsByQuotation(props.quotationId));
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === props.quotationId)?.travelId);
+const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
+const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
 
 function getRoomCount(accommodation: QuotationAccommodation, roomTypeId: string): number {
   return roomCounts.value.get(roomTypeKey(accommodation.providerId, roomTypeId)) ?? 0;

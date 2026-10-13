@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
+import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -11,6 +12,8 @@ type Props = {
 const { quotationId, readonly = false } = defineProps<Props>();
 
 const cotizacionStore = useCotizacionStore();
+const travelId = computed(() => cotizacionStore.cotizaciones.find(c => c.id === quotationId)?.travelId);
+const coordinatorCount = useTravelCoordinatorCount(travelId);
 const toast = useToast();
 
 const gastos = computed(() => cotizacionStore.getGastosByQuotation(quotationId));
@@ -19,7 +22,7 @@ const totalPorAsiento = computed(() => gastos.value.reduce((sum, g) => sum + get
 
 // Lo que suma un gasto al precio de cada asiento: su total entre el divisor de "Dividir entre".
 function getCostoPorAsiento(gasto: QuotationExpense): number {
-  const divisor = cotizacionStore.getDivisorCosto(quotationId, gasto.splitType);
+  const divisor = cotizacionStore.getDivisorCosto(quotationId, gasto.splitType, coordinatorCount.value);
   return divisor > 0 ? gasto.totalCost / divisor : 0;
 }
 

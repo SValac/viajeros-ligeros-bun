@@ -35,7 +35,6 @@ import {
   calculateProviderQuotedCost,
   calculateSeatPrice,
   calculateSellableSeats,
-  countRoomsByType,
   findRoomsOutsideQuotation,
   isPerPersonProvider,
 } from '~/composables/quotation/use-quotation-domain';
@@ -129,21 +128,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return quotationAccommodations.value
         .filter(h => h.quotationId === quotationId)
         .reduce((sum, h) => sum + h.totalCost, 0);
-    };
-  });
-
-  // Rooms the quotation's travel holds per hotel room type (key: roomTypeKey). The count
-  // lives on the travel: it's set on the rooms page and changes until the trip leaves.
-  const getRoomCountsByQuotation = computed(() => {
-    return (quotationId: string): Map<string, number> => {
-      const quote = quotations.value.find(q => q.id === quotationId);
-      if (!quote)
-        return new Map();
-
-      // Temporal hasta Fase 4: lee el viaje de la caché, así que depende de que la
-      // pantalla haya montado travelDetailQuery. Sin entrada cuenta 0 habitaciones.
-      const travelData = queryCache.getQueryData<TravelDetail | null>(travelKeys.detail(quote.travelId));
-      return countRoomsByType(travelData?.accommodations ?? []);
     };
   });
 
@@ -289,25 +273,22 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Asientos que se pueden vender: el total menos los coordinadores del viaje cuando la
   // cotización dice que ocupan asiento. Es el divisor de los costos repartidos entre el
   // total y la base de la ganancia proyectada.
+  // Los coordinadores son del viaje, no de la cotización: quien llama pasa cuántos son
+  // (`coordinatorIds.length` de travelDetailQuery). Lo mismo los getters que dependen de este.
   const getAsientosVendibles = computed(() => {
-    return (quotationId: string): number => {
+    return (quotationId: string, coordinatorCount: number): number => {
       const quote = quotations.value.find(c => c.id === quotationId);
       if (!quote)
         return 0;
-
-      // Temporal hasta Fase 4: lee el viaje de la caché, así que depende de que la
-      // pantalla haya montado travelDetailQuery. Sin entrada cuenta 0 coordinadores.
-      const travelData = queryCache.getQueryData<TravelDetail | null>(travelKeys.detail(quote.travelId));
-      const coordinators = travelData?.coordinatorIds.length ?? 0;
-      return calculateSellableSeats(quote, coordinators);
+      return calculateSellableSeats(quote, coordinatorCount);
     };
   });
 
   // Costo de los servicios con el autobús lleno: los por persona cuentan su costo por
   // persona × asientos vendibles.
   const getCostoTotal = computed(() => {
-    return (quotationId: string): number => {
-      const asientosVendibles = getAsientosVendibles.value(quotationId);
+    return (quotationId: string, coordinatorCount: number): number => {
+      const asientosVendibles = getAsientosVendibles.value(quotationId, coordinatorCount);
       return quotationProviders.value
         .filter(p => p.quotationId === quotationId)
         .reduce((sum, p) => sum + calculateProviderQuotedCost(p, asientosVendibles), 0);
@@ -318,7 +299,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // El hospedaje queda fuera: cada viajero lo paga aparte según su habitación.
   // Devuelve 0 si aún no hay precio por asiento.
   const getAsientoConGanancia = computed(() => {
-    return (quotationId: string): number => {
+    return (quotationId: string, coordinatorCount: number): number => {
       const cotizacion = quotations.value.find(c => c.id === quotationId);
       if (!cotizacion || cotizacion.seatPrice === 0)
         return 0;
@@ -327,7 +308,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       const costoPorAsiento = getCostoPorPersonaAsiento.value(quotationId);
       const margenPorAsiento = cotizacion.seatPrice - costoPorAsiento;
       if (margenPorAsiento <= 0)
-        return getAsientosVendibles.value(quotationId) + 1;
+        return getAsientosVendibles.value(quotationId, coordinatorCount) + 1;
       const costoFijo = getCostoTipoMinimo.value(quotationId) + getCostoTipoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId) + getTotalGastos.value(quotationId);
       return Math.floor(costoFijo / margenPorAsiento) + 1;
     };
@@ -336,13 +317,13 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Precio calculado a partir del asiento mínimo objetivo (seatPrice de la cotización)
   // Incluye costos de proveedores, autobuses y gastos adicionales; el hospedaje se suma aparte en la matriz de precios de referencia
   const getPrecioAsientoCalculado = computed(() => {
-    return (quotationId: string): number => {
+    return (quotationId: string, coordinatorCount: number): number => {
       const cotizacion = quotations.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return 0;
 
       return calculateSeatPrice(
-        { minimumSeatTarget: cotizacion.minimumSeatTarget, sellableSeats: getAsientosVendibles.value(quotationId) },
+        { minimumSeatTarget: cotizacion.minimumSeatTarget, sellableSeats: getAsientosVendibles.value(quotationId, coordinatorCount) },
         quotationProviders.value.filter(p => p.quotationId === quotationId),
         quotationBuses.value.filter(b => b.quotationId === quotationId),
         getGastosByQuotation.value(quotationId),
@@ -353,12 +334,12 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // Ganancia con el autobús lleno: asientos vendibles × precio por asiento − (servicios + autobuses + gastos).
   // El hospedaje queda fuera de ambos lados: los viajeros lo pagan aparte según su habitación.
   const getGananciaProyectada = computed(() => {
-    return (quotationId: string): number => {
+    return (quotationId: string, coordinatorCount: number): number => {
       const cotizacion = quotations.value.find(c => c.id === quotationId);
-      const asientosVendibles = getAsientosVendibles.value(quotationId);
+      const asientosVendibles = getAsientosVendibles.value(quotationId, coordinatorCount);
       if (!cotizacion || asientosVendibles === 0)
         return 0;
-      const costoTotal = getCostoTotal.value(quotationId) + getTotalCostoBuses.value(quotationId) + getTotalGastos.value(quotationId);
+      const costoTotal = getCostoTotal.value(quotationId, coordinatorCount) + getTotalCostoBuses.value(quotationId) + getTotalGastos.value(quotationId);
       return (asientosVendibles * cotizacion.seatPrice) - costoTotal;
     };
   });
@@ -375,18 +356,18 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   // objetivo o los asientos vendibles. También es el número de personas por defecto de un
   // servicio cobrado por persona.
   const getDivisorCosto = computed(() => {
-    return (quotationId: string, splitType: CostSplitType): number => {
+    return (quotationId: string, splitType: CostSplitType, coordinatorCount: number): number => {
       const cotizacion = quotations.value.find(c => c.id === quotationId);
       if (!cotizacion)
         return 0;
       return splitType === 'total'
-        ? getAsientosVendibles.value(quotationId)
+        ? getAsientosVendibles.value(quotationId, coordinatorCount)
         : cotizacion.minimumSeatTarget;
     };
   });
 
   const getCostoPerPersonaProveedor = computed(() => {
-    return (quotationProviderId: string): number => {
+    return (quotationProviderId: string, coordinatorCount: number): number => {
       const proveedor = quotationProviders.value.find(p => p.id === quotationProviderId);
       if (!proveedor)
         return 0;
@@ -395,7 +376,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (isPerPersonProvider(proveedor))
         return proveedor.unitCost ?? 0;
 
-      const divisor = getDivisorCosto.value(proveedor.quotationId, proveedor.splitType ?? 'minimum');
+      const divisor = getDivisorCosto.value(proveedor.quotationId, proveedor.splitType ?? 'minimum', coordinatorCount);
       if (divisor === 0)
         return 0;
       return proveedor.totalCost / divisor;
@@ -597,7 +578,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
   });
 
   const getCostoPerPersonaBus = computed(() => {
-    return (quotationBusId: string): number => {
+    return (quotationBusId: string, coordinatorCount: number): number => {
       const bus = quotationBuses.value.find(b => b.id === quotationBusId);
       if (!bus)
         return 0;
@@ -605,7 +586,7 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       if (!cotizacion)
         return 0;
       const divisor = bus.splitType === 'total'
-        ? getAsientosVendibles.value(cotizacion.id)
+        ? getAsientosVendibles.value(cotizacion.id, coordinatorCount)
         : cotizacion.minimumSeatTarget;
       if (divisor === 0)
         return 0;
@@ -638,16 +619,20 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
       return;
 
     // The price is saved to the DB, so the coordinators it subtracts come fresh from the
-    // server: without a cached travel detail getAsientosVendibles would count 0. A failed
-    // request throws and the caller's catch skips the save rather than store a wrong price.
+    // server (`fetch` ignores `staleTime`). A failed request throws and the caller's catch
+    // skips the save rather than store a wrong price.
+    let travel: TravelDetail | null | undefined;
     try {
-      await queryCache.fetch(queryCache.ensure(travelDetailQuery(cotizacion.travelId)));
+      const entry = queryCache.ensure(travelDetailQuery(cotizacion.travelId));
+      travel = (await queryCache.fetch(entry)).data;
     }
     catch (e) {
       throw new Error('No se pudo recalcular el precio por asiento porque no cargó el viaje. Intenta de nuevo.', { cause: e });
     }
+    if (!travel)
+      throw new Error('No se encontró el viaje de esta cotización. Recarga la página e intenta de nuevo.');
 
-    const nuevoPrecio = getPrecioAsientoCalculado.value(quotationId);
+    const nuevoPrecio = getPrecioAsientoCalculado.value(quotationId, travel.coordinatorIds.length);
 
     await repository.updateSeatPrice(quotationId, nuevoPrecio);
 
@@ -1949,7 +1934,6 @@ export const useCotizacionStore = defineStore('useCotizacionStore', () => {
     filteredProveedores,
     getHospedajesByQuotation,
     getTotalCostoHospedajes,
-    getRoomCountsByQuotation,
     getPreciosPublicosByQuotation,
     getMatrizPreciosReferencia,
     getTotalCostoBuses,

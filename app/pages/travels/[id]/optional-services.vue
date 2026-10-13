@@ -19,7 +19,7 @@ const toast = useToast();
 const providerStore = useProviderStore();
 const cotizacionStore = useCotizacionStore();
 
-const { travelId } = useTravelRoute();
+const { travelId, travel } = useTravelRoute();
 
 const cotizacion = computed(() => cotizacionStore.getCotizacionByTravel(travelId.value));
 
@@ -29,7 +29,7 @@ const services = computed<QuotationProvider[]>(() => {
   return cotizacionStore.getProveedoresByQuotation(cotizacion.value.id).filter(isPerPersonProvider);
 });
 
-const sellableSeats = computed(() => (cotizacion.value ? cotizacionStore.getAsientosVendibles(cotizacion.value.id) : 0));
+const sellableSeats = computed(() => (cotizacion.value ? cotizacionStore.getAsientosVendibles(cotizacion.value.id, travel.value?.coordinatorIds.length ?? 0) : 0));
 
 const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s => ({
   id: s.id,

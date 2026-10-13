@@ -38,7 +38,7 @@ watch(() => props.travelId, async (id) => {
 // Lugares a la venta según la cotización; 0 si aún no hay cotización o autobuses
 const sellableSeats = computed(() => {
   const cotizacion = cotizacionStore.getCotizacionByTravel(props.travelId);
-  return cotizacion ? cotizacionStore.getAsientosVendibles(cotizacion.id) : 0;
+  return cotizacion ? cotizacionStore.getAsientosVendibles(cotizacion.id, travel.value?.coordinatorIds.length ?? 0) : 0;
 });
 
 type Detail = { icon: string; label: string; value: string };
