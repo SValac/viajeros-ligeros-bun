@@ -1,15 +1,12 @@
+import type { Ref } from 'vue';
+
+import type { PaymentStatus } from '~/types/payment';
 import type {
   AccommodationPayment,
-  AccommodationPaymentFormData,
-  AccommodationPaymentStatus,
   BusPayment,
-  BusPaymentFormData,
-  BusPaymentStatus,
   CostSplitType,
   ProviderOptOut,
   ProviderPayment,
-  ProviderPaymentFormData,
-  ProviderPaymentStatus,
   ProviderPriceAdjustment,
   ProviderPriceAdjustmentDraft,
   Quotation,
@@ -26,12 +23,13 @@ import type {
   QuotationProviderFormData,
   QuotationPublicPrice,
   QuotationPublicPriceFormData,
+  SupplierPayment,
+  SupplierPaymentFields,
   TravelerPriceAdjustment,
 } from '~/types/quotation';
 import type { TravelAccommodation, TravelDetail } from '~/types/travel';
 
 import {
-  calculatePaymentStatus,
   calculateProviderQuotedCost,
   calculateSeatPrice,
   calculateSellableSeats,
@@ -43,6 +41,21 @@ import { quotationByTravelQuery, quotationKeys } from '~/queries/quotations';
 import { travelDetailQuery, travelKeys } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import { getPaymentStatus } from '~/utils/payment-status';
+
+// What a supplier payment slice needs to know about one kind of payment (provider,
+// accommodation or bus): where its payments and parents live, how a payment points to its
+// parent, what the parent costs, and the repository calls that write it.
+type SupplierPaymentSliceOptions<P extends SupplierPayment, F extends SupplierPaymentFields, T extends { id: string; quotationId: string }> = {
+  payments: Ref<P[]>;
+  parents: Ref<T[]>;
+  parentIdOf: (payment: P | F) => string;
+  costOf: (parent: T) => number;
+  notFound: string;
+  insert: (data: F) => Promise<P>;
+  update: (id: string, data: Partial<F>) => Promise<P>;
+  remove: (id: string) => Promise<void>;
+};
 
 export const useQuotationStore = defineStore('quotation', () => {
   const queryCache = useQueryCache();
@@ -70,6 +83,177 @@ export const useQuotationStore = defineStore('quotation', () => {
   const error = shallowRef<string | null>(null);
   const filters = ref<QuotationProviderFilters>({});
 
+  /**
+   * Builds the getters and actions of one kind of supplier payment. Provider, accommodation
+   * and bus payments work the same way; only the parent and the cost owed to it change.
+   * @param options - Where the payments and their parents live and how to write them
+   * @returns The getters (by parent id, or by quotation id for the total) and the actions
+   */
+  function createSupplierPaymentSlice<P extends SupplierPayment, F extends SupplierPaymentFields, T extends { id: string; quotationId: string }>(
+    options: SupplierPaymentSliceOptions<P, F, T>,
+  ) {
+    const { payments, parents, parentIdOf, costOf } = options;
+    const findParent = (parentId: string) => parents.value.find(p => p.id === parentId);
+
+    // Newest first.
+    const getPayments = computed(() => {
+      return (parentId: string): P[] => payments.value
+        .filter(p => parentIdOf(p) === parentId)
+        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
+    });
+
+    const getPaid = computed(() => {
+      return (parentId: string): number => payments.value
+        .filter(p => parentIdOf(p) === parentId)
+        .reduce((sum, p) => sum + p.amount, 0);
+    });
+
+    // Never negative: what was paid beyond the cost is in getOverpayment.
+    const getPendingBalance = computed(() => {
+      return (parentId: string): number => {
+        const parent = findParent(parentId);
+        return parent ? Math.max(0, costOf(parent) - getPaid.value(parentId)) : 0;
+      };
+    });
+
+    // Paid beyond the cost, e.g. when the cost goes down after paying.
+    const getOverpayment = computed(() => {
+      return (parentId: string): number => {
+        const parent = findParent(parentId);
+        return parent ? Math.max(0, getPaid.value(parentId) - costOf(parent)) : 0;
+      };
+    });
+
+    const getStatus = computed(() => {
+      return (parentId: string): PaymentStatus => {
+        const parent = findParent(parentId);
+        return parent ? getPaymentStatus(getPaid.value(parentId), costOf(parent)) : 'pending';
+      };
+    });
+
+    const getTotalPendingBalance = computed(() => {
+      return (quotationId: string): number => parents.value
+        .filter(p => p.quotationId === quotationId)
+        .reduce((sum, p) => sum + getPendingBalance.value(p.id), 0);
+    });
+
+    async function add(data: F): Promise<P | { error: string }> {
+      const parentId = parentIdOf(data);
+      if (!findParent(parentId))
+        return { error: options.notFound };
+
+      if (data.amount <= 0)
+        return { error: 'El monto debe ser mayor a 0' };
+
+      const pendingBalance = getPendingBalance.value(parentId);
+      if (data.amount > pendingBalance)
+        return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(pendingBalance)})` };
+
+      loading.value = true;
+      error.value = null;
+      try {
+        const newPayment = await options.insert(data);
+        payments.value.push(newPayment);
+        return newPayment;
+      }
+      catch (e) {
+        error.value = e instanceof Error ? e.message : 'Error desconocido';
+        return { error: error.value };
+      }
+      finally {
+        queryCache.invalidateQueries({ key: quotationKeys.root });
+        loading.value = false;
+      }
+    }
+
+    async function update(id: string, data: Partial<F>): Promise<P | undefined> {
+      const index = payments.value.findIndex(p => p.id === id);
+      if (index === -1)
+        return undefined;
+
+      loading.value = true;
+      error.value = null;
+      try {
+        const updated = await options.update(id, data);
+        payments.value[index] = updated;
+        return updated;
+      }
+      catch (e) {
+        error.value = e instanceof Error ? e.message : 'Error desconocido';
+        return undefined;
+      }
+      finally {
+        queryCache.invalidateQueries({ key: quotationKeys.root });
+        loading.value = false;
+      }
+    }
+
+    async function remove(id: string): Promise<void> {
+      if (!payments.value.some(p => p.id === id))
+        return;
+
+      loading.value = true;
+      error.value = null;
+      try {
+        await options.remove(id);
+        payments.value = payments.value.filter(p => p.id !== id);
+      }
+      catch (e) {
+        error.value = e instanceof Error ? e.message : 'Error desconocido';
+      }
+      finally {
+        queryCache.invalidateQueries({ key: quotationKeys.root });
+        loading.value = false;
+      }
+    }
+
+    /**
+     * Drops the payments of the given parents and adds the fetched ones in their place.
+     * @param parentIds - Parents whose payments are replaced
+     * @param fetched - Their payments as the server has them; none = just drop them
+     */
+    function replaceForParents(parentIds: string[], fetched: P[] = []): void {
+      const ids = new Set(parentIds);
+      payments.value = [...payments.value.filter(p => !ids.has(parentIdOf(p))), ...fetched];
+    }
+
+    return { getPayments, getPaid, getPendingBalance, getOverpayment, getStatus, getTotalPendingBalance, add, update, remove, replaceForParents };
+  }
+
+  const providerPaymentSlice = createSupplierPaymentSlice({
+    payments: providerPayments,
+    parents: quotationProviders,
+    parentIdOf: p => p.quotationProviderId,
+    // What is owed is payableCost (in an optional service, only for those who take it).
+    costOf: p => p.payableCost,
+    notFound: 'Proveedor no encontrado',
+    insert: repository.insertProviderPayment,
+    update: repository.updateProviderPayment,
+    remove: repository.deleteProviderPayment,
+  });
+
+  const accommodationPaymentSlice = createSupplierPaymentSlice({
+    payments: accommodationPayments,
+    parents: quotationAccommodations,
+    parentIdOf: p => p.quotationAccommodationId,
+    costOf: h => h.totalCost,
+    notFound: 'Hospedaje no encontrado',
+    insert: repository.insertAccommodationPayment,
+    update: repository.updateAccommodationPayment,
+    remove: repository.deleteAccommodationPayment,
+  });
+
+  const busPaymentSlice = createSupplierPaymentSlice({
+    payments: busPayments,
+    parents: quotationBuses,
+    parentIdOf: p => p.quotationBusId,
+    costOf: b => b.totalCost,
+    notFound: 'Autobús no encontrado',
+    insert: repository.insertBusPayment,
+    update: repository.updateBusPayment,
+    remove: repository.deleteBusPayment,
+  });
+
   // Getters
   const getQuotationByTravel = computed(() => {
     return (travelId: string): Quotation | undefined => {
@@ -83,12 +267,13 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  const getPaymentsByProvider = computed(() => {
-    return (quotationProviderId: string): ProviderPayment[] => {
-      return [...providerPayments.value.filter(p => p.quotationProviderId === quotationProviderId)]
-        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-    };
-  });
+  // Provider payments: built by createSupplierPaymentSlice.
+  const getPaymentsByProvider = providerPaymentSlice.getPayments;
+  const getPaidByProvider = providerPaymentSlice.getPaid;
+  const getPendingBalanceByProvider = providerPaymentSlice.getPendingBalance;
+  const getProviderOverpayment = providerPaymentSlice.getOverpayment;
+  const getProviderPaymentStatus = providerPaymentSlice.getStatus;
+  const getTotalPendingBalanceProviders = providerPaymentSlice.getTotalPendingBalance;
 
   // Total-cost services split among the minimum target seats.
   const getProvidersMinimumSplitCost = computed(() => {
@@ -346,14 +531,6 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  const getPaidByProvider = computed(() => {
-    return (quotationProviderId: string): number => {
-      return providerPayments.value
-        .filter(p => p.quotationProviderId === quotationProviderId)
-        .reduce((sum, p) => sum + p.amount, 0);
-    };
-  });
-
   // How many people a cost is split among according to "Dividir entre": the minimum
   // target seats or the sellable seats. It's also the default number of people of a
   // service charged per person.
@@ -385,28 +562,6 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  const getPendingBalanceByProvider = computed(() => {
-    return (quotationProviderId: string): number => {
-      const provider = quotationProviders.value.find(p => p.id === quotationProviderId);
-      if (!provider)
-        return 0;
-      // What is owed is payableCost (in an optional service, only for those who take it).
-      const paid = getPaidByProvider.value(quotationProviderId);
-      return Math.max(0, provider.payableCost - paid);
-    };
-  });
-
-  // What was overpaid to an optional provider when travelers are later unchecked or deleted.
-  const getProviderOverpayment = computed(() => {
-    return (quotationProviderId: string): number => {
-      const provider = quotationProviders.value.find(p => p.id === quotationProviderId);
-      if (!provider)
-        return 0;
-      const paid = getPaidByProvider.value(quotationProviderId);
-      return Math.max(0, paid - provider.payableCost);
-    };
-  });
-
   // Price adjustments (Niño -10%, Adulto mayor -$50...) of a per-person service.
   const getAdjustmentsByProvider = computed(() => {
     return (quotationProviderId: string): ProviderPriceAdjustment[] =>
@@ -432,65 +587,13 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  const getProviderPaymentStatus = computed(() => {
-    return (quotationProviderId: string): ProviderPaymentStatus => {
-      const provider = quotationProviders.value.find(p => p.id === quotationProviderId);
-      if (!provider)
-        return 'pending';
-      const paid = getPaidByProvider.value(quotationProviderId);
-      return calculatePaymentStatus(paid, provider.payableCost);
-    };
-  });
-
-  const getTotalPendingBalanceProviders = computed(() => {
-    return (quotationId: string): number => {
-      return quotationProviders.value
-        .filter(p => p.quotationId === quotationId)
-        .reduce((sum, p) => sum + getPendingBalanceByProvider.value(p.id), 0);
-    };
-  });
-
-  const getPaymentsByAccommodation = computed(() => {
-    return (quotationAccommodationId: string): AccommodationPayment[] => {
-      return [...accommodationPayments.value.filter(p => p.quotationAccommodationId === quotationAccommodationId)]
-        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-    };
-  });
-
-  const getPaidByAccommodation = computed(() => {
-    return (quotationAccommodationId: string): number => {
-      return accommodationPayments.value
-        .filter(p => p.quotationAccommodationId === quotationAccommodationId)
-        .reduce((sum, p) => sum + p.amount, 0);
-    };
-  });
-
-  const getPendingBalanceByAccommodation = computed(() => {
-    return (quotationAccommodationId: string): number => {
-      const accommodation = quotationAccommodations.value.find(h => h.id === quotationAccommodationId);
-      if (!accommodation)
-        return 0;
-      return accommodation.totalCost - getPaidByAccommodation.value(quotationAccommodationId);
-    };
-  });
-
-  const getAccommodationPaymentStatus = computed(() => {
-    return (quotationAccommodationId: string): AccommodationPaymentStatus => {
-      const accommodation = quotationAccommodations.value.find(h => h.id === quotationAccommodationId);
-      if (!accommodation)
-        return 'pending';
-      const paid = getPaidByAccommodation.value(quotationAccommodationId);
-      return calculatePaymentStatus(paid, accommodation.totalCost);
-    };
-  });
-
-  const getTotalPendingBalanceAccommodations = computed(() => {
-    return (quotationId: string): number => {
-      return quotationAccommodations.value
-        .filter(h => h.quotationId === quotationId)
-        .reduce((sum, h) => sum + getPendingBalanceByAccommodation.value(h.id), 0);
-    };
-  });
+  // Accommodation payments: built by createSupplierPaymentSlice.
+  const getPaymentsByAccommodation = accommodationPaymentSlice.getPayments;
+  const getPaidByAccommodation = accommodationPaymentSlice.getPaid;
+  const getPendingBalanceByAccommodation = accommodationPaymentSlice.getPendingBalance;
+  const getAccommodationOverpayment = accommodationPaymentSlice.getOverpayment;
+  const getAccommodationPaymentStatus = accommodationPaymentSlice.getStatus;
+  const getTotalPendingBalanceAccommodations = accommodationPaymentSlice.getTotalPendingBalance;
 
   const canConfirm = computed(() => {
     return (quotationId: string): boolean => {
@@ -537,47 +640,13 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
-  const getPaymentsByBus = computed(() => {
-    return (quotationBusId: string): BusPayment[] => {
-      return [...busPayments.value.filter(p => p.quotationBusId === quotationBusId)]
-        .sort((a, b) => new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime());
-    };
-  });
-
-  const getPaidByBus = computed(() => {
-    return (quotationBusId: string): number => {
-      return busPayments.value
-        .filter(p => p.quotationBusId === quotationBusId)
-        .reduce((sum, p) => sum + p.amount, 0);
-    };
-  });
-
-  const getPendingBalanceByBus = computed(() => {
-    return (quotationBusId: string): number => {
-      const bus = quotationBuses.value.find(b => b.id === quotationBusId);
-      if (!bus)
-        return 0;
-      return bus.totalCost - getPaidByBus.value(quotationBusId);
-    };
-  });
-
-  const getTotalPendingBalanceBuses = computed(() => {
-    return (quotationId: string): number => {
-      return quotationBuses.value
-        .filter(b => b.quotationId === quotationId)
-        .reduce((sum, b) => sum + getPendingBalanceByBus.value(b.id), 0);
-    };
-  });
-
-  const getBusPaymentStatus = computed(() => {
-    return (quotationBusId: string): BusPaymentStatus => {
-      const bus = quotationBuses.value.find(b => b.id === quotationBusId);
-      if (!bus)
-        return 'pending';
-      const paid = getPaidByBus.value(quotationBusId);
-      return calculatePaymentStatus(paid, bus.totalCost ?? 0);
-    };
-  });
+  // Bus payments: built by createSupplierPaymentSlice.
+  const getPaymentsByBus = busPaymentSlice.getPayments;
+  const getPaidByBus = busPaymentSlice.getPaid;
+  const getPendingBalanceByBus = busPaymentSlice.getPendingBalance;
+  const getBusOverpayment = busPaymentSlice.getOverpayment;
+  const getTotalPendingBalanceBuses = busPaymentSlice.getTotalPendingBalance;
+  const getBusPaymentStatus = busPaymentSlice.getStatus;
 
   const getBusCostPerPerson = computed(() => {
     return (quotationBusId: string, coordinatorCount: number): number => {
@@ -713,20 +782,17 @@ export const useQuotationStore = defineStore('quotation', () => {
       const existing = quotations.value.find(c => c.travelId === travelId);
       if (existing) {
         const qId = existing.id;
+        const idsInQuotation = (rows: { id: string; quotationId: string }[]) =>
+          rows.filter(r => r.quotationId === qId).map(r => r.id);
+        // Payments go first: once the parents are dropped there's no way to find them.
+        providerPaymentSlice.replaceForParents(idsInQuotation(quotationProviders.value));
+        accommodationPaymentSlice.replaceForParents(idsInQuotation(quotationAccommodations.value));
+        busPaymentSlice.replaceForParents(idsInQuotation(quotationBuses.value));
         quotations.value = quotations.value.filter(c => c.id !== qId);
         quotationProviders.value = quotationProviders.value.filter(p => p.quotationId !== qId);
-        providerPayments.value = providerPayments.value.filter(p =>
-          !quotationProviders.value.some(prov => prov.id === p.quotationProviderId && prov.quotationId === qId),
-        );
         quotationAccommodations.value = quotationAccommodations.value.filter(h => h.quotationId !== qId);
-        accommodationPayments.value = accommodationPayments.value.filter(p =>
-          !quotationAccommodations.value.some(h => h.id === p.quotationAccommodationId && h.quotationId === qId),
-        );
         quotationPublicPrices.value = quotationPublicPrices.value.filter(p => p.quotationId !== qId);
         quotationBuses.value = quotationBuses.value.filter(b => b.quotationId !== qId);
-        busPayments.value = busPayments.value.filter(p =>
-          !quotationBuses.value.some(b => b.id === p.quotationBusId && b.quotationId === qId),
-        );
         quotationExpenses.value = quotationExpenses.value.filter(g => g.quotationId !== qId);
       }
       return;
@@ -748,13 +814,13 @@ export const useQuotationStore = defineStore('quotation', () => {
 
     quotations.value = [...quotations.value.filter(c => c.travelId !== travelId), quotation];
     quotationProviders.value = [...quotationProviders.value.filter(p => p.quotationId !== quotationId), ...providers];
-    providerPayments.value = [...providerPayments.value.filter(p => !providers.some(pr => pr.id === p.quotationProviderId)), ...fetchedProviderPayments];
+    providerPaymentSlice.replaceForParents(providers.map(p => p.id), fetchedProviderPayments);
     providerPriceAdjustments.value = [...providerPriceAdjustments.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
     quotationAccommodations.value = [...quotationAccommodations.value.filter(h => h.quotationId !== quotationId), ...accommodations];
-    accommodationPayments.value = [...accommodationPayments.value.filter(p => !accommodations.some(a => a.id === p.quotationAccommodationId)), ...fetchedAccommodationPayments];
+    accommodationPaymentSlice.replaceForParents(accommodations.map(h => h.id), fetchedAccommodationPayments);
     quotationPublicPrices.value = [...quotationPublicPrices.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
     quotationBuses.value = [...quotationBuses.value.filter(b => b.quotationId !== quotationId), ...buses];
-    busPayments.value = [...busPayments.value.filter(p => !buses.some(b => b.id === p.quotationBusId)), ...fetchedBusPayments];
+    busPaymentSlice.replaceForParents(buses.map(b => b.id), fetchedBusPayments);
     quotationExpenses.value = [...quotationExpenses.value.filter(g => g.quotationId !== quotationId), ...expenses];
   }
 
@@ -974,7 +1040,7 @@ export const useQuotationStore = defineStore('quotation', () => {
       await repository.deleteProvider(id);
 
       quotationProviders.value = quotationProviders.value.filter(p => p.id !== id);
-      providerPayments.value = providerPayments.value.filter(p => p.quotationProviderId !== id);
+      providerPaymentSlice.replaceForParents([id]);
       providerPriceAdjustments.value = providerPriceAdjustments.value.filter(a => a.quotationProviderId !== id);
       travelerPriceAdjustments.value = travelerPriceAdjustments.value.filter(a => a.quotationProviderId !== id);
       await _syncSeatPrice(quotationId);
@@ -1211,81 +1277,10 @@ export const useQuotationStore = defineStore('quotation', () => {
     }
   }
 
-  async function addProviderPayment(data: ProviderPaymentFormData): Promise<ProviderPayment | { error: string }> {
-    const provider = quotationProviders.value.find(p => p.id === data.quotationProviderId);
-    if (!provider)
-      return { error: 'Proveedor no encontrado' };
-
-    if (data.amount <= 0)
-      return { error: 'El monto debe ser mayor a 0' };
-
-    const pendingBalance = getPendingBalanceByProvider.value(data.quotationProviderId);
-    if (data.amount > pendingBalance) {
-      return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(pendingBalance)})` };
-    }
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const newPayment = await repository.insertProviderPayment(data);
-      providerPayments.value.push(newPayment);
-      return newPayment;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
-
-  async function updateProviderPayment(id: string, data: Partial<ProviderPaymentFormData>): Promise<ProviderPayment | undefined> {
-    const index = providerPayments.value.findIndex(p => p.id === id);
-    if (index === -1)
-      return undefined;
-
-    const existing = providerPayments.value[index];
-    if (!existing)
-      return undefined;
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const updated = await repository.updateProviderPayment(id, data);
-      providerPayments.value[index] = updated;
-      return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
-
-  async function deleteProviderPayment(id: string): Promise<void> {
-    const payment = providerPayments.value.find(p => p.id === id);
-    if (!payment)
-      return;
-
-    loading.value = true;
-    error.value = null;
-    try {
-      await repository.deleteProviderPayment(id);
-      providerPayments.value = providerPayments.value.filter(p => p.id !== id);
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
+  // Provider payment actions: built by createSupplierPaymentSlice.
+  const addProviderPayment = providerPaymentSlice.add;
+  const updateProviderPayment = providerPaymentSlice.update;
+  const deleteProviderPayment = providerPaymentSlice.remove;
 
   function setFilters(f: QuotationProviderFilters): void {
     filters.value = { ...f };
@@ -1389,7 +1384,7 @@ export const useQuotationStore = defineStore('quotation', () => {
       await repository.deleteAccommodation(id);
 
       quotationAccommodations.value = quotationAccommodations.value.filter(h => h.id !== id);
-      accommodationPayments.value = accommodationPayments.value.filter(p => p.quotationAccommodationId !== id);
+      accommodationPaymentSlice.replaceForParents([id]);
       await _deleteRooms(quotationId, roomsToDrop);
       await _syncSeatPrice(quotationId);
       return null;
@@ -1455,80 +1450,10 @@ export const useQuotationStore = defineStore('quotation', () => {
     }
   }
 
-  async function addAccommodationPayment(data: AccommodationPaymentFormData): Promise<AccommodationPayment | { error: string }> {
-    const accommodation = quotationAccommodations.value.find(h => h.id === data.quotationAccommodationId);
-    if (!accommodation)
-      return { error: 'Hospedaje no encontrado' };
-
-    if (data.amount <= 0)
-      return { error: 'El monto debe ser mayor a 0' };
-
-    const pendingBalance = getPendingBalanceByAccommodation.value(data.quotationAccommodationId);
-    if (data.amount > pendingBalance)
-      return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(pendingBalance)})` };
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const newPayment = await repository.insertAccommodationPayment(data);
-      accommodationPayments.value.push(newPayment);
-      return newPayment;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
-
-  async function updateAccommodationPayment(id: string, data: Partial<AccommodationPaymentFormData>): Promise<AccommodationPayment | undefined> {
-    const index = accommodationPayments.value.findIndex(p => p.id === id);
-    if (index === -1)
-      return undefined;
-
-    const existing = accommodationPayments.value[index];
-    if (!existing)
-      return undefined;
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const updated = await repository.updateAccommodationPayment(id, data);
-      accommodationPayments.value[index] = updated;
-      return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
-
-  async function deleteAccommodationPayment(id: string): Promise<void> {
-    const payment = accommodationPayments.value.find(p => p.id === id);
-    if (!payment)
-      return;
-
-    loading.value = true;
-    error.value = null;
-    try {
-      await repository.deleteAccommodationPayment(id);
-      accommodationPayments.value = accommodationPayments.value.filter(p => p.id !== id);
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
+  // Accommodation payment actions: built by createSupplierPaymentSlice.
+  const addAccommodationPayment = accommodationPaymentSlice.add;
+  const updateAccommodationPayment = accommodationPaymentSlice.update;
+  const deleteAccommodationPayment = accommodationPaymentSlice.remove;
 
   // ============================================================================
   // Public Price Actions
@@ -1798,7 +1723,7 @@ export const useQuotationStore = defineStore('quotation', () => {
       await repository.deleteBus(id);
 
       quotationBuses.value = quotationBuses.value.filter(b => b.id !== id);
-      busPayments.value = busPayments.value.filter(p => p.quotationBusId !== id);
+      busPaymentSlice.replaceForParents([id]);
       // The linked travel_bus is deleted by CASCADE in the DB (quotation_bus_id FK ON DELETE CASCADE)
       // and travelers.travel_bus_id is cleared by ON DELETE SET NULL. Refetching the travel
       // detail removes it from the travelers' bus options.
@@ -1816,76 +1741,10 @@ export const useQuotationStore = defineStore('quotation', () => {
     }
   }
 
-  async function addBusPayment(data: BusPaymentFormData): Promise<BusPayment | { error: string }> {
-    const bus = quotationBuses.value.find(b => b.id === data.quotationBusId);
-    if (!bus)
-      return { error: 'Autobús no encontrado' };
-
-    if (data.amount <= 0)
-      return { error: 'El monto debe ser mayor a 0' };
-
-    const pendingBalance = getPendingBalanceByBus.value(data.quotationBusId);
-    if (data.amount > pendingBalance)
-      return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(pendingBalance)})` };
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const newPayment = await repository.insertBusPayment(data);
-      busPayments.value.push(newPayment);
-      return newPayment;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
-
-  async function updateBusPayment(id: string, data: Partial<BusPaymentFormData>): Promise<BusPayment | undefined> {
-    const index = busPayments.value.findIndex(p => p.id === id);
-    if (index === -1)
-      return undefined;
-
-    const existing = busPayments.value[index];
-    if (!existing)
-      return undefined;
-
-    loading.value = true;
-    error.value = null;
-    try {
-      const updated = await repository.updateBusPayment(id, data);
-      busPayments.value[index] = updated;
-      return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
-
-  async function deleteBusPayment(id: string): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
-      await repository.deleteBusPayment(id);
-      busPayments.value = busPayments.value.filter(p => p.id !== id);
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
-  }
+  // Bus payment actions: built by createSupplierPaymentSlice.
+  const addBusPayment = busPaymentSlice.add;
+  const updateBusPayment = busPaymentSlice.update;
+  const deleteBusPayment = busPaymentSlice.remove;
 
   return {
     // State
@@ -1930,6 +1789,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     getPaymentsByAccommodation,
     getPaidByAccommodation,
     getPendingBalanceByAccommodation,
+    getAccommodationOverpayment,
     getAccommodationPaymentStatus,
     getTotalPendingBalanceAccommodations,
     canConfirm,
@@ -1947,6 +1807,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     getPaymentsByBus,
     getPaidByBus,
     getPendingBalanceByBus,
+    getBusOverpayment,
     getBusPaymentStatus,
     getBusCostPerPerson,
     getExpensesByQuotation,
