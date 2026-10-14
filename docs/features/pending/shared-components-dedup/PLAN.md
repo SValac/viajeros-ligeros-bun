@@ -9,7 +9,8 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Estado:** Pendiente (sin rama todavía).
+**Status:** In progress. PR (b) on branch `feature/shared-components-dedup-payments`
+(phases 1, 2, 8): all three done, PR in review. Next PRs: (a), (c), (d), (e) and phase 7.
 
 ---
 
@@ -48,7 +49,11 @@ lleva el nombre completo con el prefijo de su carpeta.
 Después de cada fase: `bun run lint:fix`, `bun run typecheck` (en una copia del scratchpad si
 `nuxt dev` está corriendo) y revisar en el navegador las pantallas afectadas.
 
-### Fase 1 — Formularios de pago a proveedores + fecha de hoy (bugs)
+### Fase 1 — Formularios de pago a proveedores + fecha de hoy (bugs) ✅
+
+**Done (2026-10-13):** `todayISO()` in `utils/format-date.ts`; one `QuotationPaymentForm`
+that emits only `SupplierPaymentFields` (new type in `types/quotation.ts`); each history adds
+its parent id.
 
 Archivos: `quotation-bus-payment-form.vue`, `quotation-accommodation-payment-form.vue`, `quotation-provider-payment-form.vue`,
 `payment-form.vue`, `utils/format-date.ts`.
@@ -66,7 +71,15 @@ Archivos: `quotation-bus-payment-form.vue`, `quotation-accommodation-payment-for
   (preferida: el formulario no necesita saber de qué es el pago).
 - `name` de cada `UFormField` = llave del esquema (mantenerlo al juntar los 3).
 
-### Fase 2 — Historiales de pago
+### Fase 2 — Historiales de pago ✅
+
+**Done (2026-10-13):** one `QuotationPaymentHistory` (`kind`, `parentId`, `subtitle`) on
+`useSupplierPayments(kind, parentId)` in `composables/quotation/`, which maps each kind to the
+store getters and actions; new `SupplierPayment` type. "Registrar pago" is disabled at zero
+balance in the three; generic form modal description and the longer delete text. Correction:
+the three already showed "Total pagado" and "Saldo pendiente", only the layout differed.
+Also in this PR: the four native `<table>` (payment history, buses, expenses, providers) now
+use `UTable` with `h()` cells like the rest of the app (see phase 16).
 
 Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-history.vue`,
 `quotation-provider-payment-history.vue`; usos en `quotation-bus-section.vue:301`,
@@ -180,7 +193,7 @@ proveedor). Se leyeron a mano todos los stores, los repositorios, `utils/mappers
 `*-domain.ts` y `queries/`. Las fases 8-13 salen de esa lectura. La 8 conviene hacerla junto con
 la 1 y la 2 (son los mismos pagos, de la UI a la base de datos).
 
-### Fase 8 — Pagos de cotización en store, repositorio y mappers
+### Fase 8 — Pagos de cotización en store, repositorio y mappers ✅
 
 Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `paymentType`,
 `concept`, `notes`); solo cambia la llave del padre.
@@ -202,6 +215,43 @@ Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `payme
 - `getPaymentStatus` (`payments/use-payments-domain.ts`) y `calculatePaymentStatus`
   (`quotation/use-quotation-domain.ts`) son la misma función → dejar una (en `utils/` o en el
   dominio de pagos) y que la otra la importe.
+- **Added (2026-10-13):** `useSupplierPaymentColumns(kind)` in `composables/quotation/`: the
+  paid / pending (+ overpaid) / payment status columns that the bus, accommodation and provider
+  tables repeat. The generic column helpers (`actionsColumn`, badges) stay in phases 6 and 14,
+  in the components PR (d).
+
+**Implementation steps (agreed 2026-10-13, one commit each, mentor mode):**
+- 8.0 Before starting, write down paid / pending / status per row and the 3 pending totals of
+  the financial summary for a quotation with bus, accommodation and provider payments.
+- 8.1 `utils/payment-status.ts` with `getPaymentStatus(paid, total)` replaces both functions;
+  the 3 `…PaymentStatus` types become `PaymentStatus`; `BusPayment` etc. are
+  `SupplierPayment & { quotationBusId }`.
+- 8.2 Mappers: `mapSupplierPaymentRowFields`, `mapSupplierPaymentFieldsToRow`,
+  `mapSupplierPaymentToUpdate` (the 5 `if`s). One `Pick<Tables<'bus_payments'>, …>` fits the
+  3 tables without `any`.
+- 8.3 Repository uses `mapSupplierPaymentToUpdate`; insert/update/delete stay one per table
+  (a union table name breaks the Supabase types).
+- 8.4 Store: internal `createSupplierPaymentSlice({ payments, items, parentIdOf, costOf,
+  notFound, insert, update, remove })`; exported names don't change. `parentIdOf` function
+  instead of `keyof`. `Math.max(0, …)` and `getOverpayment` for the 3 (the only number that
+  may change vs 8.0). Keep today's error contract (phase 10). `replaceForParents(parentIds,
+  fetched)` fixes the `hydrateTravel(null)` payments bug of phase 9.
+- 8.5 `useSupplierPaymentApi(kind)` split out of `useSupplierPayments` (+ `overpayment`,
+  `status`); `useSupplierPaymentColumns(kind)` (Pagado, Pendiente + "Pagado de más", Estado
+  Pago) used by the 3 tables; "Anticipo" is `info` in the 3. Método and Confirmado stay in
+  phase 14.
+
+**Done (2026-10-14).** Notes from the implementation:
+- Before 8.2, `utils/mappers.ts` (800 lines) was split into `utils/mappers/<domain>-mappers.ts`,
+  auto-imported through `imports.dirs: ['utils/mappers']` in `nuxt.config.ts`. Supplier payment
+  mappers live in `supplier-payment-mappers.ts`.
+- 8.0 → 8.4 numbers on the local seed quotation: the overpaid hotel went from -$600 pending to
+  $0, and "Por pagar a proveedores" from $34,199 to $34,799. Nothing else changed.
+- `useSupplierPaymentColumns` returns three columns, not an array: provider and bus have
+  "Método" between Pendiente and Estado Pago.
+- A `.ts` file can't use `resolveComponent('UBadge')` (Nuxt only rewrites it in `.vue` files);
+  import it from `#components`.
+- Found while testing: the accommodation row actions button had no `aria-label` (fixed).
 
 ### Fase 9 — Repetición interna de `use-quotation-store`
 
@@ -222,7 +272,8 @@ Sin cambiar lo que exporta el store:
 - **Bug menor:** en `hydrateTravel` con `result === null`, los pagos se filtran después de
   quitar sus padres, así que la condición nunca se cumple y los pagos de la cotización borrada
   se quedan en el store. Tampoco limpia `providerPriceAdjustments`. Hoy no se ve porque nadie
-  los lee sin su padre, pero se arregla al pasar a `_paymentSlice`.
+  los lee sin su padre. **Payments fixed in phase 8 (2026-10-14); `providerPriceAdjustments`
+  is still open.**
 
 ### Fase 10 — Contrato de errores de los stores (`toErrorMessage` + regla de `standardize-store-error-handling`)
 
@@ -285,7 +336,7 @@ Sin cambiar lo que exporta el store:
 - `use-provider-repository.update` copia los campos de ubicación y contacto de
   `mapProviderToInsert` → reutilizar el mapper.
 - `use-travel-repository`: los `insert` de services, buses y accommodations mapean en línea →
-  moverlos a `utils/mappers.ts` como los demás; `mapRowToDomain` de travel media también.
+  moverlos a `utils/mappers/travel-mappers.ts` como los demás; `mapRowToDomain` de travel media también.
 
 ## Tercera pasada: páginas y componentes leídos a mano (2026-10-13)
 
@@ -387,7 +438,8 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - `quotation-provider-table`, `quotation-bus-section` y `quotation-accommodation-table`
   repiten el grupo de acciones de pago, la de confirmar y los badges; las dos primeras usan
   `<table>` a mano y la de hospedaje `UTable`. Al juntar los badges (fase 14) y las acciones,
-  decidir una sola forma de tabla.
+  decidir una sola forma de tabla. **Table form decided (2026-10-13):** every table is `UTable`
+  with `TableColumn` + `h()` cells; no native `<table>` left in `app/`.
 - `agency-about-page-form` y `agency-home-page-form` son iguales salvo los nombres →
   `AgencyPageForm` que reciba el esquema, `clone` y `serialize` del dominio. Los editores
   (`agency-about-page-editor` / `agency-home-page-editor`) comparten el estado vacío y la barra

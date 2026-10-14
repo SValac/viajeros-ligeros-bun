@@ -4,7 +4,7 @@
 
 - Usar `type` en lugar de `interface` (convención del proyecto)
 - `database.types.ts` es auto-generado — no editar manualmente
-- Los mappers en `utils/mappers.ts` son el único punto de conversión entre tipos de BD y tipos de dominio
+- Los mappers en `utils/mappers/<dominio>-mappers.ts` son el único punto de conversión entre tipos de BD y tipos de dominio
 - `TablesInsert<'nombre_tabla'>` y `Tables<'nombre_tabla'>` del tipo de Supabase para operaciones de BD
 
 ## Vue 3 / Nuxt 4

@@ -29,6 +29,17 @@ Everything written for developers is in English: file names, identifiers (variab
 
 See [docs/architecture/03-components.md](../architecture/03-components.md).
 
+## Reuse first
+
+The general rule (smallest complete change, reuse before writing) lives in the user-level `~/.claude/CLAUDE.md`. In this repo that means looking, in this order:
+
+1. `app/components/`, `app/composables/`, `app/utils/` (mappers, formatters, payment status helpers).
+2. Nuxt UI components (`UTable`, `UInput type="date"`, `UModal`…) before native elements or hand-built widgets.
+3. VueUse and installed packages before new code; no new dependency for a few lines.
+4. A Supabase query or RPC that already returns the data before a new one.
+
+Dates: always `parseDisplayDate` for date-only values, never `new Date('YYYY-MM-DD')`.
+
 ---
 
 [← Architecture](./03-architecture.md) | [Volver al índice](../../CLAUDE.md) | [Siguiente: Git Workflow →](./05-git-workflow.md)

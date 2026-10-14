@@ -1,4 +1,6 @@
-import type { AdjustmentItem, Payment, PaymentCalculation, PaymentStatus, TravelerAccountConfig, TravelPaymentTotals } from '~/types/payment';
+import type { AdjustmentItem, Payment, PaymentCalculation, TravelerAccountConfig, TravelPaymentTotals } from '~/types/payment';
+
+import { getPaymentStatus } from '~/utils/payment-status';
 
 /**
  * Calculates the monetary value of a single discount or surcharge item.
@@ -8,24 +10,6 @@ import type { AdjustmentItem, Payment, PaymentCalculation, PaymentStatus, Travel
  */
 export function calcAdjustmentAmount(item: AdjustmentItem, base: number): number {
   return item.type === 'percentage' ? base * item.amount / 100 : item.amount;
-}
-
-/**
- * Determines the payment status of a traveler based on amounts paid vs. final cost.
- * @param totalPaid - Sum of all payments made by the traveler
- * @param finalCost - The final cost after discounts and surcharges
- * @returns `'pending'` if nothing paid, `'paid'` if fully covered, `'partial'` otherwise
- */
-export function getPaymentStatus(totalPaid: number, finalCost: number): PaymentStatus {
-  if (totalPaid <= 0) {
-    return 'pending';
-  }
-  else if (totalPaid >= finalCost) {
-    return 'paid';
-  }
-  else {
-    return 'partial';
-  }
 }
 
 /**
