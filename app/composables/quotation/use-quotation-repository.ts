@@ -20,6 +20,7 @@ import {
   mapAccommodationPaymentRowToDomain,
   mapBusPaymentRowToDomain,
   mapProviderPaymentRowToDomain,
+  mapSupplierPaymentToUpdate,
 } from '~/utils/mappers/supplier-payment-mappers';
 
 export function useQuotationRepository() {
@@ -464,17 +465,7 @@ export function useQuotationRepository() {
   }
 
   async function updateProviderPayment(id: string, data: Partial<ProviderPaymentFormData>): Promise<ProviderPayment> {
-    const update: TablesUpdate<'provider_payments'> = {};
-    if (data.amount !== undefined)
-      update.amount = data.amount;
-    if (data.paymentDate !== undefined)
-      update.payment_date = data.paymentDate;
-    if (data.paymentType !== undefined)
-      update.payment_type = data.paymentType;
-    if (data.concept !== undefined)
-      update.concept = data.concept ?? null;
-    if (data.notes !== undefined)
-      update.notes = data.notes ?? null;
+    const update = mapSupplierPaymentToUpdate(data);
 
     const { data: row, error } = await supabase
       .from('provider_payments')
@@ -523,17 +514,7 @@ export function useQuotationRepository() {
   }
 
   async function updateAccommodationPayment(id: string, data: Partial<AccommodationPaymentFormData>): Promise<AccommodationPayment> {
-    const update: TablesUpdate<'accommodation_payments'> = {};
-    if (data.amount !== undefined)
-      update.amount = data.amount;
-    if (data.paymentDate !== undefined)
-      update.payment_date = data.paymentDate;
-    if (data.paymentType !== undefined)
-      update.payment_type = data.paymentType;
-    if (data.concept !== undefined)
-      update.concept = data.concept ?? null;
-    if (data.notes !== undefined)
-      update.notes = data.notes ?? null;
+    const update = mapSupplierPaymentToUpdate(data);
 
     const { data: row, error } = await supabase
       .from('accommodation_payments')
@@ -625,17 +606,7 @@ export function useQuotationRepository() {
   }
 
   async function updateBusPayment(id: string, data: Partial<BusPaymentFormData>): Promise<BusPayment> {
-    const update: TablesUpdate<'bus_payments'> = {};
-    if (data.amount !== undefined)
-      update.amount = data.amount;
-    if (data.paymentDate !== undefined)
-      update.payment_date = data.paymentDate;
-    if (data.paymentType !== undefined)
-      update.payment_type = data.paymentType;
-    if (data.concept !== undefined)
-      update.concept = data.concept ?? null;
-    if (data.notes !== undefined)
-      update.notes = data.notes ?? null;
+    const update = mapSupplierPaymentToUpdate(data);
 
     const { data: row, error } = await supabase
       .from('bus_payments')
