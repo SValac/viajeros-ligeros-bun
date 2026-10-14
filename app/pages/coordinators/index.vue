@@ -49,14 +49,14 @@ function clearSearch() {
   searchTerm.value = '';
 }
 
-function handleFormSubmit(data: CoordinatorFormData) {
+async function handleFormSubmit(data: CoordinatorFormData) {
   try {
     if (editingCoordinator.value) {
-      coordinatorStore.updateCoordinator(editingCoordinator.value.id, data);
+      await coordinatorStore.updateCoordinator(editingCoordinator.value.id, data);
       toast.add({ title: 'Coordinador actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
     }
     else {
-      coordinatorStore.addCoordinator(data);
+      await coordinatorStore.addCoordinator(data);
       toast.add({ title: 'Coordinador creado', description: `${data.name} se creó correctamente`, color: 'primary' });
     }
     closeModal();
@@ -66,11 +66,16 @@ function handleFormSubmit(data: CoordinatorFormData) {
   }
 }
 
-function handleDelete(coordinator: Coordinator) {
+async function handleDelete(coordinator: Coordinator) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar a ${coordinator.name}?`)) {
-    coordinatorStore.deleteCoordinator(coordinator.id);
-    toast.add({ title: 'Coordinador eliminado', description: `${coordinator.name} se eliminó correctamente`, color: 'warning' });
+    try {
+      await coordinatorStore.deleteCoordinator(coordinator.id);
+      toast.add({ title: 'Coordinador eliminado', description: `${coordinator.name} se eliminó correctamente`, color: 'warning' });
+    }
+    catch {
+      toast.add({ title: 'Error', description: 'Ocurrió un error al eliminar el coordinador', color: 'error' });
+    }
   }
 }
 
