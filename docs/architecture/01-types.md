@@ -221,7 +221,6 @@ type TravelerPaymentSummary = {
 
 ```typescript
 type QuotationStatus = 'draft' | 'confirmed';
-type ProviderPaymentStatus = 'pending' | 'partial' | 'paid';
 type CostSplitType = 'minimum' | 'total';
 type QuotationBusStatus = 'reserved' | 'confirmed' | 'pending';
 
@@ -260,6 +259,13 @@ type QuotationBus = {
   createdAt: string; updatedAt: string;
 };
 
+// Pagos a proveedores, hospedajes y buses: mismos campos + la llave padre.
+// Su estado es `PaymentStatus` (`getPaymentStatus` en `utils/payment-status.ts`).
+type SupplierPayment = SupplierPaymentFields & { id: string; createdAt: string };
+type ProviderPayment = SupplierPayment & { quotationProviderId: string };
+type AccommodationPayment = SupplierPayment & { quotationAccommodationId: string };
+type BusPayment = SupplierPayment & { quotationBusId: string };
+
 type QuotationPublicPrice = {
   id: string; quotationId: string;
   priceType: string; description: string;
@@ -280,7 +286,7 @@ Archivo de ~1,262 líneas **auto-generado** por Supabase CLI. Define `Row`, `Ins
 bunx supabase gen types typescript --project-id <id> > app/types/database.types.ts
 ```
 
-Los mappers en `app/utils/mappers.ts` convierten entre estos tipos de BD (snake_case) y los tipos de dominio (camelCase).
+Los mappers en `app/utils/mappers/` convierten entre estos tipos de BD (snake_case) y los tipos de dominio (camelCase).
 
 ---
 

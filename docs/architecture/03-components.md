@@ -64,9 +64,10 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 | `quotation-financial-summary.vue` | Resumen financiero |
 | `quotation-summary-section.vue` / `quotation-kpi-card.vue` | Piezas del resumen |
 | `quotation-expense-form.vue` / `-section.vue` | Gastos extra |
-| `accommodation/quotation-accommodation-*.vue` | Hospedaje: sección, tabla, formulario, tipos de habitación, resumen y pagos (`-payment-form`, `-payment-history`) |
-| `bus/quotation-bus-*.vue` | Buses: sección, formulario y pagos |
-| `provider/quotation-provider-*.vue` | Proveedores de servicios: sección, tabla, formulario, ajustes de precio, cortesía y pagos |
+| `quotation-payment-form.vue` / `quotation-payment-history.vue` | Pagos a proveedores, hospedajes y buses (prop `kind`); datos y acciones vía `useSupplierPayments` |
+| `accommodation/quotation-accommodation-*.vue` | Hospedaje: sección, tabla, formulario, tipos de habitación y resumen |
+| `bus/quotation-bus-*.vue` | Buses: sección y formulario |
+| `provider/quotation-provider-*.vue` | Proveedores de servicios: sección, tabla, formulario, ajustes de precio y cortesía |
 | `public-price/quotation-public-price-*.vue` | Precios al público: sección, formulario y aviso al editar/eliminar un precio en uso |
 
 ---

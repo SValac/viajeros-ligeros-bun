@@ -35,7 +35,7 @@
 │  SUPABASE (PostgreSQL)                                       │
 │  - Cliente singleton en app/composables/use-supabase.ts      │
 │  - Todas las operaciones CRUD pasan por este cliente         │
-│  - Mappers (app/utils/mappers.ts) convierten snake_case ↔   │
+│  - Mappers (app/utils/mappers/) convierten snake_case ↔     │
 │    camelCase entre BD y dominio                              │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -179,7 +179,8 @@ viajes de más de 1000 filas y con una escritura en esos milisegundos.
 
 ## Mapeo BD ↔ Dominio
 
-`app/utils/mappers.ts` provee funciones bidireccionales:
+`app/utils/mappers/` tiene un archivo por dominio (`provider-mappers.ts`, `travel-mappers.ts`, …),
+auto-importados (`imports.dirs` en `nuxt.config.ts`). Proveen funciones bidireccionales:
 
 ```typescript
 // BD → Dominio
@@ -190,6 +191,9 @@ mapTravelRowToDomain(row): Travel
 mapProviderToInsert(data: Partial<Provider>): TablesInsert<'providers'>
 mapTravelToInsert(data): TablesInsert<'travels'>
 ```
+
+Los pagos a proveedores, hospedajes y buses comparten columnas: sus mappers toman los campos
+comunes de `supplier-payment-mappers.ts` y solo agregan su llave padre.
 
 ---
 

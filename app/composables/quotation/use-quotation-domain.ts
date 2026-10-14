@@ -1,23 +1,6 @@
 import type { ProviderPriceAdjustment, Quotation, QuotationAccommodation, QuotationBus, QuotationExpense, QuotationProvider } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 
-type ProviderPaymentStatus = 'pending' | 'partial' | 'paid';
-
-/**
- * Derives the payment status of a quotation item from the amount paid vs. the total cost.
- * Used uniformly for providers, accommodations, and buses to avoid duplicating this logic.
- * @param paid - Total amount already paid
- * @param total - Full cost of the item
- * @returns `'pending'` if nothing has been paid, `'paid'` if fully covered, `'partial'` otherwise
- */
-export function calculatePaymentStatus(paid: number, total: number): ProviderPaymentStatus {
-  if (paid <= 0)
-    return 'pending';
-  if (paid >= total)
-    return 'paid';
-  return 'partial';
-}
-
 /**
  * Total cost of a service quoted per person, rounded to cents so float artifacts of the
  * multiplication never reach the database.

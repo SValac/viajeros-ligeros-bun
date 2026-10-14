@@ -49,8 +49,10 @@ app/
 │   │   ├── use-provider-domain.ts
 │   │   └── use-provider-repository.ts
 │   ├── quotation/
-│   │   ├── use-quotation-domain.ts     # calcPaymentStatus, calcSeatPrice, countRoomsByType
-│   │   └── use-quotation-repository.ts # ~30 funciones, 8 tablas
+│   │   ├── use-quotation-domain.ts     # calculateSeatPrice, countRoomsByType
+│   │   ├── use-quotation-repository.ts # ~30 funciones, 8 tablas
+│   │   ├── use-supplier-payments.ts    # Getters y acciones de pagos por kind
+│   │   └── use-supplier-payment-columns.ts # Columnas Pagado/Pendiente/Estado Pago
 │   ├── travelers/
 │   │   ├── use-traveler-domain.ts
 │   │   └── use-traveler-repository.ts
@@ -124,7 +126,8 @@ app/
 │   └── logo.vue
 │
 ├── utils/
-│   ├── mappers.ts                  # Mapeo snake_case (BD) ↔ camelCase (dominio)
+│   ├── mappers/                    # <dominio>-mappers.ts: snake_case (BD) ↔ camelCase (dominio)
+│   ├── payment-status.ts           # getPaymentStatus(paid, total)
 │   └── hotel-room-helpers.ts       # calculateCostPerPerson, formatBedConfiguration
 │
 ├── assets/

@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { z } from 'zod';
 
-import type { BusPayment, BusPaymentFormData } from '~/types/quotation';
+import type { SupplierPaymentFields } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
+import { todayISO } from '~/utils/format-date';
 
 type Props = {
-  quotationBusId: string;
   maxAmount: number;
-  payment?: BusPayment | null;
+  payment?: SupplierPaymentFields | null;
 };
 
-const { quotationBusId, maxAmount, payment = null } = defineProps<Props>();
+const { maxAmount, payment = null } = defineProps<Props>();
 
 const emit = defineEmits<{
-  submit: [data: BusPaymentFormData];
+  submit: [data: SupplierPaymentFields];
   cancel: [];
 }>();
 
@@ -47,7 +47,7 @@ type FormSchema = {
 
 const state = reactive<FormSchema>({
   amount: payment?.amount ?? undefined,
-  paymentDate: payment?.paymentDate ?? new Date().toISOString().split('T')[0]!,
+  paymentDate: payment?.paymentDate ?? todayISO(),
   paymentType: payment?.paymentType ?? 'cash',
   concept: payment?.concept ?? '',
   notes: payment?.notes ?? '',
@@ -62,11 +62,7 @@ function onSubmit() {
   if (!result.success)
     return;
 
-  emit('submit', {
-    ...result.data,
-    quotationBusId,
-    ...(payment?.id ? { id: payment.id } : {}),
-  });
+  emit('submit', result.data);
 }
 </script>
 

@@ -17,3 +17,16 @@ export function parseDisplayDate(dateString: string): Date {
 export function formatDate(dateString: string, locale: string = 'es-MX') {
   return parseDisplayDate(dateString).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' });
 }
+
+/**
+ * Returns a date as a local calendar date (`YYYY-MM-DD`), the format of `<input type="date">`.
+ * `toISOString()` converts to UTC first, so in Mexico's time zone it returns tomorrow's date
+ * after 6 pm.
+ * @param now - Date to format (defaults to the current date)
+ * @returns The local date as `YYYY-MM-DD`
+ */
+export function todayISO(now: Date = new Date()): string {
+  const month = (now.getMonth() + 1).toString().padStart(2, '0');
+  const day = now.getDate().toString().padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}

@@ -4,9 +4,10 @@ import type { TableColumn } from '@nuxt/ui';
 import { h } from 'vue';
 import { z } from 'zod';
 
-import type { AccommodationPaymentStatus, QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
+import type { QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
 
 import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 
@@ -91,13 +92,6 @@ function openHistory(accommodation: QuotationAccommodation) {
   isHistoryOpen.value = true;
 }
 
-// Payment helpers for the columns
-const paymentStatusBadge: Record<AccommodationPaymentStatus, { label: string; color: 'warning' | 'success' | 'neutral' }> = {
-  pending: { label: 'Pendiente', color: 'warning' },
-  partial: { label: 'Anticipo', color: 'neutral' },
-  paid: { label: 'Liquidado', color: 'success' },
-};
-
 // Row actions
 function getRowActions(accommodation: QuotationAccommodation) {
   const balance = quotationStore.getPendingBalanceByAccommodation(accommodation.id);
@@ -145,6 +139,7 @@ function getRowActions(accommodation: QuotationAccommodation) {
 }
 
 // Table columns
+const supplierColumns = useSupplierPaymentColumns<QuotationAccommodation>('accommodation');
 const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
   const cols: TableColumn<QuotationAccommodation>[] = [
     {
@@ -167,31 +162,9 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       header: 'Costo Total',
       cell: ({ row }) => h('span', { class: 'font-bold' }, formatCurrency(row.original.totalCost)),
     },
-    {
-      id: 'paid',
-      header: 'Pagado',
-      cell: ({ row }) => {
-        const paid = quotationStore.getPaidByAccommodation(row.original.id);
-        return h('span', { class: 'font-medium' }, formatCurrency(paid));
-      },
-    },
-    {
-      id: 'pending',
-      header: 'Pendiente',
-      cell: ({ row }) => {
-        const balance = quotationStore.getPendingBalanceByAccommodation(row.original.id);
-        return h('span', { class: balance > 0 ? 'text-warning font-medium' : 'text-success font-medium' }, formatCurrency(balance));
-      },
-    },
-    {
-      id: 'paymentStatus',
-      header: 'Estado Pago',
-      cell: ({ row }) => {
-        const status = quotationStore.getAccommodationPaymentStatus(row.original.id);
-        const badge = paymentStatusBadge[status];
-        return h(resolveComponent('UBadge'), { label: badge.label, color: badge.color, variant: 'subtle' });
-      },
-    },
+    supplierColumns.paidColumn,
+    supplierColumns.pendingColumn,
+    supplierColumns.statusColumn,
     {
       id: 'confirmed',
       header: 'Confirmado',
@@ -211,10 +184,11 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       h(resolveComponent('UDropdownMenu'), {
         items: getRowActions(row.original),
       }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-        size: 'xs',
+        'color': 'neutral',
+        'variant': 'ghost',
+        'icon': 'i-lucide-more-vertical',
+        'size': 'xs',
+        'aria-label': 'Acciones del hospedaje',
       })),
   });
 
@@ -363,10 +337,11 @@ async function deleteAccommodation(id: string) {
       class="sm:max-w-lg"
     >
       <template #body>
-        <QuotationAccommodationPaymentHistory
+        <QuotationPaymentHistory
           v-if="historyAccommodation"
-          :quotation-accommodation-id="historyAccommodation.id"
-          :hotel-name="getHotelName(historyAccommodation.providerId)"
+          kind="accommodation"
+          :parent-id="historyAccommodation.id"
+          :subtitle="getHotelName(historyAccommodation.providerId)"
         />
       </template>
     </USlideover>

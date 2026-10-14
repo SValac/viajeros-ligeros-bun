@@ -2,6 +2,7 @@
 import type { PaymentFormData, PaymentType } from '~/types/payment';
 
 import { formatCurrency } from '~/utils/currency';
+import { todayISO } from '~/utils/format-date';
 
 const props = defineProps<{
   payment?: { id: string; amount: number; paymentDate: string; paymentType: PaymentType; notes?: string } | null;
@@ -16,7 +17,7 @@ const emit = defineEmits<{
 }>();
 
 const amount = ref<number | null>(props.payment?.amount ?? null);
-const paymentDate = ref(props.payment?.paymentDate ?? new Date().toISOString().split('T')[0]);
+const paymentDate = ref(props.payment?.paymentDate ?? todayISO());
 const paymentType = ref<PaymentType>(props.payment?.paymentType ?? 'cash');
 const notes = ref(props.payment?.notes ?? '');
 
