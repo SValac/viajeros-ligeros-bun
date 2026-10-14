@@ -10,7 +10,7 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (9-13). La 7 puede ir sola.
 
 **Status:** In progress. PR (b) on branch `feature/shared-components-dedup-payments`
-(phases 1, 2, 8). Phases 1 and 2 done.
+(phases 1, 2, 8): all three done, PR not opened yet. Next PRs: (a), (c), (d), (e) and phase 7.
 
 ---
 
@@ -193,7 +193,7 @@ proveedor). Se leyeron a mano todos los stores, los repositorios, `utils/mappers
 `*-domain.ts` y `queries/`. Las fases 8-13 salen de esa lectura. La 8 conviene hacerla junto con
 la 1 y la 2 (son los mismos pagos, de la UI a la base de datos).
 
-### Fase 8 — Pagos de cotización en store, repositorio y mappers
+### Fase 8 — Pagos de cotización en store, repositorio y mappers ✅
 
 Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `paymentType`,
 `concept`, `notes`); solo cambia la llave del padre.
@@ -241,6 +241,18 @@ Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `payme
   Pago) used by the 3 tables; "Anticipo" is `info` in the 3. Método and Confirmado stay in
   phase 14.
 
+**Done (2026-10-14).** Notes from the implementation:
+- Before 8.2, `utils/mappers.ts` (800 lines) was split into `utils/mappers/<domain>-mappers.ts`,
+  auto-imported through `imports.dirs: ['utils/mappers']` in `nuxt.config.ts`. Supplier payment
+  mappers live in `supplier-payment-mappers.ts`.
+- 8.0 → 8.4 numbers on the local seed quotation: the overpaid hotel went from -$600 pending to
+  $0, and "Por pagar a proveedores" from $34,199 to $34,799. Nothing else changed.
+- `useSupplierPaymentColumns` returns three columns, not an array: provider and bus have
+  "Método" between Pendiente and Estado Pago.
+- A `.ts` file can't use `resolveComponent('UBadge')` (Nuxt only rewrites it in `.vue` files);
+  import it from `#components`.
+- Found while testing: the accommodation row actions button had no `aria-label` (fixed).
+
 ### Fase 9 — Repetición interna de `use-quotation-store`
 
 Sin cambiar lo que exporta el store:
@@ -260,7 +272,8 @@ Sin cambiar lo que exporta el store:
 - **Bug menor:** en `hydrateTravel` con `result === null`, los pagos se filtran después de
   quitar sus padres, así que la condición nunca se cumple y los pagos de la cotización borrada
   se quedan en el store. Tampoco limpia `providerPriceAdjustments`. Hoy no se ve porque nadie
-  los lee sin su padre, pero se arregla al pasar a `_paymentSlice`.
+  los lee sin su padre. **Payments fixed in phase 8 (2026-10-14); `providerPriceAdjustments`
+  is still open.**
 
 ### Fase 10 — Contrato de errores de los stores (`toErrorMessage` + regla de `standardize-store-error-handling`)
 
@@ -323,7 +336,7 @@ Sin cambiar lo que exporta el store:
 - `use-provider-repository.update` copia los campos de ubicación y contacto de
   `mapProviderToInsert` → reutilizar el mapper.
 - `use-travel-repository`: los `insert` de services, buses y accommodations mapean en línea →
-  moverlos a `utils/mappers.ts` como los demás; `mapRowToDomain` de travel media también.
+  moverlos a `utils/mappers/travel-mappers.ts` como los demás; `mapRowToDomain` de travel media también.
 
 ## Tercera pasada: páginas y componentes leídos a mano (2026-10-13)
 
