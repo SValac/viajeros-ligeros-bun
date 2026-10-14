@@ -782,14 +782,17 @@ export const useQuotationStore = defineStore('quotation', () => {
       const existing = quotations.value.find(c => c.travelId === travelId);
       if (existing) {
         const qId = existing.id;
+        const idsInQuotation = (rows: { id: string; quotationId: string }[]) =>
+          rows.filter(r => r.quotationId === qId).map(r => r.id);
+        // Payments go first: once the parents are dropped there's no way to find them.
+        providerPaymentSlice.replaceForParents(idsInQuotation(quotationProviders.value));
+        accommodationPaymentSlice.replaceForParents(idsInQuotation(quotationAccommodations.value));
+        busPaymentSlice.replaceForParents(idsInQuotation(quotationBuses.value));
         quotations.value = quotations.value.filter(c => c.id !== qId);
         quotationProviders.value = quotationProviders.value.filter(p => p.quotationId !== qId);
-        providerPaymentSlice.replaceForParents(quotationProviders.value.filter(p => p.quotationId === qId).map(p => p.id));
         quotationAccommodations.value = quotationAccommodations.value.filter(h => h.quotationId !== qId);
-        accommodationPaymentSlice.replaceForParents(quotationAccommodations.value.filter(h => h.quotationId === qId).map(h => h.id));
         quotationPublicPrices.value = quotationPublicPrices.value.filter(p => p.quotationId !== qId);
         quotationBuses.value = quotationBuses.value.filter(b => b.quotationId !== qId);
-        busPaymentSlice.replaceForParents(quotationBuses.value.filter(b => b.quotationId === qId).map(b => b.id));
         quotationExpenses.value = quotationExpenses.value.filter(g => g.quotationId !== qId);
       }
       return;
