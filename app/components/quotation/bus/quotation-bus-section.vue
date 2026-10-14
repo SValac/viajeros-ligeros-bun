@@ -3,9 +3,9 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { PaymentStatus } from '~/types/payment';
 import type { QuotationBus } from '~/types/quotation';
 
+import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 
@@ -38,22 +38,6 @@ const selectedBus = shallowRef<QuotationBus | null>(null);
 
 function getAgencyName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
-}
-
-function getPaymentStatusColor(status: PaymentStatus): 'warning' | 'info' | 'success' {
-  if (status === 'pending')
-    return 'warning';
-  if (status === 'partial')
-    return 'info';
-  return 'success';
-}
-
-function getPaymentStatusLabel(status: PaymentStatus): string {
-  if (status === 'pending')
-    return 'Pendiente';
-  if (status === 'partial')
-    return 'Anticipo';
-  return 'Liquidado';
 }
 
 function openHistory(bus: QuotationBus) {
@@ -134,6 +118,7 @@ function getBusActions(bus: QuotationBus) {
   ];
 }
 
+const supplierColumns = useSupplierPaymentColumns<QuotationBus>('bus');
 const columns: TableColumn<QuotationBus>[] = [
   {
     accessorKey: 'providerId',
@@ -171,19 +156,8 @@ const columns: TableColumn<QuotationBus>[] = [
     header: 'Costo/persona',
     cell: ({ row }) => formatCurrency(quotationStore.getBusCostPerPerson(row.original.id, coordinatorCount.value)),
   },
-  {
-    id: 'paid',
-    header: 'Pagado',
-    cell: ({ row }) => formatCurrency(quotationStore.getPaidByBus(row.original.id)),
-  },
-  {
-    id: 'pending',
-    header: 'Pendiente',
-    cell: ({ row }) => {
-      const balance = quotationStore.getPendingBalanceByBus(row.original.id);
-      return h('span', { class: balance > 0 ? 'text-warning' : 'text-success' }, formatCurrency(balance));
-    },
-  },
+  supplierColumns.paidColumn,
+  supplierColumns.pendingColumn,
   {
     accessorKey: 'paymentMethod',
     header: 'Método',
@@ -193,18 +167,7 @@ const columns: TableColumn<QuotationBus>[] = [
       variant: 'subtle',
     }),
   },
-  {
-    id: 'paymentStatus',
-    header: 'Estado Pago',
-    cell: ({ row }) => {
-      const status = quotationStore.getBusPaymentStatus(row.original.id);
-      return h(resolveComponent('UBadge'), {
-        label: getPaymentStatusLabel(status),
-        color: getPaymentStatusColor(status),
-        variant: 'subtle',
-      });
-    },
-  },
+  supplierColumns.statusColumn,
   {
     accessorKey: 'confirmed',
     header: 'Confirmado',

@@ -7,6 +7,7 @@ import type { PaymentStatus } from '~/types/payment';
 import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 
@@ -77,22 +78,6 @@ const paymentMethodOptions = [
   { label: 'Efectivo', value: 'cash' },
   { label: 'Transferencia', value: 'transfer' },
 ];
-
-function getPaymentStatusColor(status: PaymentStatus): 'warning' | 'info' | 'success' {
-  if (status === 'pending')
-    return 'warning';
-  if (status === 'partial')
-    return 'info';
-  return 'success';
-}
-
-function getPaymentStatusLabel(status: PaymentStatus): string {
-  if (status === 'pending')
-    return 'Pendiente';
-  if (status === 'partial')
-    return 'Anticipo';
-  return 'Liquidado';
-}
 
 function getProviderName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
@@ -290,6 +275,7 @@ function getProviderActions(provider: QuotationProvider) {
   return [paymentActions, writeActions, destructiveActions];
 }
 
+const supplierColumns = useSupplierPaymentColumns<QuotationProvider>('provider');
 const columns: TableColumn<QuotationProvider>[] = [
   {
     accessorKey: 'providerId',
@@ -381,25 +367,8 @@ const columns: TableColumn<QuotationProvider>[] = [
     header: 'Costo/persona',
     cell: ({ row }) => formatCurrency(quotationStore.getProviderCostPerPerson(row.original.id, coordinatorCount.value)),
   },
-  {
-    id: 'paid',
-    header: 'Pagado',
-    cell: ({ row }) => formatCurrency(quotationStore.getPaidByProvider(row.original.id)),
-  },
-  {
-    id: 'pending',
-    header: 'Pendiente',
-    cell: ({ row }) => {
-      const balance = quotationStore.getPendingBalanceByProvider(row.original.id);
-      const overpayment = quotationStore.getProviderOverpayment(row.original.id);
-      return h('div', [
-        h('span', { class: balance > 0 ? 'text-warning' : 'text-success' }, formatCurrency(balance)),
-        overpayment > 0
-          ? h('p', { class: 'text-xs text-error whitespace-nowrap' }, `Pagado de más: ${formatCurrency(overpayment)}`)
-          : null,
-      ]);
-    },
-  },
+  supplierColumns.paidColumn,
+  supplierColumns.pendingColumn,
   {
     accessorKey: 'paymentMethod',
     header: 'Método',
@@ -409,18 +378,7 @@ const columns: TableColumn<QuotationProvider>[] = [
       variant: 'subtle',
     }),
   },
-  {
-    id: 'paymentStatus',
-    header: 'Estado Pago',
-    cell: ({ row }) => {
-      const status = quotationStore.getProviderPaymentStatus(row.original.id);
-      return h(resolveComponent('UBadge'), {
-        label: getPaymentStatusLabel(status),
-        color: getPaymentStatusColor(status),
-        variant: 'subtle',
-      });
-    },
-  },
+  supplierColumns.statusColumn,
   {
     accessorKey: 'confirmed',
     header: 'Confirmado',
