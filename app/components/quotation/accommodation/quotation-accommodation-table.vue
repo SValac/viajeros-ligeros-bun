@@ -212,10 +212,11 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       h(resolveComponent('UDropdownMenu'), {
         items: getRowActions(row.original),
       }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-        size: 'xs',
+        'color': 'neutral',
+        'variant': 'ghost',
+        'icon': 'i-lucide-more-vertical',
+        'size': 'xs',
+        'aria-label': 'Acciones del hospedaje',
       })),
   });
 
