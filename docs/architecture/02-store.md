@@ -165,7 +165,7 @@ Aplica patrón Repository + Domain: `composables/hotel-rooms/use-hotel-room-doma
 ## 2.9 Quotation Store (`use-quotation-store.ts`)
 
 Gestiona todo el flujo de cotización de un viaje. Aplica el patrón Repository + Domain:
-- `app/composables/quotation/use-quotation-domain.ts` — lógica pura (calcPaymentStatus, calcSeatPrice, countRoomsByType, findRoomsOutsideQuotation)
+- `app/composables/quotation/use-quotation-domain.ts` — lógica pura (calculateSeatPrice, countRoomsByType, findRoomsOutsideQuotation)
 - `app/composables/quotation/use-quotation-repository.ts` — acceso a Supabase (~30 funciones, 8 tablas)
 - `use-quotation-store.ts` — orquestación; guarda la copia que le pasa `quotationByTravelQuery`
 
@@ -187,7 +187,8 @@ Gestiona todo el flujo de cotización de un viaje. Aplica el patrón Repository 
 - `getProvidersMinimumSplitCost` / `getProvidersTotalSplitCost` — según split type
 - `getAccommodationsTotalCost`
 - `getReferencePriceMatrix` — matriz: precio por asiento + hospedaje por ocupación (queda en store porque depende de `useProviderStore` y `useHotelRoomStore`)
-- Estados de pago: proveedores, hospedajes, buses
+- Pagos de proveedores, hospedajes y buses: pagado, pendiente, pagado de más y estado. Los tres
+  salen de `createSupplierPaymentSlice`; los componentes los leen con `useSupplierPaymentApi(kind)`
 
 **Actions**:
 - `fetchByTravel(travelId, { force })` — pasa por la caché de la query (`refresh` / `fetch`)

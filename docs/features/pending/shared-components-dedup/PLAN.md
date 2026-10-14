@@ -10,7 +10,7 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (9-13). La 7 puede ir sola.
 
 **Status:** In progress. PR (b) on branch `feature/shared-components-dedup-payments`
-(phases 1, 2, 8): all three done, PR not opened yet. Next PRs: (a), (c), (d), (e) and phase 7.
+(phases 1, 2, 8): all three done, PR in review. Next PRs: (a), (c), (d), (e) and phase 7.
 
 ---
 
