@@ -7,6 +7,7 @@ import { calculateProviderTotalCost } from '~/composables/quotation/use-quotatio
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
+import { COST_SPLIT_OPTIONS, COST_TYPE_OPTIONS } from '~/utils/quotation-labels';
 
 type Props = {
   quotationId: string;
@@ -57,16 +58,6 @@ type FormState = {
   personCount?: number;
   splitType: CostSplitType;
 };
-
-const costTypeOptions: { label: string; value: ProviderCostType }[] = [
-  { label: 'Costo total', value: 'total' },
-  { label: 'Costo por persona', value: 'per_person' },
-];
-
-const splitTypeOptions: { label: string; value: CostSplitType }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimum' },
-  { label: 'Asientos vendibles', value: 'total' },
-];
 
 const state = reactive<FormState>({
   category: expense?.category,
@@ -201,7 +192,7 @@ function onSubmit() {
     >
       <URadioGroup
         v-model="state.costType"
-        :items="costTypeOptions"
+        :items="COST_TYPE_OPTIONS"
         orientation="horizontal"
         class="py-1.5"
       />
@@ -250,7 +241,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.splitType"
-        :items="splitTypeOptions"
+        :items="COST_SPLIT_OPTIONS"
         class="w-full"
       />
     </UFormField>

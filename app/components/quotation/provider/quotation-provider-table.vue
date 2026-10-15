@@ -307,12 +307,7 @@ const columns: TableColumn<QuotationProvider>[] = [
     cell: ({ row }) => {
       if (isPerPersonProvider(row.original))
         return h(resolveComponent('UBadge'), { label: 'Por persona', color: 'primary', variant: 'subtle' });
-      const isMinimum = (row.original.splitType ?? 'minimum') === 'minimum';
-      return h(resolveComponent('UBadge'), {
-        label: isMinimum ? 'Asientos min.' : 'Asientos vend.',
-        color: isMinimum ? 'info' : 'neutral',
-        variant: 'subtle',
-      });
+      return h(resolveComponent('QuotationSplitTypeBadge'), { splitType: row.original.splitType });
     },
   },
   {

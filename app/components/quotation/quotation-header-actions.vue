@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
+
 type Props = {
   quotationId: string;
   readonly: boolean;
@@ -26,14 +28,6 @@ function openConfirmModal() {
 
 function closeConfirmModal() {
   isConfirmModalOpen.value = false;
-}
-
-function getStatusColor(status: string): 'warning' | 'success' {
-  return status === 'confirmed' ? 'success' : 'warning';
-}
-
-function getStatusLabel(status: string): string {
-  return status === 'confirmed' ? 'Confirmada' : 'Borrador';
 }
 
 function openReopenModal() {
@@ -77,8 +71,8 @@ async function confirmQuotation() {
       <span class="text-sm text-muted">Estado</span>
       <UBadge
         v-if="quotation"
-        :label="getStatusLabel(quotation.status)"
-        :color="getStatusColor(quotation.status)"
+        :label="getQuotationStatusLabel(quotation.status)"
+        :color="getQuotationStatusColor(quotation.status)"
         variant="subtle"
       />
     </div>

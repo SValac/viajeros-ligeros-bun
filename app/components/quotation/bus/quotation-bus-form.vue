@@ -2,12 +2,13 @@
 import { z } from 'zod';
 
 import type { Bus } from '~/types/bus';
-import type { CostSplitType, QuotationBus, QuotationBusStatus } from '~/types/quotation';
+import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
 import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+import { COST_SPLIT_OPTIONS } from '~/utils/quotation-labels';
 
 type Props = {
   quotationId: string;
@@ -45,11 +46,6 @@ const statusOptions: { label: string; value: QuotationBusStatus }[] = [
   { label: 'Apartado', value: 'reserved' },
   { label: 'Confirmado', value: 'confirmed' },
   { label: 'Pendiente', value: 'pending' },
-];
-
-const splitTypeOptions: { label: string; value: CostSplitType }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimum' },
-  { label: 'Asientos vendibles', value: 'total' },
 ];
 
 const busSchema = z.object({
@@ -395,7 +391,7 @@ function handleCancel() {
             :help="`Entre ${personDivisor} personas`"
             required
           >
-            <USelect v-model="formState.splitType" :items="splitTypeOptions" />
+            <USelect v-model="formState.splitType" :items="COST_SPLIT_OPTIONS" />
           </UFormField>
 
           <UFormField label="Método de Pago" required>

@@ -138,14 +138,7 @@ const columns: TableColumn<QuotationBus>[] = [
   {
     id: 'split',
     header: 'División',
-    cell: ({ row }) => {
-      const isMinimum = (row.original.splitType ?? 'minimum') === 'minimum';
-      return h(resolveComponent('UBadge'), {
-        label: isMinimum ? 'Asientos min.' : 'Asientos vend.',
-        color: isMinimum ? 'info' : 'neutral',
-        variant: 'subtle',
-      });
-    },
+    cell: ({ row }) => h(resolveComponent('QuotationSplitTypeBadge'), { splitType: row.original.splitType }),
   },
   {
     accessorKey: 'totalCost',

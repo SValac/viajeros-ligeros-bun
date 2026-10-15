@@ -105,11 +105,7 @@ const columns = computed<TableColumn<QuotationExpense>[]>(() => {
     {
       accessorKey: 'splitType',
       header: 'División',
-      cell: ({ row }) => h(resolveComponent('UBadge'), {
-        label: row.original.splitType === 'minimum' ? 'Asientos min.' : 'Asientos vend.',
-        color: row.original.splitType === 'minimum' ? 'info' : 'neutral',
-        variant: 'subtle',
-      }),
+      cell: ({ row }) => h(resolveComponent('QuotationSplitTypeBadge'), { splitType: row.original.splitType }),
     },
     {
       accessorKey: 'totalCost',

@@ -7,6 +7,7 @@ import type { TravelSummary } from '~/types/travel';
 
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
+import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
 
 definePageMeta({
   name: 'quotations-index',
@@ -29,14 +30,6 @@ const stats = computed(() => {
     confirmed: rows.filter(r => r.quotation?.status === 'confirmed').length,
   };
 });
-
-function getQuotationStatusColor(status: QuotationStatus): 'warning' | 'success' {
-  return status === 'confirmed' ? 'success' : 'warning';
-}
-
-function getQuotationStatusLabel(status: QuotationStatus): string {
-  return status === 'confirmed' ? 'Confirmada' : 'Borrador';
-}
 
 function goToQuotation(travelId: string) {
   router.push({ name: 'quotation-detail', params: { id: travelId } });
