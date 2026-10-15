@@ -2,6 +2,7 @@
 import type { TravelActivity } from '~/types/travel';
 
 import { pluralize } from '~/utils/pluralize';
+import { getTravelDurationDays } from '~/utils/travel-calendar';
 
 // Props
 type Props = {
@@ -32,10 +33,7 @@ const toast = useToast();
 const travelDuration = computed(() => {
   if (!props.startDate || !props.endDate)
     return 0;
-  const start = new Date(props.startDate);
-  const fin = new Date(props.endDate);
-  const diff = fin.getTime() - start.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both days
+  return getTravelDurationDays(props);
 });
 
 // Activities sorted by day

@@ -8,7 +8,7 @@ import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 
 import { useSupplierPayments } from '~/composables/quotation/use-supplier-payments';
 import { formatCurrency } from '~/utils/currency';
-import { parseDisplayDate } from '~/utils/format-date';
+import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 type Props = {
@@ -26,15 +26,6 @@ const isFormModalOpen = shallowRef(false);
 const selectedPayment = shallowRef<SupplierPayment | null>(null);
 const isDeleteModalOpen = shallowRef(false);
 const paymentToDelete = shallowRef<SupplierPayment | null>(null);
-
-function formatDate(dateString: string): string {
-  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
-  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
 
 function openNewPayment() {
   selectedPayment.value = null;
@@ -88,7 +79,7 @@ const columns: TableColumn<SupplierPayment>[] = [
   {
     accessorKey: 'paymentDate',
     header: 'Fecha',
-    cell: ({ row }) => formatDate(row.original.paymentDate),
+    cell: ({ row }) => formatShortDate(row.original.paymentDate),
   },
   {
     accessorKey: 'concept',

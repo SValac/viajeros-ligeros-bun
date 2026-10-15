@@ -2,6 +2,7 @@
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { pluralize } from '~/utils/pluralize';
+import { getTravelDurationDays } from '~/utils/travel-calendar';
 
 definePageMeta({
   name: 'travel-detail',
@@ -33,14 +34,11 @@ const details = computed<Detail[]>(() => {
   const t = travel.value;
   if (!t)
     return [];
-  const start = parseDisplayDate(t.startDate);
-  const end = parseDisplayDate(t.endDate);
-  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
 
   return [
     { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(t.startDate) },
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(t.endDate) },
-    { icon: 'i-lucide-clock', label: 'Duración', value: pluralize(days, 'día') },
+    { icon: 'i-lucide-clock', label: 'Duración', value: pluralize(getTravelDurationDays(t), 'día') },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
     { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(quotation.value?.minimumSeatTarget) },
     { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(quotation.value?.totalSeats) },

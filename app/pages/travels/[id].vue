@@ -2,7 +2,9 @@
 import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { formatDateRange } from '~/utils/format-date';
 import { pluralize } from '~/utils/pluralize';
+import { getTravelDurationDays } from '~/utils/travel-calendar';
 
 // Parent of the travel tabs (app/pages/travels/[id]/*). Shows the header, the
 // actions and the navigation; each tab is a child route rendered in <NuxtPage />.
@@ -39,11 +41,8 @@ watch([status, travel], ([currentStatus, value]) => {
 const dateRange = computed(() => {
   if (!travel.value)
     return '';
-  const format = (date: string) => parseDisplayDate(date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
-  const start = parseDisplayDate(travel.value.startDate);
-  const end = parseDisplayDate(travel.value.endDate);
-  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
-  return `${format(travel.value.startDate)} – ${format(travel.value.endDate)} · ${pluralize(days, 'día')}`;
+  const { startDate, endDate } = travel.value;
+  return `${formatDateRange(startDate, endDate)} · ${pluralize(getTravelDurationDays(travel.value), 'día')}`;
 });
 
 // To add a tab: create app/pages/travels/[id]/<name>.vue and add it here.

@@ -9,7 +9,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
-import { parseDisplayDate } from '~/utils/format-date';
+import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
@@ -126,20 +126,11 @@ async function handleDelete(payment: Payment) {
   }
 }
 
-function formatDate(dateString: string) {
-  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
-  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
 const columns: TableColumn<Payment>[] = [
   {
     accessorKey: 'paymentDate',
     header: 'Fecha',
-    cell: ({ row }) => h('span', { class: 'text-sm' }, formatDate(row.getValue('paymentDate'))),
+    cell: ({ row }) => h('span', { class: 'text-sm' }, formatShortDate(row.getValue('paymentDate'))),
   },
   {
     accessorKey: 'amount',
