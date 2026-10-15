@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { travelDetailQuery } from '~/queries/travels';
 
 definePageMeta({
@@ -6,15 +7,14 @@ definePageMeta({
 });
 
 const route = useRoute();
-const router = useRouter();
 
 const travelId = computed(() => route.params.id as string);
 const { data: travel, status } = useQuery(() => travelDetailQuery(travelId.value));
 
-watch([status, travel], ([currentStatus, value]) => {
-  if (currentStatus === 'success' && value === null && travelId.value)
-    router.push({ name: 'payments-index' });
-}, { immediate: true });
+useRedirectIfMissing({ status, data: travel }, {
+  to: { name: 'payments-index' },
+  active: () => !!travelId.value,
+});
 </script>
 
 <template>

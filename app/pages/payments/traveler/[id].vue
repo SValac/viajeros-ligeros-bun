@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Payment, PaymentFormData, PaymentType, TravelerAccountConfig } from '~/types/payment';
 
+import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
@@ -28,12 +29,7 @@ const travelerQuery = useQuery(() => travelerDetailQuery(travelerId.value));
 const { data: traveler, status, refetch } = travelerQuery;
 const travelerLoad = useQueryLoadState(travelerQuery);
 
-// Only once resolved: `undefined` is "still loading" or "the request failed", and neither
-// means the traveler doesn't exist.
-watch([status, traveler], ([currentStatus, value]) => {
-  if (currentStatus === 'success' && value === null)
-    router.push({ name: 'payments-index' });
-}, { immediate: true });
+useRedirectIfMissing({ status, data: traveler }, { to: { name: 'payments-index' } });
 
 const travelerName = computed(() =>
   traveler.value ? formatTravelerName(traveler.value) : '',

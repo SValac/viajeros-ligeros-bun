@@ -2,6 +2,7 @@
 import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { formatDateRange } from '~/utils/format-date';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
@@ -22,21 +23,12 @@ const isEditing = computed(() => route.name === 'travel-edit');
 const isDeleteModalOpen = shallowRef(false);
 const isDeleting = shallowRef(false);
 
-// Redirect to dashboard if travel not found.
-// `watch` with an explicit source, not `watchEffect`: toast.add() reads internal reactive state
-// and the effect would retrigger in a loop (endless toast + router.push).
-// Only once the query resolved and with a strict `null`: `undefined` is "still loading" (direct
-// link) or "the request failed", and neither means the travel doesn't exist.
-watch([status, travel], ([currentStatus, value]) => {
-  if (currentStatus === 'success' && value === null && travelId.value && !isDeleting.value) {
-    toast.add({
-      title: 'Viaje no encontrado',
-      description: 'El viaje que buscas no existe',
-      color: 'error',
-    });
-    router.push({ name: 'travels-dashboard' });
-  }
-}, { immediate: true });
+// After a delete the travel is gone too: that redirect is handleDelete's.
+useRedirectIfMissing({ status, data: travel }, {
+  to: { name: 'travels-dashboard' },
+  toast: { title: 'Viaje no encontrado', description: 'El viaje que buscas no existe' },
+  active: () => !!travelId.value && !isDeleting.value,
+});
 
 const dateRange = computed(() => {
   if (!travel.value)
