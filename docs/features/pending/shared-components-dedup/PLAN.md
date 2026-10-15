@@ -9,8 +9,8 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Status:** In progress. PR (b) on branch `feature/shared-components-dedup-payments`
-(phases 1, 2, 8): all three done, PR in review. Next PRs: (a), (c), (d), (e) and phase 7.
+**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137. PR (a) on branch
+`feature/shared-components-dedup-bugs`: all loose bugs done. Next PRs: (c), (d), phase 7, (e).
 
 ---
 
@@ -273,7 +273,11 @@ Sin cambiar lo que exporta el store:
   quitar sus padres, así que la condición nunca se cumple y los pagos de la cotización borrada
   se quedan en el store. Tampoco limpia `providerPriceAdjustments`. Hoy no se ve porque nadie
   los lee sin su padre. **Payments fixed in phase 8 (2026-10-14); `providerPriceAdjustments`
-  is still open.**
+  fixed in PR (a) (2026-10-14).**
+- **Open bug (found in PR (a)):** on the non-null path, `providerPriceAdjustments` is replaced
+  by filtering on the *fetched* providers, so the adjustments of a provider that no longer
+  comes back from the server stay in the store. Filter by the quotation's previous provider ids
+  instead.
 
 ### Fase 10 — Contrato de errores de los stores (`toErrorMessage` + regla de `standardize-store-error-handling`)
 
@@ -364,6 +368,17 @@ galería) y se buscó con grep cada patrón en el resto. Fases 14-17.
   los usa nadie (código muerto; verificar con grep antes de borrar).
 - `TravelerFilterBar`: el filtro de viaje siempre está oculto (`hide-travel-filter` y
   `available-travels="[]"` en su único uso) → quitarlo.
+
+**Done in PR (a) (2026-10-14).** Notes from the implementation:
+- `updateCoordinator` also swallowed its error (returned `undefined`); it now re-throws like
+  `addCoordinator` and `deleteCoordinator`.
+- `bus-list`: `toggleBusStatus` had the same silent failure as update/delete. The bus store
+  keeps its `Promise<boolean>` contract until phase 10.
+- "Eliminar": `travel-activity-list` already had the color; `hotel-room-type-card` and
+  `use-provider-category-list` didn't (7 menus in total). In the travelers page,
+  `getRowActions` returns `TravelerActionItem[][]` because `BusSeatMap` needs a required `label`.
+- Coordinator icon is `i-lucide-user-cog` everywhere; `user-star` only means representative.
+- `TravelerFilters.travelId` and its check in `filterTravelers` were removed with the filter.
 
 ### Fase 14 — Etiquetas, opciones y formatos en `utils/`
 
