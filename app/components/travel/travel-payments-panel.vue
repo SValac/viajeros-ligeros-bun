@@ -14,6 +14,7 @@ import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
+import { formatTravelerName, getTravelerTypeLabel } from '~/utils/traveler-labels';
 
 // Payments of a travel's travelers: cash summary, account configs and payments. Used by the
 // travel's "Pagos" tab and by /payments/travel/[id].
@@ -169,7 +170,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     cell: ({ row }) => {
       const depth = row.depth;
       const traveler = row.original;
-      const name = `${traveler.firstName} ${traveler.lastName}`;
+      const name = formatTravelerName(traveler);
       const link = h(resolveComponent('NuxtLink'), {
         to: { name: 'payments-traveler', params: { id: traveler.id } },
         class: 'font-medium hover:text-primary transition-colors',
@@ -200,7 +201,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Tipo',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
+      const label = getTravelerTypeLabel(config?.travelerType ?? 'adult');
       return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => label);
     },
   },
@@ -215,7 +216,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => price.priceType);
         }
       }
-      const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
+      const label = getTravelerTypeLabel(config?.travelerType ?? 'adult');
       return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => label);
     },
   },
@@ -432,7 +433,7 @@ watch(travelId, async (id) => {
     <UModal
       v-model:open="isPaymentModalOpen"
       title="Registrar abono"
-      :description="selectedTraveler ? `${selectedTraveler.firstName} ${selectedTraveler.lastName}` : ''"
+      :description="selectedTraveler ? formatTravelerName(selectedTraveler) : ''"
     >
       <template #body>
         <PaymentForm
@@ -466,7 +467,7 @@ watch(travelId, async (id) => {
     <UModal
       v-model:open="isConfigModalOpen"
       title="Configurar cuenta"
-      :description="selectedTraveler ? `${selectedTraveler.firstName} ${selectedTraveler.lastName}` : ''"
+      :description="selectedTraveler ? formatTravelerName(selectedTraveler) : ''"
     >
       <template #body>
         <PaymentAccountConfigForm

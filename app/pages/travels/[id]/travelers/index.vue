@@ -12,6 +12,7 @@ import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 definePageMeta({
   name: 'travel-travelers',
@@ -179,7 +180,7 @@ function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
   const representativeById = new Map(
     travelersByBus
       .filter(t => t.isRepresentative)
-      .map(t => [t.id, `${t.firstName} ${t.lastName}`]),
+      .map(t => [t.id, formatTravelerName(t)]),
   );
 
   return travelersByBus
@@ -188,7 +189,7 @@ function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
       return {
         travelerId: t.id,
         seatNumber,
-        passengerName: `${t.firstName} ${t.lastName}`,
+        passengerName: formatTravelerName(t),
         boardingPoint: t.boardingPoint,
         isRepresentative: t.isRepresentative,
         isCoordinator: t.kind === 'coordinator',
@@ -307,7 +308,7 @@ function startSeatChange(traveler: Traveler) {
   toast.clear();
   seatChangeContext.value = {
     travelerId: traveler.id,
-    travelerName: `${traveler.firstName} ${traveler.lastName}`,
+    travelerName: formatTravelerName(traveler),
     travelBusId: traveler.travelBusId,
     sourceSeat: traveler.seat,
   };
@@ -316,7 +317,7 @@ function startSeatChange(traveler: Traveler) {
 
   toast.add({
     title: 'Modo cambiar asiento',
-    description: `Selecciona el asiento destino para ${traveler.firstName} ${traveler.lastName}.`,
+    description: `Selecciona el asiento destino para ${formatTravelerName(traveler)}.`,
     color: 'info',
   });
 }
@@ -435,7 +436,7 @@ async function handleFormSubmit(data: TravelerFormData) {
   if (takenSeatTraveler) {
     toast.add({
       title: 'Asiento ocupado',
-      description: `El asiento ${data.seat} ya está asignado a ${takenSeatTraveler.firstName} ${takenSeatTraveler.lastName}`,
+      description: `El asiento ${data.seat} ya está asignado a ${formatTravelerName(takenSeatTraveler)}`,
       color: 'warning',
     });
     return;
@@ -446,7 +447,7 @@ async function handleFormSubmit(data: TravelerFormData) {
       await travelerStore.updateTraveler(editingTraveler.value.id, data);
       toast.add({
         title: 'Viajero actualizado',
-        description: `${data.firstName} ${data.lastName} se actualizó correctamente`,
+        description: `${formatTravelerName(data)} se actualizó correctamente`,
         color: 'primary',
       });
       closeModal();
@@ -455,7 +456,7 @@ async function handleFormSubmit(data: TravelerFormData) {
       await travelerStore.addTraveler(data);
       toast.add({
         title: 'Viajero creado',
-        description: `${data.firstName} ${data.lastName} se registró correctamente`,
+        description: `${formatTravelerName(data)} se registró correctamente`,
         color: 'primary',
       });
       closeModal();
@@ -481,14 +482,14 @@ async function handleFormSubmit(data: TravelerFormData) {
 
 async function handleDelete(traveler: Traveler) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${traveler.firstName} ${traveler.lastName}?`)) {
+  if (confirm(`¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`)) {
     await travelerStore.deleteTraveler(traveler.id);
     if (seatChangeContext.value?.travelerId === traveler.id) {
       clearSeatChangeState();
     }
     toast.add({
       title: 'Viajero eliminado',
-      description: `${traveler.firstName} ${traveler.lastName} se eliminó correctamente`,
+      description: `${formatTravelerName(traveler)} se eliminó correctamente`,
       color: 'warning',
     });
   }
@@ -610,7 +611,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const depth = row.depth;
       const canExpand = row.getCanExpand();
 
-      const nameNode = h('span', { class: 'font-medium' }, `${t.firstName} ${t.lastName}`);
+      const nameNode = h('span', { class: 'font-medium' }, formatTravelerName(t));
 
       if (canExpand) {
         const isExpanded = row.getIsExpanded();

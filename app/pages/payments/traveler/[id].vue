@@ -11,6 +11,7 @@ import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 definePageMeta({
   name: 'payments-traveler',
@@ -35,7 +36,7 @@ watch([status, traveler], ([currentStatus, value]) => {
 }, { immediate: true });
 
 const travelerName = computed(() =>
-  traveler.value ? `${traveler.value.firstName} ${traveler.value.lastName}` : '',
+  traveler.value ? formatTravelerName(traveler.value) : '',
 );
 
 // One quotation per travel the traveler is in (for its public prices). The quotation query

@@ -10,6 +10,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
+import { formatTravelerName, getTravelerRole, TRAVELER_ROLE_ICONS } from '~/utils/traveler-labels';
 
 definePageMeta({
   name: 'travel-rooms',
@@ -143,7 +144,7 @@ const representativeNames = computed(() => {
   for (const traveler of travelersOfTravel.value) {
     const representative = traveler.representativeId ? byId.get(traveler.representativeId) : undefined;
     if (representative)
-      names[traveler.id] = `${representative.firstName} ${representative.lastName}`;
+      names[traveler.id] = formatTravelerName(representative);
   }
   return names;
 });
@@ -287,11 +288,7 @@ watch(travelId, async (id) => {
 }, { immediate: true });
 
 function getTravelerIcon(traveler: Traveler): { name: string; class: string } {
-  if (traveler.kind === 'coordinator')
-    return { name: 'i-lucide-user-cog', class: 'text-info' };
-  if (traveler.isRepresentative)
-    return { name: 'i-lucide-user-star', class: 'text-primary' };
-  return { name: 'i-lucide-user', class: 'text-muted' };
+  return TRAVELER_ROLE_ICONS[getTravelerRole(traveler)];
 }
 
 function openAddTravelerModal(accommodationId: string): void {
@@ -512,7 +509,7 @@ async function updateAccommodation(
             />
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium">
-                {{ traveler.firstName }} {{ traveler.lastName }}
+                {{ formatTravelerName(traveler) }}
                 <span
                   v-if="representativeName"
                   class="inline-flex items-center gap-1 font-normal text-muted"

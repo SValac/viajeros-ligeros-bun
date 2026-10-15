@@ -2,6 +2,8 @@
 import type { TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFilters } from '~/types/traveler';
 
+import { formatTravelerName } from '~/utils/traveler-labels';
+
 type Props = {
   availableBuses: TravelBus[];
   representatives?: Traveler[];
@@ -16,7 +18,7 @@ const providerStore = useProviderStore();
 
 const representativeOptions = computed(() =>
   (props.representatives ?? []).map(r => ({
-    label: `${r.firstName} ${r.lastName}`,
+    label: formatTravelerName(r),
     value: r.id,
   })),
 );

@@ -9,6 +9,7 @@ import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPubli
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 type Props = {
   quotationId: string;
@@ -236,7 +237,7 @@ const travelersByPrice = computed(() => {
     const traveler = travelersById.value.get(config.travelerId);
     const withPrice: TravelerWithPrice = {
       id: config.travelerId,
-      name: traveler ? `${traveler.firstName} ${traveler.lastName}` : 'Viajero',
+      name: traveler ? formatTravelerName(traveler) : 'Viajero',
       amount: config.publicPriceAmount,
     };
     map.set(config.publicPriceId, [...(map.get(config.publicPriceId) ?? []), withPrice]);

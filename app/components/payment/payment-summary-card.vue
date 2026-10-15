@@ -2,6 +2,7 @@
 import type { TravelerPaymentSummary } from '~/types/payment';
 
 import { formatCurrency } from '~/utils/currency';
+import { getTravelerTypeLabel } from '~/utils/traveler-labels';
 
 defineProps<{
   summary: TravelerPaymentSummary;
@@ -29,7 +30,7 @@ function formatAdjustmentAmount(item: { amount: number; type: 'fixed' | 'percent
     <div class="space-y-2 text-sm">
       <div class="flex justify-between text-muted">
         <span>Tipo de viajero</span>
-        <span class="capitalize">{{ summary.travelerType === 'adult' ? 'Adulto' : 'Niño' }}</span>
+        <span class="capitalize">{{ getTravelerTypeLabel(summary.travelerType) }}</span>
       </div>
 
       <div class="flex justify-between text-muted">

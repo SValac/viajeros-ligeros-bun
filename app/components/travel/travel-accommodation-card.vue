@@ -2,6 +2,8 @@
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler } from '~/types/traveler';
 
+import { formatTravelerName, getTravelerRole, TRAVELER_ROLE_ICONS } from '~/utils/traveler-labels';
+
 type Props = {
   accommodation: TravelAccommodation;
   occupants: Traveler[];
@@ -122,23 +124,13 @@ function toggleEditing() {
         >
           <div class="flex items-center gap-2 min-w-0">
             <UIcon
-              v-if="traveler.kind === 'coordinator'"
-              name="i-lucide-user-cog"
-              class="size-3.5 text-info shrink-0"
-            />
-            <UIcon
-              v-else-if="traveler.isRepresentative"
-              name="i-lucide-user-star"
-              class="size-3.5 text-primary shrink-0"
-            />
-            <UIcon
-              v-else
-              name="i-lucide-user"
-              class="size-3.5 text-muted shrink-0"
+              :name="TRAVELER_ROLE_ICONS[getTravelerRole(traveler)].name"
+              class="size-3.5 shrink-0"
+              :class="TRAVELER_ROLE_ICONS[getTravelerRole(traveler)].class"
             />
             <div class="min-w-0">
               <p class="text-sm truncate">
-                {{ traveler.firstName }} {{ traveler.lastName }}
+                {{ formatTravelerName(traveler) }}
               </p>
               <p v-if="traveler.kind === 'coordinator'" class="text-xs text-info">
                 Coordinador
