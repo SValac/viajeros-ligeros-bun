@@ -12,6 +12,7 @@ import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
+import { formatTravelBusLabel } from '~/utils/travel-bus';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
 definePageMeta({
@@ -227,9 +228,7 @@ function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
   if (!bus)
     return travelBusId;
-  const agency = providerStore.getProviderById(bus.providerId)?.name;
-  const busName = [bus.brand, bus.model].filter(Boolean).join(' ').trim() || 'Camión';
-  return agency ? `${agency} — ${busName}` : busName;
+  return formatTravelBusLabel(bus, providerStore.getProviderById(bus.providerId)?.name);
 }
 
 function openCreateModal() {

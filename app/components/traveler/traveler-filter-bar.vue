@@ -2,6 +2,7 @@
 import type { TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFilters } from '~/types/traveler';
 
+import { formatTravelBusLabel } from '~/utils/travel-bus';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
 type Props = {
@@ -25,14 +26,10 @@ const representativeOptions = computed(() =>
 
 // Bus options
 const busOptions = computed(() => {
-  return props.availableBuses.map((b) => {
-    const agency = providerStore.getProviderById(b.providerId)?.name;
-    const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
-    return {
-      label: agency ? `${agency} — ${busName}` : busName,
-      value: b.id,
-    };
-  });
+  return props.availableBuses.map(b => ({
+    label: formatTravelBusLabel(b, providerStore.getProviderById(b.providerId)?.name),
+    value: b.id,
+  }));
 });
 
 function onBusChange(val: string | undefined) {
