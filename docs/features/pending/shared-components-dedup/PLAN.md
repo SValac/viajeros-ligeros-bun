@@ -10,8 +10,8 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (9-13). La 7 puede ir sola.
 
 **Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138.
-PR (c) on branch `feature/shared-components-dedup-utils`: phase 14 done, phase 15 next. Then
-(d), phase 7, (e).
+PR (c) on branch `feature/shared-components-dedup-utils`: phases 14 and 15 done, ready for
+review. Then (d), phase 7, (e).
 
 ---
 
@@ -437,7 +437,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   (booleans and its own palette), `providers/index` (noun without count) and the price warning
   modal (verb agreement).
 
-### Fase 15 — Composables de pantalla
+### Fase 15 — Composables de pantalla ✅
 
 - `useQuotationContext(quotationId)`: `cotizaciones.find(c => c.id === quotationId)?.travelId`
   + `useTravelCoordinatorCount` en 11 componentes de cotización.
@@ -461,6 +461,27 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - Búsqueda: `coordinators/index` filtra con otras reglas que `matchesProviderSearch` (sin
   quitar acentos, teléfono desde 1 dígito) → un `matchesSearch(fields, term, phone?)` en
   `utils/`.
+
+**Done (2026-10-14).** Notes from the implementation:
+- `quotation/`: `useQuotationContext` (quotation, travelId, coordinatorCount; 9 components),
+  `useQuotationRoomCounts` (accommodation table and summary), `useTravelQuotation` (quotation,
+  `load`, `refetch`; 8 places).
+- Root composables: `useRedirectIfMissing` (with `toast` and `active` options), `useFormModal`
+  (screens rename `isOpen`/`editing`/`openNew`/`openEdit`/`close` so templates stay the same),
+  `useValidTab`, `useExpandedGroups`. `payments/useTravelPayments`,
+  `agency-profile/useSiteImageActions`.
+- `useFormModal` left out on purpose: travelers page (also resets the initial values),
+  accommodation table (copies the record into a form state) and public prices (templates); the
+  delete-confirm modals wait for `ConfirmDeleteModal` (phase 3).
+- VueUse: `refDebounced` in `provider-filter-bar` (a pending search no longer comes back after
+  "Limpiar"), `useObjectUrl` for the travel form banner. `travel-gallery-upload` keeps its own
+  object URLs: it holds a list of files, and `useObjectUrl` takes one.
+- `utils/search.ts` `matchesSearch`: no case or accents, phone by digits only from 3 on. The
+  coordinators page now follows it (it matched accents literally and phones from 1 digit).
+- Visible changes: logo toasts read "El logo se actualizó / se quitó"; the coordinators search
+  placeholder said "Buscar por name".
+- Dev server gotcha seen here: after many in-place rewrites `nuxt dev` lost the
+  `coordinators-index` route (500 "No match" on every page); rewriting that page file again fixed it.
 
 ### Fase 16 — Componentes y piezas de tabla
 
