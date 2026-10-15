@@ -11,6 +11,7 @@ import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
+import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 
 type Props = {
   quotationId: string;
@@ -69,11 +70,7 @@ const confirmedOptions = [
   { label: 'No', value: 'no' },
 ];
 
-const paymentMethodOptions = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
+const paymentMethodOptions = [{ label: 'Todos', value: 'all' }, ...PAYMENT_TYPE_OPTIONS];
 
 function getProviderName(providerId: string): string {
   return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
@@ -369,7 +366,7 @@ const columns: TableColumn<QuotationProvider>[] = [
     accessorKey: 'paymentMethod',
     header: 'Método',
     cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+      label: getPaymentTypeLabel(row.original.paymentMethod),
       color: 'neutral',
       variant: 'subtle',
     }),

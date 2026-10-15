@@ -8,6 +8,7 @@ import { calculateProviderTotalCost, getPriceAdjustmentError } from '~/composabl
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 
 type Props = {
   quotationId: string;
@@ -62,11 +63,6 @@ type FormState = {
   remarks: string;
   confirmed: boolean;
 };
-
-const paymentMethodOptions = [
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
 
 const splitTypeOptions: { label: string; value: CostSplitType }[] = [
   { label: 'Asientos mínimos objetivo', value: 'minimum' },
@@ -267,7 +263,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.paymentMethod"
-        :items="paymentMethodOptions"
+        :items="PAYMENT_TYPE_OPTIONS"
         class="w-full"
       />
     </UFormField>

@@ -8,6 +8,7 @@ import type { QuotationBus } from '~/types/quotation';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
+import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 type Props = {
   quotationId: string;
@@ -162,7 +163,7 @@ const columns: TableColumn<QuotationBus>[] = [
     accessorKey: 'paymentMethod',
     header: 'Método',
     cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+      label: getPaymentTypeLabel(row.original.paymentMethod),
       color: 'neutral',
       variant: 'subtle',
     }),

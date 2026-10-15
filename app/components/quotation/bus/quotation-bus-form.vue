@@ -7,6 +7,7 @@ import type { CostSplitType, QuotationBus, QuotationBusStatus } from '~/types/qu
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 
 type Props = {
   quotationId: string;
@@ -44,11 +45,6 @@ const statusOptions: { label: string; value: QuotationBusStatus }[] = [
   { label: 'Apartado', value: 'reserved' },
   { label: 'Confirmado', value: 'confirmed' },
   { label: 'Pendiente', value: 'pending' },
-];
-
-const paymentMethodOptions = [
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
 ];
 
 const splitTypeOptions: { label: string; value: CostSplitType }[] = [
@@ -403,7 +399,7 @@ function handleCancel() {
           </UFormField>
 
           <UFormField label="Método de Pago" required>
-            <USelect v-model="formState.paymentMethod" :items="paymentMethodOptions" />
+            <USelect v-model="formState.paymentMethod" :items="PAYMENT_TYPE_OPTIONS" />
           </UFormField>
 
           <UFormField label="Observaciones">

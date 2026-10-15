@@ -9,6 +9,7 @@ import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 import { useSupplierPayments } from '~/composables/quotation/use-supplier-payments';
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
+import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 type Props = {
   kind: SupplierPaymentKind;
@@ -98,7 +99,7 @@ const columns: TableColumn<SupplierPayment>[] = [
     accessorKey: 'paymentType',
     header: 'Tipo',
     cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.paymentType === 'cash' ? 'Efectivo' : 'Transferencia',
+      label: getPaymentTypeLabel(row.original.paymentType),
       color: row.original.paymentType === 'cash' ? 'success' : 'info',
       variant: 'subtle',
     }),

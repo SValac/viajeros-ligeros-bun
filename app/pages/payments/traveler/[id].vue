@@ -3,13 +3,14 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
+import type { Payment, PaymentFormData, PaymentType, TravelerAccountConfig } from '~/types/payment';
 
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { parseDisplayDate } from '~/utils/format-date';
+import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 definePageMeta({
   name: 'payments-traveler',
@@ -133,11 +134,6 @@ function formatDate(dateString: string) {
   });
 }
 
-const paymentTypeLabel: Record<string, string> = {
-  cash: 'Efectivo',
-  transfer: 'Transferencia',
-};
-
 const columns: TableColumn<Payment>[] = [
   {
     accessorKey: 'paymentDate',
@@ -153,8 +149,8 @@ const columns: TableColumn<Payment>[] = [
     accessorKey: 'paymentType',
     header: 'Tipo',
     cell: ({ row }) => {
-      const type = row.getValue<string>('paymentType');
-      return h(resolveComponent('UBadge'), { color: type === 'cash' ? 'neutral' : 'info', variant: 'subtle' }, () => paymentTypeLabel[type] ?? type);
+      const type = row.getValue<PaymentType>('paymentType');
+      return h(resolveComponent('UBadge'), { color: type === 'cash' ? 'neutral' : 'info', variant: 'subtle' }, () => getPaymentTypeLabel(type));
     },
   },
   {
