@@ -4,7 +4,6 @@ import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatDate } from '~/utils/format-date';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
-import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
 // Summary of the travel picked in the calendar (app/pages/calendar.vue). It gets only the id and reads
 // travelDetailQuery, so it stays open even when the travel isn't in the visible month.
@@ -78,12 +77,7 @@ const highlights = computed(() => travel.value?.highlights.slice(0, MAX_HIGHLIGH
             <h2 class="font-semibold text-highlighted wrap-break-word">
               {{ travel.label }}
             </h2>
-            <UBadge
-              :label="getTravelStatusLabel(travel.status)"
-              :color="getTravelStatusColor(travel.status)"
-              variant="subtle"
-              class="shrink-0"
-            />
+            <TravelStatusBadge :status="travel.status" class="shrink-0" />
           </div>
           <p v-if="travel.destination" class="text-sm text-muted">
             {{ travel.destination }}

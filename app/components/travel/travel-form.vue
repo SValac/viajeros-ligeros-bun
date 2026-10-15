@@ -9,6 +9,7 @@ import type { Coordinator } from '~/types/coordinator';
 import type { Travel, TravelFormData } from '~/types/travel';
 
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
 // Props
 type Props = {
@@ -175,13 +176,11 @@ onMounted(() => agencyProfileStore.fetchProfile());
 const canPublish = computed(() => agencyProfileStore.isComplete || travel?.status === 'published');
 
 // Status options for the select
-const statusOptions = computed<SelectItem[]>(() => [
-  { value: 'pending', label: 'Pendiente' },
-  { value: 'published', label: 'Publicado', disabled: !canPublish.value },
-  { value: 'in_progress', label: 'En Curso' },
-  { value: 'completed', label: 'Completado' },
-  { value: 'cancelled', label: 'Cancelado' },
-]);
+const statusOptions = computed<SelectItem[]>(() => TRAVEL_STATUSES.map(status => ({
+  value: status,
+  label: getTravelStatusLabel(status),
+  disabled: status === 'published' && !canPublish.value,
+})));
 
 // Handlers
 const isSubmitting = ref(false);

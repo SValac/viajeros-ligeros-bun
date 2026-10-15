@@ -131,11 +131,7 @@ async function deleteTravel() {
                 <h1 class="text-2xl font-bold wrap-break-word">
                   {{ travel.label }}
                 </h1>
-                <UBadge
-                  :label="getTravelStatusLabel(travel.status)"
-                  :color="getTravelStatusColor(travel.status)"
-                  variant="subtle"
-                />
+                <TravelStatusBadge :status="travel.status" />
               </div>
               <p class="text-muted text-sm">
                 <template v-if="travel.destination">

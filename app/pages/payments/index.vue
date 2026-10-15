@@ -88,12 +88,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
   {
     id: 'status',
     header: 'Estado',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: getTravelStatusLabel(row.original.travel.status),
-      color: getTravelStatusColor(row.original.travel.status),
-      variant: 'subtle',
-      size: 'sm',
-    }),
+    cell: ({ row }) => h(resolveComponent('TravelStatusBadge'), { status: row.original.travel.status, size: 'sm' }),
   },
   {
     id: 'travelers',

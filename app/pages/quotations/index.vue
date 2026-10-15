@@ -64,10 +64,7 @@ const columns: TableColumn<TravelSummary>[] = [
     header: 'Estado del viaje',
     cell: ({ row }) => {
       const { status } = row.original;
-      return h(resolveComponent('UBadge'), {
-        color: getTravelStatusColor(status),
-        variant: 'subtle',
-      }, () => getTravelStatusLabel(status));
+      return h(resolveComponent('TravelStatusBadge'), { status });
     },
   },
   {
