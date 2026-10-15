@@ -7,6 +7,8 @@ import type { TravelSummary } from '~/types/travel';
 
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
+import { formatDateRange } from '~/utils/format-date';
+import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
 
 definePageMeta({
   name: 'quotations-index',
@@ -29,14 +31,6 @@ const stats = computed(() => {
     confirmed: rows.filter(r => r.quotation?.status === 'confirmed').length,
   };
 });
-
-function getQuotationStatusColor(status: QuotationStatus): 'warning' | 'success' {
-  return status === 'confirmed' ? 'success' : 'warning';
-}
-
-function getQuotationStatusLabel(status: QuotationStatus): string {
-  return status === 'confirmed' ? 'Confirmada' : 'Borrador';
-}
 
 function goToQuotation(travelId: string) {
   router.push({ name: 'quotation-detail', params: { id: travelId } });
@@ -63,7 +57,7 @@ const columns: TableColumn<TravelSummary>[] = [
     header: 'Fechas',
     cell: ({ row }) => {
       const { startDate, endDate } = row.original;
-      return h('span', { class: 'text-sm text-muted' }, `${formatDate(startDate)} - ${formatDate(endDate)}`);
+      return h('span', { class: 'text-sm text-muted' }, formatDateRange(startDate, endDate, 'long'));
     },
   },
   {
@@ -71,10 +65,7 @@ const columns: TableColumn<TravelSummary>[] = [
     header: 'Estado del viaje',
     cell: ({ row }) => {
       const { status } = row.original;
-      return h(resolveComponent('UBadge'), {
-        color: getTravelStatusColor(status),
-        variant: 'subtle',
-      }, () => getTravelStatusLabel(status));
+      return h(resolveComponent('TravelStatusBadge'), { status });
     },
   },
   {

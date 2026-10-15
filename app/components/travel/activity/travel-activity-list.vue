@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import type { TravelActivity } from '~/types/travel';
 
+import { useFormModal } from '~/composables/use-form-modal';
+import { pluralize } from '~/utils/pluralize';
+import { getTravelDurationDays } from '~/utils/travel-calendar';
+
 // Props
 type Props = {
   modelValue: TravelActivity[];
@@ -20,8 +24,7 @@ const travelsStore = useTravelsStore();
 
 // Local state
 const activities = ref<TravelActivity[]>([...props.modelValue]);
-const isActivityModalOpen = ref(false);
-const editingActivity = ref<TravelActivity | null>(null);
+const { isOpen: isActivityModalOpen, editing: editingActivity, openNew: openActivityAddModal, openEdit: openEditModal } = useFormModal<TravelActivity>();
 
 // Toast for feedback
 const toast = useToast();
@@ -30,10 +33,7 @@ const toast = useToast();
 const travelDuration = computed(() => {
   if (!props.startDate || !props.endDate)
     return 0;
-  const start = new Date(props.startDate);
-  const fin = new Date(props.endDate);
-  const diff = fin.getTime() - start.getTime();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both days
+  return getTravelDurationDays(props);
 });
 
 // Activities sorted by day
@@ -42,16 +42,6 @@ const sortedActivities = computed(() => {
 });
 
 // Handlers
-function openActivityAddModal() {
-  editingActivity.value = null;
-  isActivityModalOpen.value = true;
-}
-
-function openEditModal(activity: TravelActivity) {
-  editingActivity.value = activity;
-  isActivityModalOpen.value = true;
-}
-
 async function persistActivities(nextActivities: TravelActivity[]): Promise<boolean> {
   if (!props.travelId) {
     activities.value = nextActivities;
@@ -157,8 +147,8 @@ function getActivityActions(activity: TravelActivity) {
     <!-- Header with the add button -->
     <div class="flex items-center justify-between">
       <div class="text-sm text-muted">
-        {{ sortedActivities.length }} actividad{{ sortedActivities.length !== 1 ? 'es' : '' }}
-        {{ travelDuration > 0 ? `en ${travelDuration} día${travelDuration !== 1 ? 's' : ''}` : '' }}
+        {{ pluralize(sortedActivities.length, 'actividad') }}
+        {{ travelDuration > 0 ? `en ${pluralize(travelDuration, 'día')}` : '' }}
       </div>
       <UButton
         icon="i-lucide-plus"

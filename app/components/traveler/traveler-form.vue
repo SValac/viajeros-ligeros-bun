@@ -8,6 +8,8 @@ import type { Traveler, TravelerFormData } from '~/types/traveler';
 
 import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, nameSchema, phoneSchema, sanitizeBusinessName, sanitizeName } from '~/utils/form-validation';
+import { formatTravelBusLabel } from '~/utils/travel-bus';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 type Props = {
   traveler?: Traveler | null;
@@ -112,12 +114,10 @@ const busOptions = computed(() => {
     ? availableBuses
     : (selectedTravel.value?.buses ?? []);
 
-  return buses.map((b) => {
-    const agency = providerStore.getProviderById(b.providerId)?.name;
-    const busName = [b.brand, b.model].filter(Boolean).join(' ').trim() || 'Camión';
-    const label = agency ? `${agency} — ${busName}` : busName;
-    return { value: b.id, label };
-  });
+  return buses.map(b => ({
+    value: b.id,
+    label: formatTravelBusLabel(b, providerStore.getProviderById(b.providerId)?.name),
+  }));
 });
 
 // Representative options: travelers of the same travel and bus, excluding the traveler itself
@@ -133,7 +133,7 @@ const representativeOptions = computed(() => {
     )
     .map(t => ({
       value: t.id,
-      label: `${t.firstName} ${t.lastName}`,
+      label: formatTravelerName(t),
     }));
 });
 

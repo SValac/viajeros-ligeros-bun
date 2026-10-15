@@ -4,6 +4,7 @@ import type { QuotationAccommodationDetailFormData } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import { pluralize } from '~/utils/pluralize';
 
 type Props = {
   roomTypes: HotelRoomType[];
@@ -66,7 +67,7 @@ const droppedWithRooms = computed(() =>
         <div class="flex-1 min-w-0 space-y-0.5">
           <div class="flex flex-wrap items-center gap-2">
             <p class="font-medium">
-              {{ type.maxOccupancy }} persona{{ type.maxOccupancy === 1 ? '' : 's' }} · {{ formatCurrency(type.pricePerNight) }}/noche
+              {{ pluralize(type.maxOccupancy, 'persona') }} · {{ formatCurrency(type.pricePerNight) }}/noche
             </p>
             <UBadge
               v-if="roomCounts"
@@ -84,7 +85,7 @@ const droppedWithRooms = computed(() =>
           </p>
           <p v-if="selectedIds.has(type.id)" class="text-xs text-toned pt-1">
             {{ formatCurrency(type.pricePerNight / type.maxOccupancy) }} por persona/noche ·
-            {{ formatCurrency(type.pricePerNight * nightCount) }} por habitación ({{ nightCount }} noche{{ nightCount === 1 ? '' : 's' }})
+            {{ formatCurrency(type.pricePerNight * nightCount) }} por habitación ({{ pluralize(nightCount, 'noche') }})
           </p>
         </div>
       </label>

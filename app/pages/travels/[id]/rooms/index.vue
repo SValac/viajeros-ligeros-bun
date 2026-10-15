@@ -3,13 +3,17 @@ import type { QuotationPublicPrice } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler } from '~/types/traveler';
 
+import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
+import { pluralize } from '~/utils/pluralize';
+import { formatTravelerName, getTravelerRole, TRAVELER_ROLE_ICONS } from '~/utils/traveler-labels';
 
 definePageMeta({
   name: 'travel-rooms',
@@ -30,9 +34,7 @@ const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
 const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
 const travelersLoad = useQueryLoadState(travelersQuery);
 // The quoted hotels and room types group the rooms; the public prices say who goes where.
-const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
-const { refetch: refetchQuotation } = quotationQuery;
-const quotationLoad = useQueryLoadState(quotationQuery);
+const { quotation, load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(travelId);
 // Coordinators need a room too, so room counts and the add modal include them.
 const occupantsOfTravel = computed(() => travelerData.value?.travelers ?? []);
 const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel.value));
@@ -59,8 +61,7 @@ const occupiedRooms = computed(() =>
 // The quotation picks each hotel's room types; how many rooms of each the travel holds
 // is set here (it changes until the trip leaves), and the hotel's cost follows it.
 const quotationAccommodations = computed(() => {
-  const quotation = quotationStore.getQuotationByTravel(travelId.value);
-  return quotation ? quotationStore.getAccommodationsByQuotation(quotation.id) : [];
+  return quotation.value ? quotationStore.getAccommodationsByQuotation(quotation.value.id) : [];
 });
 
 type RoomTypeGroup = {
@@ -95,7 +96,7 @@ const hotelGroups = computed((): HotelGroup[] => {
     if (!hotel) {
       hotel = {
         providerId,
-        providerName: providerStore.getProviderById(providerId)?.name ?? 'Hotel desconocido',
+        providerName: providerStore.getProviderName(providerId),
         roomTypes: [],
       };
       hotels.set(providerId, hotel);
@@ -143,7 +144,7 @@ const representativeNames = computed(() => {
   for (const traveler of travelersOfTravel.value) {
     const representative = traveler.representativeId ? byId.get(traveler.representativeId) : undefined;
     if (representative)
-      names[traveler.id] = `${representative.firstName} ${representative.lastName}`;
+      names[traveler.id] = formatTravelerName(representative);
   }
   return names;
 });
@@ -196,8 +197,6 @@ type HotelTab = {
   group: HotelGroup;
 };
 
-const activeTabValue = shallowRef<string | number>('');
-
 const tabs = computed((): HotelTab[] =>
   hotelGroups.value.map((group, index) => ({
     label: group.providerName,
@@ -208,12 +207,7 @@ const tabs = computed((): HotelTab[] =>
   })),
 );
 
-watch(tabs, (availableTabs) => {
-  const hasCurrentTab = availableTabs.some(tab => tab.value === activeTabValue.value);
-  if (!hasCurrentTab) {
-    activeTabValue.value = availableTabs[0]?.value ?? '';
-  }
-}, { immediate: true });
+const activeTabValue = useValidTab(tabs, available => available[0]?.value ?? '');
 
 // Modal for adding traveler to a room
 const addingToAccommodation = shallowRef<TravelAccommodation | null>(null);
@@ -227,8 +221,7 @@ const isAddModalOpen = shallowRef(false);
 
 // The public price each traveler paid says which room type (and hotels) they belong in.
 const publicPricesById = computed(() => {
-  const quotation = quotationStore.getQuotationByTravel(travelId.value);
-  const prices = quotation ? quotationStore.getPublicPricesByQuotation(quotation.id) : [];
+  const prices = quotation.value ? quotationStore.getPublicPricesByQuotation(quotation.value.id) : [];
   return new Map(prices.map(price => [price.id, price]));
 });
 
@@ -280,18 +273,10 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
     });
 });
 
-watch(travelId, async (id) => {
-  if (!id)
-    return;
-  await paymentStore.fetchByTravel(id);
-}, { immediate: true });
+useTravelPayments(travelId);
 
 function getTravelerIcon(traveler: Traveler): { name: string; class: string } {
-  if (traveler.kind === 'coordinator')
-    return { name: 'i-lucide-user-cog', class: 'text-info' };
-  if (traveler.isRepresentative)
-    return { name: 'i-lucide-user-star', class: 'text-primary' };
-  return { name: 'i-lucide-user', class: 'text-muted' };
+  return TRAVELER_ROLE_ICONS[getTravelerRole(traveler)];
 }
 
 function openAddTravelerModal(accommodationId: string): void {
@@ -451,7 +436,7 @@ async function updateAccommodation(
                 <p v-if="item.group.totalCost !== undefined" class="text-sm text-muted">
                   Costo del hotel:
                   <span class="font-semibold text-highlighted">{{ formatCurrency(item.group.totalCost) }}</span>
-                  · {{ item.group.nightCount }} noche{{ item.group.nightCount === 1 ? '' : 's' }} · se calcula con las habitaciones de abajo
+                  · {{ pluralize(item.group.nightCount ?? 0, 'noche') }} · se calcula con las habitaciones de abajo
                 </p>
 
                 <TravelRoomTypeGroup
@@ -512,7 +497,7 @@ async function updateAccommodation(
             />
             <div class="min-w-0 flex-1">
               <p class="text-sm font-medium">
-                {{ traveler.firstName }} {{ traveler.lastName }}
+                {{ formatTravelerName(traveler) }}
                 <span
                   v-if="representativeName"
                   class="inline-flex items-center gap-1 font-normal text-muted"

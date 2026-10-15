@@ -33,6 +33,12 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     };
   });
 
+  // A travel's coordinators, in the order of its ids; ids missing from the catalog are skipped
+  const getCoordinatorsByIds = computed(() => {
+    return (ids: string[]): Coordinator[] =>
+      ids.map(id => getCoordinatorById.value(id)).filter(c => c !== undefined);
+  });
+
   // Actions
   /**
    * Creates a new coordinator.
@@ -146,6 +152,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     loadError: catalog.loadError,
     allCoordinators,
     getCoordinatorById,
+    getCoordinatorsByIds,
     // Actions
     refetch: catalog.refetch,
     addCoordinator,

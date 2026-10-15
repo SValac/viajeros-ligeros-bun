@@ -9,8 +9,9 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137. PR (a) on branch
-`feature/shared-components-dedup-bugs`: all loose bugs done. Next PRs: (c), (d), phase 7, (e).
+**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138.
+PR (c) on branch `feature/shared-components-dedup-utils`: phases 14 and 15 done, ready for
+review. Then (d), phase 7, (e).
 
 ---
 
@@ -380,7 +381,7 @@ galería) y se buscó con grep cada patrón en el resto. Fases 14-17.
 - Coordinator icon is `i-lucide-user-cog` everywhere; `user-star` only means representative.
 - `TravelerFilters.travelId` and its check in `filterTravelers` were removed with the filter.
 
-### Fase 14 — Etiquetas, opciones y formatos en `utils/`
+### Fase 14 — Etiquetas, opciones y formatos en `utils/` ✅
 
 Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 
@@ -417,7 +418,26 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   `traveler-filter-bar`) → `formatTravelBusLabel`.
 - **Coordinadores por ids** `ids.map(id => getCoordinatorById(id))` ×5 → getter.
 
-### Fase 15 — Composables de pantalla
+**Done (2026-10-14).** Notes from the implementation:
+- New utils: `payment-status.ts` (labels by `PaymentParty`: traveler "Abono parcial", supplier
+  "Anticipo" / "Liquidado"; filter options), `payment-type.ts`, `quotation-labels.ts` (split,
+  cost type, quotation status), `traveler-labels.ts` (traveler type, `TRAVELER_ROLE_ICONS` +
+  `getTravelerRole`, `formatTravelerName`), `pluralize.ts`, `travel-bus.ts`
+  (`formatTravelBusLabel`); `formatShortDate` / `formatDateRange` in `format-date.ts`.
+- New badges: `PaymentStatusBadge`, `TravelStatusBadge` (size/class fall through),
+  `QuotationSplitTypeBadge`.
+- Getters: `providerStore.getProviderName` (one fallback, "Proveedor desconocido"; the bus label
+  still reads `getProviderById` so a missing agency shows only the bus) and
+  `coordinatorStore.getCoordinatorsByIds` (skips ids missing from the catalog; the dashboard used
+  to show "—" for them).
+- Small visible changes: the travelers payment table reads "Abono parcial" (was "Parcial"), dates
+  use a numeric day ("5 oct 2026", the histories had "05"), ranges use an en dash, and
+  `pluralize` fixed "autobúses" and "1 habitaciones".
+- Left as is: the payment method badge colors (each table keeps its own), `bus-seat-card` icons
+  (booleans and its own palette), `providers/index` (noun without count) and the price warning
+  modal (verb agreement).
+
+### Fase 15 — Composables de pantalla ✅
 
 - `useQuotationContext(quotationId)`: `cotizaciones.find(c => c.id === quotationId)?.travelId`
   + `useTravelCoordinatorCount` en 11 componentes de cotización.
@@ -441,6 +461,27 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - Búsqueda: `coordinators/index` filtra con otras reglas que `matchesProviderSearch` (sin
   quitar acentos, teléfono desde 1 dígito) → un `matchesSearch(fields, term, phone?)` en
   `utils/`.
+
+**Done (2026-10-14).** Notes from the implementation:
+- `quotation/`: `useQuotationContext` (quotation, travelId, coordinatorCount; 9 components),
+  `useQuotationRoomCounts` (accommodation table and summary), `useTravelQuotation` (quotation,
+  `load`, `refetch`; 8 places).
+- Root composables: `useRedirectIfMissing` (with `toast` and `active` options), `useFormModal`
+  (screens rename `isOpen`/`editing`/`openNew`/`openEdit`/`close` so templates stay the same),
+  `useValidTab`, `useExpandedGroups`. `payments/useTravelPayments`,
+  `agency-profile/useSiteImageActions`.
+- `useFormModal` left out on purpose: travelers page (also resets the initial values),
+  accommodation table (copies the record into a form state) and public prices (templates); the
+  delete-confirm modals wait for `ConfirmDeleteModal` (phase 3).
+- VueUse: `refDebounced` in `provider-filter-bar` (a pending search no longer comes back after
+  "Limpiar"), `useObjectUrl` for the travel form banner. `travel-gallery-upload` keeps its own
+  object URLs: it holds a list of files, and `useObjectUrl` takes one.
+- `utils/search.ts` `matchesSearch`: no case or accents, phone by digits only from 3 on. The
+  coordinators page now follows it (it matched accents literally and phones from 1 digit).
+- Visible changes: logo toasts read "El logo se actualizó / se quitó"; the coordinators search
+  placeholder said "Buscar por name".
+- Dev server gotcha seen here: after many in-place rewrites `nuxt dev` lost the
+  `coordinators-index` route (500 "No match" on every page); rewriting that page file again fixed it.
 
 ### Fase 16 — Componentes y piezas de tabla
 

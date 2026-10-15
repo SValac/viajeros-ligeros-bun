@@ -31,7 +31,7 @@ watch(() => props.selectedTravelId, () => {
   list.value?.querySelector('[aria-current="true"]')?.scrollIntoView({ block: 'nearest' });
 }, { flush: 'post', immediate: true });
 
-function formatShortDate(date: string): string {
+function formatDayMonth(date: string): string {
   return parseDisplayDate(date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
 }
 </script>
@@ -55,7 +55,7 @@ function formatShortDate(date: string): string {
           {{ travel.label }}
         </span>
         <span class="shrink-0 text-xs text-muted">
-          {{ formatShortDate(travel.startDate) }} – {{ formatShortDate(travel.endDate) }}
+          {{ formatDayMonth(travel.startDate) }} – {{ formatDayMonth(travel.endDate) }}
         </span>
       </button>
     </li>

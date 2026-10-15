@@ -1,17 +1,20 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
-import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
 import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
 
 import BusSeatMap from '~/components/bus/bus-seat-map.vue';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useExpandedGroups } from '~/composables/use-expanded-groups';
+import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
+import { formatTravelBusLabel } from '~/utils/travel-bus';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 definePageMeta({
   name: 'travel-travelers',
@@ -66,8 +69,6 @@ type SeatSelectionPayload = {
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
 const createTravelerInitialValues = shallowRef<Partial<TravelerFormData> | null>(null);
-const expanded = ref<ExpandedStateList>({});
-const activeTabValue = shallowRef<string | number>('travelers');
 const seatChangeContext = shallowRef<SeatChangeContext | null>(null);
 const selectedDestinationSeat = shallowRef<number | null>(null);
 const seatChangeLoading = shallowRef(false);
@@ -94,10 +95,8 @@ const isSeatChangeModeActive = computed(() => seatChangeContext.value !== null);
 // the quotation counts them as passengers) and rooms like anyone else.
 const coordinatorsOfTravel = computed(() => occupantsOfTravel.value.filter(t => t.kind === 'coordinator'));
 // Whether coordinators take seats, and which bus each one rides, live in the quotation.
-useQuery(() => quotationByTravelQuery(travelId.value));
-const coordinatorsTakeSeats = computed(() =>
-  quotationStore.getQuotationByTravel(travelId.value)?.coordinatorsTakeSeats ?? false,
-);
+const { quotation } = useTravelQuotation(travelId);
+const coordinatorsTakeSeats = computed(() => quotation.value?.coordinatorsTakeSeats ?? false);
 const coordinatorRows = computed(() =>
   coordinatorsOfTravel.value.map(coordinator => ({
     coordinator,
@@ -153,22 +152,9 @@ watch(travelId, () => {
   clearSeatChangeState();
 }, { immediate: true });
 
-watch(tabs, (availableTabs) => {
-  const hasCurrentTab = availableTabs.some(tab => tab.value === activeTabValue.value);
-  if (!hasCurrentTab) {
-    activeTabValue.value = 'travelers';
-  }
-}, { immediate: true });
+const activeTabValue = useValidTab(tabs, () => 'travelers');
 
-watchEffect(() => {
-  const newExpanded: ExpandedStateList = {};
-  for (const row of travelers.value) {
-    if (row.children && row.children.length > 0) {
-      newExpanded[row.id] = true;
-    }
-  }
-  expanded.value = newExpanded;
-});
+const expanded = useExpandedGroups(travelers);
 
 function getOccupantsByBus(busId: string): Traveler[] {
   return occupantsOfTravel.value.filter(t => t.travelBusId === busId);
@@ -179,7 +165,7 @@ function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
   const representativeById = new Map(
     travelersByBus
       .filter(t => t.isRepresentative)
-      .map(t => [t.id, `${t.firstName} ${t.lastName}`]),
+      .map(t => [t.id, formatTravelerName(t)]),
   );
 
   return travelersByBus
@@ -188,7 +174,7 @@ function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
       return {
         travelerId: t.id,
         seatNumber,
-        passengerName: `${t.firstName} ${t.lastName}`,
+        passengerName: formatTravelerName(t),
         boardingPoint: t.boardingPoint,
         isRepresentative: t.isRepresentative,
         isCoordinator: t.kind === 'coordinator',
@@ -217,7 +203,7 @@ function getAccommodationLabels(travelerId: string): string[] {
     const acc = allAccommodations.value.find(a => a.id === assignment.travelAccommodationId);
     if (!acc)
       return [];
-    const provider = providerStore.getProviderById(acc.providerId)?.name ?? 'Hotel';
+    const provider = providerStore.getProviderName(acc.providerId);
     return [acc.roomNumber ? `${provider} — Hab. ${acc.roomNumber}` : provider];
   });
 }
@@ -226,9 +212,7 @@ function getBusLabel(travelBusId: string): string {
   const bus = allBuses.value.find(b => b.id === travelBusId);
   if (!bus)
     return travelBusId;
-  const agency = providerStore.getProviderById(bus.providerId)?.name;
-  const busName = [bus.brand, bus.model].filter(Boolean).join(' ').trim() || 'Camión';
-  return agency ? `${agency} — ${busName}` : busName;
+  return formatTravelBusLabel(bus, providerStore.getProviderById(bus.providerId)?.name);
 }
 
 function openCreateModal() {
@@ -307,7 +291,7 @@ function startSeatChange(traveler: Traveler) {
   toast.clear();
   seatChangeContext.value = {
     travelerId: traveler.id,
-    travelerName: `${traveler.firstName} ${traveler.lastName}`,
+    travelerName: formatTravelerName(traveler),
     travelBusId: traveler.travelBusId,
     sourceSeat: traveler.seat,
   };
@@ -316,7 +300,7 @@ function startSeatChange(traveler: Traveler) {
 
   toast.add({
     title: 'Modo cambiar asiento',
-    description: `Selecciona el asiento destino para ${traveler.firstName} ${traveler.lastName}.`,
+    description: `Selecciona el asiento destino para ${formatTravelerName(traveler)}.`,
     color: 'info',
   });
 }
@@ -435,7 +419,7 @@ async function handleFormSubmit(data: TravelerFormData) {
   if (takenSeatTraveler) {
     toast.add({
       title: 'Asiento ocupado',
-      description: `El asiento ${data.seat} ya está asignado a ${takenSeatTraveler.firstName} ${takenSeatTraveler.lastName}`,
+      description: `El asiento ${data.seat} ya está asignado a ${formatTravelerName(takenSeatTraveler)}`,
       color: 'warning',
     });
     return;
@@ -446,7 +430,7 @@ async function handleFormSubmit(data: TravelerFormData) {
       await travelerStore.updateTraveler(editingTraveler.value.id, data);
       toast.add({
         title: 'Viajero actualizado',
-        description: `${data.firstName} ${data.lastName} se actualizó correctamente`,
+        description: `${formatTravelerName(data)} se actualizó correctamente`,
         color: 'primary',
       });
       closeModal();
@@ -455,7 +439,7 @@ async function handleFormSubmit(data: TravelerFormData) {
       await travelerStore.addTraveler(data);
       toast.add({
         title: 'Viajero creado',
-        description: `${data.firstName} ${data.lastName} se registró correctamente`,
+        description: `${formatTravelerName(data)} se registró correctamente`,
         color: 'primary',
       });
       closeModal();
@@ -481,14 +465,14 @@ async function handleFormSubmit(data: TravelerFormData) {
 
 async function handleDelete(traveler: Traveler) {
   // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${traveler.firstName} ${traveler.lastName}?`)) {
+  if (confirm(`¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`)) {
     await travelerStore.deleteTraveler(traveler.id);
     if (seatChangeContext.value?.travelerId === traveler.id) {
       clearSeatChangeState();
     }
     toast.add({
       title: 'Viajero eliminado',
-      description: `${traveler.firstName} ${traveler.lastName} se eliminó correctamente`,
+      description: `${formatTravelerName(traveler)} se eliminó correctamente`,
       color: 'warning',
     });
   }
@@ -509,10 +493,9 @@ const coordinatorSeatBuses = computed(() => {
 
 const coordinatorInitialBusId = computed(() => {
   const coordinatorId = seatingCoordinator.value?.coordinatorId;
-  const quotation = quotationStore.getQuotationByTravel(travelId.value);
-  if (!coordinatorId || !quotation)
+  if (!coordinatorId || !quotation.value)
     return undefined;
-  const quotationBus = quotationStore.getBusesByQuotation(quotation.id)
+  const quotationBus = quotationStore.getBusesByQuotation(quotation.value.id)
     .find(bus => (bus.coordinatorIds as string[] | undefined)?.includes(coordinatorId));
   return allBuses.value.find(bus => quotationBus && bus.quotationBusId === quotationBus.id)?.id;
 });
@@ -610,7 +593,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       const depth = row.depth;
       const canExpand = row.getCanExpand();
 
-      const nameNode = h('span', { class: 'font-medium' }, `${t.firstName} ${t.lastName}`);
+      const nameNode = h('span', { class: 'font-medium' }, formatTravelerName(t));
 
       if (canExpand) {
         const isExpanded = row.getIsExpanded();

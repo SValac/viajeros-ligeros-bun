@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
 
 definePageMeta({
@@ -15,9 +16,7 @@ const travelersCollected = computed(() =>
   paymentStore.getTravelCashSummary(travelId.value).totalCollected,
 );
 
-onMounted(async () => {
-  await paymentStore.fetchByTravel(travelId.value);
-});
+useTravelPayments(travelId);
 </script>
 
 <template>

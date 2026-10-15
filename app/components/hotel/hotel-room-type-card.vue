@@ -3,6 +3,7 @@ import type { HotelRoomType } from '~/types/hotel-room';
 
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import { pluralize } from '~/utils/pluralize';
 
 defineProps<{
   roomType: HotelRoomType;
@@ -35,10 +36,10 @@ const dropdownItems = computed(() => [[
         <UIcon name="i-lucide-bed" class="w-8 h-8 text-primary" />
         <div>
           <p class="font-semibold">
-            {{ roomType.roomCount }} habitaciones
+            {{ pluralize(roomType.roomCount, 'habitación', 'habitaciones') }}
           </p>
           <p class="text-sm text-gray-500">
-            {{ roomType.maxOccupancy }} {{ roomType.maxOccupancy === 1 ? 'persona' : 'personas' }}
+            {{ pluralize(roomType.maxOccupancy, 'persona') }}
           </p>
         </div>
       </div>

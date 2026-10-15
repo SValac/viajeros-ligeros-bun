@@ -4,6 +4,7 @@ import type { Traveler } from '~/types/traveler';
 
 import { calculateAdjustedUnitCost, formatPriceAdjustment } from '~/composables/quotation/use-quotation-domain';
 import { formatCurrency } from '~/utils/currency';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 // An optional service of the travel: who takes it and how much is owed to the provider.
 // Everyone takes it except the unchecked ones; the parent saves the changes.
@@ -72,12 +73,8 @@ const overpaid = computed(() => Math.max(0, paid - service.payableCost));
 const allTake = computed(() => takers.value.length === selectable.value.length);
 const noneTake = computed(() => takers.value.length === 0);
 
-function fullName(traveler: Traveler): string {
-  return `${traveler.firstName} ${traveler.lastName}`.trim();
-}
-
 function byName(a: Traveler, b: Traveler): number {
-  return fullName(a).localeCompare(fullName(b), 'es');
+  return formatTravelerName(a).localeCompare(formatTravelerName(b), 'es');
 }
 
 type Row = {
@@ -97,7 +94,7 @@ const rows = computed<Row[]>(() => {
     const courtesy = isCourtesy(traveler);
     return {
       traveler,
-      representativeName: representative ? fullName(representative) : undefined,
+      representativeName: representative ? formatTravelerName(representative) : undefined,
       takes: !courtesy && !optedOut.has(traveler.id),
       courtesy,
     };
@@ -247,7 +244,7 @@ function setAll(takes: boolean) {
                   class="size-4 text-info align-[-3px] mr-1"
                   aria-hidden="true"
                 />
-                {{ fullName(row.traveler) }}
+                {{ formatTravelerName(row.traveler) }}
                 <span
                   v-if="row.representativeName"
                   class="font-normal text-muted"
@@ -273,7 +270,7 @@ function setAll(takes: boolean) {
             :disabled="busy"
             size="sm"
             class="w-full"
-            :aria-label="`Precio de ${fullName(row.traveler)}`"
+            :aria-label="`Precio de ${formatTravelerName(row.traveler)}`"
             @update:model-value="v => emit('adjust', [row.traveler.id], v === BASE ? null : String(v))"
           />
         </li>

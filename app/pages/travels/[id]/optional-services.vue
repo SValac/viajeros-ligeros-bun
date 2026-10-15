@@ -3,9 +3,9 @@ import type { OptionalServiceListItem } from '~/components/travel/travel-optiona
 import type { QuotationProvider } from '~/types/quotation';
 
 import { isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 
 definePageMeta({
@@ -25,10 +25,7 @@ const { travelId, travel } = useTravelRoute();
 
 // The services come from the quotation. The query copies it into the store and refetches it after
 // travelers are added or deleted, which changes what is owed to each service.
-const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
-const { refetch: refetchQuotation } = quotationQuery;
-const quotationLoad = useQueryLoadState(quotationQuery);
-const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
+const { quotation, load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(travelId);
 
 const services = computed<QuotationProvider[]>(() => {
   if (!quotation.value)
@@ -41,7 +38,7 @@ const sellableSeats = computed(() => (quotation.value ? quotationStore.getSellab
 const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s => ({
   id: s.id,
   label: s.serviceDescription,
-  providerName: getProviderName(s.providerId),
+  providerName: providerStore.getProviderName(s.providerId),
   takers: s.unitCost ? Math.round(s.payableCost / s.unitCost) : 0,
   payableCost: s.payableCost,
   overpaid: quotationStore.getProviderOverpayment(s.id) > 0,
@@ -87,10 +84,6 @@ watch(travelId, async (id) => {
     quotationStore.fetchTravelerAdjustments(id),
   ]);
 }, { immediate: true });
-
-function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
-}
 
 async function onAdjust(travelerIds: string[], adjustmentId: string | null) {
   const service = selectedService.value;
@@ -151,7 +144,7 @@ async function onChange(travelerIds: string[], takes: boolean) {
               v-if="selectedService"
               :key="selectedService.id"
               :service="selectedService"
-              :provider-name="getProviderName(selectedService.providerId)"
+              :provider-name="providerStore.getProviderName(selectedService.providerId)"
               :occupants="occupants"
               :opted-out="quotationStore.getOptOutsByProvider(selectedService.id)"
               :paid="quotationStore.getPaidByProvider(selectedService.id)"

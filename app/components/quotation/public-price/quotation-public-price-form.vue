@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+import { pluralize } from '~/utils/pluralize';
 
 type Props = {
   quotationId: string;
@@ -50,7 +51,7 @@ const state = reactive<Partial<FormSchema>>({
 // Hand-written prices have none. The web groups prices into tabs by it.
 const maxOccupancy = initial?.maxOccupancy;
 const occupancyLabel = maxOccupancy
-  ? `${maxOccupancy} persona${maxOccupancy === 1 ? '' : 's'}`
+  ? pluralize(maxOccupancy, 'persona')
   : 'Sin ocupación (no se creó desde un precio de referencia)';
 
 // Sanitized proxies: filter out invalid characters while the user types

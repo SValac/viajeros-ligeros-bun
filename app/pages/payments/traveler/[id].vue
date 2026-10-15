@@ -3,13 +3,17 @@ import type { TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Payment, PaymentFormData, TravelerAccountConfig } from '~/types/payment';
+import type { Payment, PaymentFormData, PaymentType, TravelerAccountConfig } from '~/types/payment';
 
+import { useFormModal } from '~/composables/use-form-modal';
+import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
-import { parseDisplayDate } from '~/utils/format-date';
+import { formatShortDate } from '~/utils/format-date';
+import { getPaymentTypeLabel } from '~/utils/payment-type';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 definePageMeta({
   name: 'payments-traveler',
@@ -26,15 +30,10 @@ const travelerQuery = useQuery(() => travelerDetailQuery(travelerId.value));
 const { data: traveler, status, refetch } = travelerQuery;
 const travelerLoad = useQueryLoadState(travelerQuery);
 
-// Only once resolved: `undefined` is "still loading" or "the request failed", and neither
-// means the traveler doesn't exist.
-watch([status, traveler], ([currentStatus, value]) => {
-  if (currentStatus === 'success' && value === null)
-    router.push({ name: 'payments-index' });
-}, { immediate: true });
+useRedirectIfMissing({ status, data: traveler }, { to: { name: 'payments-index' } });
 
 const travelerName = computed(() =>
-  traveler.value ? `${traveler.value.firstName} ${traveler.value.lastName}` : '',
+  traveler.value ? formatTravelerName(traveler.value) : '',
 );
 
 // One quotation per travel the traveler is in (for its public prices). The quotation query
@@ -95,18 +94,7 @@ const filteredPayments = computed(() => {
 });
 
 // Modals
-const isEditModalOpen = shallowRef(false);
-const editingPayment = shallowRef<Payment | null>(null);
-
-function openEditModal(payment: Payment) {
-  editingPayment.value = payment;
-  isEditModalOpen.value = true;
-}
-
-function closeEditModal() {
-  isEditModalOpen.value = false;
-  editingPayment.value = null;
-}
+const { isOpen: isEditModalOpen, editing: editingPayment, openEdit: openEditModal, close: closeEditModal } = useFormModal<Payment>();
 
 async function handleEditSubmit(data: PaymentFormData) {
   if (!editingPayment.value)
@@ -124,25 +112,11 @@ async function handleDelete(payment: Payment) {
   }
 }
 
-function formatDate(dateString: string) {
-  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
-  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-const paymentTypeLabel: Record<string, string> = {
-  cash: 'Efectivo',
-  transfer: 'Transferencia',
-};
-
 const columns: TableColumn<Payment>[] = [
   {
     accessorKey: 'paymentDate',
     header: 'Fecha',
-    cell: ({ row }) => h('span', { class: 'text-sm' }, formatDate(row.getValue('paymentDate'))),
+    cell: ({ row }) => h('span', { class: 'text-sm' }, formatShortDate(row.getValue('paymentDate'))),
   },
   {
     accessorKey: 'amount',
@@ -153,8 +127,8 @@ const columns: TableColumn<Payment>[] = [
     accessorKey: 'paymentType',
     header: 'Tipo',
     cell: ({ row }) => {
-      const type = row.getValue<string>('paymentType');
-      return h(resolveComponent('UBadge'), { color: type === 'cash' ? 'neutral' : 'info', variant: 'subtle' }, () => paymentTypeLabel[type] ?? type);
+      const type = row.getValue<PaymentType>('paymentType');
+      return h(resolveComponent('UBadge'), { color: type === 'cash' ? 'neutral' : 'info', variant: 'subtle' }, () => getPaymentTypeLabel(type));
     },
   },
   {
@@ -181,18 +155,7 @@ const columns: TableColumn<Payment>[] = [
 ];
 
 // Config modal
-const isConfigModalOpen = shallowRef(false);
-const editingConfigTravelId = shallowRef<string | null>(null);
-
-function openConfigModal(travelId: string) {
-  editingConfigTravelId.value = travelId;
-  isConfigModalOpen.value = true;
-}
-
-function closeConfigModal() {
-  isConfigModalOpen.value = false;
-  editingConfigTravelId.value = null;
-}
+const { isOpen: isConfigModalOpen, editing: editingConfigTravelId, openEdit: openConfigModal, close: closeConfigModal } = useFormModal<string>();
 
 function goToPaymentsIndex() {
   router.push({ name: 'payments-index' });

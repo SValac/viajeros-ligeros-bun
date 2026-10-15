@@ -5,6 +5,10 @@ import { h } from 'vue';
 
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
+import { useFormModal } from '~/composables/use-form-modal';
+import { pluralize } from '~/utils/pluralize';
+import { matchesSearch } from '~/utils/search';
+
 definePageMeta({
   name: 'coordinators-index',
 });
@@ -12,38 +16,12 @@ definePageMeta({
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
 
-const isFormModalOpen = ref(false);
-const editingCoordinator = ref<Coordinator | null>(null);
+const { isOpen: isFormModalOpen, editing: editingCoordinator, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Coordinator>();
 const searchTerm = ref('');
 
-const coordinators = computed(() => {
-  const term = searchTerm.value.toLowerCase();
-  if (!term)
-    return coordinatorStore.allCoordinators;
-  // The phone is compared by digits: it's stored as E.164 and typed as shown, "(312) 127…"
-  const termDigits = term.replace(/\D/g, '');
-  return coordinatorStore.allCoordinators.filter(
-    c =>
-      c.name.toLowerCase().includes(term)
-      || c.email.toLowerCase().includes(term)
-      || (!!termDigits && c.phone.replace(/\D/g, '').includes(termDigits)),
-  );
-});
-
-function openCreateModal() {
-  editingCoordinator.value = null;
-  isFormModalOpen.value = true;
-}
-
-function openEditModal(coordinator: Coordinator) {
-  editingCoordinator.value = coordinator;
-  isFormModalOpen.value = true;
-}
-
-function closeModal() {
-  isFormModalOpen.value = false;
-  editingCoordinator.value = null;
-}
+const coordinators = computed(() =>
+  coordinatorStore.allCoordinators.filter(c => matchesSearch([c.name, c.email], searchTerm.value, c.phone)),
+);
 
 function clearSearch() {
   searchTerm.value = '';
@@ -167,7 +145,7 @@ const columns: TableColumn<Coordinator>[] = [
             Coordinadores
           </h1>
           <p class="text-gray-500 dark:text-gray-400 mt-1">
-            {{ coordinatorStore.allCoordinators.length }} coordinador{{ coordinatorStore.allCoordinators.length !== 1 ? 'es' : '' }} registrado{{ coordinatorStore.allCoordinators.length !== 1 ? 's' : '' }}
+            {{ pluralize(coordinatorStore.allCoordinators.length, 'coordinador registrado', 'coordinadores registrados') }}
           </p>
         </div>
       </div>
@@ -183,7 +161,7 @@ const columns: TableColumn<Coordinator>[] = [
     <UInput
       v-model="searchTerm"
       icon="i-lucide-search"
-      placeholder="Buscar por name, email o teléfono..."
+      placeholder="Buscar por nombre, email o teléfono..."
       class="max-w-sm"
     />
 

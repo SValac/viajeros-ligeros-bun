@@ -1,18 +1,21 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
-import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
 import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
+import { useTravelPayments } from '~/composables/payments/use-travel-payments';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
+import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
+import { formatTravelerName, getTravelerTypeLabel } from '~/utils/traveler-labels';
 
 // Payments of a travel's travelers: cash summary, account configs and payments. Used by the
 // travel's "Pagos" tab and by /payments/travel/[id].
@@ -32,8 +35,7 @@ const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
 const travelersLoad = useQueryLoadState(travelersQuery);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 // The public prices (what each traveler is charged) live in the quotation.
-useQuery(() => quotationByTravelQuery(travelId.value));
-const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
+const { quotation } = useTravelQuotation(travelId);
 const publicPrices = computed(() =>
   quotation.value
     ? quotationStore.getPublicPricesByQuotation(quotation.value.id)
@@ -44,16 +46,9 @@ const enrolledTravelers = computed(() =>
   selectPayingTravelers(travelerData.value?.travelers ?? []),
 );
 
-const expanded = ref<ExpandedStateList>({});
-
 // Status filter
 const statusFilter = ref<PaymentStatus | 'all'>('all');
-const statusFilterOptions = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Pendiente', value: 'pending' },
-  { label: 'Abono parcial', value: 'partial' },
-  { label: 'Pagado', value: 'paid' },
-];
+const statusFilterOptions = getPaymentStatusFilterOptions('traveler');
 
 const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
   // Group ALL enrolled travelers by representativeId to preserve the tree structure.
@@ -88,15 +83,7 @@ const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
   return result;
 });
 
-watchEffect(() => {
-  const newExpanded: ExpandedStateList = {};
-  for (const row of groupedFilteredTravelers.value) {
-    if (row.children && row.children.length > 0) {
-      newExpanded[row.id] = true;
-    }
-  }
-  expanded.value = newExpanded;
-});
+const expanded = useExpandedGroups(groupedFilteredTravelers);
 
 // Travel cash
 const cashSummary = computed(() => {
@@ -166,13 +153,6 @@ async function handleConfigSubmit(config: TravelerAccountConfig) {
   closeModals();
 }
 
-type BadgeColor = 'warning' | 'info' | 'success' | 'neutral';
-const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
-  pending: { color: 'warning', label: 'Pendiente' },
-  partial: { color: 'info', label: 'Parcial' },
-  paid: { color: 'success', label: 'Pagado' },
-};
-
 const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'name',
@@ -180,7 +160,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     cell: ({ row }) => {
       const depth = row.depth;
       const traveler = row.original;
-      const name = `${traveler.firstName} ${traveler.lastName}`;
+      const name = formatTravelerName(traveler);
       const link = h(resolveComponent('NuxtLink'), {
         to: { name: 'payments-traveler', params: { id: traveler.id } },
         class: 'font-medium hover:text-primary transition-colors',
@@ -211,7 +191,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     header: 'Tipo',
     cell: ({ row }) => {
       const config = paymentStore.getAccountConfig(row.original.id, travelId.value);
-      const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
+      const label = getTravelerTypeLabel(config?.travelerType ?? 'adult');
       return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => label);
     },
   },
@@ -226,7 +206,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => price.priceType);
         }
       }
-      const label = config?.travelerType === 'child' ? 'Niño' : 'Adulto';
+      const label = getTravelerTypeLabel(config?.travelerType ?? 'adult');
       return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => label);
     },
   },
@@ -297,8 +277,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       if (!config?.publicPriceId)
         return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => 'Sin configurar');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
-      const cfg = statusConfig[s.status] ?? { color: 'neutral', label: s.status };
-      return h(resolveComponent('UBadge'), { color: cfg.color, variant: 'subtle' }, () => cfg.label);
+      return h(resolveComponent('PaymentStatusBadge'), { status: s.status, party: 'traveler' });
     },
   },
   {
@@ -337,11 +316,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   },
 ];
 
-watch(travelId, async (id) => {
-  if (!id)
-    return;
-  await paymentStore.fetchByTravel(id);
-}, { immediate: true });
+useTravelPayments(travelId);
 </script>
 
 <template>
@@ -444,7 +419,7 @@ watch(travelId, async (id) => {
     <UModal
       v-model:open="isPaymentModalOpen"
       title="Registrar abono"
-      :description="selectedTraveler ? `${selectedTraveler.firstName} ${selectedTraveler.lastName}` : ''"
+      :description="selectedTraveler ? formatTravelerName(selectedTraveler) : ''"
     >
       <template #body>
         <PaymentForm
@@ -478,7 +453,7 @@ watch(travelId, async (id) => {
     <UModal
       v-model:open="isConfigModalOpen"
       title="Configurar cuenta"
-      :description="selectedTraveler ? `${selectedTraveler.firstName} ${selectedTraveler.lastName}` : ''"
+      :description="selectedTraveler ? formatTravelerName(selectedTraveler) : ''"
     >
       <template #body>
         <PaymentAccountConfigForm

@@ -3,12 +3,14 @@ import type { FormSubmitEvent, SelectItem } from '#ui/types';
 import type { DateRange } from 'reka-ui';
 
 import { parseDate } from '@internationalized/date';
+import { useObjectUrl } from '@vueuse/core';
 import { z } from 'zod';
 
 import type { Coordinator } from '~/types/coordinator';
 import type { Travel, TravelFormData } from '~/types/travel';
 
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
 // Props
 type Props = {
@@ -105,11 +107,12 @@ const initialState = computed((): Schema => {
 // Banner image state (managed outside Zod schema)
 const bannerInputRef = useTemplateRef<HTMLInputElement>('bannerInputRef');
 const pendingBannerFile = ref<File | null>(null);
-const bannerPreviewUrl = ref('');
+// Revoked by VueUse when the file changes or the form unmounts
+const bannerPreviewUrl = useObjectUrl(pendingBannerFile);
 const existingBannerUrl = ref(travel?.imageUrl ?? '');
 
 const displayBannerUrl = computed(() =>
-  pendingBannerFile.value ? bannerPreviewUrl.value : existingBannerUrl.value,
+  bannerPreviewUrl.value ?? existingBannerUrl.value,
 );
 
 function onBannerSelected(event: Event) {
@@ -118,26 +121,14 @@ function onBannerSelected(event: Event) {
   if (!file)
     return;
 
-  if (bannerPreviewUrl.value)
-    URL.revokeObjectURL(bannerPreviewUrl.value);
-
   pendingBannerFile.value = file;
-  bannerPreviewUrl.value = URL.createObjectURL(file);
   input.value = '';
 }
 
 function removeBanner() {
-  if (bannerPreviewUrl.value)
-    URL.revokeObjectURL(bannerPreviewUrl.value);
   pendingBannerFile.value = null;
-  bannerPreviewUrl.value = '';
   existingBannerUrl.value = '';
 }
-
-onUnmounted(() => {
-  if (bannerPreviewUrl.value)
-    URL.revokeObjectURL(bannerPreviewUrl.value);
-});
 
 const state = ref<Schema>({ ...initialState.value });
 
@@ -175,13 +166,11 @@ onMounted(() => agencyProfileStore.fetchProfile());
 const canPublish = computed(() => agencyProfileStore.isComplete || travel?.status === 'published');
 
 // Status options for the select
-const statusOptions = computed<SelectItem[]>(() => [
-  { value: 'pending', label: 'Pendiente' },
-  { value: 'published', label: 'Publicado', disabled: !canPublish.value },
-  { value: 'in_progress', label: 'En Curso' },
-  { value: 'completed', label: 'Completado' },
-  { value: 'cancelled', label: 'Cancelado' },
-]);
+const statusOptions = computed<SelectItem[]>(() => TRAVEL_STATUSES.map(status => ({
+  value: status,
+  label: getTravelStatusLabel(status),
+  disabled: status === 'published' && !canPublish.value,
+})));
 
 // Handlers
 const isSubmitting = ref(false);
@@ -207,11 +196,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   }
 }
 
-const selectedCoordinators = computed(() =>
-  state.value.coordinatorIds
-    .map(id => coordinatorStore.getCoordinatorById(id))
-    .filter((c): c is Coordinator => c !== undefined),
-);
+const selectedCoordinators = computed(() => coordinatorStore.getCoordinatorsByIds(state.value.coordinatorIds));
 
 function removeCoordinator(id: string) {
   state.value.coordinatorIds = state.value.coordinatorIds.filter(cid => cid !== id);

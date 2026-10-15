@@ -3,10 +3,11 @@ import { z } from 'zod';
 
 import type { CostSplitType, ProviderCostType, QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderTotalCost } from '~/composables/quotation/use-quotation-domain';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
+import { COST_SPLIT_OPTIONS, COST_TYPE_OPTIONS } from '~/utils/quotation-labels';
 
 type Props = {
   quotationId: string;
@@ -21,8 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 
 // Usual suggestions; the ones the agency already used are added, and the user can type another.
 const BASE_CATEGORIES = ['Publicidad', 'Viáticos', 'Comisiones', 'Box lunch', 'Otro'];
@@ -57,16 +57,6 @@ type FormState = {
   personCount?: number;
   splitType: CostSplitType;
 };
-
-const costTypeOptions: { label: string; value: ProviderCostType }[] = [
-  { label: 'Costo total', value: 'total' },
-  { label: 'Costo por persona', value: 'per_person' },
-];
-
-const splitTypeOptions: { label: string; value: CostSplitType }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimum' },
-  { label: 'Asientos vendibles', value: 'total' },
-];
 
 const state = reactive<FormState>({
   category: expense?.category,
@@ -201,7 +191,7 @@ function onSubmit() {
     >
       <URadioGroup
         v-model="state.costType"
-        :items="costTypeOptions"
+        :items="COST_TYPE_OPTIONS"
         orientation="horizontal"
         class="py-1.5"
       />
@@ -250,7 +240,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.splitType"
-        :items="splitTypeOptions"
+        :items="COST_SPLIT_OPTIONS"
         class="w-full"
       />
     </UFormField>
