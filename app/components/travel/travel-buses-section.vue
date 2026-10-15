@@ -137,10 +137,6 @@ function getCoordinatorOptions(busId: string) {
     .map(c => ({ value: c.id, label: c.name }));
 }
 
-function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
-}
-
 function getStatusColor(status: QuotationBusStatus): 'success' | 'warning' | 'neutral' {
   if (status === 'confirmed')
     return 'success';
@@ -199,7 +195,7 @@ async function onCoordinatorsChange(busId: string, selected: string[]) {
               <div class="flex justify-between items-center gap-4">
                 <div class="flex items-center gap-2">
                   <UIcon name="i-lucide-bus" class="w-4 h-4 text-muted" />
-                  <span class="font-medium">{{ getProviderName(bus.providerId) }}</span>
+                  <span class="font-medium">{{ providerStore.getProviderName(bus.providerId) }}</span>
                   <span v-if="bus.unitNumber" class="text-sm text-muted">· Unidad {{ bus.unitNumber }}</span>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">

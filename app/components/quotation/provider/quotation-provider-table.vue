@@ -73,10 +73,6 @@ const confirmedOptions = [
 
 const paymentMethodOptions = [{ label: 'Todos', value: 'all' }, ...PAYMENT_TYPE_OPTIONS];
 
-function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
-}
-
 function isProviderInactive(providerId: string): boolean {
   const provider = providerStore.getProviderById(providerId);
   return provider ? !provider.active : false;
@@ -146,13 +142,13 @@ function openEditProvider(provider: QuotationProvider) {
 
 function openHistory(provider: QuotationProvider) {
   historyProviderId.value = provider.id;
-  historyProviderName.value = getProviderName(provider.providerId);
+  historyProviderName.value = providerStore.getProviderName(provider.providerId);
   isHistoryOpen.value = true;
 }
 
 function openRecordPayment(provider: QuotationProvider) {
   historyProviderId.value = provider.id;
-  historyProviderName.value = getProviderName(provider.providerId);
+  historyProviderName.value = providerStore.getProviderName(provider.providerId);
   isHistoryOpen.value = true;
 }
 
@@ -282,7 +278,7 @@ const columns: TableColumn<QuotationProvider>[] = [
             title: 'Proveedor inactivo en el catálogo',
           })
         : null,
-      h('span', { class: 'font-medium' }, getProviderName(row.original.providerId)),
+      h('span', { class: 'font-medium' }, providerStore.getProviderName(row.original.providerId)),
     ]),
   },
   {
@@ -471,7 +467,7 @@ const columns: TableColumn<QuotationProvider>[] = [
   <UModal
     v-model:open="isAdjustmentsOpen"
     title="Precios por tipo de persona"
-    :description="adjustmentsProvider ? `${getProviderName(adjustmentsProvider.providerId)} · ${adjustmentsProvider.serviceDescription} · base ${formatCurrency(adjustmentsProvider.unitCost ?? 0)}` : undefined"
+    :description="adjustmentsProvider ? `${providerStore.getProviderName(adjustmentsProvider.providerId)} · ${adjustmentsProvider.serviceDescription} · base ${formatCurrency(adjustmentsProvider.unitCost ?? 0)}` : undefined"
     class="sm:max-w-2xl"
   >
     <template #body>

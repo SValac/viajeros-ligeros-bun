@@ -97,7 +97,7 @@ const hotelGroups = computed((): HotelGroup[] => {
     if (!hotel) {
       hotel = {
         providerId,
-        providerName: providerStore.getProviderById(providerId)?.name ?? 'Hotel desconocido',
+        providerName: providerStore.getProviderName(providerId),
         roomTypes: [],
       };
       hotels.set(providerId, hotel);

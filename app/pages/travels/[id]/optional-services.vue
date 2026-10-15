@@ -41,7 +41,7 @@ const sellableSeats = computed(() => (quotation.value ? quotationStore.getSellab
 const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s => ({
   id: s.id,
   label: s.serviceDescription,
-  providerName: getProviderName(s.providerId),
+  providerName: providerStore.getProviderName(s.providerId),
   takers: s.unitCost ? Math.round(s.payableCost / s.unitCost) : 0,
   payableCost: s.payableCost,
   overpaid: quotationStore.getProviderOverpayment(s.id) > 0,
@@ -87,10 +87,6 @@ watch(travelId, async (id) => {
     quotationStore.fetchTravelerAdjustments(id),
   ]);
 }, { immediate: true });
-
-function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
-}
 
 async function onAdjust(travelerIds: string[], adjustmentId: string | null) {
   const service = selectedService.value;
@@ -151,7 +147,7 @@ async function onChange(travelerIds: string[], takes: boolean) {
               v-if="selectedService"
               :key="selectedService.id"
               :service="selectedService"
-              :provider-name="getProviderName(selectedService.providerId)"
+              :provider-name="providerStore.getProviderName(selectedService.providerId)"
               :occupants="occupants"
               :opted-out="quotationStore.getOptOutsByProvider(selectedService.id)"
               :paid="quotationStore.getPaidByProvider(selectedService.id)"

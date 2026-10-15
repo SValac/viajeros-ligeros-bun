@@ -78,11 +78,6 @@ function getTravelRooms(accommodation: QuotationAccommodation): number {
   );
 }
 
-// Get the hotel name
-function getHotelName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
-}
-
 // Payment history slideover
 const isHistoryOpen = ref(false);
 const historyAccommodation = ref<QuotationAccommodation | null>(null);
@@ -145,7 +140,7 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
     {
       accessorKey: 'providerId',
       header: 'Hotel',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, getHotelName(row.original.providerId)),
+      cell: ({ row }) => h('span', { class: 'font-medium' }, providerStore.getProviderName(row.original.providerId)),
     },
     {
       accessorKey: 'nightCount',
@@ -288,7 +283,7 @@ async function deleteAccommodation(id: string) {
           <div>
             <label class="text-sm font-medium block mb-2">Hotel</label>
             <div class="bg-muted/20 rounded px-4 py-2">
-              {{ getHotelName(editingAccommodation.providerId) }}
+              {{ providerStore.getProviderName(editingAccommodation.providerId) }}
             </div>
           </div>
 
@@ -331,7 +326,7 @@ async function deleteAccommodation(id: string) {
     <!-- Payment history slideover -->
     <USlideover
       v-model:open="isHistoryOpen"
-      :title="historyAccommodation ? `Pagos — ${getHotelName(historyAccommodation.providerId)}` : 'Historial de Pagos'"
+      :title="historyAccommodation ? `Pagos — ${providerStore.getProviderName(historyAccommodation.providerId)}` : 'Historial de Pagos'"
       description="Registro de pagos realizados al hotel"
       side="right"
       class="sm:max-w-lg"
@@ -341,7 +336,7 @@ async function deleteAccommodation(id: string) {
           v-if="historyAccommodation"
           kind="accommodation"
           :parent-id="historyAccommodation.id"
-          :subtitle="getHotelName(historyAccommodation.providerId)"
+          :subtitle="providerStore.getProviderName(historyAccommodation.providerId)"
         />
       </template>
     </USlideover>

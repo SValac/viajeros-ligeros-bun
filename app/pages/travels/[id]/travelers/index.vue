@@ -218,7 +218,7 @@ function getAccommodationLabels(travelerId: string): string[] {
     const acc = allAccommodations.value.find(a => a.id === assignment.travelAccommodationId);
     if (!acc)
       return [];
-    const provider = providerStore.getProviderById(acc.providerId)?.name ?? 'Hotel';
+    const provider = providerStore.getProviderName(acc.providerId);
     return [acc.roomNumber ? `${provider} — Hab. ${acc.roomNumber}` : provider];
   });
 }

@@ -37,10 +37,6 @@ const isHistoryOpen = shallowRef(false);
 const isDeleteModalOpen = shallowRef(false);
 const selectedBus = shallowRef<QuotationBus | null>(null);
 
-function getAgencyName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
-}
-
 function openHistory(bus: QuotationBus) {
   selectedBus.value = bus;
   isHistoryOpen.value = true;
@@ -124,7 +120,7 @@ const columns: TableColumn<QuotationBus>[] = [
   {
     accessorKey: 'providerId',
     header: 'Agencia',
-    cell: ({ row }) => h('span', { class: 'font-medium' }, getAgencyName(row.original.providerId)),
+    cell: ({ row }) => h('span', { class: 'font-medium' }, providerStore.getProviderName(row.original.providerId)),
   },
   {
     accessorKey: 'unitNumber',

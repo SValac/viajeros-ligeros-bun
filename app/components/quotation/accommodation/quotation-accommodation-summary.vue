@@ -36,10 +36,6 @@ const totalRooms = computed(() =>
   accommodations.value.reduce((sum, h) => sum + h.details.reduce((s, d) => s + getRoomCount(h, d.roomTypeId), 0), 0),
 );
 
-function getHotelName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
-}
-
 // Accordion items — one per accommodation
 function getRoomBreakdown(accommodation: QuotationAccommodation): string {
   return accommodation.details
@@ -49,7 +45,7 @@ function getRoomBreakdown(accommodation: QuotationAccommodation): string {
 
 const accordionItems = computed(() =>
   accommodations.value.map(h => ({
-    label: `${getHotelName(h.providerId)} - ${getRoomBreakdown(h)}`,
+    label: `${providerStore.getProviderName(h.providerId)} - ${getRoomBreakdown(h)}`,
     value: h.id,
     slot: `hotel-${h.id}`,
   })),
