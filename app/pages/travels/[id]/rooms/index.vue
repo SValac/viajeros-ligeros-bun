@@ -4,10 +4,10 @@ import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler } from '~/types/traveler';
 
 import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 import { pluralize } from '~/utils/pluralize';
@@ -32,9 +32,7 @@ const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
 const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
 const travelersLoad = useQueryLoadState(travelersQuery);
 // The quoted hotels and room types group the rooms; the public prices say who goes where.
-const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
-const { refetch: refetchQuotation } = quotationQuery;
-const quotationLoad = useQueryLoadState(quotationQuery);
+const { quotation, load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(travelId);
 // Coordinators need a room too, so room counts and the add modal include them.
 const occupantsOfTravel = computed(() => travelerData.value?.travelers ?? []);
 const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel.value));
@@ -61,8 +59,7 @@ const occupiedRooms = computed(() =>
 // The quotation picks each hotel's room types; how many rooms of each the travel holds
 // is set here (it changes until the trip leaves), and the hotel's cost follows it.
 const quotationAccommodations = computed(() => {
-  const quotation = quotationStore.getQuotationByTravel(travelId.value);
-  return quotation ? quotationStore.getAccommodationsByQuotation(quotation.id) : [];
+  return quotation.value ? quotationStore.getAccommodationsByQuotation(quotation.value.id) : [];
 });
 
 type RoomTypeGroup = {
@@ -229,8 +226,7 @@ const isAddModalOpen = shallowRef(false);
 
 // The public price each traveler paid says which room type (and hotels) they belong in.
 const publicPricesById = computed(() => {
-  const quotation = quotationStore.getQuotationByTravel(travelId.value);
-  const prices = quotation ? quotationStore.getPublicPricesByQuotation(quotation.id) : [];
+  const prices = quotation.value ? quotationStore.getPublicPricesByQuotation(quotation.value.id) : [];
   return new Map(prices.map(price => [price.id, price]));
 });
 

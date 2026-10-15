@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatDate } from '~/utils/format-date';
 import { pluralize } from '~/utils/pluralize';
@@ -32,12 +32,11 @@ const travelerCount = computed (() => travel.value?.travelerCount ?? 0);
 
 // The sellable seats come from the quotation. The getter follows `props.travelId`, so
 // picking another travel loads its quotation (already cached = no request).
-useQuery(() => quotationByTravelQuery(props.travelId));
+const { quotation } = useTravelQuotation(() => props.travelId);
 
 // Seats for sale according to the quotation; 0 if there's no quotation or buses yet
 const sellableSeats = computed(() => {
-  const quotation = quotationStore.getQuotationByTravel(props.travelId);
-  return quotation ? quotationStore.getSellableSeats(quotation.id, travel.value?.coordinatorIds.length ?? 0) : 0;
+  return quotation.value ? quotationStore.getSellableSeats(quotation.value.id, travel.value?.coordinatorIds.length ?? 0) : 0;
 });
 
 type Detail = { icon: string; label: string; value: string };

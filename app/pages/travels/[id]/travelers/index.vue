@@ -7,10 +7,10 @@ import { h } from 'vue';
 import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
 
 import BusSeatMap from '~/components/bus/bus-seat-map.vue';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatTravelBusLabel } from '~/utils/travel-bus';
 import { formatTravelerName } from '~/utils/traveler-labels';
@@ -96,10 +96,8 @@ const isSeatChangeModeActive = computed(() => seatChangeContext.value !== null);
 // the quotation counts them as passengers) and rooms like anyone else.
 const coordinatorsOfTravel = computed(() => occupantsOfTravel.value.filter(t => t.kind === 'coordinator'));
 // Whether coordinators take seats, and which bus each one rides, live in the quotation.
-useQuery(() => quotationByTravelQuery(travelId.value));
-const coordinatorsTakeSeats = computed(() =>
-  quotationStore.getQuotationByTravel(travelId.value)?.coordinatorsTakeSeats ?? false,
-);
+const { quotation } = useTravelQuotation(travelId);
+const coordinatorsTakeSeats = computed(() => quotation.value?.coordinatorsTakeSeats ?? false);
 const coordinatorRows = computed(() =>
   coordinatorsOfTravel.value.map(coordinator => ({
     coordinator,
@@ -509,10 +507,9 @@ const coordinatorSeatBuses = computed(() => {
 
 const coordinatorInitialBusId = computed(() => {
   const coordinatorId = seatingCoordinator.value?.coordinatorId;
-  const quotation = quotationStore.getQuotationByTravel(travelId.value);
-  if (!coordinatorId || !quotation)
+  if (!coordinatorId || !quotation.value)
     return undefined;
-  const quotationBus = quotationStore.getBusesByQuotation(quotation.id)
+  const quotationBus = quotationStore.getBusesByQuotation(quotation.value.id)
     .find(bus => (bus.coordinatorIds as string[] | undefined)?.includes(coordinatorId));
   return allBuses.value.find(bus => quotationBus && bus.quotationBusId === quotationBus.id)?.id;
 });

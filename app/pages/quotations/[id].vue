@@ -4,8 +4,8 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 import { z } from 'zod';
 
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -23,9 +23,7 @@ const { travelId, quotation, readonly } = useQuotationRoute();
 // The quotation is copied into the store on every request; the tabs read from the store. The query
 // refetches it when returning to the browser tab and after every write, so it
 // also brings what is owed to each optional service (it changes with the travelers).
-const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
-const { refetch: refetchQuotation } = quotationQuery;
-const quotationLoad = useQueryLoadState(quotationQuery);
+const { load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(travelId);
 
 const travelQuery = useQuery(() => travelDetailQuery(travelId.value));
 const { data: travel, status, refetch: refetchTravel } = travelQuery;

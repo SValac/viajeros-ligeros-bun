@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
-import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeName } from '~/utils/form-validation';
 
@@ -32,10 +31,7 @@ const operatorDraft = reactive<Record<string, OperatorDraft>>({});
 const { data: travel } = useQuery(() => travelDetailQuery(travelId));
 // The buses (and their coordinators) live in the quotation; the query copies it to the store
 // and refetches it when the browser tab regains focus, so buses added elsewhere show up.
-const quotationQuery = useQuery(() => quotationByTravelQuery(travelId));
-const { refetch: refetchQuotation } = quotationQuery;
-const quotationLoad = useQueryLoadState(quotationQuery);
-const quotation = computed(() => quotationStore.getQuotationByTravel(travelId));
+const { quotation, load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(() => travelId);
 const buses = computed(() => {
   if (!quotation.value)
     return [];

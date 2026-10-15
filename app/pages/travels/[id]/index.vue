@@ -1,6 +1,6 @@
 <script setup lang="ts">
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 
@@ -14,8 +14,7 @@ const quotationStore = useQuotationStore();
 const { travelId, travel } = useTravelRoute();
 
 // The seat figures live in the quotation (they drive its seat price)
-useQuery(() => quotationByTravelQuery(travelId.value));
-const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
+const { quotation } = useTravelQuotation(travelId);
 
 const coordinators = computed(() =>
   coordinatorStore.getCoordinatorsByIds(travel.value?.coordinatorIds ?? []),

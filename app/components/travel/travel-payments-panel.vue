@@ -7,9 +7,9 @@ import { h } from 'vue';
 import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
@@ -34,8 +34,7 @@ const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
 const travelersLoad = useQueryLoadState(travelersQuery);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 // The public prices (what each traveler is charged) live in the quotation.
-useQuery(() => quotationByTravelQuery(travelId.value));
-const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
+const { quotation } = useTravelQuotation(travelId);
 const publicPrices = computed(() =>
   quotation.value
     ? quotationStore.getPublicPricesByQuotation(quotation.value.id)
