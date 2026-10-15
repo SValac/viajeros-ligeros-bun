@@ -105,7 +105,7 @@ const columns: TableColumn<Coordinator>[] = [
     header: 'Nombre',
     cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-2' }, [
-        h(resolveComponent('UIcon'), { name: 'i-lucide-user-star', class: 'w-4 h-4 text-muted' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-user-cog', class: 'w-4 h-4 text-muted' }),
         h('span', { class: 'font-medium' }, row.getValue('name')),
       ]),
   },
@@ -161,7 +161,7 @@ const columns: TableColumn<Coordinator>[] = [
   <div class="space-y-6">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-4">
-        <UIcon name="i-lucide-user-star" class="w-10 h-10 text-violet-500" />
+        <UIcon name="i-lucide-user-cog" class="w-10 h-10 text-violet-500" />
         <div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
             Coordinadores

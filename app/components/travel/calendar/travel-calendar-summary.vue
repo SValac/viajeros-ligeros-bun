@@ -54,7 +54,7 @@ const details = computed<Detail[]>(() => {
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(travel.value.endDate) },
     { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: travel.value?.departureFrom || '—' },
-    { icon: 'i-lucide-user-star', label: 'Coordinadores', value: coordinatorNames.value || 'Sin asignar' },
+    { icon: 'i-lucide-user-cog', label: 'Coordinadores', value: coordinatorNames.value || 'Sin asignar' },
   ];
 });
 

@@ -161,7 +161,7 @@ const columns: TableColumn<TravelSummary>[] = [
         return c ? c.name : '—';
       });
       return h('div', { class: 'flex items-center gap-2' }, [
-        h(resolveComponent('UIcon'), { name: 'i-lucide-user-star', class: 'w-4 h-4 text-muted shrink-0' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-user-cog', class: 'w-4 h-4 text-muted shrink-0' }),
         h('span', { class: 'text-sm' }, names.join(', ')),
       ]);
     },
