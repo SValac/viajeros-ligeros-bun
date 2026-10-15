@@ -6,9 +6,8 @@ import { z } from 'zod';
 
 import type { QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
 
-import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { useQuotationRoomCounts } from '~/composables/quotation/use-quotation-room-counts';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
-import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -26,9 +25,7 @@ const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
 
 // Rooms the travel holds per hotel room type: they're added on the travel's rooms page.
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
-const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
-const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
+const { getRoomCount } = useQuotationRoomCounts(() => props.quotationId);
 
 // The quotation's accommodations
 const accommodations = computed(() => {
@@ -67,13 +64,13 @@ const roomCountsEdit = computed(() => {
   const accommodation = editingAccommodation.value;
   if (!accommodation)
     return new Map<string, number>();
-  return new Map(roomTypesEdit.value.map(t => [t.id, roomCounts.value.get(roomTypeKey(accommodation.providerId, t.id)) ?? 0]));
+  return new Map(roomTypesEdit.value.map(t => [t.id, getRoomCount(accommodation.providerId, t.id)]));
 });
 
 // Rooms the travel holds in a quoted hotel (only its quoted types count toward the cost)
 function getTravelRooms(accommodation: QuotationAccommodation): number {
   return accommodation.details.reduce(
-    (sum, d) => sum + (roomCounts.value.get(roomTypeKey(accommodation.providerId, d.roomTypeId)) ?? 0),
+    (sum, d) => sum + getRoomCount(accommodation.providerId, d.roomTypeId),
     0,
   );
 }
