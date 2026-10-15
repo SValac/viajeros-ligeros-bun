@@ -7,6 +7,7 @@ import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
 import { useFormModal } from '~/composables/use-form-modal';
 import { pluralize } from '~/utils/pluralize';
+import { matchesSearch } from '~/utils/search';
 
 definePageMeta({
   name: 'coordinators-index',
@@ -18,19 +19,9 @@ const toast = useToast();
 const { isOpen: isFormModalOpen, editing: editingCoordinator, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Coordinator>();
 const searchTerm = ref('');
 
-const coordinators = computed(() => {
-  const term = searchTerm.value.toLowerCase();
-  if (!term)
-    return coordinatorStore.allCoordinators;
-  // The phone is compared by digits: it's stored as E.164 and typed as shown, "(312) 127…"
-  const termDigits = term.replace(/\D/g, '');
-  return coordinatorStore.allCoordinators.filter(
-    c =>
-      c.name.toLowerCase().includes(term)
-      || c.email.toLowerCase().includes(term)
-      || (!!termDigits && c.phone.replace(/\D/g, '').includes(termDigits)),
-  );
-});
+const coordinators = computed(() =>
+  coordinatorStore.allCoordinators.filter(c => matchesSearch([c.name, c.email], searchTerm.value, c.phone)),
+);
 
 function clearSearch() {
   searchTerm.value = '';

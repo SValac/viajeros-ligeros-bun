@@ -1,15 +1,12 @@
 import type { Provider, ProviderFilters, ProviderLocation } from '~/types/provider';
 
+import { matchesSearch } from '~/utils/search';
+
 /**
  * Formats a provider's location as a single display string.
  */
 export function formatProviderLocation(location: ProviderLocation): string {
   return [location.city, location.state, location.country].join(', ');
-}
-
-// Lowercase without accents, so "montana" finds "Montaña".
-function normalizeSearch(value: string): string {
-  return value.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 }
 
 /**
@@ -20,28 +17,12 @@ function normalizeSearch(value: string): string {
  * @param term - Text typed by the user; blank matches everything
  */
 export function matchesProviderSearch(provider: Provider, term: string): boolean {
-  const needle = normalizeSearch(term.trim());
-  if (!needle)
-    return true;
-
   const { location, contact } = provider;
-  const textMatch = [
-    provider.name,
-    provider.description,
-    location.city,
-    location.state,
-    location.country,
-    contact.name,
+  return matchesSearch(
+    [provider.name, provider.description, location.city, location.state, location.country, contact.name, contact.email],
+    term,
     contact.phone,
-    contact.email,
-  ].some(field => !!field && normalizeSearch(field).includes(needle));
-  if (textMatch)
-    return true;
-
-  // The phone is shown formatted ("(812) 123 4567") but stored as E.164: compare
-  // digits only so it's found however it was typed.
-  const digits = term.replace(/\D/g, '');
-  return digits.length >= 3 && !!contact.phone && contact.phone.replace(/\D/g, '').includes(digits);
+  );
 }
 
 /**
