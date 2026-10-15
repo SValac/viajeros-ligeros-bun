@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
-import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
@@ -9,6 +8,7 @@ import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
@@ -44,8 +44,6 @@ const publicPrices = computed(() =>
 const enrolledTravelers = computed(() =>
   selectPayingTravelers(travelerData.value?.travelers ?? []),
 );
-
-const expanded = ref<ExpandedStateList>({});
 
 // Status filter
 const statusFilter = ref<PaymentStatus | 'all'>('all');
@@ -84,15 +82,7 @@ const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
   return result;
 });
 
-watchEffect(() => {
-  const newExpanded: ExpandedStateList = {};
-  for (const row of groupedFilteredTravelers.value) {
-    if (row.children && row.children.length > 0) {
-      newExpanded[row.id] = true;
-    }
-  }
-  expanded.value = newExpanded;
-});
+const expanded = useExpandedGroups(groupedFilteredTravelers);
 
 // Travel cash
 const cashSummary = computed(() => {

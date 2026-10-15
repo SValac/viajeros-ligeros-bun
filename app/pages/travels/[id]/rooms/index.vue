@@ -7,6 +7,7 @@ import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
@@ -195,8 +196,6 @@ type HotelTab = {
   group: HotelGroup;
 };
 
-const activeTabValue = shallowRef<string | number>('');
-
 const tabs = computed((): HotelTab[] =>
   hotelGroups.value.map((group, index) => ({
     label: group.providerName,
@@ -207,12 +206,7 @@ const tabs = computed((): HotelTab[] =>
   })),
 );
 
-watch(tabs, (availableTabs) => {
-  const hasCurrentTab = availableTabs.some(tab => tab.value === activeTabValue.value);
-  if (!hasCurrentTab) {
-    activeTabValue.value = availableTabs[0]?.value ?? '';
-  }
-}, { immediate: true });
+const activeTabValue = useValidTab(tabs, available => available[0]?.value ?? '');
 
 // Modal for adding traveler to a room
 const addingToAccommodation = shallowRef<TravelAccommodation | null>(null);

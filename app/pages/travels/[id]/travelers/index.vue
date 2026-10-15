@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
-import type { ExpandedStateList } from '@tanstack/vue-table';
 
 import { h } from 'vue';
 
@@ -10,6 +9,8 @@ import BusSeatMap from '~/components/bus/bus-seat-map.vue';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useExpandedGroups } from '~/composables/use-expanded-groups';
+import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatTravelBusLabel } from '~/utils/travel-bus';
@@ -68,8 +69,6 @@ type SeatSelectionPayload = {
 const isFormModalOpen = shallowRef(false);
 const editingTraveler = shallowRef<Traveler | null>(null);
 const createTravelerInitialValues = shallowRef<Partial<TravelerFormData> | null>(null);
-const expanded = ref<ExpandedStateList>({});
-const activeTabValue = shallowRef<string | number>('travelers');
 const seatChangeContext = shallowRef<SeatChangeContext | null>(null);
 const selectedDestinationSeat = shallowRef<number | null>(null);
 const seatChangeLoading = shallowRef(false);
@@ -153,22 +152,9 @@ watch(travelId, () => {
   clearSeatChangeState();
 }, { immediate: true });
 
-watch(tabs, (availableTabs) => {
-  const hasCurrentTab = availableTabs.some(tab => tab.value === activeTabValue.value);
-  if (!hasCurrentTab) {
-    activeTabValue.value = 'travelers';
-  }
-}, { immediate: true });
+const activeTabValue = useValidTab(tabs, () => 'travelers');
 
-watchEffect(() => {
-  const newExpanded: ExpandedStateList = {};
-  for (const row of travelers.value) {
-    if (row.children && row.children.length > 0) {
-      newExpanded[row.id] = true;
-    }
-  }
-  expanded.value = newExpanded;
-});
+const expanded = useExpandedGroups(travelers);
 
 function getOccupantsByBus(busId: string): Traveler[] {
   return occupantsOfTravel.value.filter(t => t.travelBusId === busId);
