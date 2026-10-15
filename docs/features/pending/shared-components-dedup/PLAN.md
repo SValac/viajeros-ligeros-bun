@@ -9,8 +9,9 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137. PR (a) on branch
-`feature/shared-components-dedup-bugs`: all loose bugs done. Next PRs: (c), (d), phase 7, (e).
+**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138.
+PR (c) on branch `feature/shared-components-dedup-utils`: phase 14 done, phase 15 next. Then
+(d), phase 7, (e).
 
 ---
 
@@ -380,7 +381,7 @@ galería) y se buscó con grep cada patrón en el resto. Fases 14-17.
 - Coordinator icon is `i-lucide-user-cog` everywhere; `user-star` only means representative.
 - `TravelerFilters.travelId` and its check in `filterTravelers` were removed with the filter.
 
-### Fase 14 — Etiquetas, opciones y formatos en `utils/`
+### Fase 14 — Etiquetas, opciones y formatos en `utils/` ✅
 
 Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 
@@ -416,6 +417,25 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - **Etiqueta de camión del viaje** (`agencia — marca modelo`) ×3 (travelers, `traveler-form`,
   `traveler-filter-bar`) → `formatTravelBusLabel`.
 - **Coordinadores por ids** `ids.map(id => getCoordinatorById(id))` ×5 → getter.
+
+**Done (2026-10-14).** Notes from the implementation:
+- New utils: `payment-status.ts` (labels by `PaymentParty`: traveler "Abono parcial", supplier
+  "Anticipo" / "Liquidado"; filter options), `payment-type.ts`, `quotation-labels.ts` (split,
+  cost type, quotation status), `traveler-labels.ts` (traveler type, `TRAVELER_ROLE_ICONS` +
+  `getTravelerRole`, `formatTravelerName`), `pluralize.ts`, `travel-bus.ts`
+  (`formatTravelBusLabel`); `formatShortDate` / `formatDateRange` in `format-date.ts`.
+- New badges: `PaymentStatusBadge`, `TravelStatusBadge` (size/class fall through),
+  `QuotationSplitTypeBadge`.
+- Getters: `providerStore.getProviderName` (one fallback, "Proveedor desconocido"; the bus label
+  still reads `getProviderById` so a missing agency shows only the bus) and
+  `coordinatorStore.getCoordinatorsByIds` (skips ids missing from the catalog; the dashboard used
+  to show "—" for them).
+- Small visible changes: the travelers payment table reads "Abono parcial" (was "Parcial"), dates
+  use a numeric day ("5 oct 2026", the histories had "05"), ranges use an en dash, and
+  `pluralize` fixed "autobúses" and "1 habitaciones".
+- Left as is: the payment method badge colors (each table keeps its own), `bus-seat-card` icons
+  (booleans and its own palette), `providers/index` (noun without count) and the price warning
+  modal (verb agreement).
 
 ### Fase 15 — Composables de pantalla
 
