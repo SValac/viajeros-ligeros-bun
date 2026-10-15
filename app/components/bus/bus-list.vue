@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
@@ -85,7 +85,7 @@ async function handleToggleStatus(bus: Bus) {
   }
 }
 
-function getRowActions(bus: Bus) {
+function getRowActions(bus: Bus): DropdownMenuItem[][] {
   return [
     [
       {
@@ -103,6 +103,7 @@ function getRowActions(bus: Bus) {
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
+        color: 'error',
         onSelect: () => handleDelete(bus),
       },
     ],

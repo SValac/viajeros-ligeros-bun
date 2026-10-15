@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { CheckboxGroupItem, TableColumn } from '@nuxt/ui';
+import type { CheckboxGroupItem, DropdownMenuItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
@@ -110,7 +110,7 @@ async function handleDelete(travel: TravelSummary) {
 }
 
 // Row actions
-function getRowActions(travel: TravelSummary) {
+function getRowActions(travel: TravelSummary): DropdownMenuItem[][] {
   return [
     [
       {
@@ -128,6 +128,7 @@ function getRowActions(travel: TravelSummary) {
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
+        color: 'error',
         onSelect: () => handleDelete(travel),
       },
     ],

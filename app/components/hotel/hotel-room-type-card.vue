@@ -22,6 +22,7 @@ const dropdownItems = computed(() => [[
   {
     label: 'Eliminar',
     icon: 'i-lucide-trash-2',
+    color: 'error' as const,
     onSelect: () => emit('delete'),
   },
 ]]);

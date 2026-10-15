@@ -564,7 +564,7 @@ function getCoordinatorSeatActions(coordinator: Traveler): TravelerActionItem[][
   ]];
 }
 
-function getRowActions(traveler: Traveler) {
+function getRowActions(traveler: Traveler): TravelerActionItem[][] {
   return [
     [
       {
@@ -594,6 +594,7 @@ function getRowActions(traveler: Traveler) {
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
+        color: 'error',
         onSelect: () => handleDelete(traveler),
       },
     ],

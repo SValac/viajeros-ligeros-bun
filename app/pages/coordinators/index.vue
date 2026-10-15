@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
@@ -79,7 +79,7 @@ async function handleDelete(coordinator: Coordinator) {
   }
 }
 
-function getRowActions(coordinator: Coordinator) {
+function getRowActions(coordinator: Coordinator): DropdownMenuItem[][] {
   return [
     [
       {
@@ -92,6 +92,7 @@ function getRowActions(coordinator: Coordinator) {
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
+        color: 'error',
         onSelect: () => handleDelete(coordinator),
       },
     ],
