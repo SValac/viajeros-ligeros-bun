@@ -57,7 +57,7 @@ const details = computed<Detail[]>(() => {
         v-if="travel.imageUrl"
         :src="travel.imageUrl"
         :alt="travel.label"
-        class="aspect-[21/9] w-full rounded-lg object-cover"
+        class="aspect-21/9 w-full rounded-lg object-cover"
       >
 
       <UCard>
