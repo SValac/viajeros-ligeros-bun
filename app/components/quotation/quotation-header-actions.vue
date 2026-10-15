@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
 
 type Props = {
@@ -11,9 +12,7 @@ const { quotationId, readonly } = defineProps<Props>();
 const quotationStore = useQuotationStore();
 const toast = useToast();
 
-const quotation = computed(() =>
-  quotationStore.quotations.find(c => c.id === quotationId),
-);
+const { quotation } = useQuotationContext(() => quotationId);
 
 const canConfirm = computed(() => quotationStore.canConfirm(quotationId));
 

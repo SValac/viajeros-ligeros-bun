@@ -3,8 +3,8 @@ import { z } from 'zod';
 
 import type { CostSplitType, ProviderCostType, QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderTotalCost } from '~/composables/quotation/use-quotation-domain';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 import { COST_SPLIT_OPTIONS, COST_TYPE_OPTIONS } from '~/utils/quotation-labels';
@@ -22,8 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 
 // Usual suggestions; the ones the agency already used are added, and the user can type another.
 const BASE_CATEGORIES = ['Publicidad', 'Viáticos', 'Comisiones', 'Box lunch', 'Otro'];

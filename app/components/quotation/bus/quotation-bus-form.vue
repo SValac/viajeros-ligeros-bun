@@ -4,6 +4,7 @@ import { z } from 'zod';
 import type { Bus } from '~/types/bus';
 import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
@@ -93,7 +94,7 @@ const agencyUnits = computed<Bus[]>(() => {
 });
 
 // Highest occupied seat on the travel's bus: when editing, it can't switch to a smaller unit
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
+const { travelId, coordinatorCount } = useQuotationContext(() => props.quotationId);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const { data: travelerData, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
 const highestOccupiedSeat = computed(() => {
@@ -108,7 +109,7 @@ const highestOccupiedSeat = computed(() => {
 });
 
 // How many people the cost is split among: minimum target seats or sellable seats
-const personDivisor = computed(() => quotationStore.getCostDivisor(props.quotationId, formState.splitType ?? 'minimum', travel.value?.coordinatorIds.length ?? 0));
+const personDivisor = computed(() => quotationStore.getCostDivisor(props.quotationId, formState.splitType ?? 'minimum', coordinatorCount.value));
 
 // Fill the form when it opens (add: empty; edit: the bus data)
 watch(() => props.open, (open) => {

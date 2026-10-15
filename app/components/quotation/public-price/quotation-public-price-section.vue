@@ -6,6 +6,7 @@ import { computed, h, reactive, ref, shallowRef } from 'vue';
 import type { PublicPriceWarningAction, TravelerWithPrice } from '~/components/quotation/public-price/quotation-public-price-warning-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
@@ -40,7 +41,7 @@ const publicPrices = computed(() => {
 // Visibility of the room type and description on the web
 // ============================================================================
 
-const quotation = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId));
+const { quotation, travelId } = useQuotationContext(() => props.quotationId);
 
 type PublicVisibilityField = 'showPublicRoomType' | 'showPublicDescription';
 
@@ -220,20 +221,19 @@ function openEdit(price: QuotationPublicPrice) {
 const paymentStore = usePaymentStore();
 
 // Only for the travelers' names in the warning; until they load the modal says "Viajero".
-const { data: travelerData } = useQuery(() => travelersByTravelQuery(quotation.value?.travelId));
+const { data: travelerData } = useQuery(() => travelersByTravelQuery(travelId.value));
 const travelersById = computed(() => new Map((travelerData.value?.travelers ?? []).map(t => [t.id, t])));
 
 // Account configs aren't loaded on the quotation pages otherwise.
-watch(() => quotation.value?.travelId, (travelId) => {
-  if (travelId)
-    paymentStore.fetchByTravel(travelId);
+watch(travelId, (id) => {
+  if (id)
+    paymentStore.fetchByTravel(id);
 }, { immediate: true });
 
 const travelersByPrice = computed(() => {
   const map = new Map<string, TravelerWithPrice[]>();
-  const travelId = quotation.value?.travelId;
   for (const config of paymentStore.accountConfigs) {
-    if (config.travelId !== travelId || !config.publicPriceId)
+    if (config.travelId !== travelId.value || !config.publicPriceId)
       continue;
     const traveler = travelersById.value.get(config.travelerId);
     const withPrice: TravelerWithPrice = {

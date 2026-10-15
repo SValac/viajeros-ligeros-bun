@@ -5,8 +5,8 @@ import { h } from 'vue';
 
 import type { QuotationBus } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 
@@ -24,8 +24,7 @@ const { quotationId, readonly = false } = defineProps<Props>();
 defineEmits<Emits>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 const providerStore = useProviderStore();
 const toast = useToast();
 

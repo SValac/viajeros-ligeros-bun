@@ -6,9 +6,9 @@ import { h } from 'vue';
 import type { PaymentStatus } from '~/types/payment';
 import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
@@ -59,8 +59,7 @@ const isCourtesyOpen = shallowRef(false);
 const courtesyProvider = shallowRef<QuotationProvider | null>(null);
 
 // The quotation's travel, to link to its per-person services tab.
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { travelId, coordinatorCount } = useQuotationContext(() => quotationId);
 
 // Filter options
 const paymentStatusOptions = getPaymentStatusFilterOptions('supplier');

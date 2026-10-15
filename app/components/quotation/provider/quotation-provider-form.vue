@@ -4,8 +4,8 @@ import { z } from 'zod';
 import type { PaymentType } from '~/types/payment';
 import type { CostSplitType, ProviderCostType, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderTotalCost, getPriceAdjustmentError } from '~/composables/quotation/use-quotation-domain';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
@@ -25,8 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 
 const costSchema = z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0');
 

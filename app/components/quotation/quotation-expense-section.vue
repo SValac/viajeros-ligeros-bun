@@ -5,7 +5,7 @@ import { h } from 'vue';
 
 import type { QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -16,8 +16,7 @@ type Props = {
 const { quotationId, readonly = false } = defineProps<Props>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 const toast = useToast();
 
 const expenses = computed(() => quotationStore.getExpensesByQuotation(quotationId));
