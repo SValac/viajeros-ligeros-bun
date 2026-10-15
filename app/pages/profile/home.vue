@@ -3,10 +3,10 @@ import type { HomePage } from '~/types/agency-profile';
 
 import {
   bannerImageWarning,
-  SITE_IMAGE_RULES,
   siteImageAccept,
   siteImageHint,
 } from '~/composables/agency-profile/use-agency-profile-domain';
+import { useSiteImageActions } from '~/composables/agency-profile/use-site-image-actions';
 
 definePageMeta({
   name: 'profile-home',
@@ -43,22 +43,11 @@ async function handleSubmit(page: HomePage | null) {
   });
 }
 
-async function handleBannerSelect(file: File) {
-  const noun = SITE_IMAGE_RULES.bannerImageUrl.noun;
-  const success = await agencyProfileStore.changeSiteImage('bannerImageUrl', file);
-  toast.add(success
-    ? { title: `${noun} se actualizó`, color: 'success', icon: 'i-lucide-check-circle' }
-    : { title: `No se pudo subir ${noun.toLowerCase()}`, description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
-}
+const { selectImage, removeImage } = useSiteImageActions();
 
 async function handleBannerRemove() {
-  const noun = SITE_IMAGE_RULES.bannerImageUrl.noun;
-  const success = await agencyProfileStore.removeSiteImage('bannerImageUrl');
-  if (success)
+  if (await removeImage('bannerImageUrl'))
     bannerSize.value = null;
-  toast.add(success
-    ? { title: `${noun} se quitó`, color: 'warning', icon: 'i-lucide-trash-2' }
-    : { title: `No se pudo quitar ${noun.toLowerCase()}`, description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
 }
 </script>
 
@@ -78,7 +67,7 @@ async function handleBannerRemove() {
           shape="banner"
           :uploading="agencyProfileStore.uploadingImage === 'bannerImageUrl'"
           :warning="bannerWarning"
-          @select="handleBannerSelect"
+          @select="selectImage('bannerImageUrl', $event)"
           @remove="handleBannerRemove"
           @measure="(width, height) => bannerSize = { width, height }"
         />
