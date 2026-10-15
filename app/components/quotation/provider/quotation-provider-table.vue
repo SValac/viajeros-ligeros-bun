@@ -10,6 +10,7 @@ import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvid
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
 import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
+import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 
 type Props = {
   quotationId: string;
@@ -60,12 +61,7 @@ const travelId = computed(() => quotationStore.quotations.find(c => c.id === quo
 const coordinatorCount = useTravelCoordinatorCount(travelId);
 
 // Filter options
-const paymentStatusOptions = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Pendiente', value: 'pending' },
-  { label: 'Anticipo', value: 'partial' },
-  { label: 'Liquidado', value: 'paid' },
-];
+const paymentStatusOptions = getPaymentStatusFilterOptions('supplier');
 
 const confirmedOptions = [
   { label: 'Todos', value: 'all' },

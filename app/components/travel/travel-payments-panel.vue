@@ -13,6 +13,7 @@ import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
+import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 
 // Payments of a travel's travelers: cash summary, account configs and payments. Used by the
 // travel's "Pagos" tab and by /payments/travel/[id].
@@ -48,12 +49,7 @@ const expanded = ref<ExpandedStateList>({});
 
 // Status filter
 const statusFilter = ref<PaymentStatus | 'all'>('all');
-const statusFilterOptions = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Pendiente', value: 'pending' },
-  { label: 'Abono parcial', value: 'partial' },
-  { label: 'Pagado', value: 'paid' },
-];
+const statusFilterOptions = getPaymentStatusFilterOptions('traveler');
 
 const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
   // Group ALL enrolled travelers by representativeId to preserve the tree structure.
@@ -165,13 +161,6 @@ async function handleConfigSubmit(config: TravelerAccountConfig) {
   toast.add({ title: 'Configuración guardada', color: 'success' });
   closeModals();
 }
-
-type BadgeColor = 'warning' | 'info' | 'success' | 'neutral';
-const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
-  pending: { color: 'warning', label: 'Pendiente' },
-  partial: { color: 'info', label: 'Parcial' },
-  paid: { color: 'success', label: 'Pagado' },
-};
 
 const columns: TableColumn<TravelerWithChildren>[] = [
   {
@@ -297,8 +286,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       if (!config?.publicPriceId)
         return h(resolveComponent('UBadge'), { color: 'neutral', variant: 'subtle' }, () => 'Sin configurar');
       const s = paymentStore.getTravelerPaymentSummary(row.original.id, travelId.value);
-      const cfg = statusConfig[s.status] ?? { color: 'neutral', label: s.status };
-      return h(resolveComponent('UBadge'), { color: cfg.color, variant: 'subtle' }, () => cfg.label);
+      return h(resolveComponent('PaymentStatusBadge'), { status: s.status, party: 'traveler' });
     },
   },
   {

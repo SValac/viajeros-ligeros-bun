@@ -13,14 +13,6 @@ function formatAdjustmentAmount(item: { amount: number; type: 'fixed' | 'percent
     ? formatCurrency(appliedPrice * item.amount / 100)
     : formatCurrency(item.amount);
 }
-
-type BadgeColor = 'warning' | 'info' | 'success';
-
-const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
-  pending: { color: 'warning', label: 'Pendiente' },
-  partial: { color: 'info', label: 'Abono parcial' },
-  paid: { color: 'success', label: 'Pagado' },
-};
 </script>
 
 <template>
@@ -30,12 +22,7 @@ const statusConfig: Record<string, { color: BadgeColor; label: string }> = {
         <div class="font-semibold">
           {{ travelerName }}
         </div>
-        <UBadge
-          :color="statusConfig[summary.status]?.color ?? 'neutral'"
-          variant="subtle"
-        >
-          {{ statusConfig[summary.status]?.label ?? summary.status }}
-        </UBadge>
+        <PaymentStatusBadge :status="summary.status" party="traveler" />
       </div>
     </template>
 

@@ -1,21 +1,13 @@
 import type { TableColumn } from '@nuxt/ui';
 
-// resolveComponent('UBadge') only works in .vue files (Nuxt rewrites it there at build time).
-import { UBadge } from '#components';
+// resolveComponent() only works in .vue files (Nuxt rewrites it there at build time).
+import { PaymentStatusBadge } from '#components';
 import { h } from 'vue';
 
 import type { SupplierPaymentKind } from '~/composables/quotation/use-supplier-payments';
-import type { PaymentStatus } from '~/types/payment';
 
 import { useSupplierPaymentApi } from '~/composables/quotation/use-supplier-payments';
 import { formatCurrency } from '~/utils/currency';
-
-// Label and badge color of each payment status, the same in the three tables.
-const paymentStatusBadge: Record<PaymentStatus, { label: string; color: 'warning' | 'info' | 'success' }> = {
-  pending: { label: 'Pendiente', color: 'warning' },
-  partial: { label: 'Anticipo', color: 'info' },
-  paid: { label: 'Liquidado', color: 'success' },
-};
 
 /**
  * The Pagado, Pendiente (with "Pagado de más") and Estado Pago columns of a supplier table.
@@ -52,14 +44,7 @@ export function useSupplierPaymentColumns<T extends { id: string }>(kind: Suppli
   const statusColumn: TableColumn<T> = {
     id: 'paymentStatus',
     header: 'Estado Pago',
-    cell: ({ row }) => {
-      const badge = paymentStatusBadge[api.status(row.original.id)];
-      return h(UBadge, {
-        label: badge.label,
-        color: badge.color,
-        variant: 'subtle',
-      });
-    },
+    cell: ({ row }) => h(PaymentStatusBadge, { status: api.status(row.original.id), party: 'supplier' }),
   };
 
   return { paidColumn, pendingColumn, statusColumn };
