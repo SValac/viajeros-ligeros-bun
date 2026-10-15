@@ -161,7 +161,7 @@ const columns: TableColumn<Coordinator>[] = [
     <UInput
       v-model="searchTerm"
       icon="i-lucide-search"
-      placeholder="Buscar por name, email o teléfono..."
+      placeholder="Buscar por nombre, email o teléfono..."
       class="max-w-sm"
     />
 
