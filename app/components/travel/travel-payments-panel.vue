@@ -6,6 +6,7 @@ import { h } from 'vue';
 import type { PaymentFormData, PaymentStatus, TravelerAccountConfig } from '~/types/payment';
 import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
+import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
@@ -315,11 +316,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   },
 ];
 
-watch(travelId, async (id) => {
-  if (!id)
-    return;
-  await paymentStore.fetchByTravel(id);
-}, { immediate: true });
+useTravelPayments(travelId);
 </script>
 
 <template>

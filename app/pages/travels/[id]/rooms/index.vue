@@ -3,6 +3,7 @@ import type { QuotationPublicPrice } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler } from '~/types/traveler';
 
+import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
@@ -272,11 +273,7 @@ const availableTravelersForRoom = computed((): AvailableTraveler[] => {
     });
 });
 
-watch(travelId, async (id) => {
-  if (!id)
-    return;
-  await paymentStore.fetchByTravel(id);
-}, { immediate: true });
+useTravelPayments(travelId);
 
 function getTravelerIcon(traveler: Traveler): { name: string; class: string } {
   return TRAVELER_ROLE_ICONS[getTravelerRole(traveler)];

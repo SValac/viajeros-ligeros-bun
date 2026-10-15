@@ -6,6 +6,7 @@ import { computed, h, reactive, ref, shallowRef } from 'vue';
 import type { PublicPriceWarningAction, TravelerWithPrice } from '~/components/quotation/public-price/quotation-public-price-warning-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
+import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
@@ -225,10 +226,7 @@ const { data: travelerData } = useQuery(() => travelersByTravelQuery(travelId.va
 const travelersById = computed(() => new Map((travelerData.value?.travelers ?? []).map(t => [t.id, t])));
 
 // Account configs aren't loaded on the quotation pages otherwise.
-watch(travelId, (id) => {
-  if (id)
-    paymentStore.fetchByTravel(id);
-}, { immediate: true });
+useTravelPayments(travelId);
 
 const travelersByPrice = computed(() => {
   const map = new Map<string, TravelerWithPrice[]>();
