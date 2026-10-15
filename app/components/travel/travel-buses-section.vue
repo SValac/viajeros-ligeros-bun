@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
-import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeName } from '~/utils/form-validation';
 
@@ -32,10 +31,7 @@ const operatorDraft = reactive<Record<string, OperatorDraft>>({});
 const { data: travel } = useQuery(() => travelDetailQuery(travelId));
 // The buses (and their coordinators) live in the quotation; the query copies it to the store
 // and refetches it when the browser tab regains focus, so buses added elsewhere show up.
-const quotationQuery = useQuery(() => quotationByTravelQuery(travelId));
-const { refetch: refetchQuotation } = quotationQuery;
-const quotationLoad = useQueryLoadState(quotationQuery);
-const quotation = computed(() => quotationStore.getQuotationByTravel(travelId));
+const { quotation, load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(() => travelId);
 const buses = computed(() => {
   if (!quotation.value)
     return [];
@@ -137,10 +133,6 @@ function getCoordinatorOptions(busId: string) {
     .map(c => ({ value: c.id, label: c.name }));
 }
 
-function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
-}
-
 function getStatusColor(status: QuotationBusStatus): 'success' | 'warning' | 'neutral' {
   if (status === 'confirmed')
     return 'success';
@@ -199,7 +191,7 @@ async function onCoordinatorsChange(busId: string, selected: string[]) {
               <div class="flex justify-between items-center gap-4">
                 <div class="flex items-center gap-2">
                   <UIcon name="i-lucide-bus" class="w-4 h-4 text-muted" />
-                  <span class="font-medium">{{ getProviderName(bus.providerId) }}</span>
+                  <span class="font-medium">{{ providerStore.getProviderName(bus.providerId) }}</span>
                   <span v-if="bus.unitNumber" class="text-sm text-muted">· Unidad {{ bus.unitNumber }}</span>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">

@@ -19,6 +19,27 @@ export function formatDate(dateString: string, locale: string = 'es-MX') {
 }
 
 /**
+ * Date with the short month, for table cells and headers ("5 oct 2026").
+ * @param dateString - Date-only (`YYYY-MM-DD`) or ISO timestamp
+ * @param locale - Locale of the month name
+ * @returns The formatted date
+ */
+export function formatShortDate(dateString: string, locale: string = 'es-MX'): string {
+  return parseDisplayDate(dateString).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+/**
+ * @param start - First day (`YYYY-MM-DD`)
+ * @param end - Last day (`YYYY-MM-DD`)
+ * @param style - `short` month ("5 oct 2026 – 9 oct 2026") or `long` ("5 de octubre de 2026 – …")
+ * @returns Both dates joined by an en dash
+ */
+export function formatDateRange(start: string, end: string, style: 'short' | 'long' = 'short'): string {
+  const format = style === 'long' ? formatDate : formatShortDate;
+  return `${format(start)} – ${format(end)}`;
+}
+
+/**
  * Returns a date as a local calendar date (`YYYY-MM-DD`), the format of `<input type="date">`.
  * `toISOString()` converts to UTC first, so in Mexico's time zone it returns tomorrow's date
  * after 6 pm.

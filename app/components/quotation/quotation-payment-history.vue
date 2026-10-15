@@ -7,8 +7,10 @@ import type { SupplierPaymentKind } from '~/composables/quotation/use-supplier-p
 import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 
 import { useSupplierPayments } from '~/composables/quotation/use-supplier-payments';
+import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
-import { parseDisplayDate } from '~/utils/format-date';
+import { formatShortDate } from '~/utils/format-date';
+import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 type Props = {
   kind: SupplierPaymentKind;
@@ -21,29 +23,9 @@ const { kind, parentId, subtitle } = defineProps<Props>();
 const toast = useToast();
 const { payments, paid, pendingBalance, add, update, remove } = useSupplierPayments(kind, () => parentId);
 
-const isFormModalOpen = shallowRef(false);
-const selectedPayment = shallowRef<SupplierPayment | null>(null);
+const { isOpen: isFormModalOpen, editing: selectedPayment, openNew: openNewPayment, openEdit: openEditPayment } = useFormModal<SupplierPayment>();
 const isDeleteModalOpen = shallowRef(false);
 const paymentToDelete = shallowRef<SupplierPayment | null>(null);
-
-function formatDate(dateString: string): string {
-  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
-  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function openNewPayment() {
-  selectedPayment.value = null;
-  isFormModalOpen.value = true;
-}
-
-function openEditPayment(payment: SupplierPayment) {
-  selectedPayment.value = payment;
-  isFormModalOpen.value = true;
-}
 
 function openDeleteConfirm(payment: SupplierPayment) {
   paymentToDelete.value = payment;
@@ -87,7 +69,7 @@ const columns: TableColumn<SupplierPayment>[] = [
   {
     accessorKey: 'paymentDate',
     header: 'Fecha',
-    cell: ({ row }) => formatDate(row.original.paymentDate),
+    cell: ({ row }) => formatShortDate(row.original.paymentDate),
   },
   {
     accessorKey: 'concept',
@@ -98,7 +80,7 @@ const columns: TableColumn<SupplierPayment>[] = [
     accessorKey: 'paymentType',
     header: 'Tipo',
     cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.paymentType === 'cash' ? 'Efectivo' : 'Transferencia',
+      label: getPaymentTypeLabel(row.original.paymentType),
       color: row.original.paymentType === 'cash' ? 'success' : 'info',
       variant: 'subtle',
     }),

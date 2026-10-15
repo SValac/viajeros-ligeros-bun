@@ -6,9 +6,13 @@ import { computed, h, reactive, ref, shallowRef } from 'vue';
 import type { PublicPriceWarningAction, TravelerWithPrice } from '~/components/quotation/public-price/quotation-public-price-warning-modal.vue';
 import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPublicPriceTemplate } from '~/types/quotation';
 
+import { useTravelPayments } from '~/composables/payments/use-travel-payments';
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
+import { pluralize } from '~/utils/pluralize';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 type Props = {
   quotationId: string;
@@ -38,7 +42,7 @@ const publicPrices = computed(() => {
 // Visibility of the room type and description on the web
 // ============================================================================
 
-const quotation = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId));
+const { quotation, travelId } = useQuotationContext(() => props.quotationId);
 
 type PublicVisibilityField = 'showPublicRoomType' | 'showPublicDescription';
 
@@ -171,7 +175,7 @@ function occupancyLabel(maxOccupancy: number): string {
 }
 
 function nightsLabel(nightCount: number): string {
-  return `${nightCount} noche${nightCount !== 1 ? 's' : ''}`;
+  return pluralize(nightCount, 'noche');
 }
 
 // The "Detalles adicionales" of the selected room types; with several hotels, one per line with its name
@@ -218,25 +222,21 @@ function openEdit(price: QuotationPublicPrice) {
 const paymentStore = usePaymentStore();
 
 // Only for the travelers' names in the warning; until they load the modal says "Viajero".
-const { data: travelerData } = useQuery(() => travelersByTravelQuery(quotation.value?.travelId));
+const { data: travelerData } = useQuery(() => travelersByTravelQuery(travelId.value));
 const travelersById = computed(() => new Map((travelerData.value?.travelers ?? []).map(t => [t.id, t])));
 
 // Account configs aren't loaded on the quotation pages otherwise.
-watch(() => quotation.value?.travelId, (travelId) => {
-  if (travelId)
-    paymentStore.fetchByTravel(travelId);
-}, { immediate: true });
+useTravelPayments(travelId);
 
 const travelersByPrice = computed(() => {
   const map = new Map<string, TravelerWithPrice[]>();
-  const travelId = quotation.value?.travelId;
   for (const config of paymentStore.accountConfigs) {
-    if (config.travelId !== travelId || !config.publicPriceId)
+    if (config.travelId !== travelId.value || !config.publicPriceId)
       continue;
     const traveler = travelersById.value.get(config.travelerId);
     const withPrice: TravelerWithPrice = {
       id: config.travelerId,
-      name: traveler ? `${traveler.firstName} ${traveler.lastName}` : 'Viajero',
+      name: traveler ? formatTravelerName(traveler) : 'Viajero',
       amount: config.publicPriceAmount,
     };
     map.set(config.publicPriceId, [...(map.get(config.publicPriceId) ?? []), withPrice]);

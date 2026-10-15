@@ -5,7 +5,8 @@ import { h } from 'vue';
 
 import type { QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
+import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -16,8 +17,7 @@ type Props = {
 const { quotationId, readonly = false } = defineProps<Props>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 const toast = useToast();
 
 const expenses = computed(() => quotationStore.getExpensesByQuotation(quotationId));
@@ -30,20 +30,9 @@ function getCostPerSeat(expense: QuotationExpense): number {
   return divisor > 0 ? expense.totalCost / divisor : 0;
 }
 
-const isFormOpen = shallowRef(false);
-const selectedExpense = shallowRef<QuotationExpense | null>(null);
+const { isOpen: isFormOpen, editing: selectedExpense, openNew, openEdit } = useFormModal<QuotationExpense>();
 const isDeleteModalOpen = shallowRef(false);
 const expenseToDelete = shallowRef<QuotationExpense | null>(null);
-
-function openNew() {
-  selectedExpense.value = null;
-  isFormOpen.value = true;
-}
-
-function openEdit(expense: QuotationExpense) {
-  selectedExpense.value = expense;
-  isFormOpen.value = true;
-}
 
 function openDeleteConfirm(expense: QuotationExpense) {
   expenseToDelete.value = expense;
@@ -105,11 +94,7 @@ const columns = computed<TableColumn<QuotationExpense>[]>(() => {
     {
       accessorKey: 'splitType',
       header: 'División',
-      cell: ({ row }) => h(resolveComponent('UBadge'), {
-        label: row.original.splitType === 'minimum' ? 'Asientos min.' : 'Asientos vend.',
-        color: row.original.splitType === 'minimum' ? 'info' : 'neutral',
-        variant: 'subtle',
-      }),
+      cell: ({ row }) => h(resolveComponent('QuotationSplitTypeBadge'), { splitType: row.original.splitType }),
     },
     {
       accessorKey: 'totalCost',

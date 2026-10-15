@@ -5,6 +5,7 @@ import type { Traveler } from '~/types/traveler';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText } from '~/utils/form-validation';
+import { pluralize } from '~/utils/pluralize';
 
 type Props = {
   quotation: Quotation;
@@ -33,7 +34,7 @@ const sellableSource = computed(() => {
   if (!quotation.coordinatorsTakeSeats || coordinatorCount.value === 0)
     return 'Todos los asientos se venden';
   const n = coordinatorCount.value;
-  return `${quotation.totalSeats} − ${n} coordinador${n === 1 ? '' : 'es'}`;
+  return `${quotation.totalSeats} − ${pluralize(n, 'coordinador')}`;
 });
 
 // The total seats are the sum of the quotation's bus capacities (a DB trigger keeps them),
@@ -42,7 +43,7 @@ const capacitySource = computed(() => {
   const n = quotationStore.getBusesByQuotation(quotation.id).length;
   if (n === 0)
     return 'Agrega autobuses a la cotización para calcularla';
-  return `Suma de ${n} autobús${n === 1 ? '' : 'es'}`;
+  return `Suma de ${pluralize(n, 'autobús', 'autobuses')}`;
 });
 
 const paramsState = reactive({
@@ -213,7 +214,7 @@ async function saveParameters() {
       <USwitch
         v-model="paramsState.coordinatorsTakeSeats"
         label="Los coordinadores ocupan asiento"
-        :description="`Resta ${coordinatorCount} coordinador${coordinatorCount === 1 ? '' : 'es'} de los asientos vendibles y permite asignarles asiento. Si no, viajan sin asiento de pasajero (solo habitación).`"
+        :description="`Resta ${pluralize(coordinatorCount, 'coordinador')} de los asientos vendibles y permite asignarles asiento. Si no, viajan sin asiento de pasajero (solo habitación).`"
       />
       <UFormField label="Notas">
         <UTextarea

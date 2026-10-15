@@ -4,8 +4,9 @@ import type { NavigationMenuItem } from '@nuxt/ui';
 import { z } from 'zod';
 
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
+import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -23,28 +24,17 @@ const { travelId, quotation, readonly } = useQuotationRoute();
 // The quotation is copied into the store on every request; the tabs read from the store. The query
 // refetches it when returning to the browser tab and after every write, so it
 // also brings what is owed to each optional service (it changes with the travelers).
-const quotationQuery = useQuery(() => quotationByTravelQuery(travelId.value));
-const { refetch: refetchQuotation } = quotationQuery;
-const quotationLoad = useQueryLoadState(quotationQuery);
+const { load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(travelId);
 
 const travelQuery = useQuery(() => travelDetailQuery(travelId.value));
 const { data: travel, status, refetch: refetchTravel } = travelQuery;
 const travelLoad = useQueryLoadState(travelQuery);
 
-// Redirect if travel not found.
-// `watch` with an explicit source, not `watchEffect`: toast.add() reads internal reactive state
-// and the effect would retrigger in a loop (endless toast + router.push).
-// Waits for the query to resolve: `undefined` = loading, `null` = doesn't exist or RLS hides it.
-watch([status, travel], ([currentStatus, value]) => {
-  if (currentStatus === 'success' && value === null && travelId.value) {
-    toast.add({
-      title: 'Viaje no encontrado',
-      description: 'El viaje que buscas no existe',
-      color: 'error',
-    });
-    router.push({ name: 'quotations-index' });
-  }
-}, { immediate: true });
+useRedirectIfMissing({ status, data: travel }, {
+  to: { name: 'quotations-index' },
+  toast: { title: 'Viaje no encontrado', description: 'El viaje que buscas no existe' },
+  active: () => !!travelId.value,
+});
 
 // To add a tab: create app/pages/quotations/[id]/<name>.vue and add it here.
 const tabs = computed<NavigationMenuItem[]>(() => {

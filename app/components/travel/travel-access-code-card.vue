@@ -7,6 +7,7 @@ import { buildWhatsAppShareUrl } from '~/composables/travel-access/use-travel-ac
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatDate } from '~/utils/format-date';
+import { formatTravelerName } from '~/utils/traveler-labels';
 
 const props = defineProps<{
   travelId: string;
@@ -170,7 +171,7 @@ onMounted(async () => {
                 class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-elevated transition-colors"
               >
                 <UUser
-                  :name="`${traveler.firstName} ${traveler.lastName}`"
+                  :name="formatTravelerName(traveler)"
                   :description="formatPhone(traveler.phone)"
                   :avatar="{}"
                   size="sm"

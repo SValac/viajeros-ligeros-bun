@@ -1,10 +1,10 @@
 <script setup lang="ts">
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useQueryLoadState } from '~/queries/load-state';
-import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatDate } from '~/utils/format-date';
+import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
-import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
 // Summary of the travel picked in the calendar (app/pages/calendar.vue). It gets only the id and reads
 // travelDetailQuery, so it stays open even when the travel isn't in the visible month.
@@ -23,9 +23,8 @@ const travelLoad = useQueryLoadState(travelQuery);
 const MAX_HIGHLIGHTS = 3;
 
 const coordinatorNames = computed(() =>
-  travel.value?.coordinatorIds
-    .map(id => coordinatorStore.getCoordinatorById(id)?.name)
-    .filter(name => name !== undefined)
+  coordinatorStore.getCoordinatorsByIds(travel.value?.coordinatorIds ?? [])
+    .map(coordinator => coordinator.name)
     .join(', '),
 );
 
@@ -33,12 +32,11 @@ const travelerCount = computed (() => travel.value?.travelerCount ?? 0);
 
 // The sellable seats come from the quotation. The getter follows `props.travelId`, so
 // picking another travel loads its quotation (already cached = no request).
-useQuery(() => quotationByTravelQuery(props.travelId));
+const { quotation } = useTravelQuotation(() => props.travelId);
 
 // Seats for sale according to the quotation; 0 if there's no quotation or buses yet
 const sellableSeats = computed(() => {
-  const quotation = quotationStore.getQuotationByTravel(props.travelId);
-  return quotation ? quotationStore.getSellableSeats(quotation.id, travel.value?.coordinatorIds.length ?? 0) : 0;
+  return quotation.value ? quotationStore.getSellableSeats(quotation.value.id, travel.value?.coordinatorIds.length ?? 0) : 0;
 });
 
 type Detail = { icon: string; label: string; value: string };
@@ -52,7 +50,7 @@ const details = computed<Detail[]>(() => {
   return [
     { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(travel.value.startDate) },
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(travel.value.endDate) },
-    { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
+    { icon: 'i-lucide-clock', label: 'Duración', value: pluralize(days, 'día') },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: travel.value?.departureFrom || '—' },
     { icon: 'i-lucide-user-cog', label: 'Coordinadores', value: coordinatorNames.value || 'Sin asignar' },
   ];
@@ -78,12 +76,7 @@ const highlights = computed(() => travel.value?.highlights.slice(0, MAX_HIGHLIGH
             <h2 class="font-semibold text-highlighted wrap-break-word">
               {{ travel.label }}
             </h2>
-            <UBadge
-              :label="getTravelStatusLabel(travel.status)"
-              :color="getTravelStatusColor(travel.status)"
-              variant="subtle"
-              class="shrink-0"
-            />
+            <TravelStatusBadge :status="travel.status" class="shrink-0" />
           </div>
           <p v-if="travel.destination" class="text-sm text-muted">
             {{ travel.destination }}

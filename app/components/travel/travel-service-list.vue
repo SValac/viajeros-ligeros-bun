@@ -3,6 +3,9 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { TravelService } from '~/types/travel';
 
+import { useFormModal } from '~/composables/use-form-modal';
+import { pluralize } from '~/utils/pluralize';
+
 // Public "qué incluye" list of a travel, shown on the web. Emits the whole list on every
 // change; the parent persists it and reports the result (so there's a single toast).
 type Props = {
@@ -19,8 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const services = ref<TravelService[]>([...props.modelValue]);
-const isServiceModalOpen = shallowRef(false);
-const editingService = shallowRef<TravelService | null>(null);
+const { isOpen: isServiceModalOpen, editing: editingService, openNew: openServiceAddModal, openEdit: openEditModal } = useFormModal<TravelService>();
 const serviceToDelete = shallowRef<TravelService | null>(null);
 const isDeleteModalOpen = shallowRef(false);
 
@@ -39,16 +41,6 @@ watch(() => props.modelValue, (newVal) => {
 
 function emitServices() {
   emit('update:modelValue', services.value);
-}
-
-function openServiceAddModal() {
-  editingService.value = null;
-  isServiceModalOpen.value = true;
-}
-
-function openEditModal(service: TravelService) {
-  editingService.value = service;
-  isServiceModalOpen.value = true;
 }
 
 function closeServiceModal() {
@@ -124,13 +116,13 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm">
           <UBadge
-            :label="`${includedCount} incluido${includedCount === 1 ? '' : 's'}`"
+            :label="pluralize(includedCount, 'incluido')"
             color="success"
             variant="subtle"
           />
           <UBadge
             v-if="notIncludedCount > 0"
-            :label="`${notIncludedCount} no incluido${notIncludedCount === 1 ? '' : 's'}`"
+            :label="pluralize(notIncludedCount, 'no incluido', 'no incluidos')"
             color="neutral"
             variant="subtle"
           />

@@ -3,10 +3,10 @@ import type { AgencySeoFormData, AgencySiteImageField } from '~/types/agency-pro
 
 import {
   shareImageWarning,
-  SITE_IMAGE_RULES,
   siteImageAccept,
   siteImageHint,
 } from '~/composables/agency-profile/use-agency-profile-domain';
+import { useSiteImageActions } from '~/composables/agency-profile/use-site-image-actions';
 
 definePageMeta({
   name: 'profile-seo',
@@ -39,22 +39,11 @@ async function handleSubmit(data: AgencySeoFormData) {
   });
 }
 
-async function handleImageSelect(field: AgencySiteImageField, file: File) {
-  const noun = SITE_IMAGE_RULES[field].noun;
-  const success = await agencyProfileStore.changeSiteImage(field, file);
-  toast.add(success
-    ? { title: `${noun} se actualizó`, color: 'success', icon: 'i-lucide-check-circle' }
-    : { title: `No se pudo subir ${noun.toLowerCase()}`, description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
-}
+const { selectImage, removeImage } = useSiteImageActions();
 
 async function handleImageRemove(field: AgencySiteImageField) {
-  const noun = SITE_IMAGE_RULES[field].noun;
-  const success = await agencyProfileStore.removeSiteImage(field);
-  if (success && field === 'shareImageUrl')
+  if (await removeImage(field) && field === 'shareImageUrl')
     shareImageSize.value = null;
-  toast.add(success
-    ? { title: `${noun} se quitó`, color: 'warning', icon: 'i-lucide-trash-2' }
-    : { title: `No se pudo quitar ${noun.toLowerCase()}`, description: agencyProfileStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
 }
 </script>
 
@@ -71,7 +60,7 @@ async function handleImageRemove(field: AgencySiteImageField) {
         :accept="siteImageAccept('faviconUrl')"
         :hint="siteImageHint('faviconUrl')"
         :uploading="agencyProfileStore.uploadingImage === 'faviconUrl'"
-        @select="handleImageSelect('faviconUrl', $event)"
+        @select="selectImage('faviconUrl', $event)"
         @remove="handleImageRemove('faviconUrl')"
       />
     </UPageCard>
@@ -89,7 +78,7 @@ async function handleImageRemove(field: AgencySiteImageField) {
         shape="wide"
         :uploading="agencyProfileStore.uploadingImage === 'shareImageUrl'"
         :warning="shareWarning"
-        @select="handleImageSelect('shareImageUrl', $event)"
+        @select="selectImage('shareImageUrl', $event)"
         @remove="handleImageRemove('shareImageUrl')"
         @measure="(width, height) => shareImageSize = { width, height }"
       />

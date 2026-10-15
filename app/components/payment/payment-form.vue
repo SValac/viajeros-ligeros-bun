@@ -3,6 +3,7 @@ import type { PaymentFormData, PaymentType } from '~/types/payment';
 
 import { formatCurrency } from '~/utils/currency';
 import { todayISO } from '~/utils/format-date';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 
 const props = defineProps<{
   payment?: { id: string; amount: number; paymentDate: string; paymentType: PaymentType; notes?: string } | null;
@@ -20,11 +21,6 @@ const amount = ref<number | null>(props.payment?.amount ?? null);
 const paymentDate = ref(props.payment?.paymentDate ?? todayISO());
 const paymentType = ref<PaymentType>(props.payment?.paymentType ?? 'cash');
 const notes = ref(props.payment?.notes ?? '');
-
-const paymentTypeOptions = [
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
 
 const amountError = computed(() => {
   if (amount.value === null)
@@ -94,7 +90,7 @@ function handleSubmit() {
       </label>
       <USelect
         v-model="paymentType"
-        :items="paymentTypeOptions"
+        :items="PAYMENT_TYPE_OPTIONS"
         value-key="value"
         label-key="label"
         placeholder="Selecciona tipo"

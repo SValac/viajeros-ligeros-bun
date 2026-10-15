@@ -3,6 +3,8 @@ import { z } from 'zod';
 
 import type { QuotationAccommodationFormData } from '~/types/quotation';
 
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+
 type Props = {
   quotationId: string;
   open: boolean;
@@ -37,11 +39,6 @@ const availableHotels = computed(() => {
 const hotelSelectItems = computed(() =>
   availableHotels.value.map(p => ({ value: p.id, label: p.name })),
 );
-
-const paymentMethodOptions = [
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
 
 // Validation schema
 const formSchema = z.object({
@@ -172,7 +169,7 @@ function handleCancel() {
         <UFormField label="Método de Pago" required>
           <USelect
             v-model="formState.paymentMethod"
-            :items="paymentMethodOptions"
+            :items="PAYMENT_TYPE_OPTIONS"
           />
         </UFormField>
 

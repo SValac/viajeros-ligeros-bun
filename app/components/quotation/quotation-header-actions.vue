@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
+import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
+
 type Props = {
   quotationId: string;
   readonly: boolean;
@@ -9,9 +12,7 @@ const { quotationId, readonly } = defineProps<Props>();
 const quotationStore = useQuotationStore();
 const toast = useToast();
 
-const quotation = computed(() =>
-  quotationStore.quotations.find(c => c.id === quotationId),
-);
+const { quotation } = useQuotationContext(() => quotationId);
 
 const canConfirm = computed(() => quotationStore.canConfirm(quotationId));
 
@@ -26,14 +27,6 @@ function openConfirmModal() {
 
 function closeConfirmModal() {
   isConfirmModalOpen.value = false;
-}
-
-function getStatusColor(status: string): 'warning' | 'success' {
-  return status === 'confirmed' ? 'success' : 'warning';
-}
-
-function getStatusLabel(status: string): string {
-  return status === 'confirmed' ? 'Confirmada' : 'Borrador';
 }
 
 function openReopenModal() {
@@ -77,8 +70,8 @@ async function confirmQuotation() {
       <span class="text-sm text-muted">Estado</span>
       <UBadge
         v-if="quotation"
-        :label="getStatusLabel(quotation.status)"
-        :color="getStatusColor(quotation.status)"
+        :label="getQuotationStatusLabel(quotation.status)"
+        :color="getQuotationStatusColor(quotation.status)"
         variant="subtle"
       />
     </div>
