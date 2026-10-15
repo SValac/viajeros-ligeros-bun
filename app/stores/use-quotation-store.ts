@@ -784,10 +784,12 @@ export const useQuotationStore = defineStore('quotation', () => {
         const qId = existing.id;
         const idsInQuotation = (rows: { id: string; quotationId: string }[]) =>
           rows.filter(r => r.quotationId === qId).map(r => r.id);
-        // Payments go first: once the parents are dropped there's no way to find them.
-        providerPaymentSlice.replaceForParents(idsInQuotation(quotationProviders.value));
+        const providerIdsInQuotation = idsInQuotation(quotationProviders.value);
+        // Payments and price adjustments go first: once the parents are dropped there's no way to find them.
+        providerPaymentSlice.replaceForParents(providerIdsInQuotation);
         accommodationPaymentSlice.replaceForParents(idsInQuotation(quotationAccommodations.value));
         busPaymentSlice.replaceForParents(idsInQuotation(quotationBuses.value));
+        providerPriceAdjustments.value = providerPriceAdjustments.value.filter(pa => !providerIdsInQuotation.includes(pa.quotationProviderId));
         quotations.value = quotations.value.filter(c => c.id !== qId);
         quotationProviders.value = quotationProviders.value.filter(p => p.quotationId !== qId);
         quotationAccommodations.value = quotationAccommodations.value.filter(h => h.quotationId !== qId);

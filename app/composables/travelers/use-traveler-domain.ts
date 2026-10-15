@@ -100,16 +100,13 @@ export function groupTravelersByRepresentative(
 }
 
 /**
- * Filters travelers by travel and/or bus. Omitted filter keys are ignored (not treated as "all").
+ * Filters travelers by bus. Omitted filter keys are ignored (not treated as "all").
  * @param travelers - Source array to filter
  * @param filters - Active filters; missing keys are skipped
  * @returns Filtered travelers array (may be empty)
  */
 export function filterTravelers(travelers: Traveler[], filters: TravelerFilters): Traveler[] {
   return travelers.filter((t) => {
-    if (filters.travelId && t.travelId !== filters.travelId) {
-      return false;
-    }
     if (filters.travelBusId && t.travelBusId !== filters.travelBusId) {
       return false;
     }

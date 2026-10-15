@@ -53,16 +53,6 @@ export type TravelerPaymentSummary = {
   status: PaymentStatus;
 };
 
-export type PaymentFilters = {
-  travelId?: string;
-  travelerId?: string;
-  status?: PaymentStatus;
-  paymentType?: PaymentType;
-  travelerType?: TravelerType;
-  dateFrom?: string;
-  dateTo?: string;
-};
-
 export type PaymentCalculation = {
   appliedPrice: number;
   totalDiscountAmount: number;

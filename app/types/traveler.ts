@@ -43,7 +43,6 @@ export type TravelerFormData = Omit<Traveler, 'id' | 'kind' | 'coordinatorId' | 
 export type TravelerUpdateData = Partial<TravelerFormData>;
 
 export type TravelerFilters = {
-  travelId?: string;
   travelBusId?: string;
   representativeId?: string;
 };

@@ -57,7 +57,7 @@ const details = computed<Detail[]>(() => {
         v-if="travel.imageUrl"
         :src="travel.imageUrl"
         :alt="travel.label"
-        class="aspect-[21/9] w-full rounded-lg object-cover"
+        class="aspect-21/9 w-full rounded-lg object-cover"
       >
 
       <UCard>
@@ -129,7 +129,7 @@ const details = computed<Detail[]>(() => {
             :key="coordinator.id"
             class="flex items-center gap-2 text-sm"
           >
-            <UIcon name="i-lucide-user-star" class="size-4 shrink-0 text-muted" />
+            <UIcon name="i-lucide-user-cog" class="size-4 shrink-0 text-muted" />
             {{ coordinator.name }}
           </li>
         </ul>

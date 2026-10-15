@@ -33,7 +33,7 @@ const items = computed<NavigationMenuItem[]>(() => [{
   to: { name: 'payments-index' },
 }, {
   label: 'Coordinadores',
-  icon: 'i-lucide-user-star',
+  icon: 'i-lucide-user-cog',
   to: { name: 'coordinators-index' },
 }, {
   label: 'Proveedores',
