@@ -827,10 +827,8 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           <div class="space-y-6">
             <TravelerFilterBar
               v-model="filters"
-              :available-travels="[]"
               :available-buses="allBuses"
               :representatives="representatives"
-              :hide-travel-filter="true"
             />
 
             <UCard>
