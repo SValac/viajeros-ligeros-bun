@@ -3,6 +3,8 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { TravelService } from '~/types/travel';
 
+import { pluralize } from '~/utils/pluralize';
+
 // Public "qué incluye" list of a travel, shown on the web. Emits the whole list on every
 // change; the parent persists it and reports the result (so there's a single toast).
 type Props = {
@@ -124,13 +126,13 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
       <div class="flex flex-wrap items-center justify-between gap-3">
         <div class="flex items-center gap-2 text-sm">
           <UBadge
-            :label="`${includedCount} incluido${includedCount === 1 ? '' : 's'}`"
+            :label="pluralize(includedCount, 'incluido')"
             color="success"
             variant="subtle"
           />
           <UBadge
             v-if="notIncludedCount > 0"
-            :label="`${notIncludedCount} no incluido${notIncludedCount === 1 ? '' : 's'}`"
+            :label="pluralize(notIncludedCount, 'no incluido', 'no incluidos')"
             color="neutral"
             variant="subtle"
           />

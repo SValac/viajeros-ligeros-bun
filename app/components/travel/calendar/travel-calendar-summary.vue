@@ -3,6 +3,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatDate } from '~/utils/format-date';
+import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 
 // Summary of the travel picked in the calendar (app/pages/calendar.vue). It gets only the id and reads
@@ -51,7 +52,7 @@ const details = computed<Detail[]>(() => {
   return [
     { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(travel.value.startDate) },
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(travel.value.endDate) },
-    { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
+    { icon: 'i-lucide-clock', label: 'Duración', value: pluralize(days, 'día') },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: travel.value?.departureFrom || '—' },
     { icon: 'i-lucide-user-cog', label: 'Coordinadores', value: coordinatorNames.value || 'Sin asignar' },
   ];

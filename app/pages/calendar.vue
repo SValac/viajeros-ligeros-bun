@@ -10,6 +10,7 @@ import type { MexicanHoliday } from '~/utils/mexican-holidays';
 import { useTravelCalendar } from '~/composables/travels/use-travel-calendar';
 import { travelDetailQuery } from '~/queries/travels';
 import { getMexicanHolidaysByDay, HOLIDAY_KIND_LABELS, HOLIDAY_KIND_TEXT_CLASSES } from '~/utils/mexican-holidays';
+import { pluralize } from '~/utils/pluralize';
 import { CALENDAR_DEFAULT_STATUSES, CALENDAR_LOCALE } from '~/utils/travel-calendar';
 
 definePageMeta({
@@ -277,7 +278,7 @@ watch(selectedTravel, (travel) => {
                     :content="{ align: 'end' }"
                   >
                     <UButton
-                      :label="`${monthHolidays.length} festivo${monthHolidays.length === 1 ? '' : 's'}`"
+                      :label="pluralize(monthHolidays.length, 'festivo')"
                       icon="i-lucide-party-popper"
                       color="neutral"
                       variant="soft"

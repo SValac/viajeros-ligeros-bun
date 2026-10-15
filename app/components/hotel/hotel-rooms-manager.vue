@@ -5,6 +5,7 @@ import type { Provider } from '~/types/provider';
 import HotelRoomTypeCard from '~/components/hotel/hotel-room-type-card.vue';
 import HotelRoomTypeForm from '~/components/hotel/hotel-room-type-form.vue';
 import { useHotelRoomStore } from '~/stores/use-hotel-room-store';
+import { pluralize } from '~/utils/pluralize';
 
 const props = defineProps<{
   provider: Provider;
@@ -187,7 +188,7 @@ async function handleDelete(rt: HotelRoomType) {
             <div class="flex items-center gap-2">
               <UIcon name="i-lucide-users" class="w-4 h-4 text-gray-400" />
               <span class="font-semibold text-gray-900 dark:text-white">
-                {{ group.occupancy }} {{ group.occupancy === 1 ? 'persona' : 'personas' }}
+                {{ pluralize(group.occupancy, 'persona') }}
               </span>
               <UBadge variant="subtle">
                 {{ group.totalRooms }} hab

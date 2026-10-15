@@ -10,6 +10,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { quotationByTravelQuery } from '~/queries/quotations';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
+import { pluralize } from '~/utils/pluralize';
 import { formatTravelerName, getTravelerRole, TRAVELER_ROLE_ICONS } from '~/utils/traveler-labels';
 
 definePageMeta({
@@ -448,7 +449,7 @@ async function updateAccommodation(
                 <p v-if="item.group.totalCost !== undefined" class="text-sm text-muted">
                   Costo del hotel:
                   <span class="font-semibold text-highlighted">{{ formatCurrency(item.group.totalCost) }}</span>
-                  · {{ item.group.nightCount }} noche{{ item.group.nightCount === 1 ? '' : 's' }} · se calcula con las habitaciones de abajo
+                  · {{ pluralize(item.group.nightCount ?? 0, 'noche') }} · se calcula con las habitaciones de abajo
                 </p>
 
                 <TravelRoomTypeGroup

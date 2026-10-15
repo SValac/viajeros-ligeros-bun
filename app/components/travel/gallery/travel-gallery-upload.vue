@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { TravelMediaType } from '~/types/travel-media';
 
+import { pluralize } from '~/utils/pluralize';
+
 const props = defineProps<{
   travelId: string;
 }>();
@@ -84,7 +86,7 @@ onUnmounted(() => {
         :disabled="store.uploading"
         @click="uploadAll"
       >
-        Subir {{ pendingFiles.length }} {{ pendingFiles.length === 1 ? 'archivo' : 'archivos' }}
+        Subir {{ pluralize(pendingFiles.length, 'archivo') }}
       </UButton>
     </div>
 

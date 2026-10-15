@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { quotationByTravelQuery } from '~/queries/quotations';
+import { pluralize } from '~/utils/pluralize';
 
 definePageMeta({
   name: 'travel-detail',
@@ -25,7 +26,7 @@ type Detail = { icon: string; label: string; value: string };
 
 // From the quotation; "—" when there's no quotation yet or the value is 0 (not set)
 function seats(n: number | undefined): string {
-  return n ? `${n} asiento${n === 1 ? '' : 's'}` : '—';
+  return n ? pluralize(n, 'asiento') : '—';
 }
 
 const details = computed<Detail[]>(() => {
@@ -39,7 +40,7 @@ const details = computed<Detail[]>(() => {
   return [
     { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(t.startDate) },
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(t.endDate) },
-    { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
+    { icon: 'i-lucide-clock', label: 'Duración', value: pluralize(days, 'día') },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
     { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(quotation.value?.minimumSeatTarget) },
     { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(quotation.value?.totalSeats) },

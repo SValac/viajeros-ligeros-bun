@@ -6,6 +6,7 @@ import { z } from 'zod';
 import type { TravelActivity } from '~/types/travel';
 
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+import { pluralize } from '~/utils/pluralize';
 
 // Props
 type Props = {
@@ -124,7 +125,7 @@ function onCancel() {
       label="Día del itinerario"
       name="day"
       required
-      :description="`El viaje dura ${props.maxDay} día${props.maxDay !== 1 ? 's' : ''}`"
+      :description="`El viaje dura ${pluralize(props.maxDay, 'día')}`"
     >
       <UInput
         v-model.number="state.day"

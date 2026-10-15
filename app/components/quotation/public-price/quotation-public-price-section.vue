@@ -9,6 +9,7 @@ import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPubli
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
+import { pluralize } from '~/utils/pluralize';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
 type Props = {
@@ -172,7 +173,7 @@ function occupancyLabel(maxOccupancy: number): string {
 }
 
 function nightsLabel(nightCount: number): string {
-  return `${nightCount} noche${nightCount !== 1 ? 's' : ''}`;
+  return pluralize(nightCount, 'noche');
 }
 
 // The "Detalles adicionales" of the selected room types; with several hotels, one per line with its name

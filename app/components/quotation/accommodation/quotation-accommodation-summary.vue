@@ -9,6 +9,7 @@ import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quota
 import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import { pluralize } from '~/utils/pluralize';
 
 type Props = {
   quotationId: string;
@@ -85,7 +86,7 @@ const columns: TableColumn<DetailRow>[] = [
     cell: ({ row }) =>
       h('div', [
         h('p', { class: 'font-medium' }, row.original.bedsLabel || '—'),
-        h('p', { class: 'text-xs text-muted' }, `${row.original.occupancy} ${row.original.occupancy === 1 ? 'persona' : 'personas'}`),
+        h('p', { class: 'text-xs text-muted' }, pluralize(row.original.occupancy, 'persona')),
       ]),
   },
   {
@@ -182,7 +183,7 @@ function getDetailRows(accommodation: QuotationAccommodation): DetailRow[] {
         >
           <UTable :data="getDetailRows(accommodation)" :columns="columns" />
           <div class="px-4 py-2 bg-muted/10 flex justify-between items-center text-sm font-semibold border-t">
-            <span>Total ({{ accommodation.nightCount }} noche{{ accommodation.nightCount !== 1 ? 's' : '' }})</span>
+            <span>Total ({{ pluralize(accommodation.nightCount, 'noche') }})</span>
             <span class="text-primary">{{ formatCurrency(accommodation.totalCost) }}</span>
           </div>
         </template>

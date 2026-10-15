@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { pluralize } from '~/utils/pluralize';
+
 type Props = {
   /** Room type's own description (e.g. "Suite junior con jacuzzi"). */
   details?: string;
@@ -37,7 +39,7 @@ const subtitle = computed(() => {
   if (props.details && props.beds)
     parts.push(props.beds);
   if (props.maxOccupancy)
-    parts.push(`${props.maxOccupancy} persona${props.maxOccupancy === 1 ? '' : 's'}`);
+    parts.push(pluralize(props.maxOccupancy, 'persona'));
   return parts.join(' · ');
 });
 

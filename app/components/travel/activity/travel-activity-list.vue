@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { TravelActivity } from '~/types/travel';
 
+import { pluralize } from '~/utils/pluralize';
+
 // Props
 type Props = {
   modelValue: TravelActivity[];
@@ -157,8 +159,8 @@ function getActivityActions(activity: TravelActivity) {
     <!-- Header with the add button -->
     <div class="flex items-center justify-between">
       <div class="text-sm text-muted">
-        {{ sortedActivities.length }} actividad{{ sortedActivities.length !== 1 ? 'es' : '' }}
-        {{ travelDuration > 0 ? `en ${travelDuration} día${travelDuration !== 1 ? 's' : ''}` : '' }}
+        {{ pluralize(sortedActivities.length, 'actividad') }}
+        {{ travelDuration > 0 ? `en ${pluralize(travelDuration, 'día')}` : '' }}
       </div>
       <UButton
         icon="i-lucide-plus"

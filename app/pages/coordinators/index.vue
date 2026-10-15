@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
+import { pluralize } from '~/utils/pluralize';
+
 definePageMeta({
   name: 'coordinators-index',
 });
@@ -167,7 +169,7 @@ const columns: TableColumn<Coordinator>[] = [
             Coordinadores
           </h1>
           <p class="text-gray-500 dark:text-gray-400 mt-1">
-            {{ coordinatorStore.allCoordinators.length }} coordinador{{ coordinatorStore.allCoordinators.length !== 1 ? 'es' : '' }} registrado{{ coordinatorStore.allCoordinators.length !== 1 ? 's' : '' }}
+            {{ pluralize(coordinatorStore.allCoordinators.length, 'coordinador registrado', 'coordinadores registrados') }}
           </p>
         </div>
       </div>

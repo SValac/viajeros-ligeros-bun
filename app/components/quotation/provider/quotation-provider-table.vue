@@ -12,6 +12,7 @@ import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coor
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+import { pluralize } from '~/utils/pluralize';
 
 type Props = {
   quotationId: string;
@@ -328,7 +329,7 @@ const columns: TableColumn<QuotationProvider>[] = [
               type: 'button',
               class: 'text-xs text-primary hover:underline whitespace-nowrap',
               onClick: () => openAdjustments(provider),
-            }, `${adjustmentCount} precio${adjustmentCount === 1 ? '' : 's'} por tipo`)
+            }, `${pluralize(adjustmentCount, 'precio')} por tipo`)
           : null,
       ]);
     },

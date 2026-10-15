@@ -5,6 +5,8 @@ import { h } from 'vue';
 
 import type { Bus, BusFormData } from '~/types/bus';
 
+import { pluralize } from '~/utils/pluralize';
+
 type Props = {
   providerId: string;
 };
@@ -172,7 +174,7 @@ const columns: TableColumn<Bus>[] = [
             Unidades registradas
           </h3>
           <p class="text-sm text-muted">
-            {{ buses.length }} unidad{{ buses.length !== 1 ? 'es' : '' }} activa{{ buses.length !== 1 ? 's' : '' }}
+            {{ pluralize(buses.length, 'unidad activa', 'unidades activas') }}
           </p>
         </div>
         <UButton
