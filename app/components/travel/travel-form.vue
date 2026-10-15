@@ -3,6 +3,7 @@ import type { FormSubmitEvent, SelectItem } from '#ui/types';
 import type { DateRange } from 'reka-ui';
 
 import { parseDate } from '@internationalized/date';
+import { useObjectUrl } from '@vueuse/core';
 import { z } from 'zod';
 
 import type { Coordinator } from '~/types/coordinator';
@@ -106,11 +107,12 @@ const initialState = computed((): Schema => {
 // Banner image state (managed outside Zod schema)
 const bannerInputRef = useTemplateRef<HTMLInputElement>('bannerInputRef');
 const pendingBannerFile = ref<File | null>(null);
-const bannerPreviewUrl = ref('');
+// Revoked by VueUse when the file changes or the form unmounts
+const bannerPreviewUrl = useObjectUrl(pendingBannerFile);
 const existingBannerUrl = ref(travel?.imageUrl ?? '');
 
 const displayBannerUrl = computed(() =>
-  pendingBannerFile.value ? bannerPreviewUrl.value : existingBannerUrl.value,
+  bannerPreviewUrl.value ?? existingBannerUrl.value,
 );
 
 function onBannerSelected(event: Event) {
@@ -119,26 +121,14 @@ function onBannerSelected(event: Event) {
   if (!file)
     return;
 
-  if (bannerPreviewUrl.value)
-    URL.revokeObjectURL(bannerPreviewUrl.value);
-
   pendingBannerFile.value = file;
-  bannerPreviewUrl.value = URL.createObjectURL(file);
   input.value = '';
 }
 
 function removeBanner() {
-  if (bannerPreviewUrl.value)
-    URL.revokeObjectURL(bannerPreviewUrl.value);
   pendingBannerFile.value = null;
-  bannerPreviewUrl.value = '';
   existingBannerUrl.value = '';
 }
-
-onUnmounted(() => {
-  if (bannerPreviewUrl.value)
-    URL.revokeObjectURL(bannerPreviewUrl.value);
-});
 
 const state = ref<Schema>({ ...initialState.value });
 
