@@ -42,6 +42,9 @@ async function handleFormSubmit(data: BusFormData) {
         toast.add({ title: 'Unidad actualizada', color: 'primary' });
         closeModal();
       }
+      else {
+        toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo guardar la unidad', color: 'error' });
+      }
     }
     else {
       await busStore.addBus(data);
@@ -62,6 +65,9 @@ async function handleDelete(bus: Bus) {
     if (success) {
       toast.add({ title: 'Unidad eliminada', color: 'warning' });
     }
+    else {
+      toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo eliminar la unidad', color: 'error' });
+    }
   }
 }
 
@@ -73,6 +79,9 @@ async function handleToggleStatus(bus: Bus) {
       description: `La unidad ahora está ${!bus.active ? 'activa' : 'inactiva'}`,
       color: 'primary',
     });
+  }
+  else {
+    toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo cambiar el estado de la unidad', color: 'error' });
   }
 }
 
