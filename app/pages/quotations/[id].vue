@@ -63,7 +63,7 @@ const tabs = computed<NavigationMenuItem[]>(() => {
   ];
 });
 
-// Form for creating a new cotizacion
+// Form for creating a new quotation
 const createSchema = z.object({
   minimumSeatTarget: z.number().int().nonnegative().optional(),
   notes: textSchema({ max: 1000 }).optional(),
@@ -105,17 +105,26 @@ async function handleCreateQuotation() {
   if (!result.success)
     return;
 
-  await quotationStore.createQuotation({
-    travelId: travelId.value,
-    seatPrice: 0,
-    totalSeats: 0,
-    minimumSeatTarget: result.data.minimumSeatTarget ?? 0,
-    status: 'draft',
-    notes: result.data.notes,
-  });
+  try {
+    await quotationStore.createQuotation({
+      travelId: travelId.value,
+      seatPrice: 0,
+      totalSeats: 0,
+      minimumSeatTarget: result.data.minimumSeatTarget ?? 0,
+      status: 'draft',
+      notes: result.data.notes,
+    });
 
-  toast.add({ title: 'Cotización creada', color: 'success' });
-  isCreateModalOpen.value = false;
+    toast.add({ title: 'Cotización creada', color: 'success' });
+    isCreateModalOpen.value = false;
+  }
+  catch (e) {
+    toast.add({
+      title: 'Error',
+      description: e instanceof Error ? e.message : 'No se pudo crear la cotización',
+      color: 'error',
+    });
+  }
 }
 </script>
 
