@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TravelActivity } from '~/types/travel';
 
+import { useFormModal } from '~/composables/use-form-modal';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 
@@ -23,8 +24,7 @@ const travelsStore = useTravelsStore();
 
 // Local state
 const activities = ref<TravelActivity[]>([...props.modelValue]);
-const isActivityModalOpen = ref(false);
-const editingActivity = ref<TravelActivity | null>(null);
+const { isOpen: isActivityModalOpen, editing: editingActivity, openNew: openActivityAddModal, openEdit: openEditModal } = useFormModal<TravelActivity>();
 
 // Toast for feedback
 const toast = useToast();
@@ -42,16 +42,6 @@ const sortedActivities = computed(() => {
 });
 
 // Handlers
-function openActivityAddModal() {
-  editingActivity.value = null;
-  isActivityModalOpen.value = true;
-}
-
-function openEditModal(activity: TravelActivity) {
-  editingActivity.value = activity;
-  isActivityModalOpen.value = true;
-}
-
 async function persistActivities(nextActivities: TravelActivity[]): Promise<boolean> {
   if (!props.travelId) {
     activities.value = nextActivities;

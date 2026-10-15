@@ -6,6 +6,7 @@ import { h } from 'vue';
 import type { QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
+import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -29,20 +30,9 @@ function getCostPerSeat(expense: QuotationExpense): number {
   return divisor > 0 ? expense.totalCost / divisor : 0;
 }
 
-const isFormOpen = shallowRef(false);
-const selectedExpense = shallowRef<QuotationExpense | null>(null);
+const { isOpen: isFormOpen, editing: selectedExpense, openNew, openEdit } = useFormModal<QuotationExpense>();
 const isDeleteModalOpen = shallowRef(false);
 const expenseToDelete = shallowRef<QuotationExpense | null>(null);
-
-function openNew() {
-  selectedExpense.value = null;
-  isFormOpen.value = true;
-}
-
-function openEdit(expense: QuotationExpense) {
-  selectedExpense.value = expense;
-  isFormOpen.value = true;
-}
 
 function openDeleteConfirm(expense: QuotationExpense) {
   expenseToDelete.value = expense;

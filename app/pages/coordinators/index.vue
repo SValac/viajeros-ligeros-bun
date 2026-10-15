@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
+import { useFormModal } from '~/composables/use-form-modal';
 import { pluralize } from '~/utils/pluralize';
 
 definePageMeta({
@@ -14,8 +15,7 @@ definePageMeta({
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
 
-const isFormModalOpen = ref(false);
-const editingCoordinator = ref<Coordinator | null>(null);
+const { isOpen: isFormModalOpen, editing: editingCoordinator, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Coordinator>();
 const searchTerm = ref('');
 
 const coordinators = computed(() => {
@@ -31,21 +31,6 @@ const coordinators = computed(() => {
       || (!!termDigits && c.phone.replace(/\D/g, '').includes(termDigits)),
   );
 });
-
-function openCreateModal() {
-  editingCoordinator.value = null;
-  isFormModalOpen.value = true;
-}
-
-function openEditModal(coordinator: Coordinator) {
-  editingCoordinator.value = coordinator;
-  isFormModalOpen.value = true;
-}
-
-function closeModal() {
-  isFormModalOpen.value = false;
-  editingCoordinator.value = null;
-}
 
 function clearSearch() {
   searchTerm.value = '';

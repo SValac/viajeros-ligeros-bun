@@ -4,6 +4,7 @@ import type { Provider } from '~/types/provider';
 
 import HotelRoomTypeCard from '~/components/hotel/hotel-room-type-card.vue';
 import HotelRoomTypeForm from '~/components/hotel/hotel-room-type-form.vue';
+import { useFormModal } from '~/composables/use-form-modal';
 import { useHotelRoomStore } from '~/stores/use-hotel-room-store';
 import { pluralize } from '~/utils/pluralize';
 
@@ -19,8 +20,7 @@ const store = useHotelRoomStore();
 const toast = useToast();
 
 const totalRoomsInput = ref(0);
-const isFormModalOpen = ref(false);
-const editingRoomType = ref<HotelRoomType | null>(null);
+const { isOpen: isFormModalOpen, editing: editingRoomType, openNew: openCreateForm, openEdit: openEditForm, close: closeFormModal } = useFormModal<HotelRoomType>();
 
 const isEditing = computed(() => !!editingRoomType.value);
 const roomData = computed(() => store.getRoomDataByProviderId(props.provider.id));
@@ -69,21 +69,6 @@ async function updateTotalRooms() {
     toast.add({ title: 'Error', description: store.error ?? 'No se pudo actualizar el total', color: 'error' });
     totalRoomsInput.value = store.getTotalRoomsByProvider(props.provider.id);
   }
-}
-
-function openCreateForm() {
-  editingRoomType.value = null;
-  isFormModalOpen.value = true;
-}
-
-function openEditForm(rt: HotelRoomType) {
-  editingRoomType.value = rt;
-  isFormModalOpen.value = true;
-}
-
-function closeFormModal() {
-  isFormModalOpen.value = false;
-  editingRoomType.value = null;
 }
 
 // The modal stays open until the save succeeds, so a failed save keeps what the user typed.

@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Payment, PaymentFormData, PaymentType, TravelerAccountConfig } from '~/types/payment';
 
+import { useFormModal } from '~/composables/use-form-modal';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
@@ -93,18 +94,7 @@ const filteredPayments = computed(() => {
 });
 
 // Modals
-const isEditModalOpen = shallowRef(false);
-const editingPayment = shallowRef<Payment | null>(null);
-
-function openEditModal(payment: Payment) {
-  editingPayment.value = payment;
-  isEditModalOpen.value = true;
-}
-
-function closeEditModal() {
-  isEditModalOpen.value = false;
-  editingPayment.value = null;
-}
+const { isOpen: isEditModalOpen, editing: editingPayment, openEdit: openEditModal, close: closeEditModal } = useFormModal<Payment>();
 
 async function handleEditSubmit(data: PaymentFormData) {
   if (!editingPayment.value)
@@ -165,18 +155,7 @@ const columns: TableColumn<Payment>[] = [
 ];
 
 // Config modal
-const isConfigModalOpen = shallowRef(false);
-const editingConfigTravelId = shallowRef<string | null>(null);
-
-function openConfigModal(travelId: string) {
-  editingConfigTravelId.value = travelId;
-  isConfigModalOpen.value = true;
-}
-
-function closeConfigModal() {
-  isConfigModalOpen.value = false;
-  editingConfigTravelId.value = null;
-}
+const { isOpen: isConfigModalOpen, editing: editingConfigTravelId, openEdit: openConfigModal, close: closeConfigModal } = useFormModal<string>();
 
 function goToPaymentsIndex() {
   router.push({ name: 'payments-index' });

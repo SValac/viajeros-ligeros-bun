@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Bus, BusFormData } from '~/types/bus';
 
+import { useFormModal } from '~/composables/use-form-modal';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -16,25 +17,9 @@ const props = defineProps<Props>();
 const busStore = useBusStore();
 const toast = useToast();
 
-const isFormModalOpen = shallowRef(false);
-const editingBus = shallowRef<Bus | null>(null);
+const { isOpen: isFormModalOpen, editing: editingBus, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Bus>();
 
 const buses = computed(() => busStore.getBusesByProvider(props.providerId));
-
-function openCreateModal() {
-  editingBus.value = null;
-  isFormModalOpen.value = true;
-}
-
-function openEditModal(bus: Bus) {
-  editingBus.value = bus;
-  isFormModalOpen.value = true;
-}
-
-function closeModal() {
-  isFormModalOpen.value = false;
-  editingBus.value = null;
-}
 
 async function handleFormSubmit(data: BusFormData) {
   try {

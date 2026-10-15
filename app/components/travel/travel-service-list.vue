@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { TravelService } from '~/types/travel';
 
+import { useFormModal } from '~/composables/use-form-modal';
 import { pluralize } from '~/utils/pluralize';
 
 // Public "qué incluye" list of a travel, shown on the web. Emits the whole list on every
@@ -21,8 +22,7 @@ const emit = defineEmits<{
 }>();
 
 const services = ref<TravelService[]>([...props.modelValue]);
-const isServiceModalOpen = shallowRef(false);
-const editingService = shallowRef<TravelService | null>(null);
+const { isOpen: isServiceModalOpen, editing: editingService, openNew: openServiceAddModal, openEdit: openEditModal } = useFormModal<TravelService>();
 const serviceToDelete = shallowRef<TravelService | null>(null);
 const isDeleteModalOpen = shallowRef(false);
 
@@ -41,16 +41,6 @@ watch(() => props.modelValue, (newVal) => {
 
 function emitServices() {
   emit('update:modelValue', services.value);
-}
-
-function openServiceAddModal() {
-  editingService.value = null;
-  isServiceModalOpen.value = true;
-}
-
-function openEditModal(service: TravelService) {
-  editingService.value = service;
-  isServiceModalOpen.value = true;
 }
 
 function closeServiceModal() {

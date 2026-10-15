@@ -9,6 +9,7 @@ import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProvider
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
+import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
@@ -44,8 +45,7 @@ watch([filterPaymentStatus, filterConfirmed, filterPaymentMethod], () => {
 });
 
 // Modal state
-const isProviderFormOpen = shallowRef(false);
-const selectedProvider = shallowRef<QuotationProvider | null>(null);
+const { isOpen: isProviderFormOpen, editing: selectedProvider, openNew: openNewProvider, openEdit: openEditProvider } = useFormModal<QuotationProvider>();
 const isHistoryOpen = shallowRef(false);
 const historyProviderId = shallowRef<string>('');
 const historyProviderName = shallowRef<string>('');
@@ -127,16 +127,6 @@ async function handleCourtesySubmit(coordinatorsCourtesy: boolean) {
   toast.add({ title: 'Cortesía actualizada', color: 'success' });
   isCourtesyOpen.value = false;
   courtesyProvider.value = null;
-}
-
-function openNewProvider() {
-  selectedProvider.value = null;
-  isProviderFormOpen.value = true;
-}
-
-function openEditProvider(provider: QuotationProvider) {
-  selectedProvider.value = provider;
-  isProviderFormOpen.value = true;
 }
 
 function openHistory(provider: QuotationProvider) {

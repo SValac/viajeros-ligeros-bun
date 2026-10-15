@@ -7,6 +7,7 @@ import type { SupplierPaymentKind } from '~/composables/quotation/use-supplier-p
 import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 
 import { useSupplierPayments } from '~/composables/quotation/use-supplier-payments';
+import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
 import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
@@ -22,20 +23,9 @@ const { kind, parentId, subtitle } = defineProps<Props>();
 const toast = useToast();
 const { payments, paid, pendingBalance, add, update, remove } = useSupplierPayments(kind, () => parentId);
 
-const isFormModalOpen = shallowRef(false);
-const selectedPayment = shallowRef<SupplierPayment | null>(null);
+const { isOpen: isFormModalOpen, editing: selectedPayment, openNew: openNewPayment, openEdit: openEditPayment } = useFormModal<SupplierPayment>();
 const isDeleteModalOpen = shallowRef(false);
 const paymentToDelete = shallowRef<SupplierPayment | null>(null);
-
-function openNewPayment() {
-  selectedPayment.value = null;
-  isFormModalOpen.value = true;
-}
-
-function openEditPayment(payment: SupplierPayment) {
-  selectedPayment.value = payment;
-  isFormModalOpen.value = true;
-}
 
 function openDeleteConfirm(payment: SupplierPayment) {
   paymentToDelete.value = payment;
