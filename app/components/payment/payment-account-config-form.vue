@@ -3,6 +3,7 @@ import type { AdjustmentItem, DiscountType, TravelerAccountConfig, TravelerType 
 import type { QuotationPublicPrice } from '~/types/quotation';
 
 import { formatCurrency } from '~/utils/currency';
+import { TRAVELER_TYPE_OPTIONS } from '~/utils/traveler-labels';
 
 const props = defineProps<{
   travelerId: string;
@@ -27,11 +28,6 @@ const discounts = ref<AdjustmentItem[]>(
 const surcharges = ref<AdjustmentItem[]>(
   props.config?.surcharges ? props.config.surcharges.map(s => ({ ...s })) : [],
 );
-
-const travelerTypeOptions = [
-  { label: 'Adulto', value: 'adult' },
-  { label: 'Niño', value: 'child' },
-];
 
 // Several prices share a type (e.g. three "Habitación para 2 personas"), so each option
 // also shows its description (one line per hotel) to tell them apart. The menu grows to fit
@@ -114,7 +110,7 @@ function handleSubmit() {
       </label>
       <div class="flex gap-4">
         <label
-          v-for="opt in travelerTypeOptions"
+          v-for="opt in TRAVELER_TYPE_OPTIONS"
           :key="opt.value"
           class="flex items-center gap-2 cursor-pointer"
         >

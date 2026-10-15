@@ -2,6 +2,10 @@
 import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
+import { formatDateRange } from '~/utils/format-date';
+import { pluralize } from '~/utils/pluralize';
+import { getTravelDurationDays } from '~/utils/travel-calendar';
 
 // Parent of the travel tabs (app/pages/travels/[id]/*). Shows the header, the
 // actions and the navigation; each tab is a child route rendered in <NuxtPage />.
@@ -19,30 +23,18 @@ const isEditing = computed(() => route.name === 'travel-edit');
 const isDeleteModalOpen = shallowRef(false);
 const isDeleting = shallowRef(false);
 
-// Redirect to dashboard if travel not found.
-// `watch` with an explicit source, not `watchEffect`: toast.add() reads internal reactive state
-// and the effect would retrigger in a loop (endless toast + router.push).
-// Only once the query resolved and with a strict `null`: `undefined` is "still loading" (direct
-// link) or "the request failed", and neither means the travel doesn't exist.
-watch([status, travel], ([currentStatus, value]) => {
-  if (currentStatus === 'success' && value === null && travelId.value && !isDeleting.value) {
-    toast.add({
-      title: 'Viaje no encontrado',
-      description: 'El viaje que buscas no existe',
-      color: 'error',
-    });
-    router.push({ name: 'travels-dashboard' });
-  }
-}, { immediate: true });
+// After a delete the travel is gone too: that redirect is handleDelete's.
+useRedirectIfMissing({ status, data: travel }, {
+  to: { name: 'travels-dashboard' },
+  toast: { title: 'Viaje no encontrado', description: 'El viaje que buscas no existe' },
+  active: () => !!travelId.value && !isDeleting.value,
+});
 
 const dateRange = computed(() => {
   if (!travel.value)
     return '';
-  const format = (date: string) => parseDisplayDate(date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
-  const start = parseDisplayDate(travel.value.startDate);
-  const end = parseDisplayDate(travel.value.endDate);
-  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
-  return `${format(travel.value.startDate)} – ${format(travel.value.endDate)} · ${days} día${days === 1 ? '' : 's'}`;
+  const { startDate, endDate } = travel.value;
+  return `${formatDateRange(startDate, endDate)} · ${pluralize(getTravelDurationDays(travel.value), 'día')}`;
 });
 
 // To add a tab: create app/pages/travels/[id]/<name>.vue and add it here.
@@ -131,11 +123,7 @@ async function deleteTravel() {
                 <h1 class="text-2xl font-bold wrap-break-word">
                   {{ travel.label }}
                 </h1>
-                <UBadge
-                  :label="getTravelStatusLabel(travel.status)"
-                  :color="getTravelStatusColor(travel.status)"
-                  variant="subtle"
-                />
+                <TravelStatusBadge :status="travel.status" />
               </div>
               <p class="text-muted text-sm">
                 <template v-if="travel.destination">

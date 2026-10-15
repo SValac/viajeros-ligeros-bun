@@ -5,9 +5,10 @@ import { h } from 'vue';
 
 import type { QuotationBus } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
+import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 type Props = {
   quotationId: string;
@@ -23,8 +24,7 @@ const { quotationId, readonly = false } = defineProps<Props>();
 defineEmits<Emits>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 const providerStore = useProviderStore();
 const toast = useToast();
 
@@ -35,10 +35,6 @@ const isDetailsFormOpen = shallowRef(false);
 const isHistoryOpen = shallowRef(false);
 const isDeleteModalOpen = shallowRef(false);
 const selectedBus = shallowRef<QuotationBus | null>(null);
-
-function getAgencyName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
-}
 
 function openHistory(bus: QuotationBus) {
   selectedBus.value = bus;
@@ -123,7 +119,7 @@ const columns: TableColumn<QuotationBus>[] = [
   {
     accessorKey: 'providerId',
     header: 'Agencia',
-    cell: ({ row }) => h('span', { class: 'font-medium' }, getAgencyName(row.original.providerId)),
+    cell: ({ row }) => h('span', { class: 'font-medium' }, providerStore.getProviderName(row.original.providerId)),
   },
   {
     accessorKey: 'unitNumber',
@@ -137,14 +133,7 @@ const columns: TableColumn<QuotationBus>[] = [
   {
     id: 'split',
     header: 'División',
-    cell: ({ row }) => {
-      const isMinimum = (row.original.splitType ?? 'minimum') === 'minimum';
-      return h(resolveComponent('UBadge'), {
-        label: isMinimum ? 'Asientos min.' : 'Asientos vend.',
-        color: isMinimum ? 'info' : 'neutral',
-        variant: 'subtle',
-      });
-    },
+    cell: ({ row }) => h(resolveComponent('QuotationSplitTypeBadge'), { splitType: row.original.splitType }),
   },
   {
     accessorKey: 'totalCost',
@@ -162,7 +151,7 @@ const columns: TableColumn<QuotationBus>[] = [
     accessorKey: 'paymentMethod',
     header: 'Método',
     cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+      label: getPaymentTypeLabel(row.original.paymentMethod),
       color: 'neutral',
       variant: 'subtle',
     }),

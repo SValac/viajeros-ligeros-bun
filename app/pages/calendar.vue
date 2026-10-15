@@ -10,8 +10,8 @@ import type { MexicanHoliday } from '~/utils/mexican-holidays';
 import { useTravelCalendar } from '~/composables/travels/use-travel-calendar';
 import { travelDetailQuery } from '~/queries/travels';
 import { getMexicanHolidaysByDay, HOLIDAY_KIND_LABELS, HOLIDAY_KIND_TEXT_CLASSES } from '~/utils/mexican-holidays';
+import { pluralize } from '~/utils/pluralize';
 import { CALENDAR_DEFAULT_STATUSES, CALENDAR_LOCALE } from '~/utils/travel-calendar';
-import { getTravelStatusColor, getTravelStatusLabel } from '~/utils/travel-status';
 
 definePageMeta({
   name: 'calendar',
@@ -154,12 +154,7 @@ watch(selectedTravel, (travel) => {
           </h1>
           <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Leyenda: estatus de los viajes y días festivos">
             <li v-for="status in visibleStatuses" :key="status">
-              <UBadge
-                :label="getTravelStatusLabel(status)"
-                :color="getTravelStatusColor(status)"
-                variant="subtle"
-                size="sm"
-              />
+              <TravelStatusBadge :status="status" size="sm" />
             </li>
             <template v-if="showHolidays">
               <!-- Separate from the statuses: holidays aren't travels -->
@@ -283,7 +278,7 @@ watch(selectedTravel, (travel) => {
                     :content="{ align: 'end' }"
                   >
                     <UButton
-                      :label="`${monthHolidays.length} festivo${monthHolidays.length === 1 ? '' : 's'}`"
+                      :label="pluralize(monthHolidays.length, 'festivo')"
                       icon="i-lucide-party-popper"
                       color="neutral"
                       variant="soft"

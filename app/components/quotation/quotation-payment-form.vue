@@ -6,6 +6,7 @@ import type { SupplierPaymentFields } from '~/types/quotation';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 import { todayISO } from '~/utils/format-date';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 
 type Props = {
   maxAmount: number;
@@ -18,11 +19,6 @@ const emit = defineEmits<{
   submit: [data: SupplierPaymentFields];
   cancel: [];
 }>();
-
-const paymentTypeOptions = [
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
 
 const schema = computed(() =>
   z.object({
@@ -103,7 +99,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.paymentType"
-        :items="paymentTypeOptions"
+        :items="PAYMENT_TYPE_OPTIONS"
         class="w-full"
       />
     </UFormField>

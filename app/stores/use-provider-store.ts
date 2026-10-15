@@ -40,6 +40,11 @@ export const useProviderStore = defineStore('providers', () => {
     return (id: string) => providers.value.find(p => p.id === id);
   });
 
+  // Name for tables and labels; the fallback covers a provider missing from the catalog
+  const getProviderName = computed(() => {
+    return (id: string) => getProviderById.value(id)?.name ?? 'Proveedor desconocido';
+  });
+
   const getProvidersByCategory = computed(() => {
     return (category: ProviderCategory) =>
       providers.value.filter(p => p.category === category);
@@ -182,6 +187,7 @@ export const useProviderStore = defineStore('providers', () => {
     allProviders,
     activeProviders,
     getProviderById,
+    getProviderName,
     getProvidersByCategory,
     statsByCategory,
     totalProviders,

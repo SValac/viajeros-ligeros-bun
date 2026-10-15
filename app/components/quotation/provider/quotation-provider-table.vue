@@ -6,10 +6,14 @@ import { h } from 'vue';
 import type { PaymentStatus } from '~/types/payment';
 import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
+import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
+import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
+import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+import { pluralize } from '~/utils/pluralize';
 
 type Props = {
   quotationId: string;
@@ -41,8 +45,7 @@ watch([filterPaymentStatus, filterConfirmed, filterPaymentMethod], () => {
 });
 
 // Modal state
-const isProviderFormOpen = shallowRef(false);
-const selectedProvider = shallowRef<QuotationProvider | null>(null);
+const { isOpen: isProviderFormOpen, editing: selectedProvider, openNew: openNewProvider, openEdit: openEditProvider } = useFormModal<QuotationProvider>();
 const isHistoryOpen = shallowRef(false);
 const historyProviderId = shallowRef<string>('');
 const historyProviderName = shallowRef<string>('');
@@ -56,16 +59,10 @@ const isCourtesyOpen = shallowRef(false);
 const courtesyProvider = shallowRef<QuotationProvider | null>(null);
 
 // The quotation's travel, to link to its per-person services tab.
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { travelId, coordinatorCount } = useQuotationContext(() => quotationId);
 
 // Filter options
-const paymentStatusOptions = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Pendiente', value: 'pending' },
-  { label: 'Anticipo', value: 'partial' },
-  { label: 'Liquidado', value: 'paid' },
-];
+const paymentStatusOptions = getPaymentStatusFilterOptions('supplier');
 
 const confirmedOptions = [
   { label: 'Todos', value: 'all' },
@@ -73,15 +70,7 @@ const confirmedOptions = [
   { label: 'No', value: 'no' },
 ];
 
-const paymentMethodOptions = [
-  { label: 'Todos', value: 'all' },
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
-
-function getProviderName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Proveedor desconocido';
-}
+const paymentMethodOptions = [{ label: 'Todos', value: 'all' }, ...PAYMENT_TYPE_OPTIONS];
 
 function isProviderInactive(providerId: string): boolean {
   const provider = providerStore.getProviderById(providerId);
@@ -140,25 +129,15 @@ async function handleCourtesySubmit(coordinatorsCourtesy: boolean) {
   courtesyProvider.value = null;
 }
 
-function openNewProvider() {
-  selectedProvider.value = null;
-  isProviderFormOpen.value = true;
-}
-
-function openEditProvider(provider: QuotationProvider) {
-  selectedProvider.value = provider;
-  isProviderFormOpen.value = true;
-}
-
 function openHistory(provider: QuotationProvider) {
   historyProviderId.value = provider.id;
-  historyProviderName.value = getProviderName(provider.providerId);
+  historyProviderName.value = providerStore.getProviderName(provider.providerId);
   isHistoryOpen.value = true;
 }
 
 function openRecordPayment(provider: QuotationProvider) {
   historyProviderId.value = provider.id;
-  historyProviderName.value = getProviderName(provider.providerId);
+  historyProviderName.value = providerStore.getProviderName(provider.providerId);
   isHistoryOpen.value = true;
 }
 
@@ -288,7 +267,7 @@ const columns: TableColumn<QuotationProvider>[] = [
             title: 'Proveedor inactivo en el catálogo',
           })
         : null,
-      h('span', { class: 'font-medium' }, getProviderName(row.original.providerId)),
+      h('span', { class: 'font-medium' }, providerStore.getProviderName(row.original.providerId)),
     ]),
   },
   {
@@ -314,12 +293,7 @@ const columns: TableColumn<QuotationProvider>[] = [
     cell: ({ row }) => {
       if (isPerPersonProvider(row.original))
         return h(resolveComponent('UBadge'), { label: 'Por persona', color: 'primary', variant: 'subtle' });
-      const isMinimum = (row.original.splitType ?? 'minimum') === 'minimum';
-      return h(resolveComponent('UBadge'), {
-        label: isMinimum ? 'Asientos min.' : 'Asientos vend.',
-        color: isMinimum ? 'info' : 'neutral',
-        variant: 'subtle',
-      });
+      return h(resolveComponent('QuotationSplitTypeBadge'), { splitType: row.original.splitType });
     },
   },
   {
@@ -340,7 +314,7 @@ const columns: TableColumn<QuotationProvider>[] = [
               type: 'button',
               class: 'text-xs text-primary hover:underline whitespace-nowrap',
               onClick: () => openAdjustments(provider),
-            }, `${adjustmentCount} precio${adjustmentCount === 1 ? '' : 's'} por tipo`)
+            }, `${pluralize(adjustmentCount, 'precio')} por tipo`)
           : null,
       ]);
     },
@@ -373,7 +347,7 @@ const columns: TableColumn<QuotationProvider>[] = [
     accessorKey: 'paymentMethod',
     header: 'Método',
     cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.paymentMethod === 'cash' ? 'Efectivo' : 'Transferencia',
+      label: getPaymentTypeLabel(row.original.paymentMethod),
       color: 'neutral',
       variant: 'subtle',
     }),
@@ -482,7 +456,7 @@ const columns: TableColumn<QuotationProvider>[] = [
   <UModal
     v-model:open="isAdjustmentsOpen"
     title="Precios por tipo de persona"
-    :description="adjustmentsProvider ? `${getProviderName(adjustmentsProvider.providerId)} · ${adjustmentsProvider.serviceDescription} · base ${formatCurrency(adjustmentsProvider.unitCost ?? 0)}` : undefined"
+    :description="adjustmentsProvider ? `${providerStore.getProviderName(adjustmentsProvider.providerId)} · ${adjustmentsProvider.serviceDescription} · base ${formatCurrency(adjustmentsProvider.unitCost ?? 0)}` : undefined"
     class="sm:max-w-2xl"
   >
     <template #body>

@@ -7,7 +7,7 @@ import type { TravelStatus, TravelSummary } from '~/types/travel';
 
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
-import { parseDisplayDate } from '~/utils/format-date';
+import { formatDateRange } from '~/utils/format-date';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
 const PAGE_SIZE = 20;
@@ -60,20 +60,6 @@ watch(data, (list) => {
 });
 
 const travels = computed(() => data.value?.items ?? []);
-
-// Helper functions
-function formatDate(dateString: string): string {
-  // Date without time (`YYYY-MM-DD`): with `new Date()` it would show a day earlier in Mexico
-  return parseDisplayDate(dateString).toLocaleDateString('es-MX', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
-}
-
-function formatDateRange(start: string, end: string): string {
-  return `${formatDate(start)} - ${formatDate(end)}`;
-}
 
 function resetStatuses() {
   statuses.value = [...DASHBOARD_DEFAULT_STATUSES];
@@ -156,10 +142,7 @@ const columns: TableColumn<TravelSummary>[] = [
       const ids = row.getValue('coordinatorIds') as string[];
       if (!ids || ids.length === 0)
         return h('span', { class: 'text-sm text-gray-400' }, 'Sin coordinador');
-      const names = ids.map((id) => {
-        const c = coordinatorStore.getCoordinatorById(id);
-        return c ? c.name : '—';
-      });
+      const names = coordinatorStore.getCoordinatorsByIds(ids).map(c => c.name);
       return h('div', { class: 'flex items-center gap-2' }, [
         h(resolveComponent('UIcon'), { name: 'i-lucide-user-cog', class: 'w-4 h-4 text-muted shrink-0' }),
         h('span', { class: 'text-sm' }, names.join(', ')),
@@ -179,10 +162,7 @@ const columns: TableColumn<TravelSummary>[] = [
     header: 'Estado',
     cell: ({ row }) => {
       const status = row.getValue('status') as TravelStatus;
-      return h(resolveComponent('UBadge'), {
-        color: getTravelStatusColor(status),
-        variant: 'subtle',
-      }, () => getTravelStatusLabel(status));
+      return h(resolveComponent('TravelStatusBadge'), { status });
     },
   },
   {

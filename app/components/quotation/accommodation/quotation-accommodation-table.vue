@@ -6,9 +6,8 @@ import { z } from 'zod';
 
 import type { QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
 
-import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quotation-domain';
+import { useQuotationRoomCounts } from '~/composables/quotation/use-quotation-room-counts';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
-import { travelDetailQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -26,9 +25,7 @@ const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
 
 // Rooms the travel holds per hotel room type: they're added on the travel's rooms page.
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
-const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
-const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
+const { getRoomCount } = useQuotationRoomCounts(() => props.quotationId);
 
 // The quotation's accommodations
 const accommodations = computed(() => {
@@ -67,20 +64,15 @@ const roomCountsEdit = computed(() => {
   const accommodation = editingAccommodation.value;
   if (!accommodation)
     return new Map<string, number>();
-  return new Map(roomTypesEdit.value.map(t => [t.id, roomCounts.value.get(roomTypeKey(accommodation.providerId, t.id)) ?? 0]));
+  return new Map(roomTypesEdit.value.map(t => [t.id, getRoomCount(accommodation.providerId, t.id)]));
 });
 
 // Rooms the travel holds in a quoted hotel (only its quoted types count toward the cost)
 function getTravelRooms(accommodation: QuotationAccommodation): number {
   return accommodation.details.reduce(
-    (sum, d) => sum + (roomCounts.value.get(roomTypeKey(accommodation.providerId, d.roomTypeId)) ?? 0),
+    (sum, d) => sum + getRoomCount(accommodation.providerId, d.roomTypeId),
     0,
   );
-}
-
-// Get the hotel name
-function getHotelName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
 }
 
 // Payment history slideover
@@ -145,7 +137,7 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
     {
       accessorKey: 'providerId',
       header: 'Hotel',
-      cell: ({ row }) => h('span', { class: 'font-medium' }, getHotelName(row.original.providerId)),
+      cell: ({ row }) => h('span', { class: 'font-medium' }, providerStore.getProviderName(row.original.providerId)),
     },
     {
       accessorKey: 'nightCount',
@@ -288,7 +280,7 @@ async function deleteAccommodation(id: string) {
           <div>
             <label class="text-sm font-medium block mb-2">Hotel</label>
             <div class="bg-muted/20 rounded px-4 py-2">
-              {{ getHotelName(editingAccommodation.providerId) }}
+              {{ providerStore.getProviderName(editingAccommodation.providerId) }}
             </div>
           </div>
 
@@ -331,7 +323,7 @@ async function deleteAccommodation(id: string) {
     <!-- Payment history slideover -->
     <USlideover
       v-model:open="isHistoryOpen"
-      :title="historyAccommodation ? `Pagos — ${getHotelName(historyAccommodation.providerId)}` : 'Historial de Pagos'"
+      :title="historyAccommodation ? `Pagos — ${providerStore.getProviderName(historyAccommodation.providerId)}` : 'Historial de Pagos'"
       description="Registro de pagos realizados al hotel"
       side="right"
       class="sm:max-w-lg"
@@ -341,7 +333,7 @@ async function deleteAccommodation(id: string) {
           v-if="historyAccommodation"
           kind="accommodation"
           :parent-id="historyAccommodation.id"
-          :subtitle="getHotelName(historyAccommodation.providerId)"
+          :subtitle="providerStore.getProviderName(historyAccommodation.providerId)"
         />
       </template>
     </USlideover>

@@ -5,10 +5,10 @@ import { h } from 'vue';
 
 import type { QuotationAccommodation } from '~/types/quotation';
 
-import { countRoomsByType, roomTypeKey } from '~/composables/quotation/use-quotation-domain';
-import { travelDetailQuery } from '~/queries/travels';
+import { useQuotationRoomCounts } from '~/composables/quotation/use-quotation-room-counts';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
+import { pluralize } from '~/utils/pluralize';
 
 type Props = {
   quotationId: string;
@@ -23,21 +23,15 @@ const hotelRoomStore = useHotelRoomStore();
 const accommodations = computed(() => quotationStore.getAccommodationsByQuotation(props.quotationId));
 const totalCost = computed(() => quotationStore.getAccommodationsTotalCost(props.quotationId));
 // Room counts come from the travel's rooms page, not from the quotation.
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
-const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
-const roomCounts = computed(() => countRoomsByType(travel.value?.accommodations ?? []));
+const roomCountsByType = useQuotationRoomCounts(() => props.quotationId);
 
 function getRoomCount(accommodation: QuotationAccommodation, roomTypeId: string): number {
-  return roomCounts.value.get(roomTypeKey(accommodation.providerId, roomTypeId)) ?? 0;
+  return roomCountsByType.getRoomCount(accommodation.providerId, roomTypeId);
 }
 
 const totalRooms = computed(() =>
   accommodations.value.reduce((sum, h) => sum + h.details.reduce((s, d) => s + getRoomCount(h, d.roomTypeId), 0), 0),
 );
-
-function getHotelName(providerId: string): string {
-  return providerStore.getProviderById(providerId)?.name ?? 'Desconocido';
-}
 
 // Accordion items — one per accommodation
 function getRoomBreakdown(accommodation: QuotationAccommodation): string {
@@ -48,7 +42,7 @@ function getRoomBreakdown(accommodation: QuotationAccommodation): string {
 
 const accordionItems = computed(() =>
   accommodations.value.map(h => ({
-    label: `${getHotelName(h.providerId)} - ${getRoomBreakdown(h)}`,
+    label: `${providerStore.getProviderName(h.providerId)} - ${getRoomBreakdown(h)}`,
     value: h.id,
     slot: `hotel-${h.id}`,
   })),
@@ -85,7 +79,7 @@ const columns: TableColumn<DetailRow>[] = [
     cell: ({ row }) =>
       h('div', [
         h('p', { class: 'font-medium' }, row.original.bedsLabel || '—'),
-        h('p', { class: 'text-xs text-muted' }, `${row.original.occupancy} ${row.original.occupancy === 1 ? 'persona' : 'personas'}`),
+        h('p', { class: 'text-xs text-muted' }, pluralize(row.original.occupancy, 'persona')),
       ]),
   },
   {
@@ -182,7 +176,7 @@ function getDetailRows(accommodation: QuotationAccommodation): DetailRow[] {
         >
           <UTable :data="getDetailRows(accommodation)" :columns="columns" />
           <div class="px-4 py-2 bg-muted/10 flex justify-between items-center text-sm font-semibold border-t">
-            <span>Total ({{ accommodation.nightCount }} noche{{ accommodation.nightCount !== 1 ? 's' : '' }})</span>
+            <span>Total ({{ pluralize(accommodation.nightCount, 'noche') }})</span>
             <span class="text-primary">{{ formatCurrency(accommodation.totalCost) }}</span>
           </div>
         </template>

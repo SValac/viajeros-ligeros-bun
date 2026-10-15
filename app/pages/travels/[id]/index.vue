@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
-import { quotationByTravelQuery } from '~/queries/quotations';
+import { pluralize } from '~/utils/pluralize';
+import { getTravelDurationDays } from '~/utils/travel-calendar';
 
 definePageMeta({
   name: 'travel-detail',
@@ -12,34 +14,28 @@ const quotationStore = useQuotationStore();
 const { travelId, travel } = useTravelRoute();
 
 // The seat figures live in the quotation (they drive its seat price)
-useQuery(() => quotationByTravelQuery(travelId.value));
-const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
+const { quotation } = useTravelQuotation(travelId);
 
 const coordinators = computed(() =>
-  (travel.value?.coordinatorIds ?? [])
-    .map(id => coordinatorStore.getCoordinatorById(id))
-    .filter(coordinator => coordinator !== undefined),
+  coordinatorStore.getCoordinatorsByIds(travel.value?.coordinatorIds ?? []),
 );
 
 type Detail = { icon: string; label: string; value: string };
 
 // From the quotation; "—" when there's no quotation yet or the value is 0 (not set)
 function seats(n: number | undefined): string {
-  return n ? `${n} asiento${n === 1 ? '' : 's'}` : '—';
+  return n ? pluralize(n, 'asiento') : '—';
 }
 
 const details = computed<Detail[]>(() => {
   const t = travel.value;
   if (!t)
     return [];
-  const start = parseDisplayDate(t.startDate);
-  const end = parseDisplayDate(t.endDate);
-  const days = Math.round((end.getTime() - start.getTime()) / 86_400_000) + 1;
 
   return [
     { icon: 'i-lucide-calendar', label: 'Salida', value: formatDate(t.startDate) },
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(t.endDate) },
-    { icon: 'i-lucide-clock', label: 'Duración', value: `${days} día${days === 1 ? '' : 's'}` },
+    { icon: 'i-lucide-clock', label: 'Duración', value: pluralize(getTravelDurationDays(t), 'día') },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
     { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(quotation.value?.minimumSeatTarget) },
     { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(quotation.value?.totalSeats) },

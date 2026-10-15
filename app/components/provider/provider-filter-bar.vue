@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { refDebounced } from '@vueuse/core';
+
 import type { ProviderCategory, ProviderFilters } from '~/types/provider';
 
 import { PROVIDER_CATEGORY_LIST } from '~/utils/provider-categories';
@@ -21,20 +23,18 @@ const emit = defineEmits<{
 const categoryOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ label: meta.label, value: meta.category }));
 
 const searchTerm = ref(props.modelValue.searchTerm ?? '');
-let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const debouncedSearchTerm = refDebounced(searchTerm, 300);
 
 watch(() => props.modelValue.searchTerm, (val) => {
   searchTerm.value = val ?? '';
 });
 
-function onSearchInput(val: string) {
-  searchTerm.value = val;
-  if (debounceTimer)
-    clearTimeout(debounceTimer);
-  debounceTimer = setTimeout(() => {
+// Emits only what the parent doesn't have yet: a change coming from the parent (or "Limpiar")
+// settles here too.
+watch(debouncedSearchTerm, (val) => {
+  if ((val || undefined) !== props.modelValue.searchTerm)
     emit('update:modelValue', { ...props.modelValue, searchTerm: val || undefined });
-  }, 300);
-}
+});
 
 const cityOptions = computed(() =>
   props.availableCities.map(c => ({ label: c, value: c })),
@@ -78,11 +78,10 @@ const hasFilters = computed(() =>
 <template>
   <div class="flex flex-wrap items-center gap-3">
     <UInput
-      :model-value="searchTerm"
+      v-model="searchTerm"
       icon="i-lucide-search"
       placeholder="Buscar por nombre, ubicación o contacto..."
       class="w-full sm:w-80"
-      @update:model-value="onSearchInput"
     />
 
     <USelect

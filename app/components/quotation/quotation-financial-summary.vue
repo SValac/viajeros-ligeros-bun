@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -11,10 +11,7 @@ const { quotationId, travelersCollected } = defineProps<Props>();
 
 const quotationStore = useQuotationStore();
 
-const quotation = computed(() =>
-  quotationStore.quotations.find(c => c.id === quotationId),
-);
-const coordinatorCount = useTravelCoordinatorCount(() => quotation.value?.travelId);
+const { quotation, coordinatorCount } = useQuotationContext(() => quotationId);
 
 const providersCost = computed(() => quotationStore.getProvidersFullBusCost(quotationId, coordinatorCount.value));
 const minimumSplitCost = computed(() => quotationStore.getProvidersMinimumSplitCost(quotationId));

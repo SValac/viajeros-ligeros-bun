@@ -2,11 +2,14 @@
 import { z } from 'zod';
 
 import type { Bus } from '~/types/bus';
-import type { CostSplitType, QuotationBus, QuotationBusStatus } from '~/types/quotation';
+import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+import { COST_SPLIT_OPTIONS } from '~/utils/quotation-labels';
 
 type Props = {
   quotationId: string;
@@ -44,16 +47,6 @@ const statusOptions: { label: string; value: QuotationBusStatus }[] = [
   { label: 'Apartado', value: 'reserved' },
   { label: 'Confirmado', value: 'confirmed' },
   { label: 'Pendiente', value: 'pending' },
-];
-
-const paymentMethodOptions = [
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
-
-const splitTypeOptions: { label: string; value: CostSplitType }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimum' },
-  { label: 'Asientos vendibles', value: 'total' },
 ];
 
 const busSchema = z.object({
@@ -101,7 +94,7 @@ const agencyUnits = computed<Bus[]>(() => {
 });
 
 // Highest occupied seat on the travel's bus: when editing, it can't switch to a smaller unit
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === props.quotationId)?.travelId);
+const { travelId, coordinatorCount } = useQuotationContext(() => props.quotationId);
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 const { data: travelerData, refetch: refetchTravelers } = useQuery(() => travelersByTravelQuery(travelId.value));
 const highestOccupiedSeat = computed(() => {
@@ -116,7 +109,7 @@ const highestOccupiedSeat = computed(() => {
 });
 
 // How many people the cost is split among: minimum target seats or sellable seats
-const personDivisor = computed(() => quotationStore.getCostDivisor(props.quotationId, formState.splitType ?? 'minimum', travel.value?.coordinatorIds.length ?? 0));
+const personDivisor = computed(() => quotationStore.getCostDivisor(props.quotationId, formState.splitType ?? 'minimum', coordinatorCount.value));
 
 // Fill the form when it opens (add: empty; edit: the bus data)
 watch(() => props.open, (open) => {
@@ -399,11 +392,11 @@ function handleCancel() {
             :help="`Entre ${personDivisor} personas`"
             required
           >
-            <USelect v-model="formState.splitType" :items="splitTypeOptions" />
+            <USelect v-model="formState.splitType" :items="COST_SPLIT_OPTIONS" />
           </UFormField>
 
           <UFormField label="Método de Pago" required>
-            <USelect v-model="formState.paymentMethod" :items="paymentMethodOptions" />
+            <USelect v-model="formState.paymentMethod" :items="PAYMENT_TYPE_OPTIONS" />
           </UFormField>
 
           <UFormField label="Observaciones">

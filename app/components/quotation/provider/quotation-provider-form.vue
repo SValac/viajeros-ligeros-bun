@@ -4,10 +4,12 @@ import { z } from 'zod';
 import type { PaymentType } from '~/types/payment';
 import type { CostSplitType, ProviderCostType, ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
+import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderTotalCost, getPriceAdjustmentError } from '~/composables/quotation/use-quotation-domain';
-import { useTravelCoordinatorCount } from '~/composables/travels/use-travel-coordinator-count';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+import { COST_SPLIT_OPTIONS, COST_TYPE_OPTIONS } from '~/utils/quotation-labels';
 
 type Props = {
   quotationId: string;
@@ -23,8 +25,7 @@ const emit = defineEmits<{
 }>();
 
 const quotationStore = useQuotationStore();
-const travelId = computed(() => quotationStore.quotations.find(c => c.id === quotationId)?.travelId);
-const coordinatorCount = useTravelCoordinatorCount(travelId);
+const { coordinatorCount } = useQuotationContext(() => quotationId);
 
 const costSchema = z.number({ message: 'Ingresa un costo válido' }).positive('El costo debe ser mayor a 0');
 
@@ -62,21 +63,6 @@ type FormState = {
   remarks: string;
   confirmed: boolean;
 };
-
-const paymentMethodOptions = [
-  { label: 'Efectivo', value: 'cash' },
-  { label: 'Transferencia', value: 'transfer' },
-];
-
-const splitTypeOptions: { label: string; value: CostSplitType }[] = [
-  { label: 'Asientos mínimos objetivo', value: 'minimum' },
-  { label: 'Asientos vendibles', value: 'total' },
-];
-
-const costTypeOptions: { label: string; value: ProviderCostType }[] = [
-  { label: 'Costo total', value: 'total' },
-  { label: 'Costo por persona', value: 'per_person' },
-];
 
 const state = reactive<FormState>({
   providerId: quotationProvider?.providerId ?? undefined,
@@ -200,7 +186,7 @@ function onSubmit() {
     >
       <URadioGroup
         v-model="state.costType"
-        :items="costTypeOptions"
+        :items="COST_TYPE_OPTIONS"
         orientation="horizontal"
         class="py-1.5"
       />
@@ -254,7 +240,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.splitType"
-        :items="splitTypeOptions"
+        :items="COST_SPLIT_OPTIONS"
         class="w-full"
       />
     </UFormField>
@@ -267,7 +253,7 @@ function onSubmit() {
     >
       <USelect
         v-model="state.paymentMethod"
-        :items="paymentMethodOptions"
+        :items="PAYMENT_TYPE_OPTIONS"
         class="w-full"
       />
     </UFormField>
