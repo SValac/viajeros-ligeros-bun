@@ -118,18 +118,16 @@ Solo escrituras. Las lecturas van por `travelDetailQuery(id)` (viaje con sus rel
 
 Aplica patrón Repository + Domain: `composables/payments/use-payments-domain.ts` + `use-payments-repository.ts`
 
-**Estado**: `payments[]`, `accountConfigs[]`, `filters`, `loading`, `error`
+**Estado**: `payments[]`, `accountConfigs[]`, `loading`, `error`
 
 **Getters**:
-- `allPayments` — DESC por fecha
-- `getPaymentById`, `getPaymentsByTravel`, `getPaymentsByTraveler`, `getPaymentsByTravelerAndTravel`
+- `getPaymentsByTravel`, `getPaymentsByTraveler`, `getPaymentsByTravelerAndTravel`
 - `getAccountConfig(travelerId, travelId)`
 - `getTravelerPaymentSummary` — **cálculo complejo**:
   - Aplica precio de niño o precio público según config
   - Calcula descuentos (fijo / porcentaje)
   - Calcula recargos (fijo / porcentaje)
   - Determina status: `pending` / `partial` / `paid`
-- `filteredPayments` — por viaje, viajero, tipo, rango de fechas
 - `getTravelCashSummary`
 
 **Actions**:
