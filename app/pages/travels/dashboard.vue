@@ -142,10 +142,7 @@ const columns: TableColumn<TravelSummary>[] = [
       const ids = row.getValue('coordinatorIds') as string[];
       if (!ids || ids.length === 0)
         return h('span', { class: 'text-sm text-gray-400' }, 'Sin coordinador');
-      const names = ids.map((id) => {
-        const c = coordinatorStore.getCoordinatorById(id);
-        return c ? c.name : '—';
-      });
+      const names = coordinatorStore.getCoordinatorsByIds(ids).map(c => c.name);
       return h('div', { class: 'flex items-center gap-2' }, [
         h(resolveComponent('UIcon'), { name: 'i-lucide-user-cog', class: 'w-4 h-4 text-muted shrink-0' }),
         h('span', { class: 'text-sm' }, names.join(', ')),

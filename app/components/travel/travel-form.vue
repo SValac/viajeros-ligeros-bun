@@ -206,11 +206,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   }
 }
 
-const selectedCoordinators = computed(() =>
-  state.value.coordinatorIds
-    .map(id => coordinatorStore.getCoordinatorById(id))
-    .filter((c): c is Coordinator => c !== undefined),
-);
+const selectedCoordinators = computed(() => coordinatorStore.getCoordinatorsByIds(state.value.coordinatorIds));
 
 function removeCoordinator(id: string) {
   state.value.coordinatorIds = state.value.coordinatorIds.filter(cid => cid !== id);

@@ -23,9 +23,8 @@ const travelLoad = useQueryLoadState(travelQuery);
 const MAX_HIGHLIGHTS = 3;
 
 const coordinatorNames = computed(() =>
-  travel.value?.coordinatorIds
-    .map(id => coordinatorStore.getCoordinatorById(id)?.name)
-    .filter(name => name !== undefined)
+  coordinatorStore.getCoordinatorsByIds(travel.value?.coordinatorIds ?? [])
+    .map(coordinator => coordinator.name)
     .join(', '),
 );
 

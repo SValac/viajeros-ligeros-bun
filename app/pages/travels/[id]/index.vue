@@ -18,9 +18,7 @@ useQuery(() => quotationByTravelQuery(travelId.value));
 const quotation = computed(() => quotationStore.getQuotationByTravel(travelId.value));
 
 const coordinators = computed(() =>
-  (travel.value?.coordinatorIds ?? [])
-    .map(id => coordinatorStore.getCoordinatorById(id))
-    .filter(coordinator => coordinator !== undefined),
+  coordinatorStore.getCoordinatorsByIds(travel.value?.coordinatorIds ?? []),
 );
 
 type Detail = { icon: string; label: string; value: string };
