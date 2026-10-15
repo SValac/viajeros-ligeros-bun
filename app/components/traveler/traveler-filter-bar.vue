@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import type { Travel, TravelBus } from '~/types/travel';
+import type { TravelBus } from '~/types/travel';
 import type { Traveler, TravelerFilters } from '~/types/traveler';
 
 type Props = {
-  availableTravels: Travel[];
   availableBuses: TravelBus[];
   representatives?: Traveler[];
-  hideTravelFilter?: boolean;
 };
 
 const props = defineProps<Props>();
@@ -15,10 +13,6 @@ const props = defineProps<Props>();
 const filters = defineModel<TravelerFilters>({ default: () => ({}) });
 
 const providerStore = useProviderStore();
-
-const travelOptions = computed(() =>
-  props.availableTravels.map(t => ({ label: t.label, value: t.id })),
-);
 
 const representativeOptions = computed(() =>
   (props.representatives ?? []).map(r => ({
@@ -39,11 +33,6 @@ const busOptions = computed(() => {
   });
 });
 
-function onTravelChange(val: string | undefined) {
-  // When the travel changes, reset the bus and representative to avoid an invalid selection
-  filters.value = { ...filters.value, travelId: val, travelBusId: undefined, representativeId: undefined };
-}
-
 function onBusChange(val: string | undefined) {
   filters.value = { ...filters.value, travelBusId: val };
 }
@@ -53,9 +42,7 @@ function onRepresentativeChange(val: string | undefined) {
 }
 
 function clearAll() {
-  filters.value = props.hideTravelFilter
-    ? { travelId: filters.value.travelId }
-    : {};
+  filters.value = {};
 }
 
 const hasFilters = computed(() =>
@@ -65,17 +52,6 @@ const hasFilters = computed(() =>
 
 <template>
   <div class="flex flex-wrap items-center gap-3">
-    <USelect
-      v-if="!hideTravelFilter"
-      :model-value="filters.travelId"
-      :items="travelOptions"
-      value-key="value"
-      label-key="label"
-      placeholder="Todos los viajes"
-      class="w-56"
-      @update:model-value="onTravelChange"
-    />
-
     <USelect
       :model-value="filters.travelBusId"
       :items="busOptions"

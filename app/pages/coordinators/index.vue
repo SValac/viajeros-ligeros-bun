@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
@@ -49,14 +49,14 @@ function clearSearch() {
   searchTerm.value = '';
 }
 
-function handleFormSubmit(data: CoordinatorFormData) {
+async function handleFormSubmit(data: CoordinatorFormData) {
   try {
     if (editingCoordinator.value) {
-      coordinatorStore.updateCoordinator(editingCoordinator.value.id, data);
+      await coordinatorStore.updateCoordinator(editingCoordinator.value.id, data);
       toast.add({ title: 'Coordinador actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
     }
     else {
-      coordinatorStore.addCoordinator(data);
+      await coordinatorStore.addCoordinator(data);
       toast.add({ title: 'Coordinador creado', description: `${data.name} se creó correctamente`, color: 'primary' });
     }
     closeModal();
@@ -66,15 +66,20 @@ function handleFormSubmit(data: CoordinatorFormData) {
   }
 }
 
-function handleDelete(coordinator: Coordinator) {
+async function handleDelete(coordinator: Coordinator) {
   // eslint-disable-next-line no-alert
   if (confirm(`¿Estás seguro de eliminar a ${coordinator.name}?`)) {
-    coordinatorStore.deleteCoordinator(coordinator.id);
-    toast.add({ title: 'Coordinador eliminado', description: `${coordinator.name} se eliminó correctamente`, color: 'warning' });
+    try {
+      await coordinatorStore.deleteCoordinator(coordinator.id);
+      toast.add({ title: 'Coordinador eliminado', description: `${coordinator.name} se eliminó correctamente`, color: 'warning' });
+    }
+    catch {
+      toast.add({ title: 'Error', description: 'Ocurrió un error al eliminar el coordinador', color: 'error' });
+    }
   }
 }
 
-function getRowActions(coordinator: Coordinator) {
+function getRowActions(coordinator: Coordinator): DropdownMenuItem[][] {
   return [
     [
       {
@@ -87,6 +92,7 @@ function getRowActions(coordinator: Coordinator) {
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
+        color: 'error',
         onSelect: () => handleDelete(coordinator),
       },
     ],
@@ -99,7 +105,7 @@ const columns: TableColumn<Coordinator>[] = [
     header: 'Nombre',
     cell: ({ row }) =>
       h('div', { class: 'flex items-center gap-2' }, [
-        h(resolveComponent('UIcon'), { name: 'i-lucide-user-star', class: 'w-4 h-4 text-muted' }),
+        h(resolveComponent('UIcon'), { name: 'i-lucide-user-cog', class: 'w-4 h-4 text-muted' }),
         h('span', { class: 'font-medium' }, row.getValue('name')),
       ]),
   },
@@ -155,7 +161,7 @@ const columns: TableColumn<Coordinator>[] = [
   <div class="space-y-6">
     <div class="flex flex-wrap justify-between items-center gap-4">
       <div class="flex items-center gap-4">
-        <UIcon name="i-lucide-user-star" class="w-10 h-10 text-violet-500" />
+        <UIcon name="i-lucide-user-cog" class="w-10 h-10 text-violet-500" />
         <div>
           <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
             Coordinadores

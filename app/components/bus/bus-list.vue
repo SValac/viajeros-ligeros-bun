@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableColumn } from '@nuxt/ui';
+import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
@@ -42,6 +42,9 @@ async function handleFormSubmit(data: BusFormData) {
         toast.add({ title: 'Unidad actualizada', color: 'primary' });
         closeModal();
       }
+      else {
+        toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo guardar la unidad', color: 'error' });
+      }
     }
     else {
       await busStore.addBus(data);
@@ -62,6 +65,9 @@ async function handleDelete(bus: Bus) {
     if (success) {
       toast.add({ title: 'Unidad eliminada', color: 'warning' });
     }
+    else {
+      toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo eliminar la unidad', color: 'error' });
+    }
   }
 }
 
@@ -74,9 +80,12 @@ async function handleToggleStatus(bus: Bus) {
       color: 'primary',
     });
   }
+  else {
+    toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo cambiar el estado de la unidad', color: 'error' });
+  }
 }
 
-function getRowActions(bus: Bus) {
+function getRowActions(bus: Bus): DropdownMenuItem[][] {
   return [
     [
       {
@@ -94,6 +103,7 @@ function getRowActions(bus: Bus) {
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
+        color: 'error',
         onSelect: () => handleDelete(bus),
       },
     ],

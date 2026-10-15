@@ -1,6 +1,5 @@
 import type {
   Payment,
-  PaymentFilters,
   PaymentFormData,
   PaymentUpdateData,
   TravelerAccountConfig,
@@ -20,21 +19,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
   const accountConfigs = ref<TravelerAccountConfig[]>([]);
   const loading = shallowRef(false);
   const error = shallowRef<string | null>(null);
-  const filters = ref<PaymentFilters>({});
 
   // Getters (computed)
-  const allPayments = computed((): Payment[] => {
-    return [...payments.value].sort((a, b) =>
-      new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime(),
-    );
-  });
-
-  const getPaymentById = computed(() => {
-    return (id: string): Payment | undefined => {
-      return payments.value.find(p => p.id === id);
-    };
-  });
-
   const getPaymentsByTravel = computed(() => {
     return (travelId: string): Payment[] => {
       return payments.value.filter(p => p.travelId === travelId);
@@ -78,22 +64,6 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
         ...summary,
       };
     };
-  });
-
-  const filteredPayments = computed((): Payment[] => {
-    return payments.value.filter((p) => {
-      if (filters.value.travelId && p.travelId !== filters.value.travelId)
-        return false;
-      if (filters.value.travelerId && p.travelerId !== filters.value.travelerId)
-        return false;
-      if (filters.value.paymentType && p.paymentType !== filters.value.paymentType)
-        return false;
-      if (filters.value.dateFrom && p.paymentDate < filters.value.dateFrom)
-        return false;
-      if (filters.value.dateTo && p.paymentDate > filters.value.dateTo)
-        return false;
-      return true;
-    });
   });
 
   const getTravelCashSummary = computed(() => {
@@ -255,30 +225,18 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     }
   }
 
-  function setFilters(newFilters: PaymentFilters): void {
-    filters.value = { ...newFilters };
-  }
-
-  function clearFilters(): void {
-    filters.value = {};
-  }
-
   return {
     // State
     payments,
     accountConfigs,
     loading,
     error,
-    filters,
     // Getters
-    allPayments,
-    getPaymentById,
     getPaymentsByTravel,
     getPaymentsByTraveler,
     getPaymentsByTravelerAndTravel,
     getAccountConfig,
     getTravelerPaymentSummary,
-    filteredPayments,
     getTravelCashSummary,
     // Actions
     fetchByTravel,
@@ -288,7 +246,5 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     updatePayment,
     deletePayment,
     setAccountConfig,
-    setFilters,
-    clearFilters,
   };
 });

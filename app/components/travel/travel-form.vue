@@ -331,7 +331,7 @@ function onCancel() {
                   <div class="flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
                       <UAvatar
-                        icon="i-lucide-user-star"
+                        icon="i-lucide-user-cog"
                         size="sm"
                         variant="soft"
                       />

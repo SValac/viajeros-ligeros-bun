@@ -36,7 +36,7 @@ export const EMPTY_STATES = {
     description: 'Agrega proveedores para usarlos en las cotizaciones.',
   },
   coordinators: {
-    icon: 'i-lucide-user-star',
+    icon: 'i-lucide-user-cog',
     title: 'Todavía no hay coordinadores',
     description: 'Agrega coordinadores para asignarlos a los viajes.',
   },

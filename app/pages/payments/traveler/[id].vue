@@ -171,7 +171,7 @@ const columns: TableColumn<Payment>[] = [
         {
           items: [
             [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEditModal(row.original) }],
-            [{ label: 'Eliminar', icon: 'i-lucide-trash-2', onSelect: () => handleDelete(row.original) }],
+            [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => handleDelete(row.original) }],
           ],
         },
         () => h(resolveComponent('UButton'), { color: 'neutral', variant: 'ghost', icon: 'i-lucide-more-vertical' }),

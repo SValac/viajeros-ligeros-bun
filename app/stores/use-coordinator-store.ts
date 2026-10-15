@@ -61,9 +61,10 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
    * Updates a coordinator.
    * @param id - UUID of the coordinator to update
    * @param data - Partial update data
-   * @returns The updated coordinator, or `undefined` on failure (error is stored in `error` state)
+   * @returns The updated coordinator
+   * @throws Re-throws repository errors so the caller can react (e.g. show a toast)
    */
-  async function updateCoordinator(id: string, data: CoordinatorUpdateData): Promise<Coordinator | undefined> {
+  async function updateCoordinator(id: string, data: CoordinatorUpdateData): Promise<Coordinator> {
     loading.value = true;
     error.value = null;
     try {
@@ -73,7 +74,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al actualizar coordinador';
-      return undefined;
+      throw e;
     }
     finally {
       loading.value = false;
@@ -83,6 +84,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
   /**
    * Deletes a coordinator.
    * @param id - UUID of the coordinator to delete
+   * @throws Re-throws repository errors so the caller can react (e.g. show a toast)
    */
   async function deleteCoordinator(id: string): Promise<void> {
     loading.value = true;
@@ -93,6 +95,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
     }
     catch (e) {
       error.value = e instanceof Error ? e.message : 'Error al eliminar coordinador';
+      throw e;
     }
     finally {
       loading.value = false;

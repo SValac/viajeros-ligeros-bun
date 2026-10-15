@@ -564,7 +564,7 @@ function getCoordinatorSeatActions(coordinator: Traveler): TravelerActionItem[][
   ]];
 }
 
-function getRowActions(traveler: Traveler) {
+function getRowActions(traveler: Traveler): TravelerActionItem[][] {
   return [
     [
       {
@@ -594,6 +594,7 @@ function getRowActions(traveler: Traveler) {
       {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
+        color: 'error',
         onSelect: () => handleDelete(traveler),
       },
     ],
@@ -826,10 +827,8 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           <div class="space-y-6">
             <TravelerFilterBar
               v-model="filters"
-              :available-travels="[]"
               :available-buses="allBuses"
               :representatives="representatives"
-              :hide-travel-filter="true"
             />
 
             <UCard>

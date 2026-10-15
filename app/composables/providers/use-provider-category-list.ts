@@ -146,6 +146,7 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
         {
           label: 'Eliminar',
           icon: 'i-lucide-trash-2',
+          color: 'error',
           onSelect: () => handleDelete(provider),
         },
       ],
