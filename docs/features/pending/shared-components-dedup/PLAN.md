@@ -123,7 +123,9 @@ Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-
 **Design decided (2026-10-15):** one form only, no `v-model:open` variant. `ConfirmDeleteModal`
 emits `close(confirmed)` and is opened through `useConfirmDelete()` (`useOverlay`, same pattern
 as `useUnsavedChangesGuard`): `if (!(await confirmDelete({ title, description }))) return;`.
-None of the inline delete modals used `loading`, so nothing is lost.
+Exception: `pages/travels/[id].vue` keeps its own modal, because it shows `loading` on the
+button and stays open on failure while the travel's cascade delete runs.
+`quotation-accommodation-table` deleted with no confirmation at all; it now asks too.
 
 ### Fase 4 — Páginas de proveedores por categoría
 
