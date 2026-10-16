@@ -25,6 +25,7 @@ const { quotationId, readonly = false } = defineProps<Props>();
 const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 // Derived data
 const providers = computed(() => quotationStore.filteredProviders(quotationId));
@@ -49,8 +50,6 @@ const { isOpen: isProviderFormOpen, editing: selectedProvider, openNew: openNewP
 const isHistoryOpen = shallowRef(false);
 const historyProviderId = shallowRef<string>('');
 const historyProviderName = shallowRef<string>('');
-const isDeleteModalOpen = shallowRef(false);
-const providerToDelete = shallowRef<QuotationProvider | null>(null);
 const isAdjustmentsOpen = shallowRef(false);
 const adjustmentsProvider = shallowRef<QuotationProvider | null>(null);
 const adjustmentsDraft = ref<ProviderPriceAdjustmentDraft[]>([]);
@@ -141,15 +140,6 @@ function openRecordPayment(provider: QuotationProvider) {
   isHistoryOpen.value = true;
 }
 
-function openDeleteConfirm(provider: QuotationProvider) {
-  providerToDelete.value = provider;
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
-
 async function handleProviderSubmit(data: QuotationProviderFormData, adjustments: ProviderPriceAdjustmentDraft[]) {
   let saved: QuotationProvider | undefined;
   if (selectedProvider.value) {
@@ -188,13 +178,16 @@ async function handleToggleConfirmed(provider: QuotationProvider) {
   await quotationStore.toggleProviderConfirmed(provider.id);
 }
 
-async function confirmDeleteProvider() {
-  if (!providerToDelete.value)
+async function handleDelete(provider: QuotationProvider) {
+  if (!(await confirmDelete({
+    title: 'Eliminar proveedor',
+    description: '¿Estás seguro? Se eliminarán también todos los pagos asociados a este proveedor.',
+  }))) {
     return;
-  await quotationStore.deleteQuotationProvider(providerToDelete.value.id);
+  }
+
+  await quotationStore.deleteQuotationProvider(provider.id);
   toast.add({ title: 'Proveedor eliminado', color: 'warning' });
-  isDeleteModalOpen.value = false;
-  providerToDelete.value = null;
 }
 
 function getProviderActions(provider: QuotationProvider) {
@@ -247,7 +240,7 @@ function getProviderActions(provider: QuotationProvider) {
       label: 'Eliminar',
       icon: 'i-lucide-trash-2',
       color: 'error' as const,
-      onSelect: () => openDeleteConfirm(provider),
+      onSelect: () => handleDelete(provider),
     },
   ];
 
@@ -516,27 +509,4 @@ const columns: TableColumn<QuotationProvider>[] = [
       </div>
     </template>
   </USlideover>
-
-  <!-- Modal: confirm deletion -->
-  <UModal
-    v-model:open="isDeleteModalOpen"
-    title="Eliminar Proveedor"
-    description="¿Estás seguro? Se eliminarán también todos los pagos asociados a este proveedor."
-  >
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          label="Cancelar"
-          @click="closeDeleteModal"
-        />
-        <UButton
-          color="error"
-          label="Eliminar"
-          @click="confirmDeleteProvider"
-        />
-      </div>
-    </template>
-  </UModal>
 </template>

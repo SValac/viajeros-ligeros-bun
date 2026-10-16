@@ -23,6 +23,7 @@ const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 // Rooms the travel holds per hotel room type: they're added on the travel's rooms page.
 const { getRoomCount } = useQuotationRoomCounts(() => props.quotationId);
@@ -124,7 +125,7 @@ function getRowActions(accommodation: QuotationAccommodation) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => deleteAccommodation(accommodation.id),
+        onSelect: () => deleteAccommodation(accommodation),
       },
     ],
   ];
@@ -238,8 +239,15 @@ function closeEdit() {
 }
 
 // Delete accommodation
-async function deleteAccommodation(id: string) {
-  const error = await quotationStore.deleteQuotationAccommodation(id);
+async function deleteAccommodation(accommodation: QuotationAccommodation) {
+  if (!(await confirmDelete({
+    title: 'Eliminar hospedaje',
+    description: `¿Estás seguro de que deseas eliminar “${providerStore.getProviderName(accommodation.providerId)}”?`,
+  }))) {
+    return;
+  }
+
+  const error = await quotationStore.deleteQuotationAccommodation(accommodation.id);
   if (error) {
     toast.add({
       title: 'No se pudo eliminar el hospedaje',

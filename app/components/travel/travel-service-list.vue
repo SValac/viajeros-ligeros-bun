@@ -21,10 +21,10 @@ const emit = defineEmits<{
   'update:modelValue': [services: TravelService[]];
 }>();
 
+const confirmDelete = useConfirmDelete();
+
 const services = ref<TravelService[]>([...props.modelValue]);
 const { isOpen: isServiceModalOpen, editing: editingService, openNew: openServiceAddModal, openEdit: openEditModal } = useFormModal<TravelService>();
-const serviceToDelete = shallowRef<TravelService | null>(null);
-const isDeleteModalOpen = shallowRef(false);
 
 // Included ones first, each group keeping its order
 const sortedServices = computed(() => [
@@ -65,23 +65,16 @@ function toggleIncluded(service: TravelService) {
   emitServices();
 }
 
-function openDeleteModal(service: TravelService) {
-  serviceToDelete.value = service;
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
-
-function confirmDelete() {
-  const service = serviceToDelete.value;
-  if (!service)
+async function handleDelete(service: TravelService) {
+  if (!(await confirmDelete({
+    title: 'Eliminar servicio',
+    description: `¿Eliminar “${service.name}”? Dejará de mostrarse en la web.`,
+  }))) {
     return;
+  }
+
   services.value = services.value.filter(s => s.id !== service.id);
   emitServices();
-  isDeleteModalOpen.value = false;
-  serviceToDelete.value = null;
 }
 
 function getServiceActions(service: TravelService): DropdownMenuItem[][] {
@@ -103,7 +96,7 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error',
-        onSelect: () => openDeleteModal(service),
+        onSelect: () => handleDelete(service),
       },
     ],
   ];
@@ -181,29 +174,6 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
           @submit="handleSubmit"
           @cancel="closeServiceModal"
         />
-      </template>
-    </UModal>
-
-    <!-- Modal: delete -->
-    <UModal
-      v-model:open="isDeleteModalOpen"
-      title="Eliminar servicio"
-      :description="serviceToDelete ? `¿Eliminar “${serviceToDelete.name}”? Dejará de mostrarse en la web.` : ''"
-    >
-      <template #footer>
-        <div class="flex w-full justify-end gap-3">
-          <UButton
-            variant="ghost"
-            color="neutral"
-            label="Cancelar"
-            @click="closeDeleteModal"
-          />
-          <UButton
-            color="error"
-            label="Eliminar"
-            @click="confirmDelete"
-          />
-        </div>
       </template>
     </UModal>
   </UCard>

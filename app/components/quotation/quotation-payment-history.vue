@@ -21,20 +21,10 @@ type Props = {
 const { kind, parentId, subtitle } = defineProps<Props>();
 
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 const { payments, paid, pendingBalance, add, update, remove } = useSupplierPayments(kind, () => parentId);
 
 const { isOpen: isFormModalOpen, editing: selectedPayment, openNew: openNewPayment, openEdit: openEditPayment } = useFormModal<SupplierPayment>();
-const isDeleteModalOpen = shallowRef(false);
-const paymentToDelete = shallowRef<SupplierPayment | null>(null);
-
-function openDeleteConfirm(payment: SupplierPayment) {
-  paymentToDelete.value = payment;
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
 
 async function handleSubmit(data: SupplierPaymentFields) {
   if (selectedPayment.value) {
@@ -56,13 +46,16 @@ async function handleSubmit(data: SupplierPaymentFields) {
   selectedPayment.value = null;
 }
 
-async function confirmDelete() {
-  if (!paymentToDelete.value)
+async function handleDelete(payment: SupplierPayment) {
+  if (!(await confirmDelete({
+    title: 'Eliminar pago',
+    description: '¿Estás seguro de que deseas eliminar este pago? Esta acción no se puede deshacer.',
+  }))) {
     return;
-  await remove(paymentToDelete.value.id);
+  }
+
+  await remove(payment.id);
   toast.add({ title: 'Pago eliminado', color: 'warning' });
-  isDeleteModalOpen.value = false;
-  paymentToDelete.value = null;
 }
 
 const columns: TableColumn<SupplierPayment>[] = [
@@ -114,7 +107,7 @@ const columns: TableColumn<SupplierPayment>[] = [
         'variant': 'ghost',
         'color': 'error',
         'aria-label': 'Eliminar pago',
-        'onClick': () => openDeleteConfirm(row.original),
+        'onClick': () => handleDelete(row.original),
       }),
     ]),
   },
@@ -183,29 +176,6 @@ const columns: TableColumn<SupplierPayment>[] = [
         @submit="handleSubmit"
         @cancel="isFormModalOpen = false"
       />
-    </template>
-  </UModal>
-
-  <!-- Modal: confirm deletion -->
-  <UModal
-    v-model:open="isDeleteModalOpen"
-    title="Eliminar Pago"
-    description="¿Estás seguro de que deseas eliminar este pago? Esta acción no se puede deshacer."
-  >
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          label="Cancelar"
-          @click="closeDeleteModal"
-        />
-        <UButton
-          color="error"
-          label="Eliminar"
-          @click="confirmDelete"
-        />
-      </div>
     </template>
   </UModal>
 </template>

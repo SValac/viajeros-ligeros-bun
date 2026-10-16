@@ -19,6 +19,7 @@ const { quotationId, readonly = false } = defineProps<Props>();
 const quotationStore = useQuotationStore();
 const { coordinatorCount } = useQuotationContext(() => quotationId);
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const expenses = computed(() => quotationStore.getExpensesByQuotation(quotationId));
 const expensesTotal = computed(() => quotationStore.getExpensesTotal(quotationId));
@@ -31,17 +32,6 @@ function getCostPerSeat(expense: QuotationExpense): number {
 }
 
 const { isOpen: isFormOpen, editing: selectedExpense, openNew, openEdit } = useFormModal<QuotationExpense>();
-const isDeleteModalOpen = shallowRef(false);
-const expenseToDelete = shallowRef<QuotationExpense | null>(null);
-
-function openDeleteConfirm(expense: QuotationExpense) {
-  expenseToDelete.value = expense;
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
 
 async function handleSubmit(data: QuotationExpenseFormData) {
   const result = selectedExpense.value
@@ -56,22 +46,25 @@ async function handleSubmit(data: QuotationExpenseFormData) {
   selectedExpense.value = null;
 }
 
-async function confirmDelete() {
-  if (!expenseToDelete.value)
+async function handleDelete(expense: QuotationExpense) {
+  if (!(await confirmDelete({
+    title: 'Eliminar gasto',
+    description: `¿Eliminar ${expense.category} (${formatCurrency(expense.totalCost)})? El precio por asiento se recalcula.`,
+  }))) {
     return;
-  const deleted = await quotationStore.deleteExpense(expenseToDelete.value.id);
+  }
+
+  const deleted = await quotationStore.deleteExpense(expense.id);
   if (deleted)
     toast.add({ title: 'Gasto eliminado', color: 'warning' });
   else
     toast.add({ title: 'No se pudo eliminar el gasto', description: quotationStore.error ?? undefined, color: 'error' });
-  isDeleteModalOpen.value = false;
-  expenseToDelete.value = null;
 }
 
 function getActions(expense: QuotationExpense) {
   return [
     [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEdit(expense) }],
-    [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => openDeleteConfirm(expense) }],
+    [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => handleDelete(expense) }],
   ];
 }
 
@@ -192,29 +185,6 @@ const columns = computed<TableColumn<QuotationExpense>[]>(() => {
         @submit="handleSubmit"
         @cancel="isFormOpen = false"
       />
-    </template>
-  </UModal>
-
-  <!-- Modal: confirm deletion -->
-  <UModal
-    v-model:open="isDeleteModalOpen"
-    title="Eliminar gasto"
-    :description="expenseToDelete ? `¿Eliminar ${expenseToDelete.category} (${formatCurrency(expenseToDelete.totalCost)})? El precio por asiento se recalcula.` : undefined"
-  >
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          label="Cancelar"
-          @click="closeDeleteModal"
-        />
-        <UButton
-          color="error"
-          label="Eliminar"
-          @click="confirmDelete"
-        />
-      </div>
     </template>
   </UModal>
 </template>

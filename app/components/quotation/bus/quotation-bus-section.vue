@@ -27,13 +27,13 @@ const quotationStore = useQuotationStore();
 const { coordinatorCount } = useQuotationContext(() => quotationId);
 const providerStore = useProviderStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const buses = computed(() => quotationStore.getBusesByQuotation(quotationId));
 
 // Modal state
 const isDetailsFormOpen = shallowRef(false);
 const isHistoryOpen = shallowRef(false);
-const isDeleteModalOpen = shallowRef(false);
 const selectedBus = shallowRef<QuotationBus | null>(null);
 
 function openHistory(bus: QuotationBus) {
@@ -46,28 +46,22 @@ function openDetails(bus: QuotationBus) {
   isDetailsFormOpen.value = true;
 }
 
-function openDeleteConfirm(bus: QuotationBus) {
-  selectedBus.value = bus;
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
-
 async function handleToggleConfirmed(bus: QuotationBus) {
   if (readonly)
     return;
   await quotationStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
 }
 
-async function confirmDelete() {
-  if (!selectedBus.value)
+async function handleDelete(bus: QuotationBus) {
+  if (!(await confirmDelete({
+    title: 'Eliminar autobús',
+    description: '¿Estás seguro? Se eliminarán también todos los pagos asociados.',
+  }))) {
     return;
-  await quotationStore.deleteBusQuotation(selectedBus.value.id);
+  }
+
+  await quotationStore.deleteBusQuotation(bus.id);
   toast.add({ title: 'Autobús eliminado', color: 'warning' });
-  isDeleteModalOpen.value = false;
-  selectedBus.value = null;
 }
 
 function getBusActions(bus: QuotationBus) {
@@ -108,7 +102,7 @@ function getBusActions(bus: QuotationBus) {
         label: 'Eliminar',
         icon: 'i-lucide-trash-2',
         color: 'error' as const,
-        onSelect: () => openDeleteConfirm(bus),
+        onSelect: () => handleDelete(bus),
       },
     ],
   ];
@@ -240,27 +234,4 @@ const columns: TableColumn<QuotationBus>[] = [
     :quotation-id="quotationId"
     :bus="selectedBus"
   />
-
-  <!-- Modal: confirm deletion -->
-  <UModal
-    v-model:open="isDeleteModalOpen"
-    title="Eliminar Autobús"
-    description="¿Estás seguro? Se eliminarán también todos los pagos asociados."
-  >
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          label="Cancelar"
-          @click="closeDeleteModal"
-        />
-        <UButton
-          color="error"
-          label="Eliminar"
-          @click="confirmDelete"
-        />
-      </div>
-    </template>
-  </UModal>
 </template>
