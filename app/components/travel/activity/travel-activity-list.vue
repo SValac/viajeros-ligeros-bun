@@ -21,6 +21,7 @@ const emit = defineEmits<{
 }>();
 
 const travelsStore = useTravelsStore();
+const confirmDelete = useConfirmDelete();
 
 // Local state
 const activities = ref<TravelActivity[]>([...props.modelValue]);
@@ -104,8 +105,10 @@ async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
 }
 
 async function deleteActivity(activity: TravelActivity) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Eliminar la actividad "${activity.title}"?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar actividad',
+    description: `¿Estás seguro de eliminar la actividad "${activity.title}"?`,
+  })) {
     const nextActivities = activities.value.filter(a => a.id !== activity.id);
     const saved = await persistActivities(nextActivities);
     if (!saved)

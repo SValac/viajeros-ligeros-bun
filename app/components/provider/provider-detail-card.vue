@@ -12,6 +12,7 @@ const props = defineProps<Props>();
 const router = useRouter();
 const providerStore = useProviderStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const meta = computed(() => PROVIDER_CATEGORY_META[props.provider.category]);
 
@@ -49,8 +50,10 @@ async function handleToggleStatus() {
 }
 
 async function handleDelete() {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar ${props.provider.name}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar proveedor',
+    description: `¿Estás seguro de eliminar ${props.provider.name}?`,
+  })) {
     await providerStore.deleteProvider(props.provider.id);
     toast.add({ title: 'Proveedor eliminado', color: 'warning' });
     router.push(meta.value.route);

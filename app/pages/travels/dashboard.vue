@@ -23,6 +23,7 @@ const travelsStore = useTravelsStore();
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
 const router = useRouter();
+const confirmDelete = useConfirmDelete();
 
 // Computed
 const { data: stats } = useQuery(() => travelStatsQuery());
@@ -75,8 +76,10 @@ function navigateToEdit(travelId: string) {
 }
 
 async function handleDelete(travel: TravelSummary) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar el viaje ${travel.label}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar viaje',
+    description: `¿Estás seguro de eliminar el viaje ${travel.label}?`,
+  })) {
     const success = await travelsStore.deleteTravel(travel.id);
     if (success) {
       toast.add({

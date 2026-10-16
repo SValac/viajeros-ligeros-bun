@@ -15,6 +15,7 @@ definePageMeta({
 
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const { isOpen: isFormModalOpen, editing: editingCoordinator, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Coordinator>();
 const searchTerm = ref('');
@@ -45,8 +46,10 @@ async function handleFormSubmit(data: CoordinatorFormData) {
 }
 
 async function handleDelete(coordinator: Coordinator) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${coordinator.name}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar coordinador',
+    description: `¿Estás seguro de eliminar a ${coordinator.name}?`,
+  })) {
     try {
       await coordinatorStore.deleteCoordinator(coordinator.id);
       toast.add({ title: 'Coordinador eliminado', description: `${coordinator.name} se eliminó correctamente`, color: 'warning' });

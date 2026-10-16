@@ -8,6 +8,7 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
   const providerStore = useProviderStore();
   const toast = useToast();
   const router = useRouter();
+  const confirmDelete = useConfirmDelete();
 
   const isFormModalOpen = ref(false);
   const editingProvider = ref<Provider | null>(null);
@@ -95,8 +96,10 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
   }
 
   async function handleDelete(provider: Provider) {
-    // eslint-disable-next-line no-alert
-    if (confirm(`¿Estás seguro de eliminar ${provider.name}?`)) {
+    if (await confirmDelete({
+      title: 'Eliminar proveedor',
+      description: `¿Estás seguro de eliminar ${provider.name}?`,
+    })) {
       const success = await providerStore.deleteProvider(provider.id);
       if (success) {
         toast.add({ title: 'Proveedor eliminado', description: `${provider.name} se eliminó correctamente`, color: 'warning' });

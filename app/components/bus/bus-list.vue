@@ -16,6 +16,7 @@ const props = defineProps<Props>();
 
 const busStore = useBusStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const { isOpen: isFormModalOpen, editing: editingBus, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Bus>();
 
@@ -46,8 +47,11 @@ async function handleFormSubmit(data: BusFormData) {
 
 async function handleDelete(bus: Bus) {
   const label = [bus.brand, bus.model].filter(Boolean).join(' ') || 'esta unidad';
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Eliminar ${label}?`)) {
+
+  if (await confirmDelete({
+    title: 'Eliminar unidad',
+    description: `¿Estás seguro de eliminar ${label}?`,
+  })) {
     const success = await busStore.deleteBus(bus.id);
     if (success) {
       toast.add({ title: 'Unidad eliminada', color: 'warning' });

@@ -24,6 +24,7 @@ const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
 const quotationStore = useQuotationStore();
+const confirmDelete = useConfirmDelete();
 
 const travelerId = computed(() => route.params.id as string);
 const travelerQuery = useQuery(() => travelerDetailQuery(travelerId.value));
@@ -105,8 +106,10 @@ async function handleEditSubmit(data: PaymentFormData) {
 }
 
 async function handleDelete(payment: Payment) {
-  // eslint-disable-next-line no-alert
-  if (confirm('¿Eliminar este pago? Esta acción no se puede deshacer.')) {
+  if (await confirmDelete({
+    title: 'Eliminar pago',
+    description: '¿Estás seguro de eliminar este pago? Esta acción no se puede deshacer.',
+  })) {
     await paymentStore.deletePayment(payment.id);
     toast.add({ title: 'Pago eliminado', color: 'warning' });
   }

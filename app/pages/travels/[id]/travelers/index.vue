@@ -25,6 +25,7 @@ const router = useRouter();
 const travelerStore = useTravelerStore();
 const providerStore = useProviderStore();
 const quotationStore = useQuotationStore();
+const confirmDelete = useConfirmDelete();
 const toast = useToast();
 
 type TravelerActionItem = {
@@ -464,8 +465,10 @@ async function handleFormSubmit(data: TravelerFormData) {
 }
 
 async function handleDelete(traveler: Traveler) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar viajero',
+    description: `¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`,
+  })) {
     await travelerStore.deleteTraveler(traveler.id);
     if (seatChangeContext.value?.travelerId === traveler.id) {
       clearSeatChangeState();
