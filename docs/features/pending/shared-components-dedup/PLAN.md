@@ -120,6 +120,11 @@ Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-
   (`await confirmDelete({ title, description })`), que reemplaza al `confirm()` sin cambiar el
   flujo de cada handler.
 
+**Design decided (2026-10-15):** one form only, no `v-model:open` variant. `ConfirmDeleteModal`
+emits `close(confirmed)` and is opened through `useConfirmDelete()` (`useOverlay`, same pattern
+as `useUnsavedChangesGuard`): `if (!(await confirmDelete({ title, description }))) return;`.
+None of the inline delete modals used `loading`, so nothing is lost.
+
 ### Fase 4 — Páginas de proveedores por categoría
 
 Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,other,tickets,transportation}/{new,[id]}.vue` (14).
