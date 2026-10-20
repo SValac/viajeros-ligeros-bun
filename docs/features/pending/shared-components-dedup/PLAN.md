@@ -144,6 +144,11 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
 - Las páginas quedan como `definePageMeta({ name })` + un componente. Los `index.vue` ya usan
   `ProviderCategoryList`; no cambian.
 
+**Done (2026-10-19):** the meta got `newTitle` and `createdTitle`. Instead of an
+`afterCreate` hook, `ProviderCreatePage` takes a `submit` prop that replaces the whole create
+flow (accommodation also saves its rooms) plus the `extra-fields` slot. `ProviderDetailPage`
+picks the layout with `$slots.aside` and passes the loaded provider to that scoped slot.
+
 ### Fase 5 — `StatCard`
 
 - Mover `quotation/quotation-kpi-card.vue` → `stat-card.vue` en la raíz (`StatCard`, global porque
