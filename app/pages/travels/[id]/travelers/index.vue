@@ -720,47 +720,21 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     >
       <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Total Viajeros
-              </p>
-              <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalTravelers }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-users" class="w-10 h-10 text-muted" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Representantes
-              </p>
-              <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalRepresentatives }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-user-check" class="w-10 h-10 text-muted" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Acompañantes
-              </p>
-              <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalCompanions }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-user" class="w-10 h-10 text-muted" />
-          </div>
-        </UCard>
+        <StatCard
+          label="Total de Viajeros"
+          icon="i-lucide-users"
+          :value="String(totalTravelers)"
+        />
+        <StatCard
+          label="Representantes"
+          icon="i-lucide-user-check"
+          :value="String(totalRepresentatives)"
+        />
+        <StatCard
+          label="Acompañantes"
+          icon="i-lucide-user"
+          :value="String(totalCompanions)"
+        />
       </div>
 
       <div v-if="seatChangeContext" class="flex flex-col gap-3 md:flex-row md:items-center">

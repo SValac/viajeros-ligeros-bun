@@ -377,44 +377,29 @@ async function updateAccommodation(
         >
           <!-- Stats -->
           <div class="grid grid-cols-3 gap-4">
-            <UCard>
-              <div class="text-center">
-                <p class="text-2xl font-bold">
-                  {{ totalRooms }}
-                </p>
-                <p class="text-sm text-muted">
-                  Total habitaciones
-                </p>
-              </div>
-            </UCard>
-            <UCard>
-              <div class="text-center">
-                <p class="text-2xl font-bold text-success">
-                  {{ occupiedRooms }}
-                </p>
-                <p class="text-sm text-muted">
-                  Con viajeros
-                </p>
-              </div>
-            </UCard>
-            <UCard>
-              <div class="text-center">
-                <p class="text-2xl font-bold" :class="unassignedTravelers > 0 ? 'text-warning' : 'text-muted'">
-                  {{ unassignedTravelers }}
-                </p>
-                <p class="text-sm text-muted">
-                  Personas sin habitación
-                </p>
-                <p
-                  v-if="pendingByHotel.length > 1"
-                  class="text-xs text-dimmed mt-1"
-                >
-                  <template v-for="(hotel, index) in pendingByHotel" :key="hotel.providerName">
-                    <span v-if="index > 0"> · </span>{{ hotel.providerName }}: {{ hotel.count }}
-                  </template>
-                </p>
-              </div>
-            </UCard>
+            <StatCard
+              label="Total de Habitaciones"
+              icon="i-lucide-bed-double"
+              :value="String(totalRooms)"
+            />
+            <StatCard
+              label="Con Viajeros"
+              icon="i-lucide-users"
+              :value="String(occupiedRooms)"
+              value-class="text-success"
+            />
+            <StatCard
+              label="Viajeros sin Habitación"
+              icon="i-lucide-user"
+              :value="String(unassignedTravelers)"
+              :value-class="unassignedTravelers > 0 ? 'text-warning' : 'text-muted'"
+            >
+              <p v-if="pendingByHotel.length > 1" class="text-dimmed">
+                <template v-for="(hotel, index) in pendingByHotel" :key="hotel.providerName">
+                  <span v-if="index > 0"> · </span>{{ hotel.providerName }}: {{ hotel.count }}
+                </template>
+              </p>
+            </StatCard>
           </div>
 
           <!-- Tabs per hotel -->

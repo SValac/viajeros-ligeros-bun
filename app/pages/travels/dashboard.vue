@@ -214,59 +214,21 @@ const columns: TableColumn<TravelSummary>[] = [
 
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <!-- Total -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Total Viajes
-            </p>
-            <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats?.total ?? '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-globe"
-            class="w-10 h-10 text-muted"
-          />
-        </div>
-      </UCard>
-
-      <!-- Published -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Publicados
-            </p>
-            <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats?.published ?? '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-check-circle"
-            class="w-10 h-10 text-muted"
-          />
-        </div>
-      </UCard>
-
-      <!-- In Progress -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              En Curso
-            </p>
-            <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats?.inProgress ?? '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-plane"
-            class="w-10 h-10 text-muted"
-          />
-        </div>
-      </UCard>
+      <StatCard
+        label="Total de Viajes"
+        icon="i-lucide-globe"
+        :value="String(stats?.total ?? '—')"
+      />
+      <StatCard
+        label="Publicados"
+        icon="i-lucide-check-circle"
+        :value="String(stats?.published ?? '—')"
+      />
+      <StatCard
+        label="En Curso"
+        icon="i-lucide-bus"
+        :value="String(stats?.inProgress ?? '—')"
+      />
     </div>
 
     <!-- Travels table -->
