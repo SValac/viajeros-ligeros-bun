@@ -160,6 +160,10 @@ picks the layout with `$slots.aside` and passes the loaded provider to that scop
 - El diseño cambia un poco (ícono junto a la etiqueta en vez de grande a la derecha). Decidir
   en la revisión visual si `StatCard` tiene una variante con ícono a la derecha o si todas
   quedan como la de cotización.
+- Bug found in step 5.3: `pages/quotations/index.vue` shows `0` in every stat card while the
+  travels query loads, because `stats` is built from `data?.items ?? []` and is never
+  `undefined`. `/payments` shows `—` instead. Planned fix (later, not in this phase): a loading
+  state on `StatCard` that renders a `USkeleton` in place of the value, used by every page.
 
 ### Fase 6 — Piezas chicas de formularios y tablas
 
