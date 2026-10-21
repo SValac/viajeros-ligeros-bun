@@ -29,6 +29,7 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 | `rich-text-editor.client.vue` | Editor rich text (Tiptap) — solo cliente |
 | `rich-content.vue` | Render de contenido rich text con sanitización DOMPurify |
 | `unsaved-changes-modal.vue` | Confirmación al salir con cambios sin guardar |
+| `confirm-delete-modal.vue` | Confirmación de borrado (se abre con `useConfirmDelete`) |
 | `stat-card.vue` | Tarjeta de cifra: etiqueta, ícono, valor y slot de detalle |
 | `the-sidebar.vue` | Navegación principal lateral |
 | `user-menu.vue` | Menú de cuenta de usuario |
