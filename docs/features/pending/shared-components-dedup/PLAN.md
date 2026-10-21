@@ -149,7 +149,7 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
 flow (accommodation also saves its rooms) plus the `extra-fields` slot. `ProviderDetailPage`
 picks the layout with `$slots.aside` and passes the loaded provider to that scoped slot.
 
-### Fase 5 — `StatCard`
+### Fase 5 — `StatCard` ✅
 
 - Mover `quotation/quotation-kpi-card.vue` → `stat-card.vue` en la raíz (`StatCard`, global porque
   se usa en toda la app; `git mv`, ya hace lo mismo: label, icon, value,
@@ -164,6 +164,17 @@ picks the layout with `$slots.aside` and passes the loaded provider to that scop
   travels query loads, because `stats` is built from `data?.items ?? []` and is never
   `undefined`. `/payments` shows `—` instead. Planned fix (later, not in this phase): a loading
   state on `StatCard` that renders a `USkeleton` in place of the value, used by every page.
+
+**Done (2026-10-21).** Final design and notes:
+- Every page uses the quotation look (small icon next to the label); no icon-on-the-right
+  variant. `StatCard` kept its props unchanged.
+- `quotation-accommodation-summary.vue`: the gradient panel with three loose figures became
+  three plain `StatCard`s, like the financial summary on the same page. "Costo total" is
+  neutral now (a cost is not a state).
+- `/payments` and the travels dashboard keep `—` while loading (`String(n ?? '—')`, or a
+  ternary for currency).
+- Left out on purpose: `pages/providers/index.vue` category tiles. They are navigation links
+  colored by category, not stat cards.
 
 ### Fase 6 — Piezas chicas de formularios y tablas
 
