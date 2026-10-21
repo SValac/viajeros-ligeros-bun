@@ -29,6 +29,7 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 | `rich-text-editor.client.vue` | Editor rich text (Tiptap) — solo cliente |
 | `rich-content.vue` | Render de contenido rich text con sanitización DOMPurify |
 | `unsaved-changes-modal.vue` | Confirmación al salir con cambios sin guardar |
+| `stat-card.vue` | Tarjeta de cifra: etiqueta, ícono, valor y slot de detalle |
 | `the-sidebar.vue` | Navegación principal lateral |
 | `user-menu.vue` | Menú de cuenta de usuario |
 | `logo.vue` | Logo de la marca |
@@ -62,7 +63,7 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 | `quotation-header-actions.vue` | Estado y confirmación de la cotización |
 | `quotation-parameters-card.vue` | Parámetros (asientos, meta mínima) |
 | `quotation-financial-summary.vue` | Resumen financiero |
-| `quotation-summary-section.vue` / `quotation-kpi-card.vue` | Piezas del resumen |
+| `quotation-summary-section.vue` | Sección del resumen |
 | `quotation-expense-form.vue` / `-section.vue` | Gastos extra |
 | `quotation-payment-form.vue` / `quotation-payment-history.vue` | Pagos a proveedores, hospedajes y buses (prop `kind`); datos y acciones vía `useSupplierPayments` |
 | `accommodation/quotation-accommodation-*.vue` | Hospedaje: sección, tabla, formulario, tipos de habitación y resumen |
