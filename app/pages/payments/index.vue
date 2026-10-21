@@ -140,6 +140,8 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     },
   },
 ];
+
+const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success');
 </script>
 
 <template>
@@ -159,68 +161,30 @@ const columns: TableColumn<TravelSummaryRow>[] = [
       Viajes publicados y en curso
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Viajes con pagos
-            </p>
-            <p class="text-2xl font-bold mt-1">
-              {{ globalStats?.travelsWithPayments ?? '—' }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-map" class="w-10 h-10 text-muted" />
-        </div>
-      </UCard>
+      <StatCard
+        label="Viajes con pagos"
+        icon="i-lucide-map"
+        :value="String(globalStats?.travelsWithPayments ?? '—')"
+      />
 
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Total recaudado
-            </p>
-            <p class="text-2xl font-bold mt-1">
-              {{ globalStats ? formatCurrency(globalStats.totalCollected) : '—' }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-trending-up" class="w-10 h-10 text-muted" />
-        </div>
-      </UCard>
+      <StatCard
+        label="Total recaudado"
+        icon="i-lucide-trending-up"
+        :value="globalStats ? formatCurrency(globalStats.totalCollected) : '—'"
+      />
 
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Saldo pendiente
-            </p>
-            <p
-              class="text-2xl font-bold mt-1"
-              :class="(globalStats?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success'"
-            >
-              {{ globalStats ? formatCurrency(globalStats.totalBalance) : '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-clock"
-            class="w-10 h-10 opacity-60"
-            :class="(globalStats?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success'"
-          />
-        </div>
-      </UCard>
+      <StatCard
+        label="Saldo pendiente"
+        icon="i-lucide-clock"
+        :value="globalStats ? formatCurrency(globalStats.totalBalance) : '—'"
+        :value-class="globalStats ? balanceClass : 'text-highlighted'"
+      />
 
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Viajes liquidados
-            </p>
-            <p class="text-2xl font-bold mt-1">
-              {{ globalStats?.settledTravels ?? '—' }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-check-circle" class="w-10 h-10 text-muted" />
-        </div>
-      </UCard>
+      <StatCard
+        label="Viajes liquidados"
+        icon="i-lucide-check-circle"
+        :value="String(globalStats?.settledTravels ?? '—')"
+      />
     </div>
 
     <!-- Travels table -->
