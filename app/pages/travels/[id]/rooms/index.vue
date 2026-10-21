@@ -378,18 +378,18 @@ async function updateAccommodation(
           <!-- Stats -->
           <div class="grid grid-cols-3 gap-4">
             <StatCard
-              label="Total de Habitaciones"
+              label="Total de habitaciones"
               icon="i-lucide-bed-double"
               :value="String(totalRooms)"
             />
             <StatCard
-              label="Con Viajeros"
+              label="Con viajeros"
               icon="i-lucide-users"
               :value="String(occupiedRooms)"
               value-class="text-success"
             />
             <StatCard
-              label="Viajeros sin Habitación"
+              label="Viajeros sin habitación"
               icon="i-lucide-user"
               :value="String(unassignedTravelers)"
               :value-class="unassignedTravelers > 0 ? 'text-warning' : 'text-muted'"

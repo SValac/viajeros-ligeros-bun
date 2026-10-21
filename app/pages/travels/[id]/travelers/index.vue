@@ -721,7 +721,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
         <StatCard
-          label="Total de Viajeros"
+          label="Total de viajeros"
           icon="i-lucide-users"
           :value="String(totalTravelers)"
         />

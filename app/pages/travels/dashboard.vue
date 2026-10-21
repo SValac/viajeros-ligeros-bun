@@ -215,7 +215,7 @@ const columns: TableColumn<TravelSummary>[] = [
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       <StatCard
-        label="Total de Viajes"
+        label="Total de viajes"
         icon="i-lucide-globe"
         :value="String(stats?.total ?? '—')"
       />
@@ -225,7 +225,7 @@ const columns: TableColumn<TravelSummary>[] = [
         :value="String(stats?.published ?? '—')"
       />
       <StatCard
-        label="En Curso"
+        label="En curso"
         icon="i-lucide-bus"
         :value="String(stats?.inProgress ?? '—')"
       />
