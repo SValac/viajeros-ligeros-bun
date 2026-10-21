@@ -126,33 +126,22 @@ function getDetailRows(accommodation: QuotationAccommodation): DetailRow[] {
   <!-- With no accommodations it shows nothing: the table above already has the empty state -->
   <div v-if="accommodations.length > 0" class="space-y-4">
     <!-- Overall Summary -->
-    <div class="bg-linear-to-br from-primary/10 to-primary/5 rounded-lg p-4 border border-primary/20">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div>
-          <p class="text-xs text-muted mb-1">
-            Hoteles
-          </p>
-          <p class="text-2xl font-bold">
-            {{ accommodations.length }}
-          </p>
-        </div>
-        <div>
-          <p class="text-xs text-muted mb-1">
-            Habitaciones en el viaje
-          </p>
-          <p class="text-2xl font-bold">
-            {{ totalRooms }}
-          </p>
-        </div>
-        <div>
-          <p class="text-xs text-muted mb-1">
-            Costo Total
-          </p>
-          <p class="text-2xl font-bold text-primary">
-            {{ formatCurrency(totalCost) }}
-          </p>
-        </div>
-      </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <StatCard
+        label="Hoteles"
+        icon="i-lucide-hotel"
+        :value="String(accommodations.length)"
+      />
+      <StatCard
+        label="Total de habitaciones"
+        icon="i-lucide-bed-double"
+        :value="String(totalRooms)"
+      />
+      <StatCard
+        label="Costo total"
+        icon="i-lucide-door-open"
+        :value="formatCurrency(totalCost)"
+      />
     </div>
 
     <!-- Breakdown by Hotel (Accordion) -->
