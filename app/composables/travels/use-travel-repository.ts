@@ -4,6 +4,7 @@ import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelStats, TravelStatus, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
 
 import { deleteById } from '~/utils/delete-by-id';
+import { mapTravelAccommodationToInsert, mapTravelBusToInsert, mapTravelServiceToInsert } from '~/utils/mappers/travel-mappers';
 
 import { validateAndMapItinerary } from './use-travel-domain';
 
@@ -250,14 +251,7 @@ export function useTravelRepository() {
   async function insertServices(travelId: string, services: TravelService[]): Promise<TravelService[]> {
     const { data, error } = await supabase
       .from('travel_services')
-      .insert(
-        services.map(s => ({
-          travel_id: travelId,
-          name: s.name,
-          description: s.description ?? null,
-          included: s.included,
-        })),
-      )
+      .insert(services.map(s => mapTravelServiceToInsert(travelId, s)))
       .select();
 
     if (error)
@@ -276,21 +270,7 @@ export function useTravelRepository() {
   async function insertBuses(travelId: string, buses: TravelBus[]): Promise<TravelBus[]> {
     const { data, error } = await supabase
       .from('travel_buses')
-      .insert(
-        buses.map(b => ({
-          travel_id: travelId,
-          bus_id: b.busId ?? null,
-          provider_id: b.providerId,
-          model: b.model ?? null,
-          brand: b.brand ?? null,
-          year: b.year ?? null,
-          operator1_name: b.operator1Name,
-          operator1_phone: b.operator1Phone,
-          operator2_name: b.operator2Name ?? null,
-          operator2_phone: b.operator2Phone ?? null,
-          seat_count: b.seatCount,
-        })),
-      )
+      .insert(buses.map(b => mapTravelBusToInsert(travelId, b)))
       .select();
 
     if (error)
@@ -356,16 +336,7 @@ export function useTravelRepository() {
   ): Promise<TravelAccommodation[]> {
     const { data, error } = await supabase
       .from('travel_accommodations')
-      .insert(
-        accommodations.map(a => ({
-          travel_id: travelId,
-          provider_id: a.providerId,
-          hotel_room_type_id: a.hotelRoomTypeId ?? null,
-          max_occupancy: a.maxOccupancy,
-          room_number: a.roomNumber ?? null,
-          floor: a.floor ?? null,
-        })),
-      )
+      .insert(accommodations.map(a => mapTravelAccommodationToInsert(travelId, a)))
       .select();
 
     if (error)

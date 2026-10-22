@@ -1,22 +1,9 @@
-import type { Tables } from '~/types/database.types';
 import type { TravelMedia, TravelMediaType } from '~/types/travel-media';
 
 import { TRAVEL_GALLERY_BUCKET } from '~/composables/travels/use-travel-domain';
 import { deleteById } from '~/utils/delete-by-id';
+import { mapTravelMediaRowToDomain } from '~/utils/mappers/travel-mappers';
 import { fileExtension, removeStorageFile, uploadPublicFile } from '~/utils/storage';
-
-function mapRowToDomain(row: Tables<'travel_media'>): TravelMedia {
-  return {
-    id: row.id,
-    travelId: row.travel_id,
-    storagePath: row.storage_path,
-    publicUrl: row.public_url,
-    mediaType: row.media_type as TravelMediaType,
-    caption: row.caption,
-    displayOrder: row.display_order,
-    createdAt: row.created_at,
-  };
-}
 
 export function useTravelMediaRepository() {
   const supabase = useSupabase();
@@ -31,7 +18,7 @@ export function useTravelMediaRepository() {
     if (error)
       throw error;
 
-    return data.map(mapRowToDomain);
+    return data.map(mapTravelMediaRowToDomain);
   }
 
   async function upload(travelId: string, file: File, mediaType: TravelMediaType): Promise<TravelMedia> {
@@ -53,7 +40,7 @@ export function useTravelMediaRepository() {
     if (insertError)
       throw insertError;
 
-    return mapRowToDomain(data);
+    return mapTravelMediaRowToDomain(data);
   }
 
   async function remove(id: string, storagePath: string): Promise<void> {
