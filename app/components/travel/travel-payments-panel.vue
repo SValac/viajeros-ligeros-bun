@@ -293,52 +293,22 @@ useTravelPayments(travelId);
   <div v-if="travel" class="space-y-6">
     <!-- Travel cash -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <UCard>
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-sm text-muted">
-              Total esperado
-            </p>
-            <p class="text-xl font-bold mt-1">
-              {{ formatCurrency(cashSummary.totalExpected) }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-wallet" class="w-9 h-9 text-muted" />
-        </div>
-      </UCard>
-      <UCard>
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-sm text-muted">
-              Total recaudado
-            </p>
-            <p class="text-xl font-bold mt-1">
-              {{ formatCurrency(cashSummary.totalCollected) }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-trending-up" class="w-9 h-9 text-muted" />
-        </div>
-      </UCard>
-      <UCard>
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-sm text-muted">
-              Saldo por cobrar
-            </p>
-            <p
-              class="text-xl font-bold mt-1"
-              :class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
-            >
-              {{ formatCurrency(cashSummary.balance) }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-clock"
-            class="w-9 h-9 opacity-60"
-            :class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
-          />
-        </div>
-      </UCard>
+      <StatCard
+        label="Total esperado"
+        icon="i-lucide-wallet"
+        :value="formatCurrency(cashSummary.totalExpected)"
+      />
+      <StatCard
+        label="Total recaudado"
+        icon="i-lucide-trending-up"
+        :value="formatCurrency(cashSummary.totalCollected)"
+      />
+      <StatCard
+        label="Saldo por cobrar"
+        icon="i-lucide-clock"
+        :value="formatCurrency(cashSummary.balance)"
+        :value-class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
+      />
     </div>
 
     <!-- Filters -->
