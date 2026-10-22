@@ -403,9 +403,28 @@ Sin cambiar lo que exporta el store:
   operators had no message), the provider detail toggle toast said the old state, a failed
   banner upload after creating a travel was unhandled, and the traveler/travel payment loads
   failed silently (now a toast).
-- Not changed: `fetchProfile` (its error shows in `profile.vue`), `use-travel-media-store` and
-  `use-travel-access-store` (they toast inside the store), `useEditableList` and
-  `useSiteImageActions` (composables that still resolve to `boolean` for their UI).
+- Not changed: `useEditableList` and `useSiteImageActions` (composables that still resolve to
+  `boolean` for their UI). The rest is in "Phase 10 follow-ups" below.
+
+**Phase 10 follow-ups (to fix in PR (e), with 17.6 or before):**
+- [ ] `use-agency-profile-store.fetchProfile` still swallows its error and keeps it in
+  `error`: `profile.vue` shows it, while `the-sidebar.vue` and `travel-form.vue` call it
+  fire-and-forget in `onMounted`. Make it throw like the rest; `profile.vue` keeps an error
+  state (catch it and show the alert from a local ref or the query), the sidebar and the
+  travel form catch it (`.catch(() => {})` if they only need the name/completeness, with a
+  comment, or a toast).
+- [ ] `use-travel-media-store` (fetch/upload/remove) and `use-travel-access-store`
+  (fetch/generate/revoke) call `useToast()` inside the store and swallow the error. Move the
+  toasts to the callers and re-throw, as in the other stores (fits 17.6: the toast helper).
+- [ ] `pages/travels/[id]/edit.vue`: a failed `uploadBanner` before `updateTravel` is still
+  an unhandled rejection (no toast, the form just stays). Not a one-line fix: putting it in
+  the same `try` would treat `data.imageUrl` (still the previous banner) as the unused file
+  and delete the travel's current banner. Catch the upload on its own: error toast, keep the
+  form, don't save and don't touch any file.
+- [ ] Decide: with every store throwing, raw PostgREST/Postgres messages (sometimes in English,
+  e.g. a unique or FK violation) now reach more toasts. Map the common codes (`23505`,
+  `23503`, RLS `42501`, network failure) to Spanish texts in `toErrorMessage` or a sibling
+  helper, keeping the original as `cause`.
 - Checked in the browser: every touched screen loads with no console errors; refusals throw
   their message (overpay, amount 0, unconfirmed providers, duplicate bus unit, not found);
   add + delete expense moves the seat price 3015 → 3020 → 3015; provider toggle toast; a
