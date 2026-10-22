@@ -10,7 +10,7 @@ import type {
 
 import { serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 import {
-  getSiteImageStoragePath,
+  AGENCY_LOGOS_BUCKET,
   isProfileComplete,
   mapFormToUpdate,
   SITE_IMAGE_RULES,
@@ -20,6 +20,7 @@ import { useAgencyProfileRepository } from '~/composables/agency-profile/use-age
 import { mapSeoFormToUpdate } from '~/composables/agency-profile/use-agency-seo-domain';
 import { serializeHomePage } from '~/composables/agency-profile/use-home-page-domain';
 import { toErrorMessage } from '~/utils/error-message';
+import { storagePathFromPublicUrl } from '~/utils/storage';
 
 /**
  * Cache and orchestrator for the signed-in user's agency profile and the state catalog.
@@ -179,7 +180,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
       throw new Error(validationError);
     }
 
-    const previousPath = getSiteImageStoragePath(profile.value?.[field] ?? null);
+    const previousPath = storagePathFromPublicUrl(profile.value?.[field], AGENCY_LOGOS_BUCKET);
     let uploadedPath: string | null = null;
     try {
       const uploaded = await repository.uploadImage(field, file);
@@ -207,7 +208,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   async function removeSiteImage(field: AgencySiteImageField): Promise<void> {
     uploadingImage.value = field;
     error.value = null;
-    const previousPath = getSiteImageStoragePath(profile.value?.[field] ?? null);
+    const previousPath = storagePathFromPublicUrl(profile.value?.[field], AGENCY_LOGOS_BUCKET);
     try {
       profile.value = await repository.update({ [field]: null });
     }

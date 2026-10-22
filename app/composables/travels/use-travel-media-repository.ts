@@ -1,7 +1,9 @@
 import type { Tables } from '~/types/database.types';
 import type { TravelMedia, TravelMediaType } from '~/types/travel-media';
 
+import { TRAVEL_GALLERY_BUCKET } from '~/composables/travels/use-travel-domain';
 import { deleteById } from '~/utils/delete-by-id';
+import { fileExtension, removeStorageFile, uploadPublicFile } from '~/utils/storage';
 
 function mapRowToDomain(row: Tables<'travel_media'>): TravelMedia {
   return {
@@ -33,27 +35,16 @@ export function useTravelMediaRepository() {
   }
 
   async function upload(travelId: string, file: File, mediaType: TravelMediaType): Promise<TravelMedia> {
-    const ext = file.name.split('.').pop() ?? 'bin';
     const folder = mediaType === 'image' ? 'images' : 'videos';
-    const storagePath = `${travelId}/${folder}/${crypto.randomUUID()}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('travel-gallery')
-      .upload(storagePath, file);
-
-    if (uploadError)
-      throw uploadError;
-
-    const { data: urlData } = supabase.storage
-      .from('travel-gallery')
-      .getPublicUrl(storagePath);
+    const storagePath = `${travelId}/${folder}/${crypto.randomUUID()}.${fileExtension(file)}`;
+    const publicUrl = await uploadPublicFile(supabase, TRAVEL_GALLERY_BUCKET, storagePath, file);
 
     const { data, error: insertError } = await supabase
       .from('travel_media')
       .insert({
         travel_id: travelId,
         storage_path: storagePath,
-        public_url: urlData.publicUrl,
+        public_url: publicUrl,
         media_type: mediaType,
       })
       .select()
@@ -66,19 +57,13 @@ export function useTravelMediaRepository() {
   }
 
   async function remove(id: string, storagePath: string): Promise<void> {
-    const { error: storageError } = await supabase.storage
-      .from('travel-gallery')
-      .remove([storagePath]);
-
-    if (storageError)
-      throw storageError;
-
+    await removeStorageFile(supabase, TRAVEL_GALLERY_BUCKET, storagePath);
     await deleteById(supabase, 'travel_media', id);
   }
 
   function getThumbnailUrl(storagePath: string): string {
     const { data } = supabase.storage
-      .from('travel-gallery')
+      .from(TRAVEL_GALLERY_BUCKET)
       .getPublicUrl(storagePath, {
         transform: { width: 400, height: 300, resize: 'cover' },
       });
@@ -86,21 +71,8 @@ export function useTravelMediaRepository() {
   }
 
   async function uploadBanner(travelId: string, file: File): Promise<string> {
-    const ext = file.name.split('.').pop() ?? 'bin';
-    const storagePath = `${travelId}/banner/${crypto.randomUUID()}.${ext}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('travel-gallery')
-      .upload(storagePath, file);
-
-    if (uploadError)
-      throw uploadError;
-
-    const { data } = supabase.storage
-      .from('travel-gallery')
-      .getPublicUrl(storagePath);
-
-    return data.publicUrl;
+    const storagePath = `${travelId}/banner/${crypto.randomUUID()}.${fileExtension(file)}`;
+    return uploadPublicFile(supabase, TRAVEL_GALLERY_BUCKET, storagePath, file);
   }
 
   /**
@@ -109,12 +81,7 @@ export function useTravelMediaRepository() {
    * @throws {StorageError} on Supabase failure
    */
   async function removeFile(storagePath: string): Promise<void> {
-    const { error } = await supabase.storage
-      .from('travel-gallery')
-      .remove([storagePath]);
-
-    if (error)
-      throw error;
+    await removeStorageFile(supabase, TRAVEL_GALLERY_BUCKET, storagePath);
   }
 
   /**
@@ -132,7 +99,7 @@ export function useTravelMediaRepository() {
     do {
       // Flat listing (no delimiter) returns files from every subfolder with their full path.
       const { data, error: listError } = await supabase.storage
-        .from('travel-gallery')
+        .from(TRAVEL_GALLERY_BUCKET)
         .listV2({ prefix: `${travelId}/`, cursor });
 
       if (listError)
@@ -142,7 +109,7 @@ export function useTravelMediaRepository() {
 
       if (paths.length > 0) {
         const { data: removed, error: removeError } = await supabase.storage
-          .from('travel-gallery')
+          .from(TRAVEL_GALLERY_BUCKET)
           .remove(paths);
 
         if (removeError)
