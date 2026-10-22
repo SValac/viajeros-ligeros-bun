@@ -9,9 +9,9 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138.
-PR (c) on branch `feature/shared-components-dedup-utils`: phases 14 and 15 done, ready for
-review. Then (d), phase 7, (e).
+**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
+PR (c) (phases 14, 15) as #139. PR (d) on branch `feature/shared-components-dedup-components`:
+phases 3-6, 16 and 17 done (17.6 waits for phase 10). Then phase 7, then (e).
 
 ---
 
@@ -530,7 +530,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - Dev server gotcha seen here: after many in-place rewrites `nuxt dev` lost the
   `coordinators-index` route (500 "No match" on every page); rewriting that page file again fixed it.
 
-### Fase 16 — Componentes y piezas de tabla
+### Fase 16 — Componentes y piezas de tabla ✅
 
 - `PageHeader` (título, descripción, volver, acciones): ~20 `<h1>` con 4 estilos
   (`text-3xl`/`text-2xl`, `text-gray-900 dark:text-white`/`text-highlighted`).
@@ -557,7 +557,33 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   → pasar los 5 a `defineModel` (por ejemplo `provider-filter-bar`, con un
   `setFilter(key, value)` en vez de un handler por campo).
 
-### Fase 17 — Lógica de dominio repetida en componentes
+**Done (2026-10-21).** Final design and notes:
+- `PageHeader` (root): `title`, `description` (or `#description`), `to` + `backLabel` for the back
+  arrow, `icon` + `iconClass`, `#badge` and `#actions`; one style (`text-2xl sm:text-3xl`,
+  `text-highlighted`) in 14 pages and components. Not `UPageHeader`: it is built for docs pages
+  (bottom border, description under the actions, no back arrow). Left out: the `<h1>` inside
+  `provider-detail-card` (a card) and the login/register cards.
+- `utils/table-cells.ts`: `travelLinkCell(to, label)` and `groupNameCell(row, content)` (UButton
+  with `aria-label`/`aria-expanded`; the payments panel had a bare `<button>`).
+  `deleteAction(onSelect, label?)` in `utils/actions-column.ts`, in 16 menus.
+- Quotation tables: they were already `UTable` (phase 2). `useSupplierPaymentColumns` became
+  `useSupplierTable(kind)`: Pagado / Pendiente / Estado Pago plus the Confirmado column,
+  `paymentActions(row, openHistory)` and `confirmAction(row, toggle)`; `paymentMethodColumn()`
+  for provider and bus. The bus table now uses `actionsColumn`.
+- `AgencyPageForm` (`agency/page/`, generic): page, schema, clone, serialize, texts; the editor
+  goes in the default slot (`{ state, path }`, `<slot>` reserves `name`). The two old forms are
+  gone. The editors' empty state and toolbar stay apart (see "Fuera de alcance").
+- `useEditableList(source, save)`: local copy, `upsert`/`patch`/`remove`, rollback when the save
+  fails. Chosen: each list saves itself through the travel store (the itinerary already did).
+  `TravelServicesEditor` is gone; the services page passes `travel.services`. Both lists take
+  plain props instead of a v-model nobody listened to; the service form shows the spinner.
+- `ImageUpload` (root, was `agency/agency-image-upload`) with a `cover` shape, also in the travel
+  form (file still uploaded on submit).
+- `defineModel` in `ProviderFilterBar` (`setFilter`), `ProviderSelector` and
+  `HotelBedConfigurationInput`; no `update:modelValue` emit is left in `app/`.
+- Also: the travel payments panel's three cards now use `StatCard` (missed in phase 5).
+
+### Fase 17 — Lógica de dominio repetida en componentes ✅ (salvo los toasts)
 
 - Agrupar por representante: `groupTravelersByRepresentative` ya existe, pero
   `travel-payments-panel` lo reimplementa, `travel-optional-service-card` arma sus filas igual,
@@ -575,6 +601,21 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - Los toasts de "guardado / no se pudo" después de cada acción del store se escriben a mano
   en casi todas las pantallas; se simplifican solos cuando el contrato de errores de la
   fase 10 sea uno solo.
+
+**Done (2026-10-21), except the toasts (they wait for phase 10, PR (e)).** Notes:
+- Traveler domain: the payments panel calls `groupTravelersByRepresentative`;
+  `listTravelersByGroup` is the flat variant (optional service card); `getRepresentativeNames`
+  is the companion → representative map (rooms, seat map). The seat map used to search only the
+  same bus, so a companion on another bus showed no "Rep:".
+- `toTravelerSeatChangeError` took the travelers page's texts (they were clearer) and the page
+  shows `error.message`.
+- `payment-summary-card` uses `calcAdjustmentAmount`.
+- `countServiceTakers(provider)` in the quotation domain (a pure function, not a getter); the
+  optional service card gets `pending` / `overpaid` from the store getters.
+- `getExpenseCostPerPerson` getter next to `getProviderCostPerPerson`.
+- `jscpd` after phases 16-17: 13 clones, 0.43 % (44 / 1.92 % after PR (c)). Left: the summary
+  cells of `travel-payments-panel`, and pairs the plan already leaves out (expense/provider
+  forms).
 
 ## Fuera de alcance (repetido, pero no vale la pena ahora)
 
