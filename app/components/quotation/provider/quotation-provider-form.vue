@@ -277,19 +277,10 @@ function onSubmit() {
     </UFormField>
 
     <!-- Actions -->
-    <div class="flex justify-end gap-3 pt-2">
-      <UButton
-        type="button"
-        variant="ghost"
-        color="neutral"
-        label="Cancelar"
-        @click="emit('cancel')"
-      />
-      <UButton
-        type="submit"
-        :disabled="state.costType === 'per_person' && invalidAdjustments"
-        :label="quotationProvider ? 'Actualizar' : 'Agregar Proveedor'"
-      />
-    </div>
+    <FormActions
+      :submit-label="quotationProvider ? 'Actualizar proveedor' : 'Registrar proveedor'"
+      :disabled="state.costType === 'per_person' && invalidAdjustments"
+      @cancel="emit('cancel')"
+    />
   </UForm>
 </template>

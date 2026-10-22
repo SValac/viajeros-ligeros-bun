@@ -413,20 +413,11 @@ function handleCancel() {
         </template>
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton
-            type="button"
-            variant="ghost"
-            color="neutral"
-            label="Cancelar"
-            @click="handleCancel"
-          />
-          <UButton
-            type="submit"
-            :label="isEditing ? 'Guardar cambios' : 'Agregar Autobús'"
-            :disabled="!hasUnit"
-          />
-        </div>
+        <FormActions
+          :submit-label="isEditing ? 'Actualizar autobús' : 'Registrar autobús'"
+          :disabled="!hasUnit"
+          @cancel="handleCancel"
+        />
       </form>
     </template>
   </UModal>

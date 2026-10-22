@@ -121,15 +121,9 @@ function onSubmit() {
       />
     </UFormField>
 
-    <div class="flex justify-end gap-3 pt-2">
-      <UButton
-        type="button"
-        variant="ghost"
-        color="neutral"
-        label="Cancelar"
-        @click="emit('cancel')"
-      />
-      <UButton type="submit" :label="payment ? 'Actualizar Pago' : 'Registrar Pago'" />
-    </div>
+    <FormActions
+      :submit-label="payment ? 'Actualizar pago' : 'Registrar pago'"
+      @cancel="emit('cancel')"
+    />
   </UForm>
 </template>
