@@ -88,11 +88,7 @@ export function useQuotationRepository() {
 
     const accommodations = (accommodationsResult.data ?? [])
       .map((row) => {
-        const details = (row.quotation_accommodation_details ?? [])
-          .map(d => ({
-            ...mapQuotationAccommodationDetailRowToDomain(d),
-            costPerPerson: d.price_per_night / d.max_occupancy,
-          }));
+        const details = (row.quotation_accommodation_details ?? []).map(mapQuotationAccommodationDetailRowToDomain);
         return mapQuotationAccommodationRowToDomain(row, details);
       });
 
@@ -652,10 +648,7 @@ export function useQuotationRepository() {
     if (error)
       throw error;
 
-    return (detailRows ?? []).map(d => ({
-      ...mapQuotationAccommodationDetailRowToDomain(d),
-      costPerPerson: d.price_per_night / d.max_occupancy,
-    }));
+    return (detailRows ?? []).map(mapQuotationAccommodationDetailRowToDomain);
   }
 
   async function insertAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation> {
