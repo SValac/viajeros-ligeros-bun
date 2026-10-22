@@ -10,8 +10,9 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (9-13). La 7 puede ir sola.
 
 **Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
-PR (c) (phases 14, 15) as #139. PR (d) on branch `feature/shared-components-dedup-components`:
-phases 3-6, 16 and 17 done (17.6 waits for phase 10). Then phase 7, then (e).
+PR (c) (phases 14, 15) as #139. PR (d) (phases 3-6, 16, 17; 17.6 waits for phase 10) open as
+#140. Phase 7 done on branch `feature/shared-components-dedup-phase-7` (based on PR (d)).
+Then (e).
 
 ---
 
@@ -212,7 +213,7 @@ picks the layout with `$slots.aside` and passes the loaded provider to that scop
   column (`getAllBusesByProvider`); the quotation bus picker keeps active ones only
   (`getActiveBusesByProvider`).
 
-### Fase 7 — Ajustes que dejó el PR #131 (`code-review` del 2026-10-13)
+### Fase 7 — Ajustes que dejó el PR #131 (`code-review` del 2026-10-13) ✅
 
 No es duplicación, pero sale del mismo análisis y toca `LoadState` / `EmptyState`. Se puede
 mover a otra tarea si la rama crece mucho.
@@ -233,6 +234,30 @@ mover a otra tarea si la rama crece mucho.
 - Simplificar `useQueryLoadState`: que devuelva los computeds directos (hoy `catalogs.ts` los
   envuelve dos veces) o un helper que devuelva `{ ...query, loadState }` para no repetir las 3
   líneas en ~15 lugares.
+
+**Done (2026-10-21).** Notes:
+- Empty states: new `EMPTY_STATES` entries `payableTravels` (/payments), `busUnits` and
+  `roomTypes` (provider catalog), `salePrices` (points to «Usar como plantilla») and
+  `missingTravel`. `EmptyState` takes a `description` override; the lists of a confirmed
+  quotation use `CONFIRMED_QUOTATION_EMPTY_DESCRIPTION`.
+- `LoadState` with data on screen and a failed refetch: warning `UAlert` with Reintentar above
+  the slot ("No se pudieron actualizar …").
+- Missing record: the detail pages bind `:is-loaded="!!record"` so `null` keeps the spinner
+  while `useRedirectIfMissing` leaves. `/payments/travel/[id]` had no `LoadState` at all (blank
+  while loading and on error); now it has one. The calendar summary shows "Este viaje ya no
+  existe" for a picked travel deleted later (a `?travel=` link to a missing one was already
+  cleared).
+- Loading figures: `StatCard` got a `loading` prop (`USkeleton`). /payments money cells show a
+  skeleton until the row's totals arrive (they read $0 after a page change); the cards keep "—"
+  when their queries fail. The dashboard keeps the list spinner until the stats arrive or fail.
+  The phase 5 note about `/quotations` showing 0 no longer applies: the whole page is inside
+  `LoadState`, so the stats only render once loaded.
+- `useQueryWithLoadState(options)` in `queries/load-state.ts`, in 11 screens. Kept: the double
+  wrap in `catalogs.ts` (a store getter needs a computed; `<LoadState v-bind>` needs the reactive
+  object) and the composables that use the query object for more than this.
+- Proposed to the user (2026-10-21): no app-wide skeleton component in this feature. Replacing the
+  `LoadState` spinners with table/card-shaped skeletons would be a visual redesign of each
+  screen; it can be its own feature.
 
 ## Segunda pasada: stores, repositorios, mappers y dominio (2026-10-13)
 

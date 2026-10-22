@@ -10,7 +10,7 @@ import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { actionsColumn } from '~/utils/actions-column';
@@ -32,9 +32,7 @@ const paymentStore = usePaymentStore();
 const quotationStore = useQuotationStore();
 
 const travelId = computed(() => props.travelId);
-const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
-const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
-const travelersLoad = useQueryLoadState(travelersQuery);
+const { data: travelerData, refetch: refetchTravelers, loadState: travelersLoad } = useQueryWithLoadState(() => travelersByTravelQuery(travelId.value));
 const { data: travel } = useQuery(() => travelDetailQuery(travelId.value));
 // The public prices (what each traveler is charged) live in the quotation.
 const { quotation } = useTravelQuotation(travelId);

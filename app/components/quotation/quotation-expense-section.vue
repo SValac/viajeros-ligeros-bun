@@ -9,6 +9,7 @@ import { useQuotationContext } from '~/composables/quotation/use-quotation-conte
 import { useFormModal } from '~/composables/use-form-modal';
 import { deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
+import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
 
 type Props = {
   quotationId: string;
@@ -166,6 +167,7 @@ const columns = computed<TableColumn<QuotationExpense>[]>(() => {
     <EmptyState
       v-else
       section="expenses"
+      :description="readonly ? CONFIRMED_QUOTATION_EMPTY_DESCRIPTION : undefined"
       :actions="readonly ? undefined : [{ label: 'Agregar gasto', icon: 'i-lucide-plus', onClick: openNew }]"
     />
   </UCard>

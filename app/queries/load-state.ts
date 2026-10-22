@@ -1,5 +1,7 @@
 import type { UseQueryReturn } from '@pinia/colada';
 
+import { useQuery } from '@pinia/colada';
+
 /**
  * The `LoadState` props (`isLoaded`, `loadError`) for a query: `<LoadState v-bind="state" …>`.
  * - `isLoaded`: `false` until the first load resolves. `null` is a resolved answer ("no
@@ -14,4 +16,15 @@ export function useQueryLoadState(query: Pick<UseQueryReturn<unknown>, 'data' | 
     isLoaded: computed(() => query.data.value !== undefined),
     loadError: computed(() => (query.asyncStatus.value === 'loading' ? null : query.error.value)),
   });
+}
+
+/**
+ * `useQuery` plus its `LoadState` props, for the screens that put the query in a `LoadState`:
+ * `const { data, refetch, loadState } = useQueryWithLoadState(() => travelDetailQuery(id.value))`.
+ * @param options - What `useQuery` takes
+ * @returns Everything `useQuery` returns, plus `loadState` (see `useQueryLoadState`)
+ */
+export function useQueryWithLoadState<TData>(options: Parameters<typeof useQuery<TData>>[0]) {
+  const query = useQuery(options);
+  return { ...query, loadState: useQueryLoadState(query) };
 }

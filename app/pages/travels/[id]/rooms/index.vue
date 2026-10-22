@@ -9,7 +9,7 @@ import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation
 import { getRepresentativeNames, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useValidTab } from '~/composables/use-valid-tab';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
 import { pluralize } from '~/utils/pluralize';
@@ -30,9 +30,7 @@ const quotationStore = useQuotationStore();
 const { travelId, travel } = useTravelRoute();
 
 const accommodations = computed(() => travel.value?.accommodations ?? []);
-const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
-const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
-const travelersLoad = useQueryLoadState(travelersQuery);
+const { data: travelerData, refetch: refetchTravelers, loadState: travelersLoad } = useQueryWithLoadState(() => travelersByTravelQuery(travelId.value));
 // The quoted hotels and room types group the rooms; the public prices say who goes where.
 const { quotation, load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(travelId);
 // Coordinators need a room too, so room counts and the add modal include them.

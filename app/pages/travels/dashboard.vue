@@ -5,7 +5,7 @@ import { h } from 'vue';
 
 import type { TravelStatus, TravelSummary } from '~/types/travel';
 
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatDateRange } from '~/utils/format-date';
@@ -28,7 +28,7 @@ const router = useRouter();
 const confirmDelete = useConfirmDelete();
 
 // Computed
-const { data: stats } = useQuery(() => travelStatsQuery());
+const { data: stats, error: statsError } = useQuery(() => travelStatsQuery());
 
 const page = shallowRef(1);
 const statuses = ref<TravelStatus[]>([...DASHBOARD_DEFAULT_STATUSES]);
@@ -43,7 +43,7 @@ watch(statuses, () => {
   page.value = 1;
 });
 
-const travelsQuery = useQuery(() => ({
+const { data, refetch, loadState: travelsLoad } = useQueryWithLoadState(() => ({
   ...travelListQuery({
     statuses: [...statuses.value].sort(),
     page: page.value,
@@ -52,8 +52,6 @@ const travelsQuery = useQuery(() => ({
   placeholderData: previousList => previousList,
   enabled: statuses.value.length > 0,
 }));
-const { data, refetch } = travelsQuery;
-const travelsLoad = useQueryLoadState(travelsQuery);
 
 // Deleting the only travel on the last page removes that page: go to the last one that exists
 watch(data, (list) => {
@@ -192,16 +190,19 @@ const columns: TableColumn<TravelSummary>[] = [
         label="Total de viajes"
         icon="i-lucide-globe"
         :value="String(stats?.total ?? '—')"
+        :loading="!stats && !statsError"
       />
       <StatCard
         label="Publicados"
         icon="i-lucide-check-circle"
         :value="String(stats?.published ?? '—')"
+        :loading="!stats && !statsError"
       />
       <StatCard
         label="En curso"
         icon="i-lucide-bus"
         :value="String(stats?.inProgress ?? '—')"
+        :loading="!stats && !statsError"
       />
     </div>
 
@@ -210,9 +211,12 @@ const columns: TableColumn<TravelSummary>[] = [
       <div v-if="statuses.length === 0" class="py-12 text-center text-muted">
         Elegí al menos un estatus para ver viajes
       </div>
+      <!-- Until the stats arrive (or fail), an empty list can't tell "no travels at all" from
+           "none with these statuses" -->
       <LoadState
         v-else
         v-bind="travelsLoad"
+        :is-loaded="travelsLoad.isLoaded && (travels.length > 0 || !!stats || !!statsError)"
         label="los viajes"
         @retry="refetch()"
       >
