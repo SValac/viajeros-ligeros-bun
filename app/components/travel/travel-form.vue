@@ -151,7 +151,8 @@ watch(dateRange, (range) => {
 // Publishing requires a complete agency profile (a DB trigger enforces it too).
 // An already published travel keeps the option: the trigger only checks the transition.
 const agencyProfileStore = useAgencyProfileStore();
-onMounted(() => agencyProfileStore.fetchProfile());
+// A failed load leaves publishing off (the trigger is the real check); /profile shows the error.
+onMounted(() => agencyProfileStore.fetchProfile().catch(() => {}));
 const canPublish = computed(() => agencyProfileStore.isComplete || travel?.status === 'published');
 
 // Status options for the select
