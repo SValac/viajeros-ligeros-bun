@@ -34,26 +34,26 @@ export function toTravelerSeatChangeError(error: unknown): TravelerSeatChangeErr
   const message = (error as { message?: string } | null)?.message;
 
   if (message === 'invalid_travel_bus') {
-    return new TravelerSeatChangeError('invalid-travel-bus', 'Camión inválido para realizar el cambio de asiento.', { cause: error });
+    return new TravelerSeatChangeError('invalid-travel-bus', 'El camión seleccionado no es válido para este cambio.', { cause: error });
   }
 
   if (message === 'invalid_target_seat') {
-    return new TravelerSeatChangeError('invalid-target-seat', 'El asiento destino es inválido.', { cause: error });
+    return new TravelerSeatChangeError('invalid-target-seat', 'El asiento destino no es válido.', { cause: error });
   }
 
   if (message === 'traveler_not_found') {
-    return new TravelerSeatChangeError('traveler-not-found', 'No se encontró al viajero para cambiar de asiento.', { cause: error });
+    return new TravelerSeatChangeError('traveler-not-found', 'No se encontró al viajero. Recarga la vista e intenta nuevamente.', { cause: error });
   }
 
   if (message === 'same_seat_selected') {
-    return new TravelerSeatChangeError('same-seat-selected', 'Debes seleccionar un asiento diferente al actual.', { cause: error });
+    return new TravelerSeatChangeError('same-seat-selected', 'Selecciona un asiento diferente al actual.', { cause: error });
   }
 
   if (message === 'seat_conflict') {
-    return new TravelerSeatChangeError('seat-conflict', 'El asiento destino cambió durante la operación. Intenta de nuevo.', { cause: error });
+    return new TravelerSeatChangeError('seat-conflict', 'Otro cambio ocupó ese asiento. Intenta de nuevo con la información actualizada.', { cause: error });
   }
 
-  return new TravelerSeatChangeError('unknown-error', 'No se pudo cambiar el asiento del viajero.', { cause: error });
+  return new TravelerSeatChangeError('unknown-error', 'No se pudo completar el cambio de asiento.', { cause: error });
 }
 
 /**

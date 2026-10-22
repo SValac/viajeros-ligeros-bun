@@ -3,7 +3,7 @@ import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
+import type { Traveler, TravelerFilters, TravelerFormData, TravelerWithChildren } from '~/types/traveler';
 
 import BusSeatMap from '~/components/bus/bus-seat-map.vue';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
@@ -312,30 +312,6 @@ function handleEmptySeatSelected(payload: { busId: string; seatNumber: number })
   });
 }
 
-function getSeatChangeErrorMessage(code?: TravelerSeatChangeErrorCode, fallbackMessage?: string): string {
-  if (code === 'invalid-target-seat') {
-    return 'El asiento destino no es válido.';
-  }
-
-  if (code === 'invalid-travel-bus') {
-    return 'El camión seleccionado no es válido para este cambio.';
-  }
-
-  if (code === 'traveler-not-found') {
-    return 'No se encontró al viajero. Recarga la vista e intenta nuevamente.';
-  }
-
-  if (code === 'same-seat-selected') {
-    return 'Selecciona un asiento diferente al actual.';
-  }
-
-  if (code === 'seat-conflict') {
-    return 'Otro cambio ocupó ese asiento. Intenta de nuevo con la información actualizada.';
-  }
-
-  return fallbackMessage ?? 'No se pudo completar el cambio de asiento.';
-}
-
 async function handleSeatDestinationSelected(payload: SeatSelectionPayload) {
   if (!seatChangeContext.value || seatChangeLoading.value) {
     return;
@@ -387,10 +363,8 @@ async function handleSeatDestinationSelected(payload: SeatSelectionPayload) {
     toast.clear();
     toast.add({
       title: 'Error al cambiar asiento',
-      description: getSeatChangeErrorMessage(
-        (error as { code?: TravelerSeatChangeErrorCode } | null)?.code,
-        (error as { message?: string } | null)?.message,
-      ),
+      // The store throws a TravelerSeatChangeError, already translated by toTravelerSeatChangeError
+      description: error instanceof Error ? error.message : 'No se pudo completar el cambio de asiento.',
       color: 'error',
     });
   }
