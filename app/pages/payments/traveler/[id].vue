@@ -7,7 +7,7 @@ import type { Payment, PaymentFormData, PaymentType, TravelerAccountConfig } fro
 
 import { useFormModal } from '~/composables/use-form-modal';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
@@ -28,9 +28,7 @@ const quotationStore = useQuotationStore();
 const confirmDelete = useConfirmDelete();
 
 const travelerId = computed(() => route.params.id as string);
-const travelerQuery = useQuery(() => travelerDetailQuery(travelerId.value));
-const { data: traveler, status, refetch } = travelerQuery;
-const travelerLoad = useQueryLoadState(travelerQuery);
+const { data: traveler, status, refetch, loadState: travelerLoad } = useQueryWithLoadState(() => travelerDetailQuery(travelerId.value));
 
 useRedirectIfMissing({ status, data: traveler }, { to: { name: 'payments-index' } });
 

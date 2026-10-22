@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelDetailQuery } from '~/queries/travels';
 import { formatDate } from '~/utils/format-date';
 import { pluralize } from '~/utils/pluralize';
@@ -16,9 +16,7 @@ const props = defineProps<{
 const coordinatorStore = useCoordinatorStore();
 const quotationStore = useQuotationStore();
 
-const travelQuery = useQuery(() => travelDetailQuery(props.travelId));
-const { data: travel, refetch } = travelQuery;
-const travelLoad = useQueryLoadState(travelQuery);
+const { data: travel, refetch, loadState: travelLoad } = useQueryWithLoadState(() => travelDetailQuery(props.travelId));
 
 const MAX_HIGHLIGHTS = 3;
 

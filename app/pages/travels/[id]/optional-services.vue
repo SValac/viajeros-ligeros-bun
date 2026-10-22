@@ -5,7 +5,7 @@ import type { QuotationProvider } from '~/types/quotation';
 import { countServiceTakers, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 
 definePageMeta({
@@ -68,9 +68,7 @@ const selectedAdjustmentByTraveler = computed(() => new Map(
 ));
 
 // Coordinators included: they count for the payment unless the provider gives them a courtesy.
-const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
-const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
-const travelersLoad = useQueryLoadState(travelersQuery);
+const { data: travelerData, refetch: refetchTravelers, loadState: travelersLoad } = useQueryWithLoadState(() => travelersByTravelQuery(travelId.value));
 const occupants = computed(() => travelerData.value?.travelers ?? []);
 
 // Service being saved, to lock its checkboxes meanwhile.

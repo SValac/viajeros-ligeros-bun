@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelDetailQuery } from '~/queries/travels';
 
 definePageMeta({
@@ -10,9 +10,7 @@ definePageMeta({
 const route = useRoute();
 
 const travelId = computed(() => route.params.id as string);
-const travelQuery = useQuery(() => travelDetailQuery(travelId.value));
-const { data: travel, status, refetch } = travelQuery;
-const travelLoad = useQueryLoadState(travelQuery);
+const { data: travel, status, refetch, loadState: travelLoad } = useQueryWithLoadState(() => travelDetailQuery(travelId.value));
 
 useRedirectIfMissing({ status, data: travel }, {
   to: { name: 'payments-index' },

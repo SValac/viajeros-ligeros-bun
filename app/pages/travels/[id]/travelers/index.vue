@@ -11,7 +11,7 @@ import { filterTravelers, getRepresentativeNames, groupTravelersByRepresentative
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useValidTab } from '~/composables/use-valid-tab';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { groupNameCell } from '~/utils/table-cells';
@@ -81,9 +81,7 @@ const seatingCoordinator = shallowRef<Traveler | null>(null);
 const filters = ref<TravelerFilters>({});
 
 // Derived data
-const travelersQuery = useQuery(() => travelersByTravelQuery(travelId.value));
-const { data: travelerData, refetch: refetchTravelers } = travelersQuery;
-const travelersLoad = useQueryLoadState(travelersQuery);
+const { data: travelerData, refetch: refetchTravelers, loadState: travelersLoad } = useQueryWithLoadState(() => travelersByTravelQuery(travelId.value));
 // Every traveler row of the travel, coordinators included (seats and rooms need them all)
 const occupantsOfTravel = computed(() => travelerData.value?.travelers ?? []);
 const travelersOfTravel = computed(() => selectPayingTravelers(occupantsOfTravel.value));

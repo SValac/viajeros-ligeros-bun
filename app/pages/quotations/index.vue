@@ -5,7 +5,7 @@ import { h } from 'vue';
 
 import type { TravelSummary } from '~/types/travel';
 
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
 import { formatDateRange } from '~/utils/format-date';
 import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
@@ -17,9 +17,7 @@ definePageMeta({
 
 const router = useRouter();
 
-const travelsQuery = useQuery(() => travelListQuery({}));
-const { data, refetch } = travelsQuery;
-const travelsLoad = useQueryLoadState(travelsQuery);
+const { data, refetch, loadState: travelsLoad } = useQueryWithLoadState(() => travelListQuery({}));
 
 const travels = computed(() => data.value?.items ?? []);
 

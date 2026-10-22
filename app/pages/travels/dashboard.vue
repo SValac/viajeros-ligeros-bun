@@ -5,7 +5,7 @@ import { h } from 'vue';
 
 import type { TravelStatus, TravelSummary } from '~/types/travel';
 
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatDateRange } from '~/utils/format-date';
@@ -43,7 +43,7 @@ watch(statuses, () => {
   page.value = 1;
 });
 
-const travelsQuery = useQuery(() => ({
+const { data, refetch, loadState: travelsLoad } = useQueryWithLoadState(() => ({
   ...travelListQuery({
     statuses: [...statuses.value].sort(),
     page: page.value,
@@ -52,8 +52,6 @@ const travelsQuery = useQuery(() => ({
   placeholderData: previousList => previousList,
   enabled: statuses.value.length > 0,
 }));
-const { data, refetch } = travelsQuery;
-const travelsLoad = useQueryLoadState(travelsQuery);
 
 // Deleting the only travel on the last page removes that page: go to the last one that exists
 watch(data, (list) => {

@@ -6,7 +6,7 @@ import { h } from 'vue';
 
 import type { TravelStatus } from '~/types/travel';
 
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelPaymentTotalsQuery } from '~/queries/payments';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
@@ -27,19 +27,15 @@ const PAGE_SIZE = 20;
 
 const page = shallowRef(1);
 
-const listQuery = useQuery(() => ({
+const { data: list, refetch: refetchList, loadState: listLoad } = useQueryWithLoadState(() => ({
   ...travelListQuery({ statuses: PAYABLE_STATUSES, page: page.value, pageSize: PAGE_SIZE }),
   placeholderData: previousList => previousList,
 }));
-const { data: list, refetch: refetchList } = listQuery;
-const listLoad = useQueryLoadState(listQuery);
 const pageTravelIds = computed(() => (list.value?.items ?? []).map(travel => travel.id).sort());
-const totalsQuery = useQuery(() => ({
+const { data: totals, refetch: refetchTotals, loadState: totalsLoad } = useQueryWithLoadState(() => ({
   ...travelPaymentTotalsQuery(pageTravelIds.value),
   placeholderData: previousPayments => previousPayments,
 }));
-const { data: totals, refetch: refetchTotals } = totalsQuery;
-const totalsLoad = useQueryLoadState(totalsQuery);
 
 const { data: activeList, error: activeListError } = useQuery(() => travelListQuery({ statuses: ACTIVE_STATUSES }));
 const activeTravelIds = computed(() => (activeList.value?.items ?? []).map(travel => travel.id).sort());

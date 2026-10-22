@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
-import { useQueryLoadState } from '~/queries/load-state';
+import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelDetailQuery } from '~/queries/travels';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
@@ -25,9 +25,7 @@ const { travelId, quotation, readonly } = useQuotationRoute();
 // also brings what is owed to each optional service (it changes with the travelers).
 const { load: quotationLoad, refetch: refetchQuotation } = useTravelQuotation(travelId);
 
-const travelQuery = useQuery(() => travelDetailQuery(travelId.value));
-const { data: travel, status, refetch: refetchTravel } = travelQuery;
-const travelLoad = useQueryLoadState(travelQuery);
+const { data: travel, status, refetch: refetchTravel, loadState: travelLoad } = useQueryWithLoadState(() => travelDetailQuery(travelId.value));
 
 useRedirectIfMissing({ status, data: travel }, {
   to: { name: 'quotations-index' },
