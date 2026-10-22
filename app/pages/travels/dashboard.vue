@@ -7,7 +7,9 @@ import type { TravelStatus, TravelSummary } from '~/types/travel';
 
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatDateRange } from '~/utils/format-date';
+import { travelLinkCell } from '~/utils/table-cells';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
 const PAGE_SIZE = 20;
@@ -23,6 +25,7 @@ const travelsStore = useTravelsStore();
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
 const router = useRouter();
+const confirmDelete = useConfirmDelete();
 
 // Computed
 const { data: stats } = useQuery(() => travelStatsQuery());
@@ -75,8 +78,10 @@ function navigateToEdit(travelId: string) {
 }
 
 async function handleDelete(travel: TravelSummary) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar el viaje ${travel.label}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar viaje',
+    description: `¿Estás seguro de eliminar el viaje ${travel.label}?`,
+  })) {
     const success = await travelsStore.deleteTravel(travel.id);
     if (success) {
       toast.add({
@@ -111,12 +116,7 @@ function getRowActions(travel: TravelSummary): DropdownMenuItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(travel),
-      },
+      deleteAction(() => handleDelete(travel)),
     ],
   ];
 }
@@ -126,14 +126,7 @@ const columns: TableColumn<TravelSummary>[] = [
   {
     accessorKey: 'label',
     header: 'Nombre',
-    cell: ({ row }) =>
-      h(resolveComponent('NuxtLink'), {
-        to: `/travels/${row.original.id}`,
-        class: 'flex items-center gap-2 hover:text-primary transition-colors group',
-      }, () => [
-        h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
-        h('span', { class: 'font-medium' }, row.getValue('label')),
-      ]),
+    cell: ({ row }) => travelLinkCell({ name: 'travel-detail', params: { id: row.original.id } }, row.original.label),
   },
   {
     accessorKey: 'coordinatorIds',
@@ -165,105 +158,51 @@ const columns: TableColumn<TravelSummary>[] = [
       return h(resolveComponent('TravelStatusBadge'), { status });
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-        popper: { placement: 'bottom-end' },
-      }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-      }));
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-wrap justify-between items-center gap-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Gestión de Viajes
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
-          Administra todos los viajes de la agencia
-        </p>
-      </div>
-      <UCheckboxGroup
-        v-model="statuses"
-        :items="statusItems"
-        legend="Estatus del viaje"
-        orientation="horizontal"
-      />
-      <UButton
-        icon="i-lucide-plus"
-        size="lg"
-        @click="navigateToCreate"
-      >
-        Nuevo Viaje
-      </UButton>
-    </div>
+    <PageHeader
+      title="Gestión de Viajes"
+      description="Administra todos los viajes de la agencia"
+    >
+      <template #actions>
+        <UCheckboxGroup
+          v-model="statuses"
+          :items="statusItems"
+          legend="Estatus del viaje"
+          orientation="horizontal"
+          class="mr-2"
+        />
+        <UButton
+          icon="i-lucide-plus"
+          size="lg"
+          @click="navigateToCreate"
+        >
+          Nuevo Viaje
+        </UButton>
+      </template>
+    </PageHeader>
 
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <!-- Total -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Total Viajes
-            </p>
-            <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats?.total ?? '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-globe"
-            class="w-10 h-10 text-muted"
-          />
-        </div>
-      </UCard>
-
-      <!-- Published -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Publicados
-            </p>
-            <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats?.published ?? '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-check-circle"
-            class="w-10 h-10 text-muted"
-          />
-        </div>
-      </UCard>
-
-      <!-- In Progress -->
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              En Curso
-            </p>
-            <p class="text-2xl font-bold text-highlighted mt-1">
-              {{ stats?.inProgress ?? '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-plane"
-            class="w-10 h-10 text-muted"
-          />
-        </div>
-      </UCard>
+      <StatCard
+        label="Total de viajes"
+        icon="i-lucide-globe"
+        :value="String(stats?.total ?? '—')"
+      />
+      <StatCard
+        label="Publicados"
+        icon="i-lucide-check-circle"
+        :value="String(stats?.published ?? '—')"
+      />
+      <StatCard
+        label="En curso"
+        icon="i-lucide-bus"
+        :value="String(stats?.inProgress ?? '—')"
+      />
     </div>
 
     <!-- Travels table -->

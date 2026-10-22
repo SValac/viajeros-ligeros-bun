@@ -3,6 +3,7 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
+import { deleteAction } from '~/utils/actions-column';
 import { formatDateRange } from '~/utils/format-date';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
@@ -56,12 +57,7 @@ const tabs = computed<NavigationMenuItem[]>(() => {
 });
 
 const moreActions = computed<DropdownMenuItem[][]>(() => [[
-  {
-    label: 'Eliminar viaje',
-    icon: 'i-lucide-trash-2',
-    color: 'error',
-    onSelect: openDeleteModal,
-  },
+  deleteAction(openDeleteModal, 'Eliminar viaje'),
 ]]);
 
 function openDeleteModal() {
@@ -108,33 +104,16 @@ async function deleteTravel() {
   >
     <div v-if="travel" class="h-full overflow-auto">
       <div class="max-w-6xl mx-auto p-6 space-y-6">
-        <!-- Header -->
-        <div class="flex flex-wrap items-start justify-between gap-4">
-          <div class="flex items-start gap-3 min-w-0">
-            <UButton
-              icon="i-lucide-arrow-left"
-              variant="ghost"
-              color="neutral"
-              aria-label="Volver a viajes"
-              :to="{ name: 'travels-dashboard' }"
-            />
-            <div class="min-w-0">
-              <div class="flex flex-wrap items-center gap-2">
-                <h1 class="text-2xl font-bold wrap-break-word">
-                  {{ travel.label }}
-                </h1>
-                <TravelStatusBadge :status="travel.status" />
-              </div>
-              <p class="text-muted text-sm">
-                <template v-if="travel.destination">
-                  {{ travel.destination }} ·
-                </template>
-                {{ dateRange }}
-              </p>
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2">
+        <PageHeader
+          :title="travel.label"
+          :description="travel.destination ? `${travel.destination} · ${dateRange}` : dateRange"
+          :to="{ name: 'travels-dashboard' }"
+          back-label="Volver a viajes"
+        >
+          <template #badge>
+            <TravelStatusBadge :status="travel.status" />
+          </template>
+          <template #actions>
             <UButton
               icon="i-lucide-calculator"
               label="Cotización"
@@ -156,8 +135,8 @@ async function deleteTravel() {
                 aria-label="Más acciones"
               />
             </UDropdownMenu>
-          </div>
-        </div>
+          </template>
+        </PageHeader>
 
         <UNavigationMenu
           :items="tabs"

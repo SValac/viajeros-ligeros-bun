@@ -14,7 +14,6 @@ import { sanitizeText, textSchema } from '~/utils/form-validation';
 // header, the status and the navigation; the tabs only render when the
 // quotation exists. Without a quotation, shows the empty state to create it.
 
-const router = useRouter();
 const toast = useToast();
 
 const quotationStore = useQuotationStore();
@@ -74,14 +73,6 @@ const createNotesInput = useSanitizedModel(() => createState.notes ?? '', v => c
 
 const isCreateModalOpen = shallowRef(false);
 
-function goToQuotations() {
-  router.push({ name: 'quotations-index' });
-}
-
-function goToTravelDetail() {
-  router.push({ name: 'travel-detail', params: { id: travelId.value } });
-}
-
 function openCreateModal() {
   isCreateModalOpen.value = true;
 }
@@ -127,32 +118,22 @@ async function handleCreateQuotation() {
   >
     <div v-if="travel" class="h-full overflow-auto">
       <div class="max-w-6xl mx-auto p-6 space-y-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-3">
+        <PageHeader
+          title="Cotización"
+          :description="travel.label"
+          :to="{ name: 'quotations-index' }"
+          back-label="Volver a cotizaciones"
+        >
+          <template #actions>
             <UButton
-              icon="i-lucide-arrow-left"
-              variant="ghost"
+              icon="i-lucide-map"
+              label="Ver viaje"
+              variant="outline"
               color="neutral"
-              @click="goToQuotations"
+              :to="{ name: 'travel-detail', params: { id: travelId } }"
             />
-            <div>
-              <h1 class="text-2xl font-bold">
-                Cotización
-              </h1>
-              <p class="text-muted text-sm">
-                {{ travel.label }}
-              </p>
-            </div>
-          </div>
-          <UButton
-            icon="i-lucide-map"
-            label="Ver viaje"
-            variant="outline"
-            color="neutral"
-            @click="goToTravelDetail"
-          />
-        </div>
+          </template>
+        </PageHeader>
 
         <!-- Until the quotation loads (or if the first load fails), "Sin cotización" would be a lie. If a later refetch fails, what was already there stays. -->
         <LoadState

@@ -18,6 +18,7 @@ defineEmits<{
 
 const store = useHotelRoomStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const totalRoomsInput = ref(0);
 const { isOpen: isFormModalOpen, editing: editingRoomType, openNew: openCreateForm, openEdit: openEditForm, close: closeFormModal } = useFormModal<HotelRoomType>();
@@ -96,9 +97,12 @@ async function handleFormSubmit(data: HotelRoomTypeFormData) {
 }
 
 async function handleDelete(rt: HotelRoomType) {
-  // eslint-disable-next-line no-alert
-  if (!confirm('¿Eliminar este tipo de habitación?'))
+  if (!(await confirmDelete({
+    title: 'Eliminar habitación',
+    description: '¿Estás seguro de eliminar este tipo de habitación?',
+  }))) {
     return;
+  }
 
   if (await store.deleteRoomType(rt.id))
     toast.add({ title: 'Habitación eliminada', color: 'warning' });

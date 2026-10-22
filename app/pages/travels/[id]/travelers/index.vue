@@ -3,16 +3,18 @@ import type { DropdownMenuItem, TableColumn } from '@nuxt/ui';
 
 import { h } from 'vue';
 
-import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErrorCode, TravelerWithChildren } from '~/types/traveler';
+import type { Traveler, TravelerFilters, TravelerFormData, TravelerWithChildren } from '~/types/traveler';
 
 import BusSeatMap from '~/components/bus/bus-seat-map.vue';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
-import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { filterTravelers, getRepresentativeNames, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
+import { groupNameCell } from '~/utils/table-cells';
 import { formatTravelBusLabel } from '~/utils/travel-bus';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
@@ -25,6 +27,7 @@ const router = useRouter();
 const travelerStore = useTravelerStore();
 const providerStore = useProviderStore();
 const quotationStore = useQuotationStore();
+const confirmDelete = useConfirmDelete();
 const toast = useToast();
 
 type TravelerActionItem = {
@@ -160,13 +163,11 @@ function getOccupantsByBus(busId: string): Traveler[] {
   return occupantsOfTravel.value.filter(t => t.travelBusId === busId);
 }
 
+// Companion id → representative's name, also when they ride different buses.
+const representativeNames = computed(() => getRepresentativeNames(occupantsOfTravel.value));
+
 function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
   const travelersByBus = getOccupantsByBus(busId);
-  const representativeById = new Map(
-    travelersByBus
-      .filter(t => t.isRepresentative)
-      .map(t => [t.id, formatTravelerName(t)]),
-  );
 
   return travelersByBus
     .map((t) => {
@@ -178,9 +179,7 @@ function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
         boardingPoint: t.boardingPoint,
         isRepresentative: t.isRepresentative,
         isCoordinator: t.kind === 'coordinator',
-        representativeName: t.representativeId
-          ? representativeById.get(t.representativeId)
-          : undefined,
+        representativeName: representativeNames.value[t.id],
         menuItems: t.kind === 'coordinator' ? getCoordinatorSeatActions(t) : getRowActions(t),
       };
     })
@@ -313,30 +312,6 @@ function handleEmptySeatSelected(payload: { busId: string; seatNumber: number })
   });
 }
 
-function getSeatChangeErrorMessage(code?: TravelerSeatChangeErrorCode, fallbackMessage?: string): string {
-  if (code === 'invalid-target-seat') {
-    return 'El asiento destino no es válido.';
-  }
-
-  if (code === 'invalid-travel-bus') {
-    return 'El camión seleccionado no es válido para este cambio.';
-  }
-
-  if (code === 'traveler-not-found') {
-    return 'No se encontró al viajero. Recarga la vista e intenta nuevamente.';
-  }
-
-  if (code === 'same-seat-selected') {
-    return 'Selecciona un asiento diferente al actual.';
-  }
-
-  if (code === 'seat-conflict') {
-    return 'Otro cambio ocupó ese asiento. Intenta de nuevo con la información actualizada.';
-  }
-
-  return fallbackMessage ?? 'No se pudo completar el cambio de asiento.';
-}
-
 async function handleSeatDestinationSelected(payload: SeatSelectionPayload) {
   if (!seatChangeContext.value || seatChangeLoading.value) {
     return;
@@ -388,10 +363,8 @@ async function handleSeatDestinationSelected(payload: SeatSelectionPayload) {
     toast.clear();
     toast.add({
       title: 'Error al cambiar asiento',
-      description: getSeatChangeErrorMessage(
-        (error as { code?: TravelerSeatChangeErrorCode } | null)?.code,
-        (error as { message?: string } | null)?.message,
-      ),
+      // The store throws a TravelerSeatChangeError, already translated by toTravelerSeatChangeError
+      description: error instanceof Error ? error.message : 'No se pudo completar el cambio de asiento.',
       color: 'error',
     });
   }
@@ -414,6 +387,8 @@ function isSeatAlreadyTakenError(error: unknown): boolean {
     && dbError?.constraint === 'travelers_unique_travel_bus_seat';
 }
 
+const isSaving = shallowRef(false);
+
 async function handleFormSubmit(data: TravelerFormData) {
   const takenSeatTraveler = findTravelerBySeat(data, editingTraveler.value?.id);
   if (takenSeatTraveler) {
@@ -425,6 +400,7 @@ async function handleFormSubmit(data: TravelerFormData) {
     return;
   }
 
+  isSaving.value = true;
   try {
     if (editingTraveler.value) {
       await travelerStore.updateTraveler(editingTraveler.value.id, data);
@@ -461,11 +437,16 @@ async function handleFormSubmit(data: TravelerFormData) {
       color: 'error',
     });
   }
+  finally {
+    isSaving.value = false;
+  }
 }
 
 async function handleDelete(traveler: Traveler) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar viajero',
+    description: `¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`,
+  })) {
     await travelerStore.deleteTraveler(traveler.id);
     if (seatChangeContext.value?.travelerId === traveler.id) {
       clearSeatChangeState();
@@ -574,12 +555,7 @@ function getRowActions(traveler: Traveler): TravelerActionItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(traveler),
-      },
+      deleteAction(() => handleDelete(traveler)),
     ],
   ];
 }
@@ -588,32 +564,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'fullName',
     header: 'Nombre',
-    cell: ({ row }) => {
-      const t = row.original;
-      const depth = row.depth;
-      const canExpand = row.getCanExpand();
-
-      const nameNode = h('span', { class: 'font-medium' }, formatTravelerName(t));
-
-      if (canExpand) {
-        const isExpanded = row.getIsExpanded();
-        const toggleIcon = isExpanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right';
-        const toggleBtn = h(
-          resolveComponent('UButton'),
-          {
-            icon: toggleIcon,
-            variant: 'ghost',
-            color: 'neutral',
-            size: 'xs',
-            class: 'mr-1',
-            onClick: row.getToggleExpandedHandler(),
-          },
-        );
-        return h('div', { class: 'flex items-center', style: `padding-left: ${depth * 1.5}rem` }, [toggleBtn, nameNode]);
-      }
-
-      return h('div', { class: 'flex items-center', style: `padding-left: ${depth * 1.5 + 0.75}rem` }, [nameNode]);
-    },
+    cell: ({ row }) => groupNameCell(row, h('span', { class: 'font-medium' }, formatTravelerName(row.original))),
   },
   {
     accessorKey: 'travelBusId',
@@ -677,22 +628,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       );
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(
-        resolveComponent('UDropdownMenu'),
-        { items: getRowActions(row.original) },
-        () =>
-          h(resolveComponent('UButton'), {
-            color: 'neutral',
-            variant: 'ghost',
-            icon: 'i-lucide-more-vertical',
-          }),
-      );
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 
@@ -717,47 +653,21 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     >
       <!-- Stats -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Total Viajeros
-              </p>
-              <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalTravelers }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-users" class="w-10 h-10 text-muted" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Representantes
-              </p>
-              <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalRepresentatives }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-user-check" class="w-10 h-10 text-muted" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Acompañantes
-              </p>
-              <p class="text-2xl font-bold text-highlighted mt-1">
-                {{ totalCompanions }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-user" class="w-10 h-10 text-muted" />
-          </div>
-        </UCard>
+        <StatCard
+          label="Total de viajeros"
+          icon="i-lucide-users"
+          :value="String(totalTravelers)"
+        />
+        <StatCard
+          label="Representantes"
+          icon="i-lucide-user-check"
+          :value="String(totalRepresentatives)"
+        />
+        <StatCard
+          label="Acompañantes"
+          icon="i-lucide-user"
+          :value="String(totalCompanions)"
+        />
       </div>
 
       <div v-if="seatChangeContext" class="flex flex-col gap-3 md:flex-row md:items-center">
@@ -902,6 +812,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           :available-buses="allBuses"
           :available-travelers="travelersOfTravel"
           :locked-travel-id="travelId"
+          :loading="isSaving"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />

@@ -6,6 +6,7 @@ import { h } from 'vue';
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
 import { useFormModal } from '~/composables/use-form-modal';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 import { matchesSearch } from '~/utils/search';
 
@@ -15,6 +16,7 @@ definePageMeta({
 
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const { isOpen: isFormModalOpen, editing: editingCoordinator, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Coordinator>();
 const searchTerm = ref('');
@@ -27,7 +29,10 @@ function clearSearch() {
   searchTerm.value = '';
 }
 
+const isSaving = shallowRef(false);
+
 async function handleFormSubmit(data: CoordinatorFormData) {
+  isSaving.value = true;
   try {
     if (editingCoordinator.value) {
       await coordinatorStore.updateCoordinator(editingCoordinator.value.id, data);
@@ -42,11 +47,16 @@ async function handleFormSubmit(data: CoordinatorFormData) {
   catch {
     toast.add({ title: 'Error', description: 'Ocurrió un error al guardar el coordinador', color: 'error' });
   }
+  finally {
+    isSaving.value = false;
+  }
 }
 
 async function handleDelete(coordinator: Coordinator) {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar a ${coordinator.name}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar coordinador',
+    description: `¿Estás seguro de eliminar a ${coordinator.name}?`,
+  })) {
     try {
       await coordinatorStore.deleteCoordinator(coordinator.id);
       toast.add({ title: 'Coordinador eliminado', description: `${coordinator.name} se eliminó correctamente`, color: 'warning' });
@@ -67,12 +77,7 @@ function getRowActions(coordinator: Coordinator): DropdownMenuItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(coordinator),
-      },
+      deleteAction(() => handleDelete(coordinator)),
     ],
   ];
 }
@@ -120,43 +125,28 @@ const columns: TableColumn<Coordinator>[] = [
     header: 'Acceso a la app',
     cell: ({ row }) => h(resolveComponent('CoordinatorInviteButton'), { coordinator: row.original }),
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) =>
-      h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-      }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-      })),
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap justify-between items-center gap-4">
-      <div class="flex items-center gap-4">
-        <UIcon name="i-lucide-user-cog" class="w-10 h-10 text-violet-500" />
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-            Coordinadores
-          </h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-1">
-            {{ pluralize(coordinatorStore.allCoordinators.length, 'coordinador registrado', 'coordinadores registrados') }}
-          </p>
-        </div>
-      </div>
-      <UButton
-        icon="i-lucide-plus"
-        size="lg"
-        @click="openCreateModal"
-      >
-        Nuevo Coordinador
-      </UButton>
-    </div>
+    <PageHeader
+      title="Coordinadores"
+      :description="pluralize(coordinatorStore.allCoordinators.length, 'coordinador registrado', 'coordinadores registrados')"
+      icon="i-lucide-user-cog"
+      icon-class="text-violet-500"
+    >
+      <template #actions>
+        <UButton
+          icon="i-lucide-plus"
+          size="lg"
+          @click="openCreateModal"
+        >
+          Nuevo Coordinador
+        </UButton>
+      </template>
+    </PageHeader>
 
     <UInput
       v-model="searchTerm"
@@ -199,6 +189,7 @@ const columns: TableColumn<Coordinator>[] = [
       <template #body>
         <CoordinatorForm
           :coordinator="editingCoordinator"
+          :loading="isSaving"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />

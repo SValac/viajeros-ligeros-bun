@@ -9,6 +9,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { travelPaymentTotalsQuery } from '~/queries/payments';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
+import { travelLinkCell } from '~/utils/table-cells';
 
 definePageMeta({
   name: 'payments-index',
@@ -77,13 +78,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
   {
     id: 'label',
     header: 'Nombre',
-    cell: ({ row }) => h(resolveComponent('NuxtLink'), {
-      to: { name: 'payments-travel', params: { id: row.original.travel.id } },
-      class: 'flex items-center gap-2 hover:text-primary transition-colors group',
-    }, () => [
-      h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
-      h('span', { class: 'font-medium' }, row.original.travel.label),
-    ]),
+    cell: ({ row }) => travelLinkCell({ name: 'payments-travel', params: { id: row.original.travel.id } }, row.original.travel.label),
   },
   {
     id: 'status',
@@ -140,87 +135,46 @@ const columns: TableColumn<TravelSummaryRow>[] = [
     },
   },
 ];
+
+const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success');
 </script>
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-        Gestión de Pagos
-      </h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1">
-        Seguimiento de abonos y saldos por viaje
-      </p>
-    </div>
+    <PageHeader
+      title="Gestión de Pagos"
+      description="Seguimiento de abonos y saldos por viaje"
+    />
 
     <!-- Stats cards: active travels only -->
     <p class="text-sm text-muted -mb-2">
       Viajes publicados y en curso
     </p>
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Viajes con pagos
-            </p>
-            <p class="text-2xl font-bold mt-1">
-              {{ globalStats?.travelsWithPayments ?? '—' }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-map" class="w-10 h-10 text-muted" />
-        </div>
-      </UCard>
+      <StatCard
+        label="Viajes con pagos"
+        icon="i-lucide-map"
+        :value="String(globalStats?.travelsWithPayments ?? '—')"
+      />
 
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Total recaudado
-            </p>
-            <p class="text-2xl font-bold mt-1">
-              {{ globalStats ? formatCurrency(globalStats.totalCollected) : '—' }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-trending-up" class="w-10 h-10 text-muted" />
-        </div>
-      </UCard>
+      <StatCard
+        label="Total recaudado"
+        icon="i-lucide-trending-up"
+        :value="globalStats ? formatCurrency(globalStats.totalCollected) : '—'"
+      />
 
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Saldo pendiente
-            </p>
-            <p
-              class="text-2xl font-bold mt-1"
-              :class="(globalStats?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success'"
-            >
-              {{ globalStats ? formatCurrency(globalStats.totalBalance) : '—' }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-clock"
-            class="w-10 h-10 opacity-60"
-            :class="(globalStats?.totalBalance ?? 0) > 0 ? 'text-warning' : 'text-success'"
-          />
-        </div>
-      </UCard>
+      <StatCard
+        label="Saldo pendiente"
+        icon="i-lucide-clock"
+        :value="globalStats ? formatCurrency(globalStats.totalBalance) : '—'"
+        :value-class="globalStats ? balanceClass : 'text-highlighted'"
+      />
 
-      <UCard>
-        <div class="flex items-center justify-between">
-          <div>
-            <p class="text-sm text-muted">
-              Viajes liquidados
-            </p>
-            <p class="text-2xl font-bold mt-1">
-              {{ globalStats?.settledTravels ?? '—' }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-check-circle" class="w-10 h-10 text-muted" />
-        </div>
-      </UCard>
+      <StatCard
+        label="Viajes liquidados"
+        icon="i-lucide-check-circle"
+        :value="String(globalStats?.settledTravels ?? '—')"
+      />
     </div>
 
     <!-- Travels table -->

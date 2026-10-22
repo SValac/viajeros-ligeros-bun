@@ -6,6 +6,7 @@ import {
   siteImageAccept,
   siteImageHint,
 } from '~/composables/agency-profile/use-agency-profile-domain';
+import { cloneHomePage, homePageSchema, serializeHomePage } from '~/composables/agency-profile/use-home-page-domain';
 import { useSiteImageActions } from '~/composables/agency-profile/use-site-image-actions';
 
 definePageMeta({
@@ -59,7 +60,7 @@ async function handleBannerRemove() {
       variant="subtle"
     >
       <div class="space-y-4">
-        <AgencyImageUpload
+        <ImageUpload
           :image-url="profile.bannerImageUrl"
           label="banner"
           :accept="siteImageAccept('bannerImageUrl')"
@@ -87,10 +88,24 @@ async function handleBannerRemove() {
       </div>
     </UPageCard>
 
-    <AgencyHomePageForm
-      :profile="profile"
+    <AgencyPageForm
+      :page="profile.homePage"
+      :schema="homePageSchema"
+      :clone="cloneHomePage"
+      :serialize="serializeHomePage"
+      title="Página principal"
+      description="Opcional. Personaliza los textos de la página de inicio de tu sitio; el diseño y el orden los pone la web. Lo que dejes vacío usa el texto predeterminado."
+      submit-label="Guardar página principal"
       :saving="agencyProfileStore.saving"
       @submit="handleSubmit"
-    />
+    >
+      <template #default="{ state, path }">
+        <AgencyHomePageEditor
+          v-model="state.page"
+          :name="path"
+          :company-name="profile.companyName ?? ''"
+        />
+      </template>
+    </AgencyPageForm>
   </div>
 </template>

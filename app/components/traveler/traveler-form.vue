@@ -18,6 +18,8 @@ type Props = {
   availableBuses?: TravelBus[];
   availableTravelers: Traveler[];
   lockedTravelId?: string;
+  // The parent is saving the submitted data
+  loading?: boolean;
 };
 
 const {
@@ -27,6 +29,7 @@ const {
   availableBuses = [],
   availableTravelers,
   lockedTravelId,
+  loading = false,
 } = defineProps<Props>();
 const emit = defineEmits<{
   submit: [data: TravelerFormData];
@@ -157,21 +160,13 @@ watch(() => state.value.isRepresentative, (isRep) => {
   }
 });
 
-const isSubmitting = shallowRef(false);
-
-async function onSubmit(event: FormSubmitEvent<Schema>) {
-  isSubmitting.value = true;
-  try {
-    const formData: TravelerFormData = {
-      ...event.data,
-      representativeId: event.data.isRepresentative ? undefined : (event.data.representativeId || undefined),
-      id: traveler?.id,
-    };
-    emit('submit', formData);
-  }
-  finally {
-    isSubmitting.value = false;
-  }
+function onSubmit(event: FormSubmitEvent<Schema>) {
+  const formData: TravelerFormData = {
+    ...event.data,
+    representativeId: event.data.isRepresentative ? undefined : (event.data.representativeId || undefined),
+    id: traveler?.id,
+  };
+  emit('submit', formData);
 }
 
 function onCancel() {
@@ -304,22 +299,10 @@ function onCancel() {
     </UFormField>
 
     <!-- Buttons -->
-    <div class="flex justify-end gap-3 pt-4">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="outline"
-        @click="onCancel"
-      >
-        Cancelar
-      </UButton>
-      <UButton
-        type="submit"
-        color="primary"
-        :loading="isSubmitting"
-      >
-        {{ traveler ? 'Actualizar' : 'Agregar' }} Viajero
-      </UButton>
-    </div>
+    <FormActions
+      :submit-label="traveler ? 'Actualizar viajero' : 'Agregar viajero'"
+      :loading="loading"
+      @cancel="onCancel"
+    />
   </UForm>
 </template>

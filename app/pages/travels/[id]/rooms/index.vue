@@ -6,7 +6,7 @@ import type { Traveler } from '~/types/traveler';
 import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
-import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { getRepresentativeNames, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
@@ -138,16 +138,7 @@ const hotelGroups = computed((): HotelGroup[] => {
 });
 
 // Companion id → representative's full name, for the group shown on each room card.
-const representativeNames = computed(() => {
-  const byId = new Map(travelersOfTravel.value.map(t => [t.id, t]));
-  const names: Record<string, string> = {};
-  for (const traveler of travelersOfTravel.value) {
-    const representative = traveler.representativeId ? byId.get(traveler.representativeId) : undefined;
-    if (representative)
-      names[traveler.id] = formatTravelerName(representative);
-  }
-  return names;
-});
+const representativeNames = computed(() => getRepresentativeNames(travelersOfTravel.value));
 
 // A traveler needs one room in every hotel of the travel.
 function hasRoomInHotel(travelerId: string, providerId: string): boolean {
@@ -377,44 +368,29 @@ async function updateAccommodation(
         >
           <!-- Stats -->
           <div class="grid grid-cols-3 gap-4">
-            <UCard>
-              <div class="text-center">
-                <p class="text-2xl font-bold">
-                  {{ totalRooms }}
-                </p>
-                <p class="text-sm text-muted">
-                  Total habitaciones
-                </p>
-              </div>
-            </UCard>
-            <UCard>
-              <div class="text-center">
-                <p class="text-2xl font-bold text-success">
-                  {{ occupiedRooms }}
-                </p>
-                <p class="text-sm text-muted">
-                  Con viajeros
-                </p>
-              </div>
-            </UCard>
-            <UCard>
-              <div class="text-center">
-                <p class="text-2xl font-bold" :class="unassignedTravelers > 0 ? 'text-warning' : 'text-muted'">
-                  {{ unassignedTravelers }}
-                </p>
-                <p class="text-sm text-muted">
-                  Personas sin habitación
-                </p>
-                <p
-                  v-if="pendingByHotel.length > 1"
-                  class="text-xs text-dimmed mt-1"
-                >
-                  <template v-for="(hotel, index) in pendingByHotel" :key="hotel.providerName">
-                    <span v-if="index > 0"> · </span>{{ hotel.providerName }}: {{ hotel.count }}
-                  </template>
-                </p>
-              </div>
-            </UCard>
+            <StatCard
+              label="Total de habitaciones"
+              icon="i-lucide-bed-double"
+              :value="String(totalRooms)"
+            />
+            <StatCard
+              label="Con viajeros"
+              icon="i-lucide-users"
+              :value="String(occupiedRooms)"
+              value-class="text-success"
+            />
+            <StatCard
+              label="Viajeros sin habitación"
+              icon="i-lucide-user"
+              :value="String(unassignedTravelers)"
+              :value-class="unassignedTravelers > 0 ? 'text-warning' : 'text-muted'"
+            >
+              <p v-if="pendingByHotel.length > 1" class="text-dimmed">
+                <template v-for="(hotel, index) in pendingByHotel" :key="hotel.providerName">
+                  <span v-if="index > 0"> · </span>{{ hotel.providerName }}: {{ hotel.count }}
+                </template>
+              </p>
+            </StatCard>
           </div>
 
           <!-- Tabs per hotel -->

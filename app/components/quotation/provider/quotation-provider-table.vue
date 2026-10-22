@@ -7,12 +7,13 @@ import type { PaymentStatus } from '~/types/payment';
 import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
-import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
-import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
+import { calculateProviderQuotedCost, countServiceTakers, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
 import { useFormModal } from '~/composables/use-form-modal';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
-import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -25,6 +26,7 @@ const { quotationId, readonly = false } = defineProps<Props>();
 const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 // Derived data
 const providers = computed(() => quotationStore.filteredProviders(quotationId));
@@ -49,8 +51,6 @@ const { isOpen: isProviderFormOpen, editing: selectedProvider, openNew: openNewP
 const isHistoryOpen = shallowRef(false);
 const historyProviderId = shallowRef<string>('');
 const historyProviderName = shallowRef<string>('');
-const isDeleteModalOpen = shallowRef(false);
-const providerToDelete = shallowRef<QuotationProvider | null>(null);
 const isAdjustmentsOpen = shallowRef(false);
 const adjustmentsProvider = shallowRef<QuotationProvider | null>(null);
 const adjustmentsDraft = ref<ProviderPriceAdjustmentDraft[]>([]);
@@ -80,11 +80,6 @@ function isProviderInactive(providerId: string): boolean {
 // Cost with a full bus: for a per-person service, cost × sellable seats.
 function getQuotedCost(provider: QuotationProvider): number {
   return calculateProviderQuotedCost(provider, quotationStore.getSellableSeats(provider.quotationId, coordinatorCount.value));
-}
-
-// How many travelers count for the payment of a per-person service.
-function getTakersCount(provider: QuotationProvider): number {
-  return provider.unitCost ? Math.round(provider.payableCost / provider.unitCost) : 0;
 }
 
 function openAdjustments(provider: QuotationProvider) {
@@ -135,21 +130,6 @@ function openHistory(provider: QuotationProvider) {
   isHistoryOpen.value = true;
 }
 
-function openRecordPayment(provider: QuotationProvider) {
-  historyProviderId.value = provider.id;
-  historyProviderName.value = providerStore.getProviderName(provider.providerId);
-  isHistoryOpen.value = true;
-}
-
-function openDeleteConfirm(provider: QuotationProvider) {
-  providerToDelete.value = provider;
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
-
 async function handleProviderSubmit(data: QuotationProviderFormData, adjustments: ProviderPriceAdjustmentDraft[]) {
   let saved: QuotationProvider | undefined;
   if (selectedProvider.value) {
@@ -188,29 +168,23 @@ async function handleToggleConfirmed(provider: QuotationProvider) {
   await quotationStore.toggleProviderConfirmed(provider.id);
 }
 
-async function confirmDeleteProvider() {
-  if (!providerToDelete.value)
+async function handleDelete(provider: QuotationProvider) {
+  if (!(await confirmDelete({
+    title: 'Eliminar proveedor',
+    description: '¿Estás seguro? Se eliminarán también todos los pagos asociados a este proveedor.',
+  }))) {
     return;
-  await quotationStore.deleteQuotationProvider(providerToDelete.value.id);
+  }
+
+  await quotationStore.deleteQuotationProvider(provider.id);
   toast.add({ title: 'Proveedor eliminado', color: 'warning' });
-  isDeleteModalOpen.value = false;
-  providerToDelete.value = null;
 }
 
+const supplierTable = useSupplierTable<QuotationProvider>('provider');
+
 function getProviderActions(provider: QuotationProvider) {
-  // Payments go on after the quotation is confirmed; only its structure is locked.
   const paymentActions = [
-    {
-      label: 'Ver historial de pagos',
-      icon: 'i-lucide-receipt',
-      onSelect: () => openHistory(provider),
-    },
-    {
-      label: 'Registrar pago',
-      icon: 'i-lucide-banknote',
-      disabled: quotationStore.getPendingBalanceByProvider(provider.id) <= 0,
-      onSelect: () => openRecordPayment(provider),
-    },
+    ...supplierTable.paymentActions(provider, openHistory),
     // The courtesy doesn't change the seat price, so it's also allowed on a
     // confirmed quotation.
     ...(isPerPersonProvider(provider)
@@ -235,26 +209,16 @@ function getProviderActions(provider: QuotationProvider) {
       icon: 'i-lucide-pencil',
       onSelect: () => openEditProvider(provider),
     },
-    {
-      label: provider.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
-      icon: provider.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-      onSelect: () => handleToggleConfirmed(provider),
-    },
+    supplierTable.confirmAction(provider, handleToggleConfirmed),
   ];
 
   const destructiveActions = [
-    {
-      label: 'Eliminar',
-      icon: 'i-lucide-trash-2',
-      color: 'error' as const,
-      onSelect: () => openDeleteConfirm(provider),
-    },
+    deleteAction(() => handleDelete(provider)),
   ];
 
   return [paymentActions, writeActions, destructiveActions];
 }
 
-const supplierColumns = useSupplierPaymentColumns<QuotationProvider>('provider');
 const columns: TableColumn<QuotationProvider>[] = [
   {
     accessorKey: 'providerId',
@@ -331,7 +295,7 @@ const columns: TableColumn<QuotationProvider>[] = [
           ? h(resolveComponent('ULink'), {
               to: { name: 'travel-optional-services', params: { id: travelId.value } },
               class: 'text-xs text-primary whitespace-nowrap',
-            }, () => `${getTakersCount(provider)} lo toman`)
+            }, () => `${countServiceTakers(provider)} lo toman`)
           : null,
       ]);
     },
@@ -341,40 +305,12 @@ const columns: TableColumn<QuotationProvider>[] = [
     header: 'Costo/persona',
     cell: ({ row }) => formatCurrency(quotationStore.getProviderCostPerPerson(row.original.id, coordinatorCount.value)),
   },
-  supplierColumns.paidColumn,
-  supplierColumns.pendingColumn,
-  {
-    accessorKey: 'paymentMethod',
-    header: 'Método',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: getPaymentTypeLabel(row.original.paymentMethod),
-      color: 'neutral',
-      variant: 'subtle',
-    }),
-  },
-  supplierColumns.statusColumn,
-  {
-    accessorKey: 'confirmed',
-    header: 'Confirmado',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.confirmed ? 'Sí' : 'No',
-      color: row.original.confirmed ? 'success' : 'neutral',
-      variant: 'subtle',
-    }),
-  },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => h(resolveComponent('UDropdownMenu'), {
-      items: getProviderActions(row.original),
-    }, () => h(resolveComponent('UButton'), {
-      'icon': 'i-lucide-more-vertical',
-      'variant': 'ghost',
-      'color': 'neutral',
-      'size': 'xs',
-      'aria-label': 'Acciones del proveedor',
-    })),
-  },
+  supplierTable.paidColumn,
+  supplierTable.pendingColumn,
+  paymentMethodColumn(),
+  supplierTable.statusColumn,
+  supplierTable.confirmedColumn,
+  actionsColumn(getProviderActions, { size: 'xs' }),
 ];
 </script>
 
@@ -516,27 +452,4 @@ const columns: TableColumn<QuotationProvider>[] = [
       </div>
     </template>
   </USlideover>
-
-  <!-- Modal: confirm deletion -->
-  <UModal
-    v-model:open="isDeleteModalOpen"
-    title="Eliminar Proveedor"
-    description="¿Estás seguro? Se eliminarán también todos los pagos asociados a este proveedor."
-  >
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          label="Cancelar"
-          @click="closeDeleteModal"
-        />
-        <UButton
-          color="error"
-          label="Eliminar"
-          @click="confirmDeleteProvider"
-        />
-      </div>
-    </template>
-  </UModal>
 </template>

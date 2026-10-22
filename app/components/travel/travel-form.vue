@@ -105,7 +105,6 @@ const initialState = computed((): Schema => {
 });
 
 // Banner image state (managed outside Zod schema)
-const bannerInputRef = useTemplateRef<HTMLInputElement>('bannerInputRef');
 const pendingBannerFile = ref<File | null>(null);
 // Revoked by VueUse when the file changes or the form unmounts
 const bannerPreviewUrl = useObjectUrl(pendingBannerFile);
@@ -114,16 +113,6 @@ const existingBannerUrl = ref(travel?.imageUrl ?? '');
 const displayBannerUrl = computed(() =>
   bannerPreviewUrl.value ?? existingBannerUrl.value,
 );
-
-function onBannerSelected(event: Event) {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  if (!file)
-    return;
-
-  pendingBannerFile.value = file;
-  input.value = '';
-}
 
 function removeBanner() {
   pendingBannerFile.value = null;
@@ -474,38 +463,16 @@ function onCancel() {
           <!-- Cover image -->
           <div class="flex flex-col gap-2">
             <label class="text-sm font-medium">Imagen de portada</label>
-            <div
-              v-if="displayBannerUrl"
-              class="relative w-full aspect-video rounded-lg overflow-hidden bg-elevated"
-            >
-              <img
-                :src="displayBannerUrl"
-                alt="Portada del viaje"
-                class="w-full h-full object-cover"
-              >
-              <UButton
-                icon="i-lucide-x"
-                size="xs"
-                color="neutral"
-                variant="solid"
-                class="absolute top-2 right-2"
-                @click="removeBanner"
-              />
-            </div>
-            <input
-              ref="bannerInputRef"
-              type="file"
+            <!-- Uploaded by the parent on submit -->
+            <ImageUpload
+              :image-url="displayBannerUrl || null"
+              label="portada"
               accept="image/jpeg,image/png,image/webp"
-              class="hidden"
-              @change="onBannerSelected"
-            >
-            <UButton
-              icon="i-lucide-image"
-              variant="outline"
-              @click="bannerInputRef?.click()"
-            >
-              {{ displayBannerUrl ? 'Cambiar imagen' : 'Seleccionar imagen' }}
-            </UButton>
+              hint="JPG, PNG o WebP. Se sube al guardar el viaje."
+              shape="cover"
+              @select="pendingBannerFile = $event"
+              @remove="removeBanner"
+            />
           </div>
           <!-- Internal Notes -->
           <UFormField

@@ -29,14 +29,18 @@ export const useBusStore = defineStore('buses', () => {
   });
 
   // Pre-computes the map so the returned function just does a lookup (preserves caching)
-  const getBusesByProvider = computed(() => {
+  const getAllBusesByProvider = computed(() => {
     const map = new Map<string, Bus[]>();
-    buses.value.filter(b => b.active).forEach((b) => {
+    buses.value.forEach((b) => {
       const list = map.get(b.providerId) ?? [];
       list.push(b);
       map.set(b.providerId, list);
     });
     return (providerId: string): Bus[] => map.get(providerId) ?? [];
+  });
+
+  const getActiveBusesByProvider = computed(() => {
+    return (providerId: string): Bus[] => getAllBusesByProvider.value(providerId).filter(bus => bus.active);
   });
 
   const totalBuses = computed(() => buses.value.filter(b => b.active).length);
@@ -134,7 +138,8 @@ export const useBusStore = defineStore('buses', () => {
     loadError: catalog.loadError,
     activeBuses,
     getBusById,
-    getBusesByProvider,
+    getActiveBusesByProvider,
+    getAllBusesByProvider,
     totalBuses,
     // Actions
     refetch: catalog.refetch,

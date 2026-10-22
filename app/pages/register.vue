@@ -77,16 +77,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     isSubmitting.value = false;
   }
 }
-
-const showPassword = shallowRef(false);
-const passwordInputType = shallowRef('password');
-const passwordInputTrailingIcon = shallowRef('i-lucide-eye');
-
-function togglePasswordVisibility() {
-  showPassword.value = !showPassword.value;
-  passwordInputType.value = showPassword.value ? 'text' : 'password';
-  passwordInputTrailingIcon.value = showPassword.value ? 'i-lucide-eye-off' : 'i-lucide-eye';
-}
 </script>
 
 <template>
@@ -140,27 +130,9 @@ function togglePasswordVisibility() {
           label="Contraseña"
           required
         >
-          <UInput
+          <PasswordInput
             v-model="state.password"
-            :type="passwordInputType"
-            icon="i-lucide-lock"
-            placeholder="••••••••"
-            :ui="{ trailing: 'pe-1' }"
-            class="w-full"
-          >
-            <template #trailing>
-              <UButton
-                color="neutral"
-                variant="link"
-                size="sm"
-                :icon="passwordInputTrailingIcon"
-                :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                :aria-pressed="showPassword"
-                aria-controls="password"
-                @click="togglePasswordVisibility"
-              />
-            </template>
-          </UInput>
+          />
         </UFormField>
 
         <UFormField
@@ -168,27 +140,10 @@ function togglePasswordVisibility() {
           label="Confirmar contraseña"
           required
         >
-          <UInput
+          <PasswordInput
             v-model="state.confirmPassword"
-            :type="passwordInputType"
             icon="i-lucide-lock-keyhole"
-            :ui="{ trailing: 'pe-1' }"
-            placeholder="••••••••"
-            class="w-full"
-          >
-            <template #trailing>
-              <UButton
-                color="neutral"
-                variant="link"
-                size="sm"
-                :icon="passwordInputTrailingIcon"
-                :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                :aria-pressed="showPassword"
-                aria-controls="password"
-                @click="togglePasswordVisibility"
-              />
-            </template>
-          </UInput>
+          />
         </UFormField>
 
         <UAlert

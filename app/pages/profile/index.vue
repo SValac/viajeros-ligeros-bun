@@ -38,7 +38,7 @@ const { selectImage, removeImage } = useSiteImageActions();
       description="Se muestra en las tarjetas y el detalle de tus viajes."
       variant="subtle"
     >
-      <AgencyImageUpload
+      <ImageUpload
         :image-url="profile.logoUrl"
         label="logo"
         :accept="siteImageAccept('logoUrl')"

@@ -1,41 +1,23 @@
 <script setup lang="ts">
-import { useProviderDetail } from '~/composables/providers/use-provider-detail';
 import { PROVIDER_CATEGORY } from '~/types/provider';
+import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 definePageMeta({
   name: 'providers-accommodation-detail',
 });
 
 const router = useRouter();
-const { provider, providerStore } = useProviderDetail(PROVIDER_CATEGORY.ACCOMMODATION);
 </script>
 
 <template>
-  <LoadState
-    :is-loaded="providerStore.isLoaded"
-    :load-error="providerStore.loadError"
-    label="los proveedores"
-    @retry="providerStore.refetch()"
+  <ProviderDetailPage
+    :category="PROVIDER_CATEGORY.ACCOMMODATION"
   >
-    <div v-if="provider" class="space-y-6">
-      <!-- Header with breadcrumb -->
-      <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-        <NuxtLink to="/providers/accommodation" class="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-          Hospedajes
-        </NuxtLink>
-        <UIcon name="i-lucide-chevron-right" class="w-4 h-4" />
-        <span class="text-gray-900 dark:text-white font-medium">{{ provider.name }}</span>
-      </div>
-
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-        <ProviderDetailCard :provider="provider" />
-
-        <!-- Room management -->
-        <HotelRoomsManager
-          :provider="provider"
-          @close="router.push('/providers/accommodation')"
-        />
-      </div>
-    </div>
-  </LoadState>
+    <template #aside="{ provider }">
+      <HotelRoomsManager
+        :provider="provider"
+        @close="router.push(PROVIDER_CATEGORY_META.accommodation.route)"
+      />
+    </template>
+  </ProviderDetailPage>
 </template>

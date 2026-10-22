@@ -90,7 +90,7 @@ const hasUnit = computed(() => !!selectedBus.value || keepsCurrentUnit.value);
 const agencyUnits = computed<Bus[]>(() => {
   if (!formState.providerId)
     return [];
-  return busStore.getBusesByProvider(formState.providerId);
+  return busStore.getActiveBusesByProvider(formState.providerId);
 });
 
 // Highest occupied seat on the travel's bus: when editing, it can't switch to a smaller unit
@@ -413,20 +413,11 @@ function handleCancel() {
         </template>
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton
-            type="button"
-            variant="ghost"
-            color="neutral"
-            label="Cancelar"
-            @click="handleCancel"
-          />
-          <UButton
-            type="submit"
-            :label="isEditing ? 'Guardar cambios' : 'Agregar Autobús'"
-            :disabled="!hasUnit"
-          />
-        </div>
+        <FormActions
+          :submit-label="isEditing ? 'Actualizar autobús' : 'Registrar autobús'"
+          :disabled="!hasUnit"
+          @cancel="handleCancel"
+        />
       </form>
     </template>
   </UModal>
