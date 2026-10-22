@@ -16,6 +16,11 @@ export const useTravelMediaStore = defineStore('useTravelMediaStore', () => {
     return (travelId: string): TravelMedia[] => mediaByTravel.value[travelId] ?? [];
   });
 
+  /** `false` until the travel's first fetch resolves: an empty gallery before that is not "no photos". */
+  const isLoadedFor = computed(() => {
+    return (travelId: string): boolean => travelId in mediaByTravel.value;
+  });
+
   // Actions
   async function fetchForTravel(travelId: string): Promise<void> {
     error.value = null;
@@ -68,6 +73,7 @@ export const useTravelMediaStore = defineStore('useTravelMediaStore', () => {
     uploading,
     error,
     getMediaByTravel,
+    isLoadedFor,
     fetchForTravel,
     uploadMedia,
     removeMedia,

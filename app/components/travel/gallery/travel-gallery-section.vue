@@ -1,20 +1,23 @@
 <script setup lang="ts">
-import { useActionToast } from '~/composables/use-action-toast';
-
 const props = defineProps<{
   travelId: string;
 }>();
 
 const store = useTravelMediaStore();
-const { runWithToast } = useActionToast();
 
 const media = computed(() => store.getMediaByTravel(props.travelId));
+const isLoaded = computed(() => store.isLoadedFor(props.travelId));
+const loadError = shallowRef<unknown>(null);
 
+// The error shows in LoadState: as the error with Reintentar, or above the gallery if it had loaded
 async function loadMedia() {
-  await runWithToast(() => store.fetchForTravel(props.travelId), {
-    error: 'No se pudo cargar la galería',
-    errorFallback: 'Recarga la página',
-  });
+  loadError.value = null;
+  try {
+    await store.fetchForTravel(props.travelId);
+  }
+  catch (e) {
+    loadError.value = e;
+  }
 }
 
 onMounted(loadMedia);
@@ -22,11 +25,19 @@ onMounted(loadMedia);
 
 <template>
   <div class="space-y-6">
-    <TravelGalleryViewer
-      :media="media"
-      :travel-id="travelId"
-      editable
-    />
+    <LoadState
+      :is-loaded="isLoaded"
+      :load-error="loadError"
+      label="la galería"
+      skeleton="cards"
+      @retry="loadMedia"
+    >
+      <TravelGalleryViewer
+        :media="media"
+        :travel-id="travelId"
+        editable
+      />
+    </LoadState>
     <USeparator />
     <TravelGalleryUpload
       :travel-id="travelId"
