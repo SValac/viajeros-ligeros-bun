@@ -871,16 +871,21 @@ export const useQuotationStore = defineStore('quotation', () => {
       expenses,
     } = result;
     const quotationId = quotation.id;
+    // Children are replaced by the ids the store had too, not only the fetched ones: a
+    // provider, hotel or bus deleted elsewhere must take its payments and adjustments along.
+    const idsBefore = (rows: { id: string; quotationId: string }[], fetched: { id: string }[]) =>
+      [...rows.filter(r => r.quotationId === quotationId).map(r => r.id), ...fetched.map(r => r.id)];
+    const providerIds = new Set(idsBefore(quotationProviders.value, providers));
 
     quotations.value = [...quotations.value.filter(c => c.travelId !== travelId), quotation];
+    providerPaymentSlice.replaceForParents([...providerIds], fetchedProviderPayments);
+    providerPriceAdjustments.value = [...providerPriceAdjustments.value.filter(a => !providerIds.has(a.quotationProviderId)), ...providerAdjustments];
     quotationProviders.value = [...quotationProviders.value.filter(p => p.quotationId !== quotationId), ...providers];
-    providerPaymentSlice.replaceForParents(providers.map(p => p.id), fetchedProviderPayments);
-    providerPriceAdjustments.value = [...providerPriceAdjustments.value.filter(a => !providers.some(pr => pr.id === a.quotationProviderId)), ...providerAdjustments];
+    accommodationPaymentSlice.replaceForParents(idsBefore(quotationAccommodations.value, accommodations), fetchedAccommodationPayments);
     quotationAccommodations.value = [...quotationAccommodations.value.filter(h => h.quotationId !== quotationId), ...accommodations];
-    accommodationPaymentSlice.replaceForParents(accommodations.map(h => h.id), fetchedAccommodationPayments);
     quotationPublicPrices.value = [...quotationPublicPrices.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
+    busPaymentSlice.replaceForParents(idsBefore(quotationBuses.value, buses), fetchedBusPayments);
     quotationBuses.value = [...quotationBuses.value.filter(b => b.quotationId !== quotationId), ...buses];
-    busPaymentSlice.replaceForParents(buses.map(b => b.id), fetchedBusPayments);
     quotationExpenses.value = [...quotationExpenses.value.filter(g => g.quotationId !== quotationId), ...expenses];
   }
 
