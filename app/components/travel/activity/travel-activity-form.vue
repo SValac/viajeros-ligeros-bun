@@ -12,6 +12,8 @@ import { pluralize } from '~/utils/pluralize';
 type Props = {
   activity?: TravelActivity | null;
   maxDay: number;
+  // The parent is saving the submitted data
+  loading?: boolean;
 };
 
 const props = defineProps<Props>();
@@ -86,26 +88,17 @@ watch(initialState, (next) => {
 });
 
 // Handlers
-const isSubmitting = ref(false);
+function onSubmit(event: FormSubmitEvent<Schema>) {
+  const activityData: Omit<TravelActivity, 'id'> = {
+    day: event.data.day,
+    title: event.data.title,
+    description: event.data.description,
+    time: event.data.time || undefined,
+    location: event.data.location || undefined,
+    mapLocation: event.data.mapLocation,
+  };
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
-  isSubmitting.value = true;
-
-  try {
-    const activityData: Omit<TravelActivity, 'id'> = {
-      day: event.data.day,
-      title: event.data.title,
-      description: event.data.description,
-      time: event.data.time || undefined,
-      location: event.data.location || undefined,
-      mapLocation: event.data.mapLocation,
-    };
-
-    emit('submit', activityData);
-  }
-  finally {
-    isSubmitting.value = false;
-  }
+  emit('submit', activityData);
 }
 
 function onCancel() {
@@ -200,22 +193,10 @@ function onCancel() {
     </UFormField>
 
     <!-- Action buttons -->
-    <div class="flex justify-end gap-3 pt-4">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="outline"
-        @click="onCancel"
-      >
-        Cancelar
-      </UButton>
-      <UButton
-        type="submit"
-        color="primary"
-        :loading="isSubmitting"
-      >
-        {{ props.activity ? 'Actualizar' : 'Agregar' }} Actividad
-      </UButton>
-    </div>
+    <FormActions
+      :submit-label="props.activity ? 'Actualizar actividad' : 'Agregar actividad'"
+      :loading="loading"
+      @cancel="onCancel"
+    />
   </UForm>
 </template>

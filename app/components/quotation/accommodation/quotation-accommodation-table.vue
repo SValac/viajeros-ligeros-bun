@@ -7,7 +7,8 @@ import { z } from 'zod';
 import type { QuotationAccommodation, QuotationAccommodationDetailFormData } from '~/types/quotation';
 
 import { useQuotationRoomCounts } from '~/composables/quotation/use-quotation-room-counts';
-import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
+import { useSupplierTable } from '~/composables/quotation/use-supplier-table';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -23,6 +24,7 @@ const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 // Rooms the travel holds per hotel room type: they're added on the travel's rooms page.
 const { getRoomCount } = useQuotationRoomCounts(() => props.quotationId);
@@ -85,22 +87,10 @@ function openHistory(accommodation: QuotationAccommodation) {
 }
 
 // Row actions
+const supplierTable = useSupplierTable<QuotationAccommodation>('accommodation');
+
 function getRowActions(accommodation: QuotationAccommodation) {
-  const balance = quotationStore.getPendingBalanceByAccommodation(accommodation.id);
-  // Payments go on after the quotation is confirmed; only its structure is locked.
-  const paymentActions = [
-    {
-      label: 'Ver historial de pagos',
-      icon: 'i-lucide-receipt',
-      onSelect: () => openHistory(accommodation),
-    },
-    {
-      label: 'Registrar pago',
-      icon: 'i-lucide-banknote',
-      disabled: balance <= 0,
-      onSelect: () => openHistory(accommodation),
-    },
-  ];
+  const paymentActions = supplierTable.paymentActions(accommodation, openHistory);
 
   if (props.readonly)
     return [paymentActions];
@@ -113,25 +103,15 @@ function getRowActions(accommodation: QuotationAccommodation) {
         icon: 'i-lucide-pencil',
         onSelect: () => openEdit(accommodation),
       },
-      {
-        label: accommodation.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
-        icon: accommodation.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-        onSelect: () => quotationStore.toggleAccommodationConfirmed(accommodation.id),
-      },
+      supplierTable.confirmAction(accommodation, a => quotationStore.toggleAccommodationConfirmed(a.id)),
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error' as const,
-        onSelect: () => deleteAccommodation(accommodation.id),
-      },
+      deleteAction(() => deleteAccommodation(accommodation)),
     ],
   ];
 }
 
 // Table columns
-const supplierColumns = useSupplierPaymentColumns<QuotationAccommodation>('accommodation');
 const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
   const cols: TableColumn<QuotationAccommodation>[] = [
     {
@@ -154,35 +134,15 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
       header: 'Costo Total',
       cell: ({ row }) => h('span', { class: 'font-bold' }, formatCurrency(row.original.totalCost)),
     },
-    supplierColumns.paidColumn,
-    supplierColumns.pendingColumn,
-    supplierColumns.statusColumn,
-    {
-      id: 'confirmed',
-      header: 'Confirmado',
-      cell: ({ row }) =>
-        h(resolveComponent('UBadge'), {
-          label: row.original.confirmed ? 'Sí' : 'No',
-          color: row.original.confirmed ? 'success' : 'neutral',
-          variant: 'subtle',
-        }),
-    },
+    supplierTable.paidColumn,
+    supplierTable.pendingColumn,
+    supplierTable.statusColumn,
+    supplierTable.confirmedColumn,
   ];
 
-  cols.push({
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) =>
-      h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-      }, () => h(resolveComponent('UButton'), {
-        'color': 'neutral',
-        'variant': 'ghost',
-        'icon': 'i-lucide-more-vertical',
-        'size': 'xs',
-        'aria-label': 'Acciones del hospedaje',
-      })),
-  });
+  cols.push(
+    actionsColumn(getRowActions, { size: 'xs' }),
+  );
 
   return cols;
 });
@@ -238,8 +198,15 @@ function closeEdit() {
 }
 
 // Delete accommodation
-async function deleteAccommodation(id: string) {
-  const error = await quotationStore.deleteQuotationAccommodation(id);
+async function deleteAccommodation(accommodation: QuotationAccommodation) {
+  if (!(await confirmDelete({
+    title: 'Eliminar hospedaje',
+    description: `¿Estás seguro de que deseas eliminar “${providerStore.getProviderName(accommodation.providerId)}”?`,
+  }))) {
+    return;
+  }
+
+  const error = await quotationStore.deleteQuotationAccommodation(accommodation.id);
   if (error) {
     toast.add({
       title: 'No se pudo eliminar el hospedaje',

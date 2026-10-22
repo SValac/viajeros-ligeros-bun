@@ -10,6 +10,7 @@ import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
@@ -24,6 +25,7 @@ const router = useRouter();
 const toast = useToast();
 const paymentStore = usePaymentStore();
 const quotationStore = useQuotationStore();
+const confirmDelete = useConfirmDelete();
 
 const travelerId = computed(() => route.params.id as string);
 const travelerQuery = useQuery(() => travelerDetailQuery(travelerId.value));
@@ -105,11 +107,20 @@ async function handleEditSubmit(data: PaymentFormData) {
 }
 
 async function handleDelete(payment: Payment) {
-  // eslint-disable-next-line no-alert
-  if (confirm('¿Eliminar este pago? Esta acción no se puede deshacer.')) {
+  if (await confirmDelete({
+    title: 'Eliminar pago',
+    description: '¿Estás seguro de eliminar este pago? Esta acción no se puede deshacer.',
+  })) {
     await paymentStore.deletePayment(payment.id);
     toast.add({ title: 'Pago eliminado', color: 'warning' });
   }
+}
+
+function getRowActions(payment: Payment) {
+  return [
+    [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEditModal(payment) }],
+    [deleteAction(() => handleDelete(payment))],
+  ];
 }
 
 const columns: TableColumn<Payment>[] = [
@@ -136,30 +147,11 @@ const columns: TableColumn<Payment>[] = [
     header: 'Notas',
     cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.getValue('notes') || '—'),
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(
-        resolveComponent('UDropdownMenu'),
-        {
-          items: [
-            [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEditModal(row.original) }],
-            [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => handleDelete(row.original) }],
-          ],
-        },
-        () => h(resolveComponent('UButton'), { color: 'neutral', variant: 'ghost', icon: 'i-lucide-more-vertical' }),
-      );
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 
 // Config modal
 const { isOpen: isConfigModalOpen, editing: editingConfigTravelId, openEdit: openConfigModal, close: closeConfigModal } = useFormModal<string>();
-
-function goToPaymentsIndex() {
-  router.push({ name: 'payments-index' });
-}
 
 function goToTravelPayments(travelId: string) {
   router.push({ name: 'payments-travel', params: { id: travelId } });
@@ -213,24 +205,12 @@ watch(travelerTravelIds, (ids) => {
     @retry="refetch()"
   >
     <div v-if="traveler" class="space-y-6">
-      <!-- Header -->
-      <div class="flex items-center gap-3">
-        <UButton
-          icon="i-lucide-arrow-left"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          @click="goToPaymentsIndex"
-        />
-        <div>
-          <h1 class="text-3xl font-bold">
-            {{ travelerName }}
-          </h1>
-          <p class="text-muted mt-0.5">
-            Historial de pagos
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        :title="travelerName"
+        description="Historial de pagos"
+        :to="{ name: 'payments-index' }"
+        back-label="Volver a pagos"
+      />
 
       <!-- Filters -->
       <div class="flex flex-wrap gap-3">

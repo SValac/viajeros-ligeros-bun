@@ -254,18 +254,9 @@ function onSubmit() {
     />
 
     <!-- Actions -->
-    <div class="flex justify-end gap-3 pt-2">
-      <UButton
-        type="button"
-        variant="ghost"
-        color="neutral"
-        label="Cancelar"
-        @click="emit('cancel')"
-      />
-      <UButton
-        type="submit"
-        :label="expense ? 'Actualizar' : 'Agregar gasto'"
-      />
-    </div>
+    <FormActions
+      :submit-label="expense ? 'Actualizar gasto' : 'Registrar gasto'"
+      @cancel="emit('cancel')"
+    />
   </UForm>
 </template>

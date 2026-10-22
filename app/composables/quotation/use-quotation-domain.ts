@@ -78,6 +78,15 @@ export function isPerPersonProvider(provider: Pick<QuotationProvider, 'costType'
 }
 
 /**
+ * How many travelers a per-person service is paid for: what is owed over the unit cost.
+ * @param provider - The quotation provider
+ * @returns The travelers who take it (0 without a unit cost)
+ */
+export function countServiceTakers(provider: Pick<QuotationProvider, 'unitCost' | 'payableCost'>): number {
+  return provider.unitCost ? Math.round(provider.payableCost / provider.unitCost) : 0;
+}
+
+/**
  * Cost of a provider with the bus full: per-person ones are their unit cost × the sellable
  * seats; the rest, their total. Used for the trip's cost and projected profit.
  * @param provider - The quotation provider

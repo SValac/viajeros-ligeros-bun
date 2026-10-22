@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { AboutPage } from '~/types/agency-profile';
 
+import { aboutPageSchema, cloneAboutPage, serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
+
 definePageMeta({
   name: 'profile-about',
 });
@@ -31,9 +33,23 @@ async function handleSubmit(page: AboutPage | null) {
 </script>
 
 <template>
-  <AgencyAboutPageForm
-    :profile="profile"
+  <AgencyPageForm
+    :page="profile.aboutPage"
+    :schema="aboutPageSchema"
+    :clone="cloneAboutPage"
+    :serialize="serializeAboutPage"
+    title="Página Nosotros"
+    description="Opcional. Arma la página «Nosotros» de tu sitio por secciones; el diseño lo pone la web, tú solo el contenido. Sin página, tu sitio no la muestra en el menú."
+    submit-label="Guardar página Nosotros"
     :saving="agencyProfileStore.saving"
     @submit="handleSubmit"
-  />
+  >
+    <template #default="{ state, path }">
+      <AgencyAboutPageEditor
+        v-model="state.page"
+        :name="path"
+        :company-name="profile.companyName ?? ''"
+      />
+    </template>
+  </AgencyPageForm>
 </template>

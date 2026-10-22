@@ -93,15 +93,9 @@ function onSubmit(event: FormSubmitEvent<Schema>) {
       />
     </UFormField>
 
-    <div class="flex justify-end gap-3 pt-2">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="outline"
-        label="Cancelar"
-        @click="emit('cancel')"
-      />
-      <UButton type="submit" label="Asignar asiento" />
-    </div>
+    <FormActions
+      submit-label="Asignar asiento"
+      @cancel="emit('cancel')"
+    />
   </UForm>
 </template>

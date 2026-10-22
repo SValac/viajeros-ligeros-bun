@@ -306,21 +306,10 @@ function onCancel() {
     </UFormField>
 
     <!-- Buttons -->
-    <div v-if="!disabled" class="flex justify-end gap-3 pt-4">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="outline"
-        @click="onCancel"
-      >
-        Cancelar
-      </UButton>
-      <UButton
-        type="submit"
-        color="primary"
-      >
-        {{ provider ? 'Actualizar' : 'Crear' }} Proveedor
-      </UButton>
-    </div>
+    <FormActions
+      v-if="!disabled"
+      :submit-label="provider ? 'Actualizar proveedor' : 'Crear proveedor'"
+      @cancel="onCancel"
+    />
   </UForm>
 </template>

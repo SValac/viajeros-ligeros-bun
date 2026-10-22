@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { HotelRoomType } from '~/types/hotel-room';
 
+import { deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 import { pluralize } from '~/utils/pluralize';
@@ -20,12 +21,7 @@ const dropdownItems = computed(() => [[
     icon: 'i-lucide-pencil',
     onSelect: () => emit('edit'),
   },
-  {
-    label: 'Eliminar',
-    icon: 'i-lucide-trash-2',
-    color: 'error' as const,
-    onSelect: () => emit('delete'),
-  },
+  deleteAction(() => emit('delete')),
 ]]);
 </script>
 

@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import type { BedConfiguration, BedSize } from '~/types/hotel-room';
 
-const props = withDefaults(defineProps<{
-  modelValue: BedConfiguration;
+const { removable = true } = defineProps<{
   removable?: boolean;
-}>(), {
-  removable: true,
-});
+}>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: BedConfiguration];
-  'remove': [];
+  remove: [];
 }>();
+
+const bed = defineModel<BedConfiguration>({ required: true });
 
 const bedSizeOptions = [
   { value: 'single', label: 'Individual' },
@@ -21,18 +19,18 @@ const bedSizeOptions = [
 ];
 
 function updateQuantity(val: string | number) {
-  emit('update:modelValue', { ...props.modelValue, count: Number(val) });
+  bed.value = { ...bed.value, count: Number(val) };
 }
 
 function updateSize(val: string) {
-  emit('update:modelValue', { ...props.modelValue, size: val as BedSize });
+  bed.value = { ...bed.value, size: val as BedSize };
 }
 </script>
 
 <template>
   <div class="flex items-center gap-2">
     <UInput
-      :model-value="modelValue.count"
+      :model-value="bed.count"
       type="number"
       :min="1"
       :max="10"
@@ -40,7 +38,7 @@ function updateSize(val: string) {
       @update:model-value="updateQuantity"
     />
     <USelect
-      :model-value="modelValue.size"
+      :model-value="bed.size"
       :items="bedSizeOptions"
       value-key="value"
       label-key="label"

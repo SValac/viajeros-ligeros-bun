@@ -1,14 +1,15 @@
 <script setup lang="ts">
+// Image picker with a preview: the parent uploads the selected file (right away, or on submit).
 type Props = {
   imageUrl: string | null;
-  // Lowercase name used in the buttons and alt text ("logo", "favicon", "imagen").
+  // Lowercase name used in the buttons and alt text ("logo", "favicon", "portada").
   label: string;
   accept: string;
   // Formats and limits shown under the buttons.
   hint: string;
   // `wide` previews a 1200×630 share image; `banner` the home banner as the site crops it
-  // on desktop (about 4:1); `square` a logo or favicon.
-  shape?: 'square' | 'wide' | 'banner';
+  // on desktop (about 4:1); `cover` a travel cover (16:9); `square` a logo or favicon.
+  shape?: 'square' | 'wide' | 'banner' | 'cover';
   uploading?: boolean;
   // Non-blocking advice about the current image (e.g. wrong proportions).
   warning?: string | null;
@@ -29,6 +30,7 @@ const PREVIEW_CLASSES = {
   square: 'size-24',
   wide: 'aspect-[1200/630] w-48',
   banner: 'aspect-[4/1] w-64',
+  cover: 'aspect-video w-64',
 } as const;
 
 const previewClass = computed(() => PREVIEW_CLASSES[shape]);

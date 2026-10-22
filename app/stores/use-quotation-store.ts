@@ -562,6 +562,17 @@ export const useQuotationStore = defineStore('quotation', () => {
     };
   });
 
+  // What an additional expense adds to each seat: its total over its "Dividir entre" divisor.
+  const getExpenseCostPerPerson = computed(() => {
+    return (expenseId: string, coordinatorCount: number): number => {
+      const expense = quotationExpenses.value.find(e => e.id === expenseId);
+      if (!expense)
+        return 0;
+      const divisor = getCostDivisor.value(expense.quotationId, expense.splitType, coordinatorCount);
+      return divisor > 0 ? expense.totalCost / divisor : 0;
+    };
+  });
+
   // Price adjustments (Niño -10%, Adulto mayor -$50...) of a per-person service.
   const getAdjustmentsByProvider = computed(() => {
     return (quotationProviderId: string): ProviderPriceAdjustment[] =>
@@ -1816,6 +1827,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     getExpensesTotal,
     getExpensesMinimumSplit,
     getExpensesTotalSplit,
+    getExpenseCostPerPerson,
     // Actions
     fetchByTravel,
     hydrateTravel,

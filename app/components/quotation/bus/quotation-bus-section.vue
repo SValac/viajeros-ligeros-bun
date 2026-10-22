@@ -6,9 +6,9 @@ import { h } from 'vue';
 import type { QuotationBus } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
-import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
+import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
-import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 type Props = {
   quotationId: string;
@@ -27,13 +27,13 @@ const quotationStore = useQuotationStore();
 const { coordinatorCount } = useQuotationContext(() => quotationId);
 const providerStore = useProviderStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const buses = computed(() => quotationStore.getBusesByQuotation(quotationId));
 
 // Modal state
 const isDetailsFormOpen = shallowRef(false);
 const isHistoryOpen = shallowRef(false);
-const isDeleteModalOpen = shallowRef(false);
 const selectedBus = shallowRef<QuotationBus | null>(null);
 
 function openHistory(bus: QuotationBus) {
@@ -46,45 +46,28 @@ function openDetails(bus: QuotationBus) {
   isDetailsFormOpen.value = true;
 }
 
-function openDeleteConfirm(bus: QuotationBus) {
-  selectedBus.value = bus;
-  isDeleteModalOpen.value = true;
-}
-
-function closeDeleteModal() {
-  isDeleteModalOpen.value = false;
-}
-
 async function handleToggleConfirmed(bus: QuotationBus) {
   if (readonly)
     return;
   await quotationStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
 }
 
-async function confirmDelete() {
-  if (!selectedBus.value)
+async function handleDelete(bus: QuotationBus) {
+  if (!(await confirmDelete({
+    title: 'Eliminar autobús',
+    description: '¿Estás seguro? Se eliminarán también todos los pagos asociados.',
+  }))) {
     return;
-  await quotationStore.deleteBusQuotation(selectedBus.value.id);
+  }
+
+  await quotationStore.deleteBusQuotation(bus.id);
   toast.add({ title: 'Autobús eliminado', color: 'warning' });
-  isDeleteModalOpen.value = false;
-  selectedBus.value = null;
 }
 
+const supplierTable = useSupplierTable<QuotationBus>('bus');
+
 function getBusActions(bus: QuotationBus) {
-  // Payments go on after the quotation is confirmed; only its structure is locked.
-  const paymentActions = [
-    {
-      label: 'Ver historial de pagos',
-      icon: 'i-lucide-receipt',
-      onSelect: () => openHistory(bus),
-    },
-    {
-      label: 'Registrar pago',
-      icon: 'i-lucide-banknote',
-      disabled: quotationStore.getPendingBalanceByBus(bus.id) <= 0,
-      onSelect: () => openHistory(bus),
-    },
-  ];
+  const paymentActions = supplierTable.paymentActions(bus, openHistory);
 
   if (readonly)
     return [paymentActions];
@@ -97,24 +80,14 @@ function getBusActions(bus: QuotationBus) {
         icon: 'i-lucide-pencil',
         onSelect: () => openDetails(bus),
       },
-      {
-        label: bus.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
-        icon: bus.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-        onSelect: () => handleToggleConfirmed(bus),
-      },
+      supplierTable.confirmAction(bus, handleToggleConfirmed),
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error' as const,
-        onSelect: () => openDeleteConfirm(bus),
-      },
+      deleteAction(() => handleDelete(bus)),
     ],
   ];
 }
 
-const supplierColumns = useSupplierPaymentColumns<QuotationBus>('bus');
 const columns: TableColumn<QuotationBus>[] = [
   {
     accessorKey: 'providerId',
@@ -145,40 +118,12 @@ const columns: TableColumn<QuotationBus>[] = [
     header: 'Costo/persona',
     cell: ({ row }) => formatCurrency(quotationStore.getBusCostPerPerson(row.original.id, coordinatorCount.value)),
   },
-  supplierColumns.paidColumn,
-  supplierColumns.pendingColumn,
-  {
-    accessorKey: 'paymentMethod',
-    header: 'Método',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: getPaymentTypeLabel(row.original.paymentMethod),
-      color: 'neutral',
-      variant: 'subtle',
-    }),
-  },
-  supplierColumns.statusColumn,
-  {
-    accessorKey: 'confirmed',
-    header: 'Confirmado',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.confirmed ? 'Sí' : 'No',
-      color: row.original.confirmed ? 'success' : 'neutral',
-      variant: 'subtle',
-    }),
-  },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => h(resolveComponent('UDropdownMenu'), {
-      items: getBusActions(row.original),
-    }, () => h(resolveComponent('UButton'), {
-      'icon': 'i-lucide-more-vertical',
-      'variant': 'ghost',
-      'color': 'neutral',
-      'size': 'xs',
-      'aria-label': 'Acciones del autobús',
-    })),
-  },
+  supplierTable.paidColumn,
+  supplierTable.pendingColumn,
+  paymentMethodColumn(),
+  supplierTable.statusColumn,
+  supplierTable.confirmedColumn,
+  actionsColumn(getBusActions, { size: 'xs' }),
 ];
 </script>
 
@@ -240,27 +185,4 @@ const columns: TableColumn<QuotationBus>[] = [
     :quotation-id="quotationId"
     :bus="selectedBus"
   />
-
-  <!-- Modal: confirm deletion -->
-  <UModal
-    v-model:open="isDeleteModalOpen"
-    title="Eliminar Autobús"
-    description="¿Estás seguro? Se eliminarán también todos los pagos asociados."
-  >
-    <template #footer>
-      <div class="flex justify-end gap-3">
-        <UButton
-          variant="ghost"
-          color="neutral"
-          label="Cancelar"
-          @click="closeDeleteModal"
-        />
-        <UButton
-          color="error"
-          label="Eliminar"
-          @click="confirmDelete"
-        />
-      </div>
-    </template>
-  </UModal>
 </template>

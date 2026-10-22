@@ -6,7 +6,6 @@ import type { ProviderCategory, ProviderFilters } from '~/types/provider';
 import { PROVIDER_CATEGORY_LIST } from '~/utils/provider-categories';
 
 type Props = {
-  modelValue: ProviderFilters;
   availableCities: string[];
   availableStates: string[];
   showCategoryFilter?: boolean;
@@ -16,24 +15,26 @@ const props = withDefaults(defineProps<Props>(), {
   showCategoryFilter: true,
 });
 
-const emit = defineEmits<{
-  'update:modelValue': [filters: ProviderFilters];
-}>();
+const filters = defineModel<ProviderFilters>({ required: true });
 
 const categoryOptions = PROVIDER_CATEGORY_LIST.map(meta => ({ label: meta.label, value: meta.category }));
 
-const searchTerm = ref(props.modelValue.searchTerm ?? '');
+const searchTerm = ref(filters.value.searchTerm ?? '');
 const debouncedSearchTerm = refDebounced(searchTerm, 300);
 
-watch(() => props.modelValue.searchTerm, (val) => {
+watch(() => filters.value.searchTerm, (val) => {
   searchTerm.value = val ?? '';
 });
 
-// Emits only what the parent doesn't have yet: a change coming from the parent (or "Limpiar")
-// settles here too.
+function setFilter<K extends keyof ProviderFilters>(key: K, value: ProviderFilters[K]) {
+  filters.value = { ...filters.value, [key]: value || undefined };
+}
+
+// Updates only what the parent doesn't have yet: a change coming from the parent (or
+// "Limpiar") settles here too.
 watch(debouncedSearchTerm, (val) => {
-  if ((val || undefined) !== props.modelValue.searchTerm)
-    emit('update:modelValue', { ...props.modelValue, searchTerm: val || undefined });
+  if ((val || undefined) !== filters.value.searchTerm)
+    setFilter('searchTerm', val);
 });
 
 const cityOptions = computed(() =>
@@ -44,34 +45,13 @@ const statusOptions = computed(() =>
   props.availableStates.map(e => ({ label: e, value: e })),
 );
 
-function onCategoryChange(val: string | undefined) {
-  emit('update:modelValue', {
-    ...props.modelValue,
-    category: val as ProviderCategory | undefined,
-  });
-}
-
-function onCityChange(val: string | undefined) {
-  emit('update:modelValue', {
-    ...props.modelValue,
-    city: val,
-  });
-}
-
-function onStateChange(val: string | undefined) {
-  emit('update:modelValue', {
-    ...props.modelValue,
-    state: val,
-  });
-}
-
 function clearAll() {
   searchTerm.value = '';
-  emit('update:modelValue', {});
+  filters.value = {};
 }
 
 const hasFilters = computed(() =>
-  Object.values(props.modelValue).some(v => v !== undefined && v !== ''),
+  Object.values(filters.value).some(v => v !== undefined && v !== ''),
 );
 </script>
 
@@ -86,33 +66,33 @@ const hasFilters = computed(() =>
 
     <USelect
       v-if="showCategoryFilter"
-      :model-value="modelValue.category"
+      :model-value="filters.category"
       :items="categoryOptions"
       value-key="value"
       label-key="label"
       placeholder="Todas las categorías"
       class="w-52"
-      @update:model-value="onCategoryChange"
+      @update:model-value="setFilter('category', $event as ProviderCategory | undefined)"
     />
 
     <USelect
-      :model-value="modelValue.city"
+      :model-value="filters.city"
       :items="cityOptions"
       value-key="value"
       label-key="label"
       placeholder="Todas las ciudades"
       class="w-48"
-      @update:model-value="onCityChange"
+      @update:model-value="setFilter('city', $event)"
     />
 
     <USelect
-      :model-value="modelValue.state"
+      :model-value="filters.state"
       :items="statusOptions"
       value-key="value"
       label-key="label"
       placeholder="Todos los estados"
       class="w-48"
-      @update:model-value="onStateChange"
+      @update:model-value="setFilter('state', $event)"
     />
 
     <UButton

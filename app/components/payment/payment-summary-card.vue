@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TravelerPaymentSummary } from '~/types/payment';
 
+import { calcAdjustmentAmount } from '~/composables/payments/use-payments-domain';
 import { formatCurrency } from '~/utils/currency';
 import { getTravelerTypeLabel } from '~/utils/traveler-labels';
 
@@ -8,12 +9,6 @@ defineProps<{
   summary: TravelerPaymentSummary;
   travelerName: string;
 }>();
-
-function formatAdjustmentAmount(item: { amount: number; type: 'fixed' | 'percentage' }, appliedPrice: number) {
-  return item.type === 'percentage'
-    ? formatCurrency(appliedPrice * item.amount / 100)
-    : formatCurrency(item.amount);
-}
 </script>
 
 <template>
@@ -48,7 +43,7 @@ function formatAdjustmentAmount(item: { amount: number; type: 'fixed' | 'percent
           <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
           <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
-        <span>- {{ formatAdjustmentAmount(item, summary.appliedPrice) }}</span>
+        <span>- {{ formatCurrency(calcAdjustmentAmount(item, summary.appliedPrice)) }}</span>
       </div>
 
       <div
@@ -61,7 +56,7 @@ function formatAdjustmentAmount(item: { amount: number; type: 'fixed' | 'percent
           <span v-if="item.type === 'percentage'" class="text-xs">({{ item.amount }}%)</span>
           <span v-if="item.description" class="block text-xs text-muted font-normal">{{ item.description }}</span>
         </span>
-        <span>+ {{ formatAdjustmentAmount(item, summary.appliedPrice) }}</span>
+        <span>+ {{ formatCurrency(calcAdjustmentAmount(item, summary.appliedPrice)) }}</span>
       </div>
 
       <div class="flex justify-between font-medium border-t border-default pt-2">

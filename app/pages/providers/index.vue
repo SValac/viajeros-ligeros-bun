@@ -15,15 +15,10 @@ const categories = Object.values(PROVIDER_CATEGORY_META);
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-        Gestión de Proveedores
-      </h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1">
-        Administra el catálogo de proveedores de servicios
-      </p>
-    </div>
+    <PageHeader
+      title="Gestión de Proveedores"
+      description="Administra el catálogo de proveedores de servicios"
+    />
 
     <LoadState
       :is-loaded="providerStore.isLoaded"

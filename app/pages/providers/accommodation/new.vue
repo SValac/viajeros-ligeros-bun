@@ -39,56 +39,28 @@ async function handleSubmit(data: ProviderFormData) {
   }
   router.push(`/providers/accommodation/${provider.id}`);
 }
-
-function handleCancel() {
-  router.push('/providers/accommodation');
-}
 </script>
 
 <template>
-  <div class="max-w-3xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-center gap-3">
-      <UButton
-        icon="i-lucide-arrow-left"
-        variant="ghost"
-        color="neutral"
-        size="sm"
-        to="/providers/accommodation"
-      />
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          Nuevo Hospedaje
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          Completa la información del hospedaje y su cantidad de habitaciones
-        </p>
-      </div>
-    </div>
-
-    <!-- Form -->
-    <UCard>
-      <ProviderForm
-        :fixed-category="PROVIDER_CATEGORY.ACCOMMODATION"
-        @submit="handleSubmit"
-        @cancel="handleCancel"
+  <ProviderCreatePage
+    :category="PROVIDER_CATEGORY.ACCOMMODATION"
+    description="Completa la información del hospedaje y su cantidad de habitaciones"
+    :submit="handleSubmit"
+  >
+    <template #extra-fields>
+      <USeparator label="Habitaciones" />
+      <UFormField
+        label="Cantidad de habitaciones"
+        description="Número total de habitaciones del hospedaje"
+        required
       >
-        <template #extra-fields>
-          <USeparator label="Habitaciones" />
-          <UFormField
-            label="Cantidad de habitaciones"
-            description="Número total de habitaciones del hospedaje"
-            required
-          >
-            <UInput
-              v-model.number="totalRooms"
-              type="number"
-              :min="1"
-              placeholder="Ej. 20"
-            />
-          </UFormField>
-        </template>
-      </ProviderForm>
-    </UCard>
-  </div>
+        <UInput
+          v-model.number="totalRooms"
+          type="number"
+          :min="1"
+          placeholder="Ej. 20"
+        />
+      </UFormField>
+    </template>
+  </ProviderCreatePage>
 </template>
