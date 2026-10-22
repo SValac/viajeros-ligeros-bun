@@ -212,6 +212,7 @@ const columns: TableColumn<TravelSummary>[] = [
         v-bind="travelsLoad"
         :is-loaded="travelsLoad.isLoaded && (travels.length > 0 || !!stats || !!statsError)"
         label="los viajes"
+        skeleton="table"
         @retry="refetch()"
       >
         <!-- The agency has no travels at all -->

@@ -7,7 +7,7 @@ import { useQuery } from '@pinia/colada';
  * - `isLoaded`: `false` until the first load resolves. `null` is a resolved answer ("no
  *   quotation", "travel not found"): the slot still needs a `v-if` on the record. A list with
  *   `placeholderData` stays loaded while the next page or month loads.
- * - `loadError`: the last load's error, hidden while a retry runs so the screen shows the spinner
+ * - `loadError`: the last load's error, hidden while a retry runs so the screen shows the skeleton
  *   again (Colada's `status` stays `'error'` during the retry).
  * @param query - What `useQuery` returned
  */

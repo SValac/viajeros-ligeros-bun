@@ -24,6 +24,7 @@ const categories = Object.values(PROVIDER_CATEGORY_META);
       :is-loaded="providerStore.isLoaded"
       :load-error="providerStore.loadError"
       label="los proveedores"
+      skeleton="cards"
       @retry="providerStore.refetch()"
     >
       <!-- Overall summary -->

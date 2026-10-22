@@ -42,12 +42,11 @@ const tabs: NavigationMenuItem[] = [
       :ui="{ root: '[&>div]:min-w-max' }"
     />
 
-    <div
+    <LoadSkeleton
       v-if="agencyProfileStore.loading && !agencyProfileStore.profile"
-      class="flex justify-center py-12"
-    >
-      <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-    </div>
+      variant="form"
+      label="el perfil"
+    />
 
     <UAlert
       v-else-if="!agencyProfileStore.profile"

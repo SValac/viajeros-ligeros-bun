@@ -216,11 +216,12 @@ watch(travelerTravelIds, (ids) => {
 </script>
 
 <template>
-  <!-- `null` = it doesn't exist: keep the spinner while useRedirectIfMissing leaves, not a blank page -->
+  <!-- `null` = it doesn't exist: keep the skeleton while useRedirectIfMissing leaves, not a blank page -->
   <LoadState
     v-bind="travelerLoad"
     :is-loaded="!!traveler"
     label="el viajero"
+    skeleton="detail"
     @retry="refetch()"
   >
     <div v-if="traveler" class="space-y-6">

@@ -182,6 +182,7 @@ async function onCoordinatorsChange(busId: string, selected: string[]) {
     <LoadState
       v-bind="quotationLoad"
       label="la cotización"
+      skeleton="cards"
       @retry="refetchQuotation()"
     >
       <template v-if="quotation && buses.length > 0">

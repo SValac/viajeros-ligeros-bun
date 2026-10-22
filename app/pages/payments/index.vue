@@ -195,6 +195,7 @@ const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ?
       <LoadState
         v-bind="listLoad"
         label="los viajes"
+        skeleton="table"
         @retry="refetchList()"
       >
         <!-- With no travels on the page, the totals are disabled (no ids) and won't arrive -->
@@ -202,6 +203,7 @@ const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ?
           v-bind="totalsLoad"
           :is-loaded="totalsLoad.isLoaded || pageTravelIds.length === 0"
           label="los pagos"
+          skeleton="table"
           @retry="refetchTotals()"
         >
           <EmptyState

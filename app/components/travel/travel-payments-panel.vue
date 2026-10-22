@@ -307,6 +307,7 @@ useTravelPayments(travelId);
       <LoadState
         v-bind="travelersLoad"
         label="los viajeros"
+        skeleton="table"
         @retry="refetchTravelers()"
       >
         <template v-if="groupedFilteredTravelers.length === 0">
