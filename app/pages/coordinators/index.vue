@@ -6,6 +6,7 @@ import { h } from 'vue';
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
 import { useFormModal } from '~/composables/use-form-modal';
+import { actionsColumn } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 import { matchesSearch } from '~/utils/search';
 
@@ -129,18 +130,7 @@ const columns: TableColumn<Coordinator>[] = [
     header: 'Acceso a la app',
     cell: ({ row }) => h(resolveComponent('CoordinatorInviteButton'), { coordinator: row.original }),
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) =>
-      h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-      }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-      })),
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 

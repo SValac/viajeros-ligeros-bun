@@ -10,6 +10,7 @@ import { useQuotationContext } from '~/composables/quotation/use-quotation-conte
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
 import { useFormModal } from '~/composables/use-form-modal';
+import { actionsColumn } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
@@ -355,19 +356,7 @@ const columns: TableColumn<QuotationProvider>[] = [
       variant: 'subtle',
     }),
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => h(resolveComponent('UDropdownMenu'), {
-      items: getProviderActions(row.original),
-    }, () => h(resolveComponent('UButton'), {
-      'icon': 'i-lucide-more-vertical',
-      'variant': 'ghost',
-      'color': 'neutral',
-      'size': 'xs',
-      'aria-label': 'Acciones del proveedor',
-    })),
-  },
+  actionsColumn(getProviderActions, { size: 'xs' }),
 ];
 </script>
 

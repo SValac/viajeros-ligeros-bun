@@ -13,6 +13,7 @@ import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
+import { actionsColumn } from '~/utils/actions-column';
 import { formatTravelBusLabel } from '~/utils/travel-bus';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
@@ -686,22 +687,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       );
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(
-        resolveComponent('UDropdownMenu'),
-        { items: getRowActions(row.original) },
-        () =>
-          h(resolveComponent('UButton'), {
-            color: 'neutral',
-            variant: 'ghost',
-            icon: 'i-lucide-more-vertical',
-          }),
-      );
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 

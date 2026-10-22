@@ -10,6 +10,7 @@ import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
+import { actionsColumn } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
@@ -115,6 +116,13 @@ async function handleDelete(payment: Payment) {
   }
 }
 
+function getRowActions(payment: Payment) {
+  return [
+    [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEditModal(payment) }],
+    [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => handleDelete(payment) }],
+  ];
+}
+
 const columns: TableColumn<Payment>[] = [
   {
     accessorKey: 'paymentDate',
@@ -139,22 +147,7 @@ const columns: TableColumn<Payment>[] = [
     header: 'Notas',
     cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.getValue('notes') || '—'),
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(
-        resolveComponent('UDropdownMenu'),
-        {
-          items: [
-            [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEditModal(row.original) }],
-            [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => handleDelete(row.original) }],
-          ],
-        },
-        () => h(resolveComponent('UButton'), { color: 'neutral', variant: 'ghost', icon: 'i-lucide-more-vertical' }),
-      );
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 
 // Config modal

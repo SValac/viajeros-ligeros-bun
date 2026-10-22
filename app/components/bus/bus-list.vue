@@ -6,6 +6,7 @@ import { h } from 'vue';
 import type { Bus, BusFormData } from '~/types/bus';
 
 import { useFormModal } from '~/composables/use-form-modal';
+import { actionsColumn } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -137,19 +138,7 @@ const columns: TableColumn<Bus>[] = [
       ]);
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-      }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-      }));
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 

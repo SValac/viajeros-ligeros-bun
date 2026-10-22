@@ -13,6 +13,7 @@ import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
+import { actionsColumn } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { formatTravelerName, getTravelerTypeLabel } from '~/utils/traveler-labels';
@@ -153,6 +154,31 @@ async function handleConfigSubmit(config: TravelerAccountConfig) {
   closeModals();
 }
 
+function getRowActions(travelerWithChildren: TravelerWithChildren) {
+  return [
+    [
+      {
+        label: 'Registrar abono',
+        icon: 'i-lucide-plus-circle',
+        disabled: !paymentStore.getAccountConfig(travelerWithChildren.id, travelId.value)?.publicPriceId,
+        onSelect: () => openPaymentModal(travelerWithChildren),
+      },
+      {
+        label: 'Ver historial',
+        icon: 'i-lucide-history',
+        onSelect: () => router.push({ name: 'payments-traveler', params: { id: travelerWithChildren.id } }),
+      },
+    ],
+    [
+      {
+        label: 'Configurar cuenta',
+        icon: 'i-lucide-settings',
+        onSelect: () => openConfigModal(travelerWithChildren),
+      },
+    ],
+  ];
+}
+
 const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'name',
@@ -280,40 +306,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       return h(resolveComponent('PaymentStatusBadge'), { status: s.status, party: 'traveler' });
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(
-        resolveComponent('UDropdownMenu'),
-        {
-          items: [
-            [
-              {
-                label: 'Registrar abono',
-                icon: 'i-lucide-plus-circle',
-                disabled: !paymentStore.getAccountConfig(row.original.id, travelId.value)?.publicPriceId,
-                onSelect: () => openPaymentModal(row.original),
-              },
-              {
-                label: 'Ver historial',
-                icon: 'i-lucide-history',
-                onSelect: () => router.push({ name: 'payments-traveler', params: { id: row.original.id } }),
-              },
-            ],
-            [
-              {
-                label: 'Configurar cuenta',
-                icon: 'i-lucide-settings',
-                onSelect: () => openConfigModal(row.original),
-              },
-            ],
-          ],
-        },
-        () => h(resolveComponent('UButton'), { color: 'neutral', variant: 'ghost', icon: 'i-lucide-more-vertical' }),
-      );
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 
 useTravelPayments(travelId);

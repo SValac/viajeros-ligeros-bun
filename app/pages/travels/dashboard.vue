@@ -7,6 +7,7 @@ import type { TravelStatus, TravelSummary } from '~/types/travel';
 
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
+import { actionsColumn } from '~/utils/actions-column';
 import { formatDateRange } from '~/utils/format-date';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
@@ -168,20 +169,7 @@ const columns: TableColumn<TravelSummary>[] = [
       return h(resolveComponent('TravelStatusBadge'), { status });
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-        popper: { placement: 'bottom-end' },
-      }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-      }));
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 

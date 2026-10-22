@@ -7,6 +7,7 @@ import type { Provider, ProviderCategory, ProviderLocation } from '~/types/provi
 
 import { useProviderCategoryList } from '~/composables/providers/use-provider-category-list';
 import { formatProviderLocation } from '~/composables/providers/use-provider-domain';
+import { actionsColumn } from '~/utils/actions-column';
 import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 type Props = {
@@ -102,26 +103,13 @@ const emailColumn: TableColumn<Provider> = {
   },
 };
 
-const actionsColumn: TableColumn<Provider> = {
-  id: 'actions',
-  header: 'Acciones',
-  cell: ({ row }) =>
-    h(resolveComponent('UDropdownMenu'), {
-      items: getRowActions(row.original),
-    }, () => h(resolveComponent('UButton'), {
-      color: 'neutral',
-      variant: 'ghost',
-      icon: 'i-lucide-more-vertical',
-    })),
-};
-
 const columns = computed<TableColumn<Provider>[]>(() => [
   nameColumn.value,
   locationColumn,
   phoneColumn,
   emailColumn,
   ...(props.extraColumns ?? []),
-  actionsColumn,
+  actionsColumn(getRowActions),
 ]);
 </script>
 

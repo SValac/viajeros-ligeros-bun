@@ -8,6 +8,7 @@ import type { QuotationAccommodation, QuotationAccommodationDetailFormData } fro
 
 import { useQuotationRoomCounts } from '~/composables/quotation/use-quotation-room-counts';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
+import { actionsColumn } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -170,20 +171,9 @@ const columns = computed<TableColumn<QuotationAccommodation>[]>(() => {
     },
   ];
 
-  cols.push({
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) =>
-      h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-      }, () => h(resolveComponent('UButton'), {
-        'color': 'neutral',
-        'variant': 'ghost',
-        'icon': 'i-lucide-more-vertical',
-        'size': 'xs',
-        'aria-label': 'Acciones del hospedaje',
-      })),
-  });
+  cols.push(
+    actionsColumn(getRowActions, { size: 'xs' }),
+  );
 
   return cols;
 });
