@@ -719,7 +719,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   `HotelBedConfigurationInput`; no `update:modelValue` emit is left in `app/`.
 - Also: the travel payments panel's three cards now use `StatCard` (missed in phase 5).
 
-### Fase 17 — Lógica de dominio repetida en componentes ✅ (salvo los toasts)
+### Fase 17 — Lógica de dominio repetida en componentes ✅
 
 - Agrupar por representante: `groupTravelersByRepresentative` ya existe, pero
   `travel-payments-panel` lo reimplementa, `travel-optional-service-card` arma sus filas igual,
@@ -752,6 +752,18 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - `jscpd` after phases 16-17: 13 clones, 0.43 % (44 / 1.92 % after PR (c)). Left: the summary
   cells of `travel-payments-panel`, and pairs the plan already leaves out (expense/provider
   forms).
+
+**17.6 done (2026-10-22)** on branch `feature/shared-components-dedup-repositories`:
+`useActionToast().runWithToast(action, { success, error, errorFallback })` in
+`app/composables/use-action-toast.ts` runs a store action, shows the success toast or an error
+toast with `toErrorMessage`, and resolves to whether it worked
+(`if (await runWithToast(...)) close();`). 47 of the 76 try/catch toasts use it (41 rewritten
+by a script that only took `try { await …; toast; … } catch (e) { error toast [return] }`,
+6 edit-or-create handlers by hand); texts and colors are unchanged. The 30 left keep their
+try/catch on purpose: a `finally` (spinners, modal close), an icon on the error toast, a
+title that depends on the branch, a value used afterwards, or errors that aren't from a store
+(login, register, Google Maps, coordinator invite). Ref ids are captured before the closure
+(`const id = x.value.id`): TS drops the `ref.value` narrowing inside it.
 
 ## Fuera de alcance (repetido, pero no vale la pena ahora)
 
