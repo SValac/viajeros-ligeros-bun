@@ -1,6 +1,6 @@
 # Feature: app-wide loading skeleton
 
-**Status:** In progress (branch `feature/app-skeleton`).
+**Status:** Complete (branch `feature/app-skeleton`).
 
 ---
 
@@ -58,12 +58,11 @@ spinner had no text). Reduced motion: if Nuxt UI's skeleton theme lacks it, add
   `travel/travel-payments-panel.vue`, `payments/index.vue` (both nested), `travels/dashboard.vue`.
 - `table` + `stats`: `quotations/index.vue` (4), `travels/[id]/travelers/index.vue` (3).
 - `cards`: `providers/index.vue`, `hotel/hotel-rooms-manager.vue`,
-  `travel/travel-buses-section.vue`, `travels/[id]/optional-services.vue` (outer),
-  `travels/[id]/rooms/index.vue` (outer travelers one, `stats` 3; the inner quotation one only
-  shows once the outer loaded → `panel`).
+  `travel/travel-buses-section.vue`, `travels/[id]/rooms/index.vue` (both nested ones with
+  `stats` 3: the inner quotation one also wraps the stats).
 - `detail`: `travels/[id].vue` and `quotations/[id].vue` (outer, via `#loading`),
   `payments/travel/[id].vue`, `payments/traveler/[id].vue`, `provider/provider-detail-page.vue`.
-- `panel` (default, no prop): `quotations/[id].vue` (inner), `optional-services.vue` (inner),
+- `panel` (default, no prop): `quotations/[id].vue` (inner), `optional-services.vue` (both),
   `calendar/travel-calendar-summary.vue`, `calendar.vue`.
 - `profile.vue`: its spinner `div` → `<LoadSkeleton variant="form" label="el perfil" />` (store
   Pinia, stays outside `LoadState`).
@@ -96,3 +95,21 @@ spinner had no text). Reduced motion: if Nuxt UI's skeleton theme lacks it, add
 Skipped: no unit test (the repo has no test setup and this is template-only; the variant switch
 is checked visually). Risk: skeletons won't match every screen exactly (by design: presets);
 mobile width only gets CSS fixes if something overflows.
+
+## Result (2026-10-22)
+
+- Shipped as planned. Two changes to the per-screen list while implementing: the outer
+  `optional-services.vue` `LoadState` uses `panel` (its content is a side list + one card, not a
+  grid), and the inner quotation `LoadState` of `rooms/index.vue` uses `cards` + `stats` 3
+  because it wraps the stats as well.
+- `USkeleton` renders each block as `role="alert"` with `aria-label="loading"`. `LoadSkeleton` hides
+  them (`aria-hidden`) and announces a single `role="status"` "Cargando {label}…".
+- `app.config.ts` adds `motion-reduce:animate-none` to `ui.skeleton`: with reduced motion the
+  `animation-name` is `none`, otherwise `pulse`.
+- Checked with playwright-cli, holding `/rest/v1/**` (or just `travelers`/`quotations` for the
+  nested tabs) with a slow `page.route`: dashboard, quotations, providers, coordinators,
+  payments, traveler payments, calendar, profile, travel detail and its travelers / rooms /
+  buses / optional-services tabs, light and dark, 1440 px and 820 px (no horizontal scroll).
+- Error → Reintentar on `/coordinators` (500, then a held request): the error goes away and the
+  skeleton shows.
+- `grep -rn "animate-spin\|loader-circle" app` is empty.
