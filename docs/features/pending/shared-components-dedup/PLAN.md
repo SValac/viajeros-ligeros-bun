@@ -176,7 +176,7 @@ picks the layout with `$slots.aside` and passes the loaded provider to that scop
 - Left out on purpose: `pages/providers/index.vue` category tiles. They are navigation links
   colored by category, not stat cards.
 
-### Fase 6 — Piezas chicas de formularios y tablas
+### Fase 6 — Piezas chicas de formularios y tablas ✅
 
 - **`PasswordInput`**: `UInput` con botón de mostrar/ocultar; quita `togglePasswordVisibility`
   de `pages/login.vue` y las 2 copias de `pages/register.vue`. Cada campo con su propio
@@ -191,6 +191,26 @@ picks the layout with `$slots.aside` and passes the loaded provider to that scop
   `quotation-public-price-section`, `travel-payments-panel`, `pages/coordinators/index`,
   `pages/payments/traveler/[id]`, `pages/travels/dashboard`,
   `pages/travels/[id]/travelers/index`.
+
+**Done (2026-10-21).** Final design and notes:
+- `PasswordInput` uses `useId()` for the input id, so `aria-controls` and the `UFormField`
+  label both point at the right input; each field toggles on its own (register used to show
+  both passwords from one toggle). `icon`/`placeholder` fall through to the root `UInput`.
+- `FormActions` (`submitLabel`, `loading`, `disabled`, `@cancel`) in 13 forms, including the
+  quotation modals and `coordinator-seat-form`. One look everywhere: outline cancel, `pt-4`.
+  Not migrated: rows that save with `@click` instead of `type="submit"`
+  (`quotation-parameters-card`, `quotation-header-actions`, `quotation-provider-table`,
+  `quotation-accommodation-table`, `quotation-provider-courtesy-form`).
+- Bug fixed on the way: six forms wrapped a synchronous `emit` in `isSubmitting`, so the
+  spinner never showed. Traveler, coordinator and travel-activity forms now take a `loading`
+  prop set by the parent around the awaited save. Still no spinner on bus, provider and
+  travel-service (their pages save; out of scope).
+- `actionsColumn(getActions, { size })` in `utils/actions-column.ts`, in 10 tables (the list
+  above plus `quotation-provider-table`). Every ⋮ button gets `aria-label="Abrir acciones"`;
+  the dashboard's v2-only `popper` prop is gone.
+- Side change in the same PR: the provider bus list shows inactive units with an "Estatus"
+  column (`getAllBusesByProvider`); the quotation bus picker keeps active ones only
+  (`getActiveBusesByProvider`).
 
 ### Fase 7 — Ajustes que dejó el PR #131 (`code-review` del 2026-10-13)
 
