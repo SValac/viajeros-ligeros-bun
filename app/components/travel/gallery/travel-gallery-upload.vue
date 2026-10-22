@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { TravelMediaType } from '~/types/travel-media';
 
+import { useActionToast } from '~/composables/use-action-toast';
 import { pluralize } from '~/utils/pluralize';
 
 const props = defineProps<{
@@ -12,6 +13,7 @@ const emit = defineEmits<{
 }>();
 
 const store = useTravelMediaStore();
+const { runWithToast } = useActionToast();
 const fileInput = useTemplateRef<HTMLInputElement>('fileInputRef');
 
 type PendingFile = {
@@ -46,12 +48,20 @@ function removePending(index: number) {
   pendingFiles.value = pendingFiles.value.filter((_, i) => i !== index);
 }
 
+// Files that fail stay in the list, so they can be uploaded again.
 async function uploadAll() {
+  const failed: PendingFile[] = [];
   for (const pending of pendingFiles.value) {
-    await store.uploadMedia(props.travelId, pending.file, pending.mediaType);
-    URL.revokeObjectURL(pending.previewUrl);
+    const uploaded = await runWithToast(() => store.uploadMedia(props.travelId, pending.file, pending.mediaType), {
+      success: { title: 'Archivo subido', color: 'success', icon: 'i-lucide-check' },
+      error: 'Error al subir',
+    });
+    if (uploaded)
+      URL.revokeObjectURL(pending.previewUrl);
+    else
+      failed.push(pending);
   }
-  pendingFiles.value = [];
+  pendingFiles.value = failed;
   emit('uploaded');
 }
 
