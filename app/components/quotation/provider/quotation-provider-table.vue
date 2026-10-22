@@ -8,12 +8,12 @@ import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProvider
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
-import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
+import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
 import { useFormModal } from '~/composables/use-form-modal';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
-import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
+import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -135,12 +135,6 @@ function openHistory(provider: QuotationProvider) {
   isHistoryOpen.value = true;
 }
 
-function openRecordPayment(provider: QuotationProvider) {
-  historyProviderId.value = provider.id;
-  historyProviderName.value = providerStore.getProviderName(provider.providerId);
-  isHistoryOpen.value = true;
-}
-
 async function handleProviderSubmit(data: QuotationProviderFormData, adjustments: ProviderPriceAdjustmentDraft[]) {
   let saved: QuotationProvider | undefined;
   if (selectedProvider.value) {
@@ -191,20 +185,11 @@ async function handleDelete(provider: QuotationProvider) {
   toast.add({ title: 'Proveedor eliminado', color: 'warning' });
 }
 
+const supplierTable = useSupplierTable<QuotationProvider>('provider');
+
 function getProviderActions(provider: QuotationProvider) {
-  // Payments go on after the quotation is confirmed; only its structure is locked.
   const paymentActions = [
-    {
-      label: 'Ver historial de pagos',
-      icon: 'i-lucide-receipt',
-      onSelect: () => openHistory(provider),
-    },
-    {
-      label: 'Registrar pago',
-      icon: 'i-lucide-banknote',
-      disabled: quotationStore.getPendingBalanceByProvider(provider.id) <= 0,
-      onSelect: () => openRecordPayment(provider),
-    },
+    ...supplierTable.paymentActions(provider, openHistory),
     // The courtesy doesn't change the seat price, so it's also allowed on a
     // confirmed quotation.
     ...(isPerPersonProvider(provider)
@@ -229,11 +214,7 @@ function getProviderActions(provider: QuotationProvider) {
       icon: 'i-lucide-pencil',
       onSelect: () => openEditProvider(provider),
     },
-    {
-      label: provider.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
-      icon: provider.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-      onSelect: () => handleToggleConfirmed(provider),
-    },
+    supplierTable.confirmAction(provider, handleToggleConfirmed),
   ];
 
   const destructiveActions = [
@@ -243,7 +224,6 @@ function getProviderActions(provider: QuotationProvider) {
   return [paymentActions, writeActions, destructiveActions];
 }
 
-const supplierColumns = useSupplierPaymentColumns<QuotationProvider>('provider');
 const columns: TableColumn<QuotationProvider>[] = [
   {
     accessorKey: 'providerId',
@@ -330,27 +310,11 @@ const columns: TableColumn<QuotationProvider>[] = [
     header: 'Costo/persona',
     cell: ({ row }) => formatCurrency(quotationStore.getProviderCostPerPerson(row.original.id, coordinatorCount.value)),
   },
-  supplierColumns.paidColumn,
-  supplierColumns.pendingColumn,
-  {
-    accessorKey: 'paymentMethod',
-    header: 'Método',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: getPaymentTypeLabel(row.original.paymentMethod),
-      color: 'neutral',
-      variant: 'subtle',
-    }),
-  },
-  supplierColumns.statusColumn,
-  {
-    accessorKey: 'confirmed',
-    header: 'Confirmado',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.confirmed ? 'Sí' : 'No',
-      color: row.original.confirmed ? 'success' : 'neutral',
-      variant: 'subtle',
-    }),
-  },
+  supplierTable.paidColumn,
+  supplierTable.pendingColumn,
+  paymentMethodColumn(),
+  supplierTable.statusColumn,
+  supplierTable.confirmedColumn,
   actionsColumn(getProviderActions, { size: 'xs' }),
 ];
 </script>

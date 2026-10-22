@@ -52,7 +52,7 @@ app/
 │   │   ├── use-quotation-domain.ts     # calculateSeatPrice, countRoomsByType
 │   │   ├── use-quotation-repository.ts # ~30 funciones, 8 tablas
 │   │   ├── use-supplier-payments.ts    # Getters y acciones de pagos por kind
-│   │   └── use-supplier-payment-columns.ts # Columnas Pagado/Pendiente/Estado Pago
+│   │   └── use-supplier-table.ts       # Columnas y acciones de las tablas de proveedores
 │   ├── travelers/
 │   │   ├── use-traveler-domain.ts
 │   │   └── use-traveler-repository.ts

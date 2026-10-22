@@ -6,10 +6,9 @@ import { h } from 'vue';
 import type { QuotationBus } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
-import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
-import { deleteAction } from '~/utils/actions-column';
+import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
-import { getPaymentTypeLabel } from '~/utils/payment-type';
 
 type Props = {
   quotationId: string;
@@ -65,21 +64,10 @@ async function handleDelete(bus: QuotationBus) {
   toast.add({ title: 'Autobús eliminado', color: 'warning' });
 }
 
+const supplierTable = useSupplierTable<QuotationBus>('bus');
+
 function getBusActions(bus: QuotationBus) {
-  // Payments go on after the quotation is confirmed; only its structure is locked.
-  const paymentActions = [
-    {
-      label: 'Ver historial de pagos',
-      icon: 'i-lucide-receipt',
-      onSelect: () => openHistory(bus),
-    },
-    {
-      label: 'Registrar pago',
-      icon: 'i-lucide-banknote',
-      disabled: quotationStore.getPendingBalanceByBus(bus.id) <= 0,
-      onSelect: () => openHistory(bus),
-    },
-  ];
+  const paymentActions = supplierTable.paymentActions(bus, openHistory);
 
   if (readonly)
     return [paymentActions];
@@ -92,11 +80,7 @@ function getBusActions(bus: QuotationBus) {
         icon: 'i-lucide-pencil',
         onSelect: () => openDetails(bus),
       },
-      {
-        label: bus.confirmed ? 'Marcar sin confirmar' : 'Marcar como confirmado',
-        icon: bus.confirmed ? 'i-lucide-x-circle' : 'i-lucide-check-circle',
-        onSelect: () => handleToggleConfirmed(bus),
-      },
+      supplierTable.confirmAction(bus, handleToggleConfirmed),
     ],
     [
       deleteAction(() => handleDelete(bus)),
@@ -104,7 +88,6 @@ function getBusActions(bus: QuotationBus) {
   ];
 }
 
-const supplierColumns = useSupplierPaymentColumns<QuotationBus>('bus');
 const columns: TableColumn<QuotationBus>[] = [
   {
     accessorKey: 'providerId',
@@ -135,40 +118,12 @@ const columns: TableColumn<QuotationBus>[] = [
     header: 'Costo/persona',
     cell: ({ row }) => formatCurrency(quotationStore.getBusCostPerPerson(row.original.id, coordinatorCount.value)),
   },
-  supplierColumns.paidColumn,
-  supplierColumns.pendingColumn,
-  {
-    accessorKey: 'paymentMethod',
-    header: 'Método',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: getPaymentTypeLabel(row.original.paymentMethod),
-      color: 'neutral',
-      variant: 'subtle',
-    }),
-  },
-  supplierColumns.statusColumn,
-  {
-    accessorKey: 'confirmed',
-    header: 'Confirmado',
-    cell: ({ row }) => h(resolveComponent('UBadge'), {
-      label: row.original.confirmed ? 'Sí' : 'No',
-      color: row.original.confirmed ? 'success' : 'neutral',
-      variant: 'subtle',
-    }),
-  },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => h(resolveComponent('UDropdownMenu'), {
-      items: getBusActions(row.original),
-    }, () => h(resolveComponent('UButton'), {
-      'icon': 'i-lucide-more-vertical',
-      'variant': 'ghost',
-      'color': 'neutral',
-      'size': 'xs',
-      'aria-label': 'Acciones del autobús',
-    })),
-  },
+  supplierTable.paidColumn,
+  supplierTable.pendingColumn,
+  paymentMethodColumn(),
+  supplierTable.statusColumn,
+  supplierTable.confirmedColumn,
+  actionsColumn(getBusActions, { size: 'xs' }),
 ];
 </script>
 
