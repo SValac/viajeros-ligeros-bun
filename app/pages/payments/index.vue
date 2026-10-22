@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { TableColumn } from '@nuxt/ui';
+import type { VNode } from 'vue';
 
 import { h } from 'vue';
 
@@ -23,7 +24,6 @@ const PAYABLE_STATUSES: TravelStatus[] = ['completed', 'in_progress', 'published
 // The cards add up active ones only: completed ones grow forever (their balances show in the table)
 const ACTIVE_STATUSES: TravelStatus[] = ['in_progress', 'published'];
 const PAGE_SIZE = 20;
-const EMPTY_TOTALS: TravelPaymentTotals = { totalExpected: 0, totalCollected: 0, balance: 0, percent: 0 };
 
 const page = shallowRef(1);
 
@@ -41,15 +41,25 @@ const totalsQuery = useQuery(() => ({
 const { data: totals, refetch: refetchTotals } = totalsQuery;
 const totalsLoad = useQueryLoadState(totalsQuery);
 
-const { data: activeList } = useQuery(() => travelListQuery({ statuses: ACTIVE_STATUSES }));
+const { data: activeList, error: activeListError } = useQuery(() => travelListQuery({ statuses: ACTIVE_STATUSES }));
 const activeTravelIds = computed(() => (activeList.value?.items ?? []).map(travel => travel.id).sort());
-const { data: activeTotals } = useQuery(() => travelPaymentTotalsQuery(activeTravelIds.value));
+const { data: activeTotals, error: activeTotalsError } = useQuery(() => travelPaymentTotalsQuery(activeTravelIds.value));
 
+// `totals` stays undefined until this page's totals arrive: after a page change the previous
+// page's ones are still the placeholder, and none of them belongs to the new rows.
 const pageRows = computed(() => (list.value?.items ?? []).map(travel => ({
   travel,
   travelerCount: travel.travelerCount,
-  ...(totals.value?.[travel.id] ?? EMPTY_TOTALS),
+  totals: totals.value?.[travel.id] as TravelPaymentTotals | undefined,
 })));
+
+// A money figure of a row, or a skeleton while its totals load
+function totalsCell(totals: TravelPaymentTotals | undefined, render: (totals: TravelPaymentTotals) => VNode) {
+  return totals ? render(totals) : h(resolveComponent('USkeleton'), { class: 'h-4 w-20' });
+}
+
+// The cards show "—" instead of a skeleton that never ends
+const globalStatsFailed = computed(() => !!activeListError.value || !!activeTotalsError.value);
 
 const globalStats = computed(() => {
   // The active list hasn't arrived yet
@@ -93,30 +103,27 @@ const columns: TableColumn<TravelSummaryRow>[] = [
   {
     id: 'totalExpected',
     header: 'Total esperado',
-    cell: ({ row }) => h('span', { class: 'text-sm' }, formatCurrency(row.original.totalExpected)),
+    cell: ({ row }) => totalsCell(row.original.totals, t => h('span', { class: 'text-sm' }, formatCurrency(t.totalExpected))),
   },
   {
     id: 'totalCollected',
     header: 'Recaudado',
-    cell: ({ row }) => h('span', { class: 'text-sm' }, formatCurrency(row.original.totalCollected)),
+    cell: ({ row }) => totalsCell(row.original.totals, t => h('span', { class: 'text-sm' }, formatCurrency(t.totalCollected))),
   },
   {
     id: 'balance',
     header: 'Saldo pendiente',
-    cell: ({ row }) => {
-      const balance = row.original.balance;
-      return h('span', { class: balance > 0 ? 'text-sm text-warning' : 'text-sm text-success' }, formatCurrency(balance));
-    },
+    cell: ({ row }) => totalsCell(row.original.totals, ({ balance }) =>
+      h('span', { class: balance > 0 ? 'text-sm text-warning' : 'text-sm text-success' }, formatCurrency(balance))),
   },
   {
     id: 'percent',
     header: '% Completado',
-    cell: ({ row }) => {
-      const pct = row.original.percent;
+    cell: ({ row }) => totalsCell(row.original.totals, ({ percent }) => {
       // Only a settled travel gets a color; partial progress is normal, not an error.
-      const color = pct >= 100 ? 'text-success' : 'text-highlighted';
-      return h('span', { class: `text-sm font-medium ${color}` }, `${pct}%`);
-    },
+      const color = percent >= 100 ? 'text-success' : 'text-highlighted';
+      return h('span', { class: `text-sm font-medium ${color}` }, `${percent}%`);
+    }),
   },
   {
     id: 'actions',
@@ -155,12 +162,14 @@ const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ?
         label="Viajes con pagos"
         icon="i-lucide-map"
         :value="String(globalStats?.travelsWithPayments ?? '—')"
+        :loading="!globalStats && !globalStatsFailed"
       />
 
       <StatCard
         label="Total recaudado"
         icon="i-lucide-trending-up"
         :value="globalStats ? formatCurrency(globalStats.totalCollected) : '—'"
+        :loading="!globalStats && !globalStatsFailed"
       />
 
       <StatCard
@@ -168,12 +177,14 @@ const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ?
         icon="i-lucide-clock"
         :value="globalStats ? formatCurrency(globalStats.totalBalance) : '—'"
         :value-class="globalStats ? balanceClass : 'text-highlighted'"
+        :loading="!globalStats && !globalStatsFailed"
       />
 
       <StatCard
         label="Viajes liquidados"
         icon="i-lucide-check-circle"
         :value="String(globalStats?.settledTravels ?? '—')"
+        :loading="!globalStats && !globalStatsFailed"
       />
     </div>
 
