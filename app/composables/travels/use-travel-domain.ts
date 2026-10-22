@@ -1,6 +1,8 @@
 import type { TablesInsert } from '~/types/database.types';
 import type { TravelActivity } from '~/types/travel';
 
+import { toErrorMessage } from '~/utils/error-message';
+
 /**
  * Validates and maps a list of itinerary activities to DB insert format.
  * Throws if any activity has an invalid day, empty title/description, or out-of-range coordinates.
@@ -56,11 +58,10 @@ export function validateMapLocation(mapLocation: { lat: number; lng: number }): 
  * @returns A user-facing message
  */
 export function toTravelSaveErrorMessage(error: unknown, fallback: string): string {
-  if (!(error instanceof Error))
-    return fallback;
-  if (error.message.includes('agency_profile_incomplete'))
+  // PostgREST errors are plain objects, not `Error`s: read the message by shape.
+  if ((error as { message?: string } | null)?.message?.includes('agency_profile_incomplete'))
     return 'Para publicar el viaje, completa el nombre de empresa y el estado en tu perfil de agencia.';
-  return error.message || fallback;
+  return toErrorMessage(error, fallback);
 }
 
 // Gallery media and banners, under `{travelId}/`.
