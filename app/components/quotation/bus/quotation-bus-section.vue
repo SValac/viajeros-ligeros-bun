@@ -10,6 +10,7 @@ import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/u
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
+import { toErrorMessage } from '~/utils/error-message';
 
 type Props = {
   quotationId: string;
@@ -50,7 +51,12 @@ function openDetails(bus: QuotationBus) {
 async function handleToggleConfirmed(bus: QuotationBus) {
   if (readonly)
     return;
-  await quotationStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
+  try {
+    await quotationStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo actualizar el autobús', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
 }
 
 async function handleDelete(bus: QuotationBus) {
@@ -61,8 +67,13 @@ async function handleDelete(bus: QuotationBus) {
     return;
   }
 
-  await quotationStore.deleteBusQuotation(bus.id);
-  toast.add({ title: 'Autobús eliminado', color: 'warning' });
+  try {
+    await quotationStore.deleteBusQuotation(bus.id);
+    toast.add({ title: 'Autobús eliminado', color: 'warning' });
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo eliminar el autobús', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
 }
 
 const supplierTable = useSupplierTable<QuotationBus>('bus');

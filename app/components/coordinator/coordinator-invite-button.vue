@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { Coordinator } from '~/types/coordinator';
 
+import { toErrorMessage } from '~/utils/error-message';
+
 const { coordinator } = defineProps<{
   coordinator: Coordinator;
 }>();
@@ -27,7 +29,7 @@ async function handleInvite() {
     });
   }
   catch (e) {
-    const message = e instanceof Error ? e.message : 'No se pudo invitar al coordinador';
+    const message = toErrorMessage(e, 'No se pudo invitar al coordinador');
     toast.add({
       title: 'Error al invitar',
       description: message,
@@ -58,7 +60,7 @@ async function handleRevoke() {
     });
   }
   catch (e) {
-    const message = e instanceof Error ? e.message : 'No se pudo revocar el acceso';
+    const message = toErrorMessage(e, 'No se pudo revocar el acceso');
     toast.add({
       title: 'Error al revocar',
       description: message,

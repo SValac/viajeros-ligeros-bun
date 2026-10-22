@@ -6,6 +6,7 @@ import HotelRoomTypeCard from '~/components/hotel/hotel-room-type-card.vue';
 import HotelRoomTypeForm from '~/components/hotel/hotel-room-type-form.vue';
 import { useFormModal } from '~/composables/use-form-modal';
 import { useHotelRoomStore } from '~/stores/use-hotel-room-store';
+import { toErrorMessage } from '~/utils/error-message';
 import { pluralize } from '~/utils/pluralize';
 
 const props = defineProps<{
@@ -50,8 +51,8 @@ onMounted(async () => {
   try {
     await store.initRoomData(props.provider.id, 0);
   }
-  catch {
-    toast.add({ title: 'Error', description: store.error ?? 'No se pudieron preparar las habitaciones del hotel', color: 'error' });
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudieron preparar las habitaciones del hotel'), color: 'error' });
   }
 });
 
@@ -65,9 +66,11 @@ watch(
 );
 
 async function updateTotalRooms() {
-  const ok = await store.updateTotalRooms(props.provider.id, totalRoomsInput.value);
-  if (!ok) {
-    toast.add({ title: 'Error', description: store.error ?? 'No se pudo actualizar el total', color: 'error' });
+  try {
+    await store.updateTotalRooms(props.provider.id, totalRoomsInput.value);
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo actualizar el total'), color: 'error' });
     totalRoomsInput.value = store.getTotalRoomsByProvider(props.provider.id);
   }
 }
@@ -76,24 +79,20 @@ async function updateTotalRooms() {
 async function handleFormSubmit(data: HotelRoomTypeFormData) {
   const roomTypeId = editingRoomType.value?.id;
 
-  if (roomTypeId) {
-    if (!await store.updateRoomType(roomTypeId, data)) {
-      toast.add({ title: 'Error', description: store.error ?? 'No se pudo actualizar la habitación', color: 'error' });
-      return;
+  try {
+    if (roomTypeId) {
+      await store.updateRoomType(roomTypeId, data);
+      toast.add({ title: 'Habitación actualizada', color: 'primary' });
     }
-    toast.add({ title: 'Habitación actualizada', color: 'primary' });
-  }
-  else {
-    try {
+    else {
       await store.addRoomType(props.provider.id, data);
+      toast.add({ title: 'Habitación agregada', color: 'primary' });
     }
-    catch {
-      toast.add({ title: 'Error', description: store.error ?? 'No se pudo agregar la habitación', color: 'error' });
-      return;
-    }
-    toast.add({ title: 'Habitación agregada', color: 'primary' });
+    closeFormModal();
   }
-  closeFormModal();
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, roomTypeId ? 'No se pudo actualizar la habitación' : 'No se pudo agregar la habitación'), color: 'error' });
+  }
 }
 
 async function handleDelete(rt: HotelRoomType) {
@@ -104,10 +103,13 @@ async function handleDelete(rt: HotelRoomType) {
     return;
   }
 
-  if (await store.deleteRoomType(rt.id))
+  try {
+    await store.deleteRoomType(rt.id);
     toast.add({ title: 'Habitación eliminada', color: 'warning' });
-  else
-    toast.add({ title: 'Error', description: store.error ?? 'No se pudo eliminar la habitación', color: 'error' });
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar la habitación'), color: 'error' });
+  }
 }
 </script>
 

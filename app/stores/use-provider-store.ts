@@ -6,6 +6,7 @@ import { filterProviders } from '~/composables/providers/use-provider-domain';
 import { useProviderRepository } from '~/composables/providers/use-provider-repository';
 import { catalogKeys, providersCatalogQuery, useCatalogState, useProvidersCatalog } from '~/queries/catalogs';
 import { PROVIDER_CATEGORY } from '~/types/provider';
+import { toErrorMessage } from '~/utils/error-message';
 
 /**
  * Provider catalog, its writes and the providers list filters.
@@ -101,7 +102,7 @@ export const useProviderStore = defineStore('providers', () => {
       return provider;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al agregar proveedor';
+      error.value = toErrorMessage(e, 'Error al agregar proveedor');
       throw e;
     }
     finally {
@@ -109,24 +110,23 @@ export const useProviderStore = defineStore('providers', () => {
     }
   }
 
-  async function updateProvider(id: string, data: Partial<ProviderUpdateData>): Promise<boolean> {
+  async function updateProvider(id: string, data: Partial<ProviderUpdateData>): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
       await repository.update(id, data);
       await catalog.refresh();
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al actualizar proveedor';
-      return false;
+      error.value = toErrorMessage(e, 'Error al actualizar proveedor');
+      throw e;
     }
     finally {
       loading.value = false;
     }
   }
 
-  async function deleteProvider(id: string): Promise<boolean> {
+  async function deleteProvider(id: string): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
@@ -136,24 +136,23 @@ export const useProviderStore = defineStore('providers', () => {
       if (isAccommodation)
         queryCache.invalidateQueries({ key: catalogKeys.hotelRooms }).catch(() => {});
       await catalog.refresh();
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al eliminar proveedor';
-      return false;
+      error.value = toErrorMessage(e, 'Error al eliminar proveedor');
+      throw e;
     }
     finally {
       loading.value = false;
     }
   }
 
-  async function toggleProviderStatus(id: string): Promise<boolean> {
+  async function toggleProviderStatus(id: string): Promise<void> {
     const provider = getProviderById.value(id);
     if (!provider) {
       error.value = 'Proveedor no encontrado';
-      return false;
+      throw new Error(error.value);
     }
-    return updateProvider(id, { active: !provider.active });
+    await updateProvider(id, { active: !provider.active });
   }
 
   // Filter actions

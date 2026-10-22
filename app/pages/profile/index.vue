@@ -3,6 +3,7 @@ import type { AgencyProfileFormData } from '~/types/agency-profile';
 
 import { siteImageAccept, siteImageHint } from '~/composables/agency-profile/use-agency-profile-domain';
 import { useSiteImageActions } from '~/composables/agency-profile/use-site-image-actions';
+import { toErrorMessage } from '~/utils/error-message';
 
 definePageMeta({
   name: 'profile',
@@ -15,17 +16,19 @@ const toast = useToast();
 const profile = computed(() => agencyProfileStore.profile!);
 
 async function handleSubmit(data: AgencyProfileFormData) {
-  const success = await agencyProfileStore.saveProfile(data);
-  if (success) {
-    toast.add({ title: 'Perfil guardado', color: 'success', icon: 'i-lucide-check-circle' });
+  try {
+    await agencyProfileStore.saveProfile(data);
+  }
+  catch (e) {
+    toast.add({
+      title: 'No se pudo guardar el perfil',
+      description: toErrorMessage(e, 'Intenta de nuevo'),
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
     return;
   }
-  toast.add({
-    title: 'No se pudo guardar el perfil',
-    description: agencyProfileStore.error ?? undefined,
-    color: 'error',
-    icon: 'i-lucide-alert-circle',
-  });
+  toast.add({ title: 'Perfil guardado', color: 'success', icon: 'i-lucide-check-circle' });
 }
 
 const { selectImage, removeImage } = useSiteImageActions();

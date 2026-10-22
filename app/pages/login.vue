@@ -3,6 +3,8 @@ import type { FormSubmitEvent } from '#ui/types';
 
 import { z } from 'zod';
 
+import { toErrorMessage } from '~/utils/error-message';
+
 definePageMeta({
   layout: false,
 });
@@ -46,7 +48,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     window.location.href = '/';
   }
   catch (error) {
-    const message = error instanceof Error ? error.message : 'No pudimos iniciar sesión. Intenta de nuevo.';
+    const message = toErrorMessage(error, 'No pudimos iniciar sesión. Intenta de nuevo.');
     submitError.value = message;
     toast.add({
       title: 'Error al iniciar sesión',

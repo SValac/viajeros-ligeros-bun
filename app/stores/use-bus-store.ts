@@ -4,6 +4,7 @@ import type { Bus, BusFormData, BusUpdateData } from '~/types/bus';
 
 import { useBusRepository } from '~/composables/buses/use-bus-repository';
 import { busesCatalogQuery, useBusesCatalog, useCatalogState } from '~/queries/catalogs';
+import { toErrorMessage } from '~/utils/error-message';
 
 /**
  * Bus catalog and its writes.
@@ -61,7 +62,7 @@ export const useBusStore = defineStore('buses', () => {
       return bus;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al crear autobús';
+      error.value = toErrorMessage(e, 'Error al crear autobús');
       throw e;
     }
     finally {
@@ -73,19 +74,18 @@ export const useBusStore = defineStore('buses', () => {
    * Updates a bus.
    * @param id - UUID of the bus to update
    * @param data - Partial update data
-   * @returns `true` on success, `false` on failure (error is stored in `error` state)
+   * @throws Re-throws repository errors so the caller can react (e.g. show a toast)
    */
-  async function updateBus(id: string, data: Partial<BusUpdateData>): Promise<boolean> {
+  async function updateBus(id: string, data: Partial<BusUpdateData>): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
       await repository.update(id, data);
       await catalog.refresh();
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al actualizar autobús';
-      return false;
+      error.value = toErrorMessage(e, 'Error al actualizar autobús');
+      throw e;
     }
     finally {
       loading.value = false;
@@ -95,19 +95,18 @@ export const useBusStore = defineStore('buses', () => {
   /**
    * Deletes a bus.
    * @param id - UUID of the bus to delete
-   * @returns `true` on success, `false` on failure (error is stored in `error` state)
+   * @throws Re-throws repository errors so the caller can react (e.g. show a toast)
    */
-  async function deleteBus(id: string): Promise<boolean> {
+  async function deleteBus(id: string): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
       await repository.remove(id);
       await catalog.refresh();
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al eliminar autobús';
-      return false;
+      error.value = toErrorMessage(e, 'Error al eliminar autobús');
+      throw e;
     }
     finally {
       loading.value = false;
@@ -117,15 +116,15 @@ export const useBusStore = defineStore('buses', () => {
   /**
    * Toggles the `active` flag of a bus.
    * @param id - UUID of the bus to toggle
-   * @returns `true` on success, `false` if the bus is not found or on repository failure
+   * @throws When the bus isn't loaded, or re-throws repository errors
    */
-  async function toggleBusStatus(id: string): Promise<boolean> {
+  async function toggleBusStatus(id: string): Promise<void> {
     const bus = getBusById.value(id);
     if (!bus) {
       error.value = 'Autobús no encontrado';
-      return false;
+      throw new Error(error.value);
     }
-    return updateBus(id, { active: !bus.active });
+    await updateBus(id, { active: !bus.active });
   }
 
   return {

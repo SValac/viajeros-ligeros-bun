@@ -6,6 +6,7 @@ import type { TravelService } from '~/types/travel';
 import { useEditableList } from '~/composables/use-editable-list';
 import { useFormModal } from '~/composables/use-form-modal';
 import { deleteAction } from '~/utils/actions-column';
+import { toErrorMessage } from '~/utils/error-message';
 import { pluralize } from '~/utils/pluralize';
 
 // Public "qué incluye" list of a travel, shown on the web. Each change is saved right away.
@@ -23,11 +24,15 @@ const toast = useToast();
 const { isOpen: isServiceModalOpen, editing: editingService, openNew: openServiceAddModal, openEdit: openEditModal } = useFormModal<TravelService>();
 
 const { items: services, isSaving, upsert, patch, remove } = useEditableList(() => props.services, async (services) => {
-  const saved = await travelsStore.updateTravel(props.travelId, { services });
-  toast.add(saved
-    ? { title: 'Servicios guardados', color: 'success', icon: 'i-lucide-check-circle' }
-    : { title: 'Error al guardar servicios', description: travelsStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
-  return saved;
+  try {
+    await travelsStore.updateTravel(props.travelId, { services });
+    toast.add({ title: 'Servicios guardados', color: 'success', icon: 'i-lucide-check-circle' });
+    return true;
+  }
+  catch (e) {
+    toast.add({ title: 'Error al guardar servicios', description: toErrorMessage(e, 'No se pudieron guardar los servicios'), color: 'error', icon: 'i-lucide-alert-circle' });
+    return false;
+  }
 });
 
 // Included ones first, each group keeping its order

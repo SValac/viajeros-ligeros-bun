@@ -2,6 +2,7 @@
 import type { AboutPage } from '~/types/agency-profile';
 
 import { aboutPageSchema, cloneAboutPage, serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
+import { toErrorMessage } from '~/utils/error-message';
 
 definePageMeta({
   name: 'profile-about',
@@ -14,20 +15,22 @@ const toast = useToast();
 const profile = computed(() => agencyProfileStore.profile!);
 
 async function handleSubmit(page: AboutPage | null) {
-  const success = await agencyProfileStore.saveAboutPage(page);
-  if (success) {
+  try {
+    await agencyProfileStore.saveAboutPage(page);
+  }
+  catch (e) {
     toast.add({
-      title: page ? 'Página Nosotros guardada' : 'Página Nosotros quitada',
-      color: 'success',
-      icon: 'i-lucide-check-circle',
+      title: 'No se pudo guardar la página Nosotros',
+      description: toErrorMessage(e, 'Intenta de nuevo'),
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
     });
     return;
   }
   toast.add({
-    title: 'No se pudo guardar la página Nosotros',
-    description: agencyProfileStore.error ?? undefined,
-    color: 'error',
-    icon: 'i-lucide-alert-circle',
+    title: page ? 'Página Nosotros guardada' : 'Página Nosotros quitada',
+    color: 'success',
+    icon: 'i-lucide-check-circle',
   });
 }
 </script>

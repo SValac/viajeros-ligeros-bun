@@ -68,7 +68,8 @@ const state = reactive<FormState>({
   splitType: expense?.splitType ?? 'minimum',
 });
 
-onMounted(() => quotationStore.fetchExpenseCategories());
+// Only suggestions: the base categories still show if they don't load.
+onMounted(() => quotationStore.fetchExpenseCategories().catch(() => {}));
 
 const categoryOptions = computed(() => {
   const extra = [...quotationStore.expenseCategories, state.category]
