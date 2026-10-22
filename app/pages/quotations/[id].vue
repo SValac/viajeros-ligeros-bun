@@ -5,17 +5,17 @@ import { z } from 'zod';
 
 import { useQuotationRoute } from '~/composables/quotation/use-quotation-route';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
+import { useActionToast } from '~/composables/use-action-toast';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelDetailQuery } from '~/queries/travels';
-import { toErrorMessage } from '~/utils/error-message';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 // Parent of the quotation tabs (app/pages/quotations/[id]/*). Shows the
 // header, the status and the navigation; the tabs only render when the
 // quotation exists. Without a quotation, shows the empty state to create it.
 
-const toast = useToast();
+const { runWithToast } = useActionToast();
 
 const quotationStore = useQuotationStore();
 
@@ -85,25 +85,19 @@ async function handleCreateQuotation() {
   if (!result.success)
     return;
 
-  try {
-    await quotationStore.createQuotation({
-      travelId: travelId.value,
-      seatPrice: 0,
-      totalSeats: 0,
-      minimumSeatTarget: result.data.minimumSeatTarget ?? 0,
-      status: 'draft',
-      notes: result.data.notes,
-    });
-
-    toast.add({ title: 'Cotización creada', color: 'success' });
+  if (await runWithToast(() => quotationStore.createQuotation({
+    travelId: travelId.value,
+    seatPrice: 0,
+    totalSeats: 0,
+    minimumSeatTarget: result.data.minimumSeatTarget ?? 0,
+    status: 'draft',
+    notes: result.data.notes,
+  }), {
+    success: 'Cotización creada',
+    error: 'Error',
+    errorFallback: 'No se pudo crear la cotización',
+  })) {
     isCreateModalOpen.value = false;
-  }
-  catch (e) {
-    toast.add({
-      title: 'Error',
-      description: toErrorMessage(e, 'No se pudo crear la cotización'),
-      color: 'error',
-    });
   }
 }
 </script>

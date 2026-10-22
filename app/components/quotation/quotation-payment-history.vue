@@ -7,9 +7,9 @@ import type { SupplierPaymentKind } from '~/composables/quotation/use-supplier-p
 import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 
 import { useSupplierPayments } from '~/composables/quotation/use-supplier-payments';
+import { useActionToast } from '~/composables/use-action-toast';
 import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
-import { toErrorMessage } from '~/utils/error-message';
 import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 
@@ -21,7 +21,7 @@ type Props = {
 
 const { kind, parentId, subtitle } = defineProps<Props>();
 
-const toast = useToast();
+const { runWithToast } = useActionToast();
 const confirmDelete = useConfirmDelete();
 const { payments, paid, pendingBalance, add, update, remove } = useSupplierPayments(kind, () => parentId);
 
@@ -29,17 +29,13 @@ const { isOpen: isFormModalOpen, editing: selectedPayment, openNew: openNewPayme
 
 async function handleSubmit(data: SupplierPaymentFields) {
   const editing = selectedPayment.value;
-  try {
-    if (editing)
-      await update(editing.id, data);
-    else
-      await add(data);
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, editing ? 'No se pudo actualizar el pago' : 'No se pudo registrar el pago'), color: 'error' });
+  if (!(await runWithToast(() => (editing ? update(editing.id, data) : add(data)), {
+    success: editing ? 'Pago actualizado' : 'Pago registrado',
+    error: 'Error',
+    errorFallback: editing ? 'No se pudo actualizar el pago' : 'No se pudo registrar el pago',
+  }))) {
     return;
   }
-  toast.add({ title: editing ? 'Pago actualizado' : 'Pago registrado', color: 'success' });
   isFormModalOpen.value = false;
   selectedPayment.value = null;
 }
@@ -52,13 +48,11 @@ async function handleDelete(payment: SupplierPayment) {
     return;
   }
 
-  try {
-    await remove(payment.id);
-    toast.add({ title: 'Pago eliminado', color: 'warning' });
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el pago'), color: 'error' });
-  }
+  await runWithToast(() => remove(payment.id), {
+    success: { title: 'Pago eliminado', color: 'warning' },
+    error: 'Error',
+    errorFallback: 'No se pudo eliminar el pago',
+  });
 }
 
 const columns: TableColumn<SupplierPayment>[] = [

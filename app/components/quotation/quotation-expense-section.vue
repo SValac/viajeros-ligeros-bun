@@ -6,11 +6,11 @@ import { h } from 'vue';
 import type { QuotationExpense, QuotationExpenseFormData } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
+import { useActionToast } from '~/composables/use-action-toast';
 import { useFormModal } from '~/composables/use-form-modal';
 import { deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
-import { toErrorMessage } from '~/utils/error-message';
 
 type Props = {
   quotationId: string;
@@ -22,6 +22,7 @@ const { quotationId, readonly = false } = defineProps<Props>();
 const quotationStore = useQuotationStore();
 const { coordinatorCount } = useQuotationContext(() => quotationId);
 const toast = useToast();
+const { runWithToast } = useActionToast();
 const confirmDelete = useConfirmDelete();
 
 const expenses = computed(() => quotationStore.getExpensesByQuotation(quotationId));
@@ -35,13 +36,11 @@ function getCostPerSeat(expense: QuotationExpense): number {
 const { isOpen: isFormOpen, editing: selectedExpense, openNew, openEdit } = useFormModal<QuotationExpense>();
 
 async function handleSubmit(data: QuotationExpenseFormData) {
-  try {
-    await (selectedExpense.value
-      ? quotationStore.updateExpense(selectedExpense.value.id, data)
-      : quotationStore.addExpense(data));
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo guardar el gasto', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  if (!(await runWithToast(() => (selectedExpense.value
+    ? quotationStore.updateExpense(selectedExpense.value.id, data)
+    : quotationStore.addExpense(data)), {
+    error: 'No se pudo guardar el gasto',
+  }))) {
     return;
   }
   toast.add({ title: selectedExpense.value ? 'Gasto actualizado' : 'Gasto agregado', color: 'success' });
@@ -57,13 +56,10 @@ async function handleDelete(expense: QuotationExpense) {
     return;
   }
 
-  try {
-    await quotationStore.deleteExpense(expense.id);
-    toast.add({ title: 'Gasto eliminado', color: 'warning' });
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo eliminar el gasto', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
-  }
+  await runWithToast(() => quotationStore.deleteExpense(expense.id), {
+    success: { title: 'Gasto eliminado', color: 'warning' },
+    error: 'No se pudo eliminar el gasto',
+  });
 }
 
 function getActions(expense: QuotationExpense) {

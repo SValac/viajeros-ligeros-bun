@@ -8,6 +8,7 @@ import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPubli
 
 import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
+import { useActionToast } from '~/composables/use-action-toast';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
@@ -26,6 +27,7 @@ const props = defineProps<Props>();
 
 const quotationStore = useQuotationStore();
 const toast = useToast();
+const { runWithToast } = useActionToast();
 // getReferencePriceMatrix reads these catalogs. Creating the stores here, in setup, keeps
 // their catalog queries from starting during render (Vue warns: no active component instance).
 useProviderStore();
@@ -279,13 +281,11 @@ async function confirmWarning() {
       isFormModalOpen.value = false;
   }
   else if (warningAction.value === 'delete') {
-    try {
-      await quotationStore.deletePublicPrice(price.id);
-      toast.add({ title: 'Precio eliminado', color: 'success' });
-    }
-    catch (e) {
-      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el precio'), color: 'error' });
-    }
+    await runWithToast(() => quotationStore.deletePublicPrice(price.id), {
+      success: 'Precio eliminado',
+      error: 'Error',
+      errorFallback: 'No se pudo eliminar el precio',
+    });
   }
   isWarningLoading.value = false;
   isWarningOpen.value = false;
@@ -326,15 +326,10 @@ async function savePrice(data: QuotationPublicPriceFormData) {
   }
   else {
     // Create
-    try {
-      await quotationStore.addPublicPrice(data);
-    }
-    catch (e) {
-      toast.add({
-        title: 'Error',
-        description: toErrorMessage(e, 'No se pudo agregar el precio'),
-        color: 'error',
-      });
+    if (!(await runWithToast(() => quotationStore.addPublicPrice(data), {
+      error: 'Error',
+      errorFallback: 'No se pudo agregar el precio',
+    }))) {
       return;
     }
 

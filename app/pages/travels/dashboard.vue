@@ -5,10 +5,10 @@ import { h } from 'vue';
 
 import type { TravelStatus, TravelSummary } from '~/types/travel';
 
+import { useActionToast } from '~/composables/use-action-toast';
 import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
-import { toErrorMessage } from '~/utils/error-message';
 import { formatDateRange } from '~/utils/format-date';
 import { travelLinkCell } from '~/utils/table-cells';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
@@ -24,7 +24,7 @@ definePageMeta({
 // Store
 const travelsStore = useTravelsStore();
 const coordinatorStore = useCoordinatorStore();
-const toast = useToast();
+const { runWithToast } = useActionToast();
 const router = useRouter();
 const confirmDelete = useConfirmDelete();
 
@@ -81,21 +81,14 @@ async function handleDelete(travel: TravelSummary) {
     title: 'Eliminar viaje',
     description: `¿Estás seguro de eliminar el viaje ${travel.label}?`,
   })) {
-    try {
-      await travelsStore.deleteTravel(travel.id);
-      toast.add({
+    await runWithToast(() => travelsStore.deleteTravel(travel.id), {
+      success: {
         title: 'Viaje eliminado',
         description: `${travel.label} se eliminó correctamente`,
         color: 'warning',
-      });
-    }
-    catch (e) {
-      toast.add({
-        title: 'No se pudo eliminar el viaje',
-        description: toErrorMessage(e, 'Intenta de nuevo'),
-        color: 'error',
-      });
-    }
+      },
+      error: 'No se pudo eliminar el viaje',
+    });
   }
 }
 
