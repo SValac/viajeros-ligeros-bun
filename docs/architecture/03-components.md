@@ -120,10 +120,10 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 |---------|-----------|
 | `agency-profile-form.vue` / `agency-brand-preview.vue` / `agency-color-input.vue` | Datos y marca |
 | `agency-seo-form.vue` / `agency-seo-preview.vue` | SEO |
-| `agency-about-page-form.vue` / `-editor.vue` | Página "Nosotros" |
+| `agency-about-page-editor.vue` | Editor de la página "Nosotros" |
 | `agency-image-upload.vue` / `agency-icon-picker.vue` | Imagen e icono |
-| `home/agency-home-*.vue` | Página de inicio: formulario, editor y campos de bloque |
-| `page/agency-page-*.vue` | Secciones editables de una página: editor, card, items y modal de confirmación |
+| `home/agency-home-*.vue` | Página de inicio: editor y campos de bloque |
+| `page/agency-page-*.vue` | Páginas del sitio: formulario (`AgencyPageForm`, recibe el editor en su slot), secciones editables, card, items y modal de confirmación |
 
 ---
 
