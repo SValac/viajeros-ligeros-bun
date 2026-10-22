@@ -1,4 +1,4 @@
-import type { Json, Tables } from '~/types/database.types';
+import type { Json, Tables, TablesUpdate } from '~/types/database.types';
 import type { Provider, ProviderFormData } from '~/types/provider';
 import type { MapLocation } from '~/types/travel';
 
@@ -27,19 +27,31 @@ export function mapProviderRowToDomain(row: Tables<'providers'>): Provider {
   };
 }
 
+export function mapProviderLocationToRow(location: ProviderFormData['location']) {
+  return {
+    location_city: location.city,
+    location_state: location.state,
+    location_country: location.country,
+    map_location: (location.mapLocation as unknown as Json) ?? null,
+  } satisfies TablesUpdate<'providers'>;
+}
+
+export function mapProviderContactToRow(contact: ProviderFormData['contact']) {
+  return {
+    contact_name: contact.name ?? null,
+    contact_phone: contact.phone ?? null,
+    contact_email: contact.email ?? null,
+    contact_notes: contact.notes ?? null,
+  } satisfies TablesUpdate<'providers'>;
+}
+
 export function mapProviderToInsert(data: ProviderFormData): Omit<Tables<'providers'>, 'id' | 'created_at' | 'updated_at' | 'owner_id'> {
   return {
     name: data.name,
     category: data.category,
     description: data.description ?? null,
-    location_city: data.location.city,
-    location_state: data.location.state,
-    location_country: data.location.country,
-    map_location: (data.location.mapLocation as unknown as Json) ?? null,
-    contact_name: data.contact.name ?? null,
-    contact_phone: data.contact.phone ?? null,
-    contact_email: data.contact.email ?? null,
-    contact_notes: data.contact.notes ?? null,
+    ...mapProviderLocationToRow(data.location),
+    ...mapProviderContactToRow(data.contact),
     active: data.active,
   };
 }

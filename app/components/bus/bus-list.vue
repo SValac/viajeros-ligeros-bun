@@ -5,9 +5,9 @@ import { h } from 'vue';
 
 import type { Bus, BusFormData } from '~/types/bus';
 
+import { useActionToast } from '~/composables/use-action-toast';
 import { useFormModal } from '~/composables/use-form-modal';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
-import { toErrorMessage } from '~/utils/error-message';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -17,7 +17,7 @@ type Props = {
 const props = defineProps<Props>();
 
 const busStore = useBusStore();
-const toast = useToast();
+const { runWithToast } = useActionToast();
 const confirmDelete = useConfirmDelete();
 
 const { isOpen: isFormModalOpen, editing: editingBus, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Bus>();
@@ -25,19 +25,13 @@ const { isOpen: isFormModalOpen, editing: editingBus, openNew: openCreateModal, 
 const buses = computed(() => busStore.getAllBusesByProvider(props.providerId));
 
 async function handleFormSubmit(data: BusFormData) {
-  try {
-    if (editingBus.value) {
-      await busStore.updateBus(editingBus.value.id, data);
-      toast.add({ title: 'Unidad actualizada', color: 'primary' });
-    }
-    else {
-      await busStore.addBus(data);
-      toast.add({ title: 'Unidad registrada', color: 'primary' });
-    }
+  const editing = editingBus.value;
+  if (await runWithToast(() => (editing ? busStore.updateBus(editing.id, data) : busStore.addBus(data)), {
+    success: { title: editing ? 'Unidad actualizada' : 'Unidad registrada', color: 'primary' },
+    error: 'Error',
+    errorFallback: 'No se pudo guardar la unidad',
+  })) {
     closeModal();
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo guardar la unidad'), color: 'error' });
   }
 }
 
@@ -48,28 +42,24 @@ async function handleDelete(bus: Bus) {
     title: 'Eliminar unidad',
     description: `¿Estás seguro de eliminar ${label}?`,
   })) {
-    try {
-      await busStore.deleteBus(bus.id);
-      toast.add({ title: 'Unidad eliminada', color: 'warning' });
-    }
-    catch (e) {
-      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar la unidad'), color: 'error' });
-    }
+    await runWithToast(() => busStore.deleteBus(bus.id), {
+      success: { title: 'Unidad eliminada', color: 'warning' },
+      error: 'Error',
+      errorFallback: 'No se pudo eliminar la unidad',
+    });
   }
 }
 
 async function handleToggleStatus(bus: Bus) {
-  try {
-    await busStore.toggleBusStatus(bus.id);
-    toast.add({
+  await runWithToast(() => busStore.toggleBusStatus(bus.id), {
+    success: {
       title: 'Estado actualizado',
       description: `La unidad ahora está ${!bus.active ? 'activa' : 'inactiva'}`,
       color: 'primary',
-    });
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo cambiar el estado de la unidad'), color: 'error' });
-  }
+    },
+    error: 'Error',
+    errorFallback: 'No se pudo cambiar el estado de la unidad',
+  });
 }
 
 function getRowActions(bus: Bus): DropdownMenuItem[][] {

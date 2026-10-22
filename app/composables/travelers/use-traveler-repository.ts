@@ -2,6 +2,7 @@ import type { TablesUpdate } from '~/types/database.types';
 import type { TravelAccommodation } from '~/types/travel';
 import type { Traveler, TravelerFormData, TravelerRoomAssignment, TravelerUpdateData } from '~/types/traveler';
 
+import { deleteById } from '~/utils/delete-by-id';
 import { fetchInBatches } from '~/utils/fetch-in-batches';
 
 /**
@@ -135,13 +136,7 @@ export function useTravelerRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('travelers')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'travelers', id);
   }
 
   /**

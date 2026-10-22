@@ -11,9 +11,9 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 
 **Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
 PR (c) (phases 14, 15) as #139, PR (d) (phases 3-6, 16, 17 except 17.6) as #140, phase 7 as
-#141. PR (e) is split in two: phases 9 and 10 on branch `feature/shared-components-dedup-data`
-(the error contract touches every store, so it ships and gets tested alone); phases 11-13,
-17.6 and the phase 10 follow-ups in the next PR, branched from `main`.
+#141, phases 9-10 as #142. Phases 11-13 and 17.6 on branch
+`feature/shared-components-dedup-repositories`. Left for one last PR: the phase 10 follow-ups
+(then move this plan to `completed/` inside it).
 
 ---
 
@@ -431,7 +431,7 @@ Sin cambiar lo que exporta el store:
   add + delete expense moves the seat price 3015 → 3020 → 3015; provider toggle toast; a
   simulated 500 on `providers` and on `travels` shows the error toast and keeps the form.
 
-### Fase 11 — Repositorios: helpers de Supabase
+### Fase 11 — Repositorios: helpers de Supabase ✅
 
 - `delete().eq('id', id)` + `if (error) throw` está ~15 veces (bus, provider, coordinator,
   traveler, payments, hotel room types, quotation ×8, travel media). Solo `removeTravel` y
@@ -448,7 +448,28 @@ Sin cambiar lo que exporta el store:
   `fetchAll / insert / update / remove`; con los helpers de arriba quedan cortos. No hace falta
   una fábrica genérica.
 
-### Fase 12 — Storage y perfil de agencia
+**Done (2026-10-22)** on branch `feature/shared-components-dedup-repositories`. Notes:
+- `deleteById(supabase, table, id, notFound?)` in `app/utils/delete-by-id.ts`: deletes with
+  `.select('id')` and throws `notFound` when no row came back. Used by the 15 single-row
+  deletes plus `removeTravel` and `deleteEmptyAccommodation` (which had their own checks).
+- The returned id costs no permission: per the Postgres `CREATE POLICY` docs, a `DELETE` whose
+  `WHERE` reads a column (our `.eq('id', …)`) already applies the SELECT policy, and a row
+  that fails it is silently skipped. So `RETURNING` can't create false errors, it only makes
+  the 0 rows visible.
+- `insertOne` / `updateOne` skipped: supabase-js can't resolve `Insert`/`Row` for a generic
+  table (`RejectExcessProperties`, `SelectQueryError`), not without casts.
+- `use-travel-repository`: `deleteByTravel(table, travelId)` (0 rows is fine there) and
+  `replaceChildren(table, travelId, items, insert)` behind the four `replace*`.
+- Not changed: deletes by filter (opt-outs, traveler adjustments, accommodation details,
+  coordinator links) where deleting nothing is valid, and the multi-row
+  `deleteUnoccupiedAccommodations` / removed price adjustments (`.in('id', ids)`), which could
+  compare the returned count with `ids.length` the same way. `use-travel-media-repository.remove`
+  still deletes the file before the row: a blocked row delete now throws, but the file is gone.
+- Checked in the browser: delete expense and bus payment OK; deleting a public price, a
+  catalog bus or a travel that no longer exists now throws "No se pudo eliminar…" (it used to
+  resolve as a success); re-saving the seed travel's itinerary and services keeps them the same.
+
+### Fase 12 — Storage y perfil de agencia ✅
 
 - Subir archivo + `getPublicUrl` está 3 veces (`use-travel-media-repository` `upload` y
   `uploadBanner`, `use-agency-profile-repository` `uploadImage`); borrar un archivo 3 veces
@@ -459,7 +480,21 @@ Sin cambiar lo que exporta el store:
 - `use-agency-profile-store.ts`: `saveProfile`, `saveAboutPage`, `saveHomePage`, `saveSeo` son
   iguales salvo el `update` y el mensaje → un `_save(update, message)`.
 
-### Fase 13 — Piezas chicas de datos
+**Done (2026-10-22).** Notes:
+- `app/utils/storage.ts`: `uploadPublicFile(supabase, bucket, path, file, { contentType })`
+  (returns the public URL), `removeStorageFile`, `storagePathFromPublicUrl(url, bucket)` and
+  `fileExtension(file)`. `TRAVEL_GALLERY_BUCKET` sits next to `AGENCY_LOGOS_BUCKET`.
+- `getGalleryStoragePath` and `getSiteImageStoragePath` are gone (callers pass the bucket).
+- `fileExtension` fixes a name with no dot: `split('.').pop()` returned the whole name as the
+  extension; now it's `bin`.
+- `use-agency-profile-store`: the four `save*` go through `_save(update, fallback)`.
+- `removeStorageFile` keeps the old behavior: Storage leaves out files RLS won't let the user
+  remove with no error, and it doesn't check that (a missing file would then block deleting
+  a gallery row). `removeAllForTravel` still compares the count itself.
+- Checked in the browser: upload + remove of a favicon (profile back to `null`, file gone),
+  a gallery image and a banner; `saveSeo`; the profile tabs, gallery and edit load clean.
+
+### Fase 13 — Piezas chicas de datos ✅
 
 - Orden de pagos por fecha descendente: 4 veces (`use-payment-store` y 3 en cotización) →
   `sortByDateDesc`.
@@ -474,6 +509,22 @@ Sin cambiar lo que exporta el store:
   `mapProviderToInsert` → reutilizar el mapper.
 - `use-travel-repository`: los `insert` de services, buses y accommodations mapean en línea →
   moverlos a `utils/mappers/travel-mappers.ts` como los demás; `mapRowToDomain` de travel media también.
+
+**Done (2026-10-22).** Notes:
+- `sortByDateDesc` skipped: only one copy is left (the supplier payment slice); phase 8 removed
+  the others and the payment store doesn't sort.
+- `replaceWhere(list, belongs, items)` in `app/utils/replace-where.ts`: payment store loads,
+  `hydrateTravel`, the supplier payment slice, opt-outs and both adjustment lists.
+- `mapQuotationAccommodationDetailRowToDomain` sets `costPerPerson` with `calculateCostPerPerson`.
+- `mapHotelRoomTypeToRow` (insert/update), `mapProviderLocationToRow` / `mapProviderContactToRow`
+  (insert/update), and `mapTravelServiceToInsert` / `mapTravelBusToInsert` /
+  `mapTravelAccommodationToInsert` / `mapTravelMediaRowToDomain` in the mappers. New mapper
+  exports are imported explicitly (a new export of an auto-imported file isn't seen by a
+  running `nuxt dev`).
+- Checked in the browser: rehydrating the seed quotation keeps every count; detail cost per
+  person unchanged; re-saving a provider's location/contact and a room type keeps them the
+  same; services, buses and a room inserted on a throwaway travel (then deleted) match the
+  seed's; a gallery upload maps the same as its fetch.
 
 ## Tercera pasada: páginas y componentes leídos a mano (2026-10-13)
 
@@ -668,7 +719,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   `HotelBedConfigurationInput`; no `update:modelValue` emit is left in `app/`.
 - Also: the travel payments panel's three cards now use `StatCard` (missed in phase 5).
 
-### Fase 17 — Lógica de dominio repetida en componentes ✅ (salvo los toasts)
+### Fase 17 — Lógica de dominio repetida en componentes ✅
 
 - Agrupar por representante: `groupTravelersByRepresentative` ya existe, pero
   `travel-payments-panel` lo reimplementa, `travel-optional-service-card` arma sus filas igual,
@@ -701,6 +752,18 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - `jscpd` after phases 16-17: 13 clones, 0.43 % (44 / 1.92 % after PR (c)). Left: the summary
   cells of `travel-payments-panel`, and pairs the plan already leaves out (expense/provider
   forms).
+
+**17.6 done (2026-10-22)** on branch `feature/shared-components-dedup-repositories`:
+`useActionToast().runWithToast(action, { success, error, errorFallback })` in
+`app/composables/use-action-toast.ts` runs a store action, shows the success toast or an error
+toast with `toErrorMessage`, and resolves to whether it worked
+(`if (await runWithToast(...)) close();`). 47 of the 76 try/catch toasts use it (41 rewritten
+by a script that only took `try { await …; toast; … } catch (e) { error toast [return] }`,
+6 edit-or-create handlers by hand); texts and colors are unchanged. The 30 left keep their
+try/catch on purpose: a `finally` (spinners, modal close), an icon on the error toast, a
+title that depends on the branch, a value used afterwards, or errors that aren't from a store
+(login, register, Google Maps, coordinator invite). Ref ids are captured before the closure
+(`const id = x.value.id`): TS drops the `ref.value` narrowing inside it.
 
 ## Fuera de alcance (repetido, pero no vale la pena ahora)
 

@@ -1,6 +1,7 @@
 import type { TablesUpdate } from '~/types/database.types';
 import type { Payment, PaymentFormData, PaymentUpdateData, TravelerAccountConfig } from '~/types/payment';
 
+import { deleteById } from '~/utils/delete-by-id';
 import { fetchInBatches } from '~/utils/fetch-in-batches';
 
 /**
@@ -146,13 +147,7 @@ export function usePaymentsRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function removePayment(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('payments')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'payments', id);
   };
 
   /**

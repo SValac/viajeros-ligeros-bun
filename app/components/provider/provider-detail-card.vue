@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type { Provider, ProviderFormData } from '~/types/provider';
 
+import { useActionToast } from '~/composables/use-action-toast';
 import { deleteAction } from '~/utils/actions-column';
-import { toErrorMessage } from '~/utils/error-message';
 import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 type Props = {
@@ -13,7 +13,7 @@ const props = defineProps<Props>();
 
 const router = useRouter();
 const providerStore = useProviderStore();
-const toast = useToast();
+const { runWithToast } = useActionToast();
 const confirmDelete = useConfirmDelete();
 
 const meta = computed(() => PROVIDER_CATEGORY_META[props.provider.category]);
@@ -29,31 +29,28 @@ function cancelEditing() {
 }
 
 async function handleFormSubmit(data: ProviderFormData) {
-  try {
-    data.category = props.provider.category;
-    await providerStore.updateProvider(props.provider.id, data);
-    toast.add({ title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
+  data.category = props.provider.category;
+  if (await runWithToast(() => providerStore.updateProvider(props.provider.id, data), {
+    success: { title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' },
+    error: 'Error',
+    errorFallback: 'Ocurrió un error al guardar el proveedor',
+  })) {
     isEditingProvider.value = false;
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'Ocurrió un error al guardar el proveedor'), color: 'error' });
   }
 }
 
 async function handleToggleStatus() {
   // Read before the toggle: the catalog refetch flips `active` on the prop.
   const nowActive = !props.provider.active;
-  try {
-    await providerStore.toggleProviderStatus(props.provider.id);
-    toast.add({
+  await runWithToast(() => providerStore.toggleProviderStatus(props.provider.id), {
+    success: {
       title: 'Estado actualizado',
       description: `${props.provider.name} ahora está ${nowActive ? 'activo' : 'inactivo'}`,
       color: 'primary',
-    });
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo cambiar el estado del proveedor'), color: 'error' });
-  }
+    },
+    error: 'Error',
+    errorFallback: 'No se pudo cambiar el estado del proveedor',
+  });
 }
 
 async function handleDelete() {
@@ -61,13 +58,12 @@ async function handleDelete() {
     title: 'Eliminar proveedor',
     description: `¿Estás seguro de eliminar ${props.provider.name}?`,
   })) {
-    try {
-      await providerStore.deleteProvider(props.provider.id);
-      toast.add({ title: 'Proveedor eliminado', color: 'warning' });
+    if (await runWithToast(() => providerStore.deleteProvider(props.provider.id), {
+      success: { title: 'Proveedor eliminado', color: 'warning' },
+      error: 'Error',
+      errorFallback: 'No se pudo eliminar el proveedor',
+    })) {
       router.push(meta.value.route);
-    }
-    catch (e) {
-      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el proveedor'), color: 'error' });
     }
   }
 }

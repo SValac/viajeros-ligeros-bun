@@ -5,6 +5,7 @@ import type { QuotationProvider } from '~/types/quotation';
 import { countServiceTakers, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useActionToast } from '~/composables/use-action-toast';
 import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { toErrorMessage } from '~/utils/error-message';
@@ -19,6 +20,7 @@ definePageMeta({
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
+const { runWithToast } = useActionToast();
 const providerStore = useProviderStore();
 const quotationStore = useQuotationStore();
 
@@ -78,15 +80,13 @@ const savingServiceId = shallowRef<string | null>(null);
 watch(travelId, async (id) => {
   if (!id)
     return;
-  try {
-    await Promise.all([
-      quotationStore.fetchProviderOptOuts(id),
-      quotationStore.fetchTravelerAdjustments(id),
-    ]);
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo cargar quién toma cada servicio', description: toErrorMessage(e, 'Recarga la página'), color: 'error' });
-  }
+  await runWithToast(() => Promise.all([
+    quotationStore.fetchProviderOptOuts(id),
+    quotationStore.fetchTravelerAdjustments(id),
+  ]), {
+    error: 'No se pudo cargar quién toma cada servicio',
+    errorFallback: 'Recarga la página',
+  });
 }, { immediate: true });
 
 async function onAdjust(travelerIds: string[], adjustmentId: string | null) {

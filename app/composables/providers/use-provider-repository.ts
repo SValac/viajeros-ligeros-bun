@@ -1,5 +1,8 @@
-import type { Json, TablesUpdate } from '~/types/database.types';
+import type { TablesUpdate } from '~/types/database.types';
 import type { Provider, ProviderFormData, ProviderUpdateData } from '~/types/provider';
+
+import { deleteById } from '~/utils/delete-by-id';
+import { mapProviderContactToRow, mapProviderLocationToRow } from '~/utils/mappers/provider-mappers';
 
 /**
  * Data access layer for the `providers` table.
@@ -62,18 +65,10 @@ export function useProviderRepository() {
       update.active = data.active;
     if ('description' in data)
       update.description = data.description ?? null;
-    if (data.location) {
-      update.location_city = data.location.city;
-      update.location_state = data.location.state;
-      update.location_country = data.location.country;
-      update.map_location = (data.location.mapLocation as unknown as Json) ?? null;
-    }
-    if (data.contact) {
-      update.contact_name = data.contact.name ?? null;
-      update.contact_phone = data.contact.phone ?? null;
-      update.contact_email = data.contact.email ?? null;
-      update.contact_notes = data.contact.notes ?? null;
-    }
+    if (data.location)
+      Object.assign(update, mapProviderLocationToRow(data.location));
+    if (data.contact)
+      Object.assign(update, mapProviderContactToRow(data.contact));
 
     const { data: row, error } = await supabase
       .from('providers')
@@ -93,13 +88,7 @@ export function useProviderRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('providers')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'providers', id);
   };
 
   return { fetchAll, insert, update, remove };

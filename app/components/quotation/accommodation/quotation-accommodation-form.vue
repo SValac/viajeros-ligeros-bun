@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import type { QuotationAccommodationFormData } from '~/types/quotation';
 
-import { toErrorMessage } from '~/utils/error-message';
+import { useActionToast } from '~/composables/use-action-toast';
 import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 
 type Props = {
@@ -23,6 +23,7 @@ const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
+const { runWithToast } = useActionToast();
 
 // IDs of hotels already added to this quotation
 const alreadyAddedHotels = computed(() => {
@@ -92,15 +93,10 @@ async function handleSubmit() {
     return;
   }
 
-  try {
-    await quotationStore.addQuotationAccommodation(result.data as QuotationAccommodationFormData);
-  }
-  catch (e) {
-    toast.add({
-      title: 'Error',
-      description: toErrorMessage(e, 'No se pudo agregar el hospedaje'),
-      color: 'error',
-    });
+  if (!(await runWithToast(() => quotationStore.addQuotationAccommodation(result.data as QuotationAccommodationFormData), {
+    error: 'Error',
+    errorFallback: 'No se pudo agregar el hospedaje',
+  }))) {
     return;
   }
 

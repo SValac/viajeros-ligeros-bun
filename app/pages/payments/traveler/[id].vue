@@ -5,6 +5,7 @@ import { h } from 'vue';
 
 import type { Payment, PaymentFormData, PaymentType, TravelerAccountConfig } from '~/types/payment';
 
+import { useActionToast } from '~/composables/use-action-toast';
 import { useFormModal } from '~/composables/use-form-modal';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryWithLoadState } from '~/queries/load-state';
@@ -12,7 +13,6 @@ import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
-import { toErrorMessage } from '~/utils/error-message';
 import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 import { formatTravelerName } from '~/utils/traveler-labels';
@@ -23,7 +23,7 @@ definePageMeta({
 
 const route = useRoute();
 const router = useRouter();
-const toast = useToast();
+const { runWithToast } = useActionToast();
 const paymentStore = usePaymentStore();
 const quotationStore = useQuotationStore();
 const confirmDelete = useConfirmDelete();
@@ -40,12 +40,10 @@ const travelerName = computed(() =>
 // One quotation per travel the traveler is in (for its public prices). The quotation query
 // skips the request when that travel's quotation is cached and fresh.
 async function ensureQuotationsLoaded(travelIds: string[]) {
-  try {
-    await Promise.all(travelIds.filter(Boolean).map(id => quotationStore.fetchByTravel(id)));
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudieron cargar los precios del viaje', description: toErrorMessage(e, 'Recarga la página'), color: 'error' });
-  }
+  await runWithToast(() => Promise.all(travelIds.filter(Boolean).map(id => quotationStore.fetchByTravel(id))), {
+    error: 'No se pudieron cargar los precios del viaje',
+    errorFallback: 'Recarga la página',
+  });
 }
 
 // All travel IDs this traveler has account configs or payments for
@@ -105,13 +103,13 @@ const { isOpen: isEditModalOpen, editing: editingPayment, openEdit: openEditModa
 async function handleEditSubmit(data: PaymentFormData) {
   if (!editingPayment.value)
     return;
-  try {
-    await paymentStore.updatePayment(editingPayment.value.id, data);
-    toast.add({ title: 'Pago actualizado', color: 'success' });
+  const paymentId = editingPayment.value.id;
+  if (await runWithToast(() => paymentStore.updatePayment(paymentId, data), {
+    success: 'Pago actualizado',
+    error: 'Error',
+    errorFallback: 'No se pudo actualizar el pago',
+  })) {
     closeEditModal();
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo actualizar el pago'), color: 'error' });
   }
 }
 
@@ -120,13 +118,11 @@ async function handleDelete(payment: Payment) {
     title: 'Eliminar pago',
     description: '¿Estás seguro de eliminar este pago? Esta acción no se puede deshacer.',
   })) {
-    try {
-      await paymentStore.deletePayment(payment.id);
-      toast.add({ title: 'Pago eliminado', color: 'warning' });
-    }
-    catch (e) {
-      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el pago'), color: 'error' });
-    }
+    await runWithToast(() => paymentStore.deletePayment(payment.id), {
+      success: { title: 'Pago eliminado', color: 'warning' },
+      error: 'Error',
+      errorFallback: 'No se pudo eliminar el pago',
+    });
   }
 }
 
@@ -185,13 +181,12 @@ const editingConfigPublicPrices = computed(() => {
 });
 
 async function handleConfigSubmit(config: TravelerAccountConfig) {
-  try {
-    await paymentStore.setAccountConfig(config);
-    toast.add({ title: 'Configuración guardada', color: 'success' });
+  if (await runWithToast(() => paymentStore.setAccountConfig(config), {
+    success: 'Configuración guardada',
+    error: 'Error',
+    errorFallback: 'No se pudo guardar la configuración',
+  })) {
     closeConfigModal();
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo guardar la configuración'), color: 'error' });
   }
 }
 
@@ -208,12 +203,10 @@ const editMaxAmount = computed(() => {
 });
 
 onMounted(async () => {
-  try {
-    await paymentStore.fetchByTraveler(travelerId.value);
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudieron cargar los pagos', description: toErrorMessage(e, 'Recarga la página'), color: 'error' });
-  }
+  await runWithToast(() => paymentStore.fetchByTraveler(travelerId.value), {
+    error: 'No se pudieron cargar los pagos',
+    errorFallback: 'Recarga la página',
+  });
   await ensureQuotationsLoaded(travelerTravelIds.value);
 });
 

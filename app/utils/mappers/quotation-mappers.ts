@@ -17,6 +17,8 @@ import type {
   TravelerPriceAdjustment,
 } from '~/types/quotation';
 
+import { calculateCostPerPerson } from '~/utils/hotel-room-helpers';
+
 // ============================================================================
 // Quotation
 // ============================================================================
@@ -190,6 +192,7 @@ export function mapQuotationAccommodationDetailRowToDomain(row: Tables<'quotatio
     roomTypeId: row.hotel_room_type_id,
     pricePerNight: row.price_per_night,
     maxOccupancy: row.max_occupancy,
+    costPerPerson: calculateCostPerPerson(row.price_per_night, row.max_occupancy),
   };
 }
 

@@ -1,6 +1,7 @@
 import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { AccommodationPayment, AccommodationPaymentFormData, BusPayment, BusPaymentFormData, ProviderOptOut, ProviderPayment, ProviderPaymentFormData, ProviderPriceAdjustment, ProviderPriceAdjustmentDraft, Quotation, QuotationAccommodation, QuotationAccommodationDetail, QuotationAccommodationFormData, QuotationBus, QuotationBusFormData, QuotationExpense, QuotationExpenseFormData, QuotationFetchResult, QuotationFormData, QuotationProvider, QuotationProviderFormData, QuotationPublicPrice, QuotationPublicPriceFormData, TravelerPriceAdjustment } from '~/types/quotation';
 
+import { deleteById } from '~/utils/delete-by-id';
 import { fetchInBatches } from '~/utils/fetch-in-batches';
 import {
   mapProviderCostFields,
@@ -87,11 +88,7 @@ export function useQuotationRepository() {
 
     const accommodations = (accommodationsResult.data ?? [])
       .map((row) => {
-        const details = (row.quotation_accommodation_details ?? [])
-          .map(d => ({
-            ...mapQuotationAccommodationDetailRowToDomain(d),
-            costPerPerson: d.price_per_night / d.max_occupancy,
-          }));
+        const details = (row.quotation_accommodation_details ?? []).map(mapQuotationAccommodationDetailRowToDomain);
         return mapQuotationAccommodationRowToDomain(row, details);
       });
 
@@ -213,13 +210,7 @@ export function useQuotationRepository() {
   }
 
   async function deleteProvider(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('quotation_providers')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'quotation_providers', id);
   }
 
   /**
@@ -481,13 +472,7 @@ export function useQuotationRepository() {
   }
 
   async function deleteProviderPayment(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('provider_payments')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'provider_payments', id);
   }
 
   async function toggleConfirmAccommodation(id: string, confirmed: boolean): Promise<void> {
@@ -530,13 +515,7 @@ export function useQuotationRepository() {
   }
 
   async function deleteAccommodationPayment(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('accommodation_payments')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'accommodation_payments', id);
   }
 
   async function insertPublicPrice(data: QuotationPublicPriceFormData): Promise<QuotationPublicPrice> {
@@ -583,13 +562,7 @@ export function useQuotationRepository() {
   }
 
   async function deletePublicPrice(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('quotation_public_prices')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'quotation_public_prices', id);
   }
 
   async function insertBusPayment(data: BusPaymentFormData): Promise<BusPayment> {
@@ -622,13 +595,7 @@ export function useQuotationRepository() {
   }
 
   async function deleteBusPayment(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('bus_payments')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'bus_payments', id);
   }
   // total_cost is computed by the database from the travel's rooms (see the
   // lodging_cost_from_travel_rooms migration), so it's read back after the details are written.
@@ -681,10 +648,7 @@ export function useQuotationRepository() {
     if (error)
       throw error;
 
-    return (detailRows ?? []).map(d => ({
-      ...mapQuotationAccommodationDetailRowToDomain(d),
-      costPerPerson: d.price_per_night / d.max_occupancy,
-    }));
+    return (detailRows ?? []).map(mapQuotationAccommodationDetailRowToDomain);
   }
 
   async function insertAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation> {
@@ -751,13 +715,7 @@ export function useQuotationRepository() {
   }
 
   async function deleteAccommodation(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('quotation_accommodations')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'quotation_accommodations', id);
   }
 
   async function insertBus(
@@ -855,13 +813,7 @@ export function useQuotationRepository() {
   }
 
   async function deleteBus(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('quotation_buses')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'quotation_buses', id);
   }
 
   async function insertExpense(data: QuotationExpenseFormData): Promise<QuotationExpense> {
@@ -893,13 +845,7 @@ export function useQuotationRepository() {
   }
 
   async function deleteExpense(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('quotation_expenses')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'quotation_expenses', id);
   }
 
   /**
