@@ -15,6 +15,7 @@ import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
 import { actionsColumn } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
+import { toErrorMessage } from '~/utils/error-message';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { groupNameCell } from '~/utils/table-cells';
 import { formatTravelerName, getTravelerTypeLabel } from '~/utils/traveler-labels';
@@ -114,19 +115,25 @@ const selectedConfig = computed(() => {
 });
 
 async function handlePaymentSubmit(data: PaymentFormData) {
-  const result = await paymentStore.addPayment(data);
-  if ('error' in result) {
-    toast.add({ title: 'Error', description: result.error, color: 'error' });
-    return;
+  try {
+    await paymentStore.addPayment(data);
+    toast.add({ title: 'Pago registrado', description: `Se registró un abono de ${formatCurrency(data.amount)}`, color: 'success' });
+    closeModals();
   }
-  toast.add({ title: 'Pago registrado', description: `Se registró un abono de ${formatCurrency(data.amount)}`, color: 'success' });
-  closeModals();
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo registrar el pago'), color: 'error' });
+  }
 }
 
 async function handleConfigSubmit(config: TravelerAccountConfig) {
-  await paymentStore.setAccountConfig(config);
-  toast.add({ title: 'Configuración guardada', color: 'success' });
-  closeModals();
+  try {
+    await paymentStore.setAccountConfig(config);
+    toast.add({ title: 'Configuración guardada', color: 'success' });
+    closeModals();
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo guardar la configuración'), color: 'error' });
+  }
 }
 
 function getRowActions(travelerWithChildren: TravelerWithChildren) {

@@ -12,6 +12,7 @@ import { travelerDetailQuery } from '~/queries/travelers';
 import { travelListQuery } from '~/queries/travels';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
+import { toErrorMessage } from '~/utils/error-message';
 import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 import { formatTravelerName } from '~/utils/traveler-labels';
@@ -39,7 +40,12 @@ const travelerName = computed(() =>
 // One quotation per travel the traveler is in (for its public prices). The quotation query
 // skips the request when that travel's quotation is cached and fresh.
 async function ensureQuotationsLoaded(travelIds: string[]) {
-  await Promise.all(travelIds.filter(Boolean).map(id => quotationStore.fetchByTravel(id)));
+  try {
+    await Promise.all(travelIds.filter(Boolean).map(id => quotationStore.fetchByTravel(id)));
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudieron cargar los precios del viaje', description: toErrorMessage(e, 'Recarga la página'), color: 'error' });
+  }
 }
 
 // All travel IDs this traveler has account configs or payments for
@@ -99,9 +105,14 @@ const { isOpen: isEditModalOpen, editing: editingPayment, openEdit: openEditModa
 async function handleEditSubmit(data: PaymentFormData) {
   if (!editingPayment.value)
     return;
-  await paymentStore.updatePayment(editingPayment.value.id, data);
-  toast.add({ title: 'Pago actualizado', color: 'success' });
-  closeEditModal();
+  try {
+    await paymentStore.updatePayment(editingPayment.value.id, data);
+    toast.add({ title: 'Pago actualizado', color: 'success' });
+    closeEditModal();
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo actualizar el pago'), color: 'error' });
+  }
 }
 
 async function handleDelete(payment: Payment) {
@@ -109,8 +120,13 @@ async function handleDelete(payment: Payment) {
     title: 'Eliminar pago',
     description: '¿Estás seguro de eliminar este pago? Esta acción no se puede deshacer.',
   })) {
-    await paymentStore.deletePayment(payment.id);
-    toast.add({ title: 'Pago eliminado', color: 'warning' });
+    try {
+      await paymentStore.deletePayment(payment.id);
+      toast.add({ title: 'Pago eliminado', color: 'warning' });
+    }
+    catch (e) {
+      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el pago'), color: 'error' });
+    }
   }
 }
 
@@ -169,9 +185,14 @@ const editingConfigPublicPrices = computed(() => {
 });
 
 async function handleConfigSubmit(config: TravelerAccountConfig) {
-  await paymentStore.setAccountConfig(config);
-  toast.add({ title: 'Configuración guardada', color: 'success' });
-  closeConfigModal();
+  try {
+    await paymentStore.setAccountConfig(config);
+    toast.add({ title: 'Configuración guardada', color: 'success' });
+    closeConfigModal();
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo guardar la configuración'), color: 'error' });
+  }
 }
 
 const editingSummary = computed(() => {
@@ -187,7 +208,12 @@ const editMaxAmount = computed(() => {
 });
 
 onMounted(async () => {
-  await paymentStore.fetchByTraveler(travelerId.value);
+  try {
+    await paymentStore.fetchByTraveler(travelerId.value);
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudieron cargar los pagos', description: toErrorMessage(e, 'Recarga la página'), color: 'error' });
+  }
   await ensureQuotationsLoaded(travelerTravelIds.value);
 });
 
