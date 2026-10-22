@@ -54,7 +54,7 @@ async function handleImageRemove(field: AgencySiteImageField) {
       description="El ícono de tu sitio en la pestaña del navegador, en Google y al guardarlo en la pantalla de inicio del celular. Si no subes uno, se usa tu logo."
       variant="subtle"
     >
-      <AgencyImageUpload
+      <ImageUpload
         :image-url="profile.faviconUrl"
         label="favicon"
         :accept="siteImageAccept('faviconUrl')"
@@ -70,7 +70,7 @@ async function handleImageRemove(field: AgencySiteImageField) {
       description="Aparece al compartir el enlace de tu sitio en WhatsApp, Facebook u otras redes. Cada viaje usa su propia portada."
       variant="subtle"
     >
-      <AgencyImageUpload
+      <ImageUpload
         :image-url="profile.shareImageUrl"
         label="imagen"
         :accept="siteImageAccept('shareImageUrl')"

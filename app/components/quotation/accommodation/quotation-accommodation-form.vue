@@ -183,20 +183,11 @@ function handleCancel() {
         />
 
         <!-- Actions -->
-        <div class="flex justify-end gap-3 pt-2">
-          <UButton
-            type="button"
-            variant="ghost"
-            color="neutral"
-            label="Cancelar"
-            @click="handleCancel"
-          />
-          <UButton
-            type="submit"
-            label="Agregar Hospedaje"
-            :disabled="availableHotels.length === 0"
-          />
-        </div>
+        <FormActions
+          submit-label="Agregar hospedaje"
+          :disabled="availableHotels.length === 0"
+          @cancel="handleCancel"
+        />
       </form>
     </template>
   </UModal>

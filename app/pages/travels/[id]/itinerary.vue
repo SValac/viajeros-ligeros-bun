@@ -10,9 +10,8 @@ const { travelId, travel } = useTravelRoute();
 
 <template>
   <UCard v-if="travel">
-    <!-- With travelId, the list saves each change right away -->
     <TravelActivityList
-      :model-value="travel.itinerary"
+      :activities="travel.itinerary"
       :start-date="travel.startDate"
       :end-date="travel.endDate"
       :travel-id="travelId"

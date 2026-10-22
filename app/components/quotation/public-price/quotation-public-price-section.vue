@@ -9,6 +9,7 @@ import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPubli
 import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { travelersByTravelQuery } from '~/queries/travelers';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 import { pluralize } from '~/utils/pluralize';
@@ -350,12 +351,7 @@ function getRowActions(price: QuotationPublicPrice) {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error' as const,
-        onSelect: () => deletePrice(price),
-      },
+      deleteAction(() => deletePrice(price)),
     ],
   ];
 }
@@ -394,19 +390,7 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
       header: 'Grupo Etario',
       cell: ({ row }) => h('span', { class: 'text-sm text-muted' }, row.original.ageGroup ?? '—'),
     },
-    {
-      id: 'actions',
-      header: 'Acciones',
-      cell: ({ row }) =>
-        h(resolveComponent('UDropdownMenu'), {
-          items: getRowActions(row.original),
-        }, () => h(resolveComponent('UButton'), {
-          color: 'neutral',
-          variant: 'ghost',
-          icon: 'i-lucide-more-vertical',
-          size: 'xs',
-        })),
-    },
+    actionsColumn(getRowActions, { size: 'xs' }),
   ];
 });
 </script>

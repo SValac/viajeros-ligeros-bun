@@ -9,9 +9,11 @@ import { nameSchema, phoneSchema, sanitizeName, sanitizeText, textSchema } from 
 
 type Props = {
   coordinator?: Coordinator | null;
+  // The parent is saving the submitted data
+  loading?: boolean;
 };
 
-const { coordinator = null } = defineProps<Props>();
+const { coordinator = null, loading = false } = defineProps<Props>();
 
 const emit = defineEmits<{
   submit: [data: CoordinatorFormData];
@@ -49,21 +51,13 @@ const state = ref<Schema>({
 const nameInput = useSanitizedModel(() => state.value.name, v => state.value.name = v, sanitizeName);
 const notesInput = useSanitizedModel(() => state.value.notes ?? '', v => state.value.notes = v, sanitizeText);
 
-const isSubmitting = shallowRef(false);
-
-async function onSubmit(event: FormSubmitEvent<Schema>) {
-  isSubmitting.value = true;
-  try {
-    const formData: CoordinatorFormData = {
-      ...event.data,
-      notes: event.data.notes || undefined,
-      id: coordinator?.id,
-    };
-    emit('submit', formData);
-  }
-  finally {
-    isSubmitting.value = false;
-  }
+function onSubmit(event: FormSubmitEvent<Schema>) {
+  const formData: CoordinatorFormData = {
+    ...event.data,
+    notes: event.data.notes || undefined,
+    id: coordinator?.id,
+  };
+  emit('submit', formData);
 }
 
 function onCancel() {
@@ -137,22 +131,10 @@ function onCancel() {
       />
     </UFormField>
 
-    <div class="flex justify-end gap-3 pt-4">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="outline"
-        @click="onCancel"
-      >
-        Cancelar
-      </UButton>
-      <UButton
-        type="submit"
-        color="primary"
-        :loading="isSubmitting"
-      >
-        {{ coordinator ? 'Actualizar' : 'Agregar' }} Coordinador
-      </UButton>
-    </div>
+    <FormActions
+      :submit-label="coordinator ? 'Actualizar coordinador' : 'Agregar coordinador'"
+      :loading="loading"
+      @cancel="onCancel"
+    />
   </UForm>
 </template>

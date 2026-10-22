@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Provider, ProviderFormData } from '~/types/provider';
 
+import { deleteAction } from '~/utils/actions-column';
 import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 type Props = {
@@ -12,6 +13,7 @@ const props = defineProps<Props>();
 const router = useRouter();
 const providerStore = useProviderStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const meta = computed(() => PROVIDER_CATEGORY_META[props.provider.category]);
 
@@ -49,8 +51,10 @@ async function handleToggleStatus() {
 }
 
 async function handleDelete() {
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Estás seguro de eliminar ${props.provider.name}?`)) {
+  if (await confirmDelete({
+    title: 'Eliminar proveedor',
+    description: `¿Estás seguro de eliminar ${props.provider.name}?`,
+  })) {
     await providerStore.deleteProvider(props.provider.id);
     toast.add({ title: 'Proveedor eliminado', color: 'warning' });
     router.push(meta.value.route);
@@ -106,12 +110,7 @@ async function handleDelete() {
               },
             ],
             [
-              {
-                label: 'Eliminar',
-                icon: 'i-lucide-trash-2',
-                color: 'error',
-                onSelect: handleDelete,
-              },
+              deleteAction(handleDelete),
             ],
           ]"
         >

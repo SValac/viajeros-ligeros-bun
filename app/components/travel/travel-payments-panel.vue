@@ -8,13 +8,15 @@ import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
 import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
-import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
+import { actionsColumn } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
+import { groupNameCell } from '~/utils/table-cells';
 import { formatTravelerName, getTravelerTypeLabel } from '~/utils/traveler-labels';
 
 // Payments of a travel's travelers: cash summary, account configs and payments. Used by the
@@ -50,38 +52,14 @@ const enrolledTravelers = computed(() =>
 const statusFilter = ref<PaymentStatus | 'all'>('all');
 const statusFilterOptions = getPaymentStatusFilterOptions('traveler');
 
-const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
-  // Group ALL enrolled travelers by representativeId to preserve the tree structure.
-  // Filtering by status applies only to which representative rows are shown at root level.
-  const all = enrolledTravelers.value;
-  const grouped = Object.groupBy(all, t => t.representativeId ?? '');
-  const companionIds = new Set(
-    all.filter(t => t.representativeId).map(t => t.id),
-  );
-
-  const result: TravelerWithChildren[] = [];
-
-  for (const t of all) {
-    // Companions are embedded as children — skip them as root rows.
-    if (companionIds.has(t.id))
-      continue;
-
-    // Apply status filter at the representative level.
-    if (statusFilter.value !== 'all') {
-      const summary = paymentStore.getTravelerPaymentSummary(t.id, travelId.value);
-      if (summary.status !== statusFilter.value)
-        continue;
-    }
-
-    const children = grouped[t.id];
-    result.push({
-      ...t,
-      children: children && children.length > 0 ? children : undefined,
-    });
-  }
-
-  return result;
-});
+// Grouped first so companions stay under their representative; the status filter only picks
+// which root rows show.
+const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() =>
+  groupTravelersByRepresentative(enrolledTravelers.value).filter(t =>
+    statusFilter.value === 'all'
+    || paymentStore.getTravelerPaymentSummary(t.id, travelId.value).status === statusFilter.value,
+  ),
+);
 
 const expanded = useExpandedGroups(groupedFilteredTravelers);
 
@@ -153,38 +131,39 @@ async function handleConfigSubmit(config: TravelerAccountConfig) {
   closeModals();
 }
 
+function getRowActions(travelerWithChildren: TravelerWithChildren) {
+  return [
+    [
+      {
+        label: 'Registrar abono',
+        icon: 'i-lucide-plus-circle',
+        disabled: !paymentStore.getAccountConfig(travelerWithChildren.id, travelId.value)?.publicPriceId,
+        onSelect: () => openPaymentModal(travelerWithChildren),
+      },
+      {
+        label: 'Ver historial',
+        icon: 'i-lucide-history',
+        onSelect: () => router.push({ name: 'payments-traveler', params: { id: travelerWithChildren.id } }),
+      },
+    ],
+    [
+      {
+        label: 'Configurar cuenta',
+        icon: 'i-lucide-settings',
+        onSelect: () => openConfigModal(travelerWithChildren),
+      },
+    ],
+  ];
+}
+
 const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'name',
     header: 'Nombre',
-    cell: ({ row }) => {
-      const depth = row.depth;
-      const traveler = row.original;
-      const name = formatTravelerName(traveler);
-      const link = h(resolveComponent('NuxtLink'), {
-        to: { name: 'payments-traveler', params: { id: traveler.id } },
-        class: 'font-medium hover:text-primary transition-colors',
-      }, () => name);
-
-      if (row.getCanExpand()) {
-        return h('div', { class: 'flex items-center gap-1' }, [
-          h('button', {
-            onClick: row.getToggleExpandedHandler(),
-            class: 'text-muted hover:text-default',
-          }, [
-            h(resolveComponent('UIcon'), {
-              name: row.getIsExpanded() ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right',
-              class: 'w-4 h-4',
-            }),
-          ]),
-          link,
-        ]);
-      }
-
-      return h('div', {
-        style: `padding-left: ${depth * 1.5 + 0.75}rem`,
-      }, [link]);
-    },
+    cell: ({ row }) => groupNameCell(row, h(resolveComponent('NuxtLink'), {
+      to: { name: 'payments-traveler', params: { id: row.original.id } },
+      class: 'font-medium hover:text-primary transition-colors',
+    }, () => formatTravelerName(row.original))),
   },
   {
     id: 'travelerType',
@@ -280,40 +259,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
       return h(resolveComponent('PaymentStatusBadge'), { status: s.status, party: 'traveler' });
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(
-        resolveComponent('UDropdownMenu'),
-        {
-          items: [
-            [
-              {
-                label: 'Registrar abono',
-                icon: 'i-lucide-plus-circle',
-                disabled: !paymentStore.getAccountConfig(row.original.id, travelId.value)?.publicPriceId,
-                onSelect: () => openPaymentModal(row.original),
-              },
-              {
-                label: 'Ver historial',
-                icon: 'i-lucide-history',
-                onSelect: () => router.push({ name: 'payments-traveler', params: { id: row.original.id } }),
-              },
-            ],
-            [
-              {
-                label: 'Configurar cuenta',
-                icon: 'i-lucide-settings',
-                onSelect: () => openConfigModal(row.original),
-              },
-            ],
-          ],
-        },
-        () => h(resolveComponent('UButton'), { color: 'neutral', variant: 'ghost', icon: 'i-lucide-more-vertical' }),
-      );
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 
 useTravelPayments(travelId);
@@ -323,52 +269,22 @@ useTravelPayments(travelId);
   <div v-if="travel" class="space-y-6">
     <!-- Travel cash -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <UCard>
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-sm text-muted">
-              Total esperado
-            </p>
-            <p class="text-xl font-bold mt-1">
-              {{ formatCurrency(cashSummary.totalExpected) }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-wallet" class="w-9 h-9 text-muted" />
-        </div>
-      </UCard>
-      <UCard>
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-sm text-muted">
-              Total recaudado
-            </p>
-            <p class="text-xl font-bold mt-1">
-              {{ formatCurrency(cashSummary.totalCollected) }}
-            </p>
-          </div>
-          <UIcon name="i-lucide-trending-up" class="w-9 h-9 text-muted" />
-        </div>
-      </UCard>
-      <UCard>
-        <div class="flex justify-between items-center">
-          <div>
-            <p class="text-sm text-muted">
-              Saldo por cobrar
-            </p>
-            <p
-              class="text-xl font-bold mt-1"
-              :class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
-            >
-              {{ formatCurrency(cashSummary.balance) }}
-            </p>
-          </div>
-          <UIcon
-            name="i-lucide-clock"
-            class="w-9 h-9 opacity-60"
-            :class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
-          />
-        </div>
-      </UCard>
+      <StatCard
+        label="Total esperado"
+        icon="i-lucide-wallet"
+        :value="formatCurrency(cashSummary.totalExpected)"
+      />
+      <StatCard
+        label="Total recaudado"
+        icon="i-lucide-trending-up"
+        :value="formatCurrency(cashSummary.totalCollected)"
+      />
+      <StatCard
+        label="Saldo por cobrar"
+        icon="i-lucide-clock"
+        :value="formatCurrency(cashSummary.balance)"
+        :value-class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
+      />
     </div>
 
     <!-- Filters -->

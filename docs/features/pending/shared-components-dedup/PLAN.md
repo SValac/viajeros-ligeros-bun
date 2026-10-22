@@ -9,9 +9,9 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138.
-PR (c) on branch `feature/shared-components-dedup-utils`: phases 14 and 15 done, ready for
-review. Then (d), phase 7, (e).
+**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
+PR (c) (phases 14, 15) as #139. PR (d) on branch `feature/shared-components-dedup-components`:
+phases 3-6, 16 and 17 done (17.6 waits for phase 10). Then phase 7, then (e).
 
 ---
 
@@ -120,6 +120,13 @@ Archivos: `quotation-bus-payment-history.vue`, `quotation-accommodation-payment-
   (`await confirmDelete({ title, description })`), que reemplaza al `confirm()` sin cambiar el
   flujo de cada handler.
 
+**Design decided (2026-10-15):** one form only, no `v-model:open` variant. `ConfirmDeleteModal`
+emits `close(confirmed)` and is opened through `useConfirmDelete()` (`useOverlay`, same pattern
+as `useUnsavedChangesGuard`): `if (!(await confirmDelete({ title, description }))) return;`.
+Exception: `pages/travels/[id].vue` keeps its own modal, because it shows `loading` on the
+button and stays open on failure while the travel's cascade delete runs.
+`quotation-accommodation-table` deleted with no confirmation at all; it now asks too.
+
 ### Fase 4 — Páginas de proveedores por categoría
 
 Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,other,tickets,transportation}/{new,[id]}.vue` (14).
@@ -137,7 +144,12 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
 - Las páginas quedan como `definePageMeta({ name })` + un componente. Los `index.vue` ya usan
   `ProviderCategoryList`; no cambian.
 
-### Fase 5 — `StatCard`
+**Done (2026-10-19):** the meta got `newTitle` and `createdTitle`. Instead of an
+`afterCreate` hook, `ProviderCreatePage` takes a `submit` prop that replaces the whole create
+flow (accommodation also saves its rooms) plus the `extra-fields` slot. `ProviderDetailPage`
+picks the layout with `$slots.aside` and passes the loaded provider to that scoped slot.
+
+### Fase 5 — `StatCard` ✅
 
 - Mover `quotation/quotation-kpi-card.vue` → `stat-card.vue` en la raíz (`StatCard`, global porque
   se usa en toda la app; `git mv`, ya hace lo mismo: label, icon, value,
@@ -148,8 +160,23 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
 - El diseño cambia un poco (ícono junto a la etiqueta en vez de grande a la derecha). Decidir
   en la revisión visual si `StatCard` tiene una variante con ícono a la derecha o si todas
   quedan como la de cotización.
+- Bug found in step 5.3: `pages/quotations/index.vue` shows `0` in every stat card while the
+  travels query loads, because `stats` is built from `data?.items ?? []` and is never
+  `undefined`. `/payments` shows `—` instead. Planned fix (later, not in this phase): a loading
+  state on `StatCard` that renders a `USkeleton` in place of the value, used by every page.
 
-### Fase 6 — Piezas chicas de formularios y tablas
+**Done (2026-10-21).** Final design and notes:
+- Every page uses the quotation look (small icon next to the label); no icon-on-the-right
+  variant. `StatCard` kept its props unchanged.
+- `quotation-accommodation-summary.vue`: the gradient panel with three loose figures became
+  three plain `StatCard`s, like the financial summary on the same page. "Costo total" is
+  neutral now (a cost is not a state).
+- `/payments` and the travels dashboard keep `—` while loading (`String(n ?? '—')`, or a
+  ternary for currency).
+- Left out on purpose: `pages/providers/index.vue` category tiles. They are navigation links
+  colored by category, not stat cards.
+
+### Fase 6 — Piezas chicas de formularios y tablas ✅
 
 - **`PasswordInput`**: `UInput` con botón de mostrar/ocultar; quita `togglePasswordVisibility`
   de `pages/login.vue` y las 2 copias de `pages/register.vue`. Cada campo con su propio
@@ -164,6 +191,26 @@ Archivos: `pages/providers/{accommodation,bus-agencies,food-services,guides,othe
   `quotation-public-price-section`, `travel-payments-panel`, `pages/coordinators/index`,
   `pages/payments/traveler/[id]`, `pages/travels/dashboard`,
   `pages/travels/[id]/travelers/index`.
+
+**Done (2026-10-21).** Final design and notes:
+- `PasswordInput` uses `useId()` for the input id, so `aria-controls` and the `UFormField`
+  label both point at the right input; each field toggles on its own (register used to show
+  both passwords from one toggle). `icon`/`placeholder` fall through to the root `UInput`.
+- `FormActions` (`submitLabel`, `loading`, `disabled`, `@cancel`) in 13 forms, including the
+  quotation modals and `coordinator-seat-form`. One look everywhere: outline cancel, `pt-4`.
+  Not migrated: rows that save with `@click` instead of `type="submit"`
+  (`quotation-parameters-card`, `quotation-header-actions`, `quotation-provider-table`,
+  `quotation-accommodation-table`, `quotation-provider-courtesy-form`).
+- Bug fixed on the way: six forms wrapped a synchronous `emit` in `isSubmitting`, so the
+  spinner never showed. Traveler, coordinator and travel-activity forms now take a `loading`
+  prop set by the parent around the awaited save. Still no spinner on bus, provider and
+  travel-service (their pages save; out of scope).
+- `actionsColumn(getActions, { size })` in `utils/actions-column.ts`, in 10 tables (the list
+  above plus `quotation-provider-table`). Every ⋮ button gets `aria-label="Abrir acciones"`;
+  the dashboard's v2-only `popper` prop is gone.
+- Side change in the same PR: the provider bus list shows inactive units with an "Estatus"
+  column (`getAllBusesByProvider`); the quotation bus picker keeps active ones only
+  (`getActiveBusesByProvider`).
 
 ### Fase 7 — Ajustes que dejó el PR #131 (`code-review` del 2026-10-13)
 
@@ -483,7 +530,7 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - Dev server gotcha seen here: after many in-place rewrites `nuxt dev` lost the
   `coordinators-index` route (500 "No match" on every page); rewriting that page file again fixed it.
 
-### Fase 16 — Componentes y piezas de tabla
+### Fase 16 — Componentes y piezas de tabla ✅
 
 - `PageHeader` (título, descripción, volver, acciones): ~20 `<h1>` con 4 estilos
   (`text-3xl`/`text-2xl`, `text-gray-900 dark:text-white`/`text-highlighted`).
@@ -510,7 +557,33 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
   → pasar los 5 a `defineModel` (por ejemplo `provider-filter-bar`, con un
   `setFilter(key, value)` en vez de un handler por campo).
 
-### Fase 17 — Lógica de dominio repetida en componentes
+**Done (2026-10-21).** Final design and notes:
+- `PageHeader` (root): `title`, `description` (or `#description`), `to` + `backLabel` for the back
+  arrow, `icon` + `iconClass`, `#badge` and `#actions`; one style (`text-2xl sm:text-3xl`,
+  `text-highlighted`) in 14 pages and components. Not `UPageHeader`: it is built for docs pages
+  (bottom border, description under the actions, no back arrow). Left out: the `<h1>` inside
+  `provider-detail-card` (a card) and the login/register cards.
+- `utils/table-cells.ts`: `travelLinkCell(to, label)` and `groupNameCell(row, content)` (UButton
+  with `aria-label`/`aria-expanded`; the payments panel had a bare `<button>`).
+  `deleteAction(onSelect, label?)` in `utils/actions-column.ts`, in 16 menus.
+- Quotation tables: they were already `UTable` (phase 2). `useSupplierPaymentColumns` became
+  `useSupplierTable(kind)`: Pagado / Pendiente / Estado Pago plus the Confirmado column,
+  `paymentActions(row, openHistory)` and `confirmAction(row, toggle)`; `paymentMethodColumn()`
+  for provider and bus. The bus table now uses `actionsColumn`.
+- `AgencyPageForm` (`agency/page/`, generic): page, schema, clone, serialize, texts; the editor
+  goes in the default slot (`{ state, path }`, `<slot>` reserves `name`). The two old forms are
+  gone. The editors' empty state and toolbar stay apart (see "Fuera de alcance").
+- `useEditableList(source, save)`: local copy, `upsert`/`patch`/`remove`, rollback when the save
+  fails. Chosen: each list saves itself through the travel store (the itinerary already did).
+  `TravelServicesEditor` is gone; the services page passes `travel.services`. Both lists take
+  plain props instead of a v-model nobody listened to; the service form shows the spinner.
+- `ImageUpload` (root, was `agency/agency-image-upload`) with a `cover` shape, also in the travel
+  form (file still uploaded on submit).
+- `defineModel` in `ProviderFilterBar` (`setFilter`), `ProviderSelector` and
+  `HotelBedConfigurationInput`; no `update:modelValue` emit is left in `app/`.
+- Also: the travel payments panel's three cards now use `StatCard` (missed in phase 5).
+
+### Fase 17 — Lógica de dominio repetida en componentes ✅ (salvo los toasts)
 
 - Agrupar por representante: `groupTravelersByRepresentative` ya existe, pero
   `travel-payments-panel` lo reimplementa, `travel-optional-service-card` arma sus filas igual,
@@ -528,6 +601,21 @@ Mismo enfoque que `utils/travel-status.ts` (mapa de etiqueta + color por valor):
 - Los toasts de "guardado / no se pudo" después de cada acción del store se escriben a mano
   en casi todas las pantallas; se simplifican solos cuando el contrato de errores de la
   fase 10 sea uno solo.
+
+**Done (2026-10-21), except the toasts (they wait for phase 10, PR (e)).** Notes:
+- Traveler domain: the payments panel calls `groupTravelersByRepresentative`;
+  `listTravelersByGroup` is the flat variant (optional service card); `getRepresentativeNames`
+  is the companion → representative map (rooms, seat map). The seat map used to search only the
+  same bus, so a companion on another bus showed no "Rep:".
+- `toTravelerSeatChangeError` took the travelers page's texts (they were clearer) and the page
+  shows `error.message`.
+- `payment-summary-card` uses `calcAdjustmentAmount`.
+- `countServiceTakers(provider)` in the quotation domain (a pure function, not a getter); the
+  optional service card gets `pending` / `overpaid` from the store getters.
+- `getExpenseCostPerPerson` getter next to `getProviderCostPerPerson`.
+- `jscpd` after phases 16-17: 13 clones, 0.43 % (44 / 1.92 % after PR (c)). Left: the summary
+  cells of `travel-payments-panel`, and pairs the plan already leaves out (expense/provider
+  forms).
 
 ## Fuera de alcance (repetido, pero no vale la pena ahora)
 

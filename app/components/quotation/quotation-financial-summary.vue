@@ -72,35 +72,35 @@ function balanceColor(balance: number): string {
       description="Lo que cuesta operar el viaje. El hospedaje se cobra aparte en los precios al público."
     >
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <QuotationKpiCard
+        <StatCard
           label="Costo total"
           icon="i-lucide-wallet"
           :value="formatCurrency(totalCost)"
         >
           <p>Servicios + autobuses + gastos</p>
-        </QuotationKpiCard>
-        <QuotationKpiCard
+        </StatCard>
+        <StatCard
           label="Servicios"
           icon="i-lucide-building"
           :value="formatCurrency(providersCost)"
         />
-        <QuotationKpiCard
+        <StatCard
           label="Autobuses"
           icon="i-lucide-bus"
           :value="formatCurrency(busesCost)"
         />
-        <QuotationKpiCard
+        <StatCard
           label="Gastos adicionales"
           icon="i-lucide-receipt"
           :value="formatCurrency(expensesCost)"
         />
-        <QuotationKpiCard
+        <StatCard
           label="Hospedaje"
           icon="i-lucide-door-open"
           :value="formatCurrency(accommodationsCost)"
         >
           <p>No entra en el precio por asiento</p>
-        </QuotationKpiCard>
+        </StatCard>
       </div>
     </QuotationSummarySection>
 
@@ -110,7 +110,7 @@ function balanceColor(balance: number): string {
       description="Cuánto se cobra por asiento, desde qué asiento se gana y cuánto deja el viaje lleno."
     >
       <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <QuotationKpiCard
+        <StatCard
           label="Precio por asiento"
           icon="i-lucide-armchair"
           :value="formatCurrency(quotation?.seatPrice ?? 0)"
@@ -126,8 +126,8 @@ function balanceColor(balance: number): string {
           <p v-if="perPersonSeatCost > 0">
             Servicios por persona: + <span class="font-medium tabular-nums">{{ formatCurrency(perPersonSeatCost) }}</span> por asiento
           </p>
-        </QuotationKpiCard>
-        <QuotationKpiCard
+        </StatCard>
+        <StatCard
           label="Meta mínima de asientos"
           icon="i-lucide-target"
           :value="String(quotation?.minimumSeatTarget ?? 0)"
@@ -141,8 +141,8 @@ function balanceColor(balance: number): string {
           <p v-else>
             Ganancia a partir del asiento {{ breakEvenSeat }}
           </p>
-        </QuotationKpiCard>
-        <QuotationKpiCard
+        </StatCard>
+        <StatCard
           label="Ganancia proyectada"
           :icon="projectedProfit < 0 ? 'i-lucide-trending-down' : 'i-lucide-trending-up'"
           :value="formatCurrency(projectedProfit)"
@@ -151,7 +151,7 @@ function balanceColor(balance: number): string {
           <p>
             {{ sellableSeats }} asientos vendibles × {{ formatCurrency(quotation?.seatPrice ?? 0) }} − costo total
           </p>
-        </QuotationKpiCard>
+        </StatCard>
       </div>
     </QuotationSummarySection>
 
@@ -161,12 +161,12 @@ function balanceColor(balance: number): string {
       description="Lo que ya pagaron los viajeros y lo que falta pagar a proveedores."
     >
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <QuotationKpiCard
+        <StatCard
           label="Cobrado a viajeros"
           icon="i-lucide-users"
           :value="formatCurrency(travelersCollected)"
         />
-        <QuotationKpiCard
+        <StatCard
           label="Por pagar a proveedores"
           icon="i-lucide-clock"
           :value="formatCurrency(totalToPay)"
@@ -187,7 +187,7 @@ function balanceColor(balance: number): string {
               </span>
             </li>
           </ul>
-        </QuotationKpiCard>
+        </StatCard>
       </div>
     </QuotationSummarySection>
   </div>

@@ -6,6 +6,7 @@ import { h } from 'vue';
 import type { Bus, BusFormData } from '~/types/bus';
 
 import { useFormModal } from '~/composables/use-form-modal';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -16,10 +17,11 @@ const props = defineProps<Props>();
 
 const busStore = useBusStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 
 const { isOpen: isFormModalOpen, editing: editingBus, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Bus>();
 
-const buses = computed(() => busStore.getBusesByProvider(props.providerId));
+const buses = computed(() => busStore.getAllBusesByProvider(props.providerId));
 
 async function handleFormSubmit(data: BusFormData) {
   try {
@@ -46,8 +48,11 @@ async function handleFormSubmit(data: BusFormData) {
 
 async function handleDelete(bus: Bus) {
   const label = [bus.brand, bus.model].filter(Boolean).join(' ') || 'esta unidad';
-  // eslint-disable-next-line no-alert
-  if (confirm(`¿Eliminar ${label}?`)) {
+
+  if (await confirmDelete({
+    title: 'Eliminar unidad',
+    description: `¿Estás seguro de eliminar ${label}?`,
+  })) {
     const success = await busStore.deleteBus(bus.id);
     if (success) {
       toast.add({ title: 'Unidad eliminada', color: 'warning' });
@@ -87,12 +92,7 @@ function getRowActions(bus: Bus): DropdownMenuItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(bus),
-      },
+      deleteAction(() => handleDelete(bus)),
     ],
   ];
 }
@@ -123,6 +123,13 @@ const columns: TableColumn<Bus>[] = [
     },
   },
   {
+    accessorKey: 'active',
+    header: 'Estatus',
+    cell: ({ row }) => row.original.active
+      ? h('span', { class: 'text-sm' }, 'Activa')
+      : h('span', { class: 'text-sm text-muted' }, 'Inactiva'),
+  },
+  {
     accessorKey: 'seatCount',
     header: 'Asientos',
     cell: ({ row }) => {
@@ -133,19 +140,7 @@ const columns: TableColumn<Bus>[] = [
       ]);
     },
   },
-  {
-    id: 'actions',
-    header: 'Acciones',
-    cell: ({ row }) => {
-      return h(resolveComponent('UDropdownMenu'), {
-        items: getRowActions(row.original),
-      }, () => h(resolveComponent('UButton'), {
-        color: 'neutral',
-        variant: 'ghost',
-        icon: 'i-lucide-more-vertical',
-      }));
-    },
-  },
+  actionsColumn(getRowActions),
 ];
 </script>
 

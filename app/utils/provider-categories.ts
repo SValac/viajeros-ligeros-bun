@@ -6,6 +6,10 @@ export type ProviderCategoryMeta = {
   category: ProviderCategory;
   /** Plural display title, e.g. 'Guías' */
   label: string;
+  /** Header of the create page, e.g. 'Nuevo Guía' */
+  newTitle: string;
+  /** Toast title after creating one, e.g. 'Guía creado' (gender varies by category) */
+  createdTitle: string;
   icon: string;
   route: string;
   /** Used for both the list page header/empty-state icon and the dashboard card icon */
@@ -20,6 +24,8 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
   [PROVIDER_CATEGORY.GUIDES]: {
     category: PROVIDER_CATEGORY.GUIDES,
     label: 'Guías',
+    newTitle: 'Nuevo Guía',
+    createdTitle: 'Guía creado',
     icon: 'i-lucide-user-search',
     route: '/providers/guides',
     iconColorClass: 'text-blue-500',
@@ -29,6 +35,8 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
   [PROVIDER_CATEGORY.TRANSPORTATION]: {
     category: PROVIDER_CATEGORY.TRANSPORTATION,
     label: 'Transporte',
+    newTitle: 'Nuevo Transporte',
+    createdTitle: 'Proveedor creado',
     icon: 'i-lucide-car',
     route: '/providers/transportation',
     iconColorClass: 'text-purple-500',
@@ -38,6 +46,8 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
   [PROVIDER_CATEGORY.ACCOMMODATION]: {
     category: PROVIDER_CATEGORY.ACCOMMODATION,
     label: 'Hospedajes',
+    newTitle: 'Nuevo Hospedaje',
+    createdTitle: 'Hospedaje creado',
     icon: 'i-lucide-hotel',
     route: '/providers/accommodation',
     iconColorClass: 'text-green-500',
@@ -47,6 +57,8 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
   [PROVIDER_CATEGORY.BUS_AGENCIES]: {
     category: PROVIDER_CATEGORY.BUS_AGENCIES,
     label: 'Agencias de Autobús',
+    newTitle: 'Nueva Agencia de Autobús',
+    createdTitle: 'Agencia creada',
     icon: 'i-lucide-bus',
     route: '/providers/bus-agencies',
     iconColorClass: 'text-orange-500',
@@ -56,6 +68,8 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
   [PROVIDER_CATEGORY.FOOD_SERVICES]: {
     category: PROVIDER_CATEGORY.FOOD_SERVICES,
     label: 'Comidas',
+    newTitle: 'Nuevo Servicio de Comida',
+    createdTitle: 'Proveedor creado',
     icon: 'i-lucide-utensils',
     route: '/providers/food-services',
     iconColorClass: 'text-amber-500',
@@ -65,6 +79,8 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
   [PROVIDER_CATEGORY.TICKETS]: {
     category: PROVIDER_CATEGORY.TICKETS,
     label: 'Entradas',
+    newTitle: 'Nuevo Proveedor de Entradas',
+    createdTitle: 'Proveedor creado',
     icon: 'i-lucide-ticket',
     route: '/providers/tickets',
     iconColorClass: 'text-pink-500',
@@ -74,6 +90,8 @@ export const PROVIDER_CATEGORY_META: Record<ProviderCategory, ProviderCategoryMe
   [PROVIDER_CATEGORY.OTHER]: {
     category: PROVIDER_CATEGORY.OTHER,
     label: 'Otros',
+    newTitle: 'Nuevo Proveedor',
+    createdTitle: 'Proveedor creado',
     icon: 'i-lucide-package',
     route: '/providers/other',
     iconColorClass: 'text-gray-500',

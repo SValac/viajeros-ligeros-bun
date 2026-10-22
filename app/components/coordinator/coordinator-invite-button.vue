@@ -7,6 +7,7 @@ const { coordinator } = defineProps<{
 
 const coordinatorStore = useCoordinatorStore();
 const toast = useToast();
+const confirmDelete = useConfirmDelete();
 const isLoading = shallowRef(false);
 
 const showInviteButton = computed(() => coordinator.userId === null);
@@ -39,8 +40,11 @@ async function handleInvite() {
 }
 
 async function handleRevoke() {
-  // eslint-disable-next-line no-alert
-  if (!confirm(`Revocar el acceso a ${coordinator.name} a la app? Perderá acceso de inmediato.`)) {
+  if (!(await confirmDelete({
+    title: 'Revocar acceso',
+    description: `¿Estás seguro de revocar el acceso a ${coordinator.name} a la app? Perderá acceso de inmediato.`,
+    confirmLabel: 'Revocar',
+  }))) {
     return;
   }
 

@@ -9,6 +9,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
 import { formatDateRange } from '~/utils/format-date';
 import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
+import { travelLinkCell } from '~/utils/table-cells';
 
 definePageMeta({
   name: 'quotations-index',
@@ -44,13 +45,7 @@ const columns: TableColumn<TravelSummary>[] = [
   {
     id: 'label',
     header: 'Viaje',
-    cell: ({ row }) => h(resolveComponent('NuxtLink'), {
-      to: { name: 'quotation-detail', params: { id: row.original.id } },
-      class: 'flex items-center gap-2 hover:text-primary transition-colors group',
-    }, () => [
-      h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
-      h('span', { class: 'font-medium' }, row.original.label),
-    ]),
+    cell: ({ row }) => travelLinkCell({ name: 'quotation-detail', params: { id: row.original.id } }, row.original.label),
   },
   {
     id: 'dates',
@@ -110,73 +105,36 @@ const columns: TableColumn<TravelSummary>[] = [
     @retry="refetch()"
   >
     <div class="space-y-6">
-      <!-- Header -->
-      <div>
-        <h1 class="text-3xl font-bold">
-          Cotizaciones
-        </h1>
-        <p class="text-muted mt-1">
-          Costos de proveedores, hospedaje, autobuses y precios al público por viaje. Uso interno, no se publica en la web.
-        </p>
-      </div>
+      <PageHeader
+        title="Cotizaciones"
+        description="Costos de proveedores, hospedaje, autobuses y precios al público por viaje. Uso interno, no se publica en la web."
+      />
 
       <!-- Stats cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Viajes
-              </p>
-              <p class="text-2xl font-bold mt-1">
-                {{ stats.totalTravels }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-map" class="w-10 h-10 text-muted" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Con cotización
-              </p>
-              <p class="text-2xl font-bold text-primary mt-1">
-                {{ stats.withQuotation }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-file-text" class="w-10 h-10 text-primary opacity-60" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Borradores
-              </p>
-              <p class="text-2xl font-bold text-warning mt-1">
-                {{ stats.draft }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-file-pen" class="w-10 h-10 text-warning opacity-60" />
-          </div>
-        </UCard>
-
-        <UCard>
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm text-muted">
-                Confirmadas
-              </p>
-              <p class="text-2xl font-bold text-success mt-1">
-                {{ stats.confirmed }}
-              </p>
-            </div>
-            <UIcon name="i-lucide-file-check" class="w-10 h-10 text-success opacity-60" />
-          </div>
-        </UCard>
+        <StatCard
+          label="Viajes"
+          icon="i-lucide-map"
+          :value="String(stats.totalTravels)"
+        />
+        <StatCard
+          label="Con cotización"
+          icon="i-lucide-file-text"
+          :value="String(stats.withQuotation)"
+          value-class="text-info"
+        />
+        <StatCard
+          label="Borradores"
+          icon="i-lucide-file-pen"
+          :value="String(stats.draft)"
+          value-class="text-warning"
+        />
+        <StatCard
+          label="Confirmadas"
+          icon="i-lucide-file-check"
+          :value="String(stats.confirmed)"
+          value-class="text-success"
+        />
       </div>
 
       <!-- Quotations table -->
