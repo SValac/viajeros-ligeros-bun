@@ -8,6 +8,7 @@ import {
 } from '~/composables/agency-profile/use-agency-profile-domain';
 import { cloneHomePage, homePageSchema, serializeHomePage } from '~/composables/agency-profile/use-home-page-domain';
 import { useSiteImageActions } from '~/composables/agency-profile/use-site-image-actions';
+import { toErrorMessage } from '~/utils/error-message';
 
 definePageMeta({
   name: 'profile-home',
@@ -27,20 +28,22 @@ const bannerWarning = computed(() =>
 );
 
 async function handleSubmit(page: HomePage | null) {
-  const success = await agencyProfileStore.saveHomePage(page);
-  if (success) {
+  try {
+    await agencyProfileStore.saveHomePage(page);
+  }
+  catch (e) {
     toast.add({
-      title: page ? 'Página principal guardada' : 'Página principal restaurada',
-      color: 'success',
-      icon: 'i-lucide-check-circle',
+      title: 'No se pudo guardar la página principal',
+      description: toErrorMessage(e, 'Intenta de nuevo'),
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
     });
     return;
   }
   toast.add({
-    title: 'No se pudo guardar la página principal',
-    description: agencyProfileStore.error ?? undefined,
-    color: 'error',
-    icon: 'i-lucide-alert-circle',
+    title: page ? 'Página principal guardada' : 'Página principal restaurada',
+    color: 'success',
+    icon: 'i-lucide-check-circle',
   });
 }
 
