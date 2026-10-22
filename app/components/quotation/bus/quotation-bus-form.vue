@@ -90,7 +90,7 @@ const hasUnit = computed(() => !!selectedBus.value || keepsCurrentUnit.value);
 const agencyUnits = computed<Bus[]>(() => {
   if (!formState.providerId)
     return [];
-  return busStore.getBusesByProvider(formState.providerId);
+  return busStore.getActiveBusesByProvider(formState.providerId);
 });
 
 // Highest occupied seat on the travel's bus: when editing, it can't switch to a smaller unit

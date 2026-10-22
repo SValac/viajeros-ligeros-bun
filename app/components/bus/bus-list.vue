@@ -21,7 +21,7 @@ const confirmDelete = useConfirmDelete();
 
 const { isOpen: isFormModalOpen, editing: editingBus, openNew: openCreateModal, openEdit: openEditModal, close: closeModal } = useFormModal<Bus>();
 
-const buses = computed(() => busStore.getBusesByProvider(props.providerId));
+const buses = computed(() => busStore.getAllBusesByProvider(props.providerId));
 
 async function handleFormSubmit(data: BusFormData) {
   try {
@@ -126,6 +126,13 @@ const columns: TableColumn<Bus>[] = [
       const val = row.getValue('year') as number | undefined;
       return val ? h('span', { class: 'text-sm' }, String(val)) : h('span', { class: 'text-sm text-muted' }, '-');
     },
+  },
+  {
+    accessorKey: 'active',
+    header: 'Estatus',
+    cell: ({ row }) => row.original.active
+      ? h('span', { class: 'text-sm' }, 'Activa')
+      : h('span', { class: 'text-sm text-muted' }, 'Inactiva'),
   },
   {
     accessorKey: 'seatCount',
