@@ -9,6 +9,7 @@ import type {
 import { calculatePaymentSummary, validatePaymentAmount } from '~/composables/payments/use-payments-domain';
 import { usePaymentsRepository } from '~/composables/payments/use-payments-repository';
 import { paymentKeys } from '~/queries/payments';
+import { toErrorMessage } from '~/utils/error-message';
 
 export const usePaymentStore = defineStore('usePaymentStore', () => {
   const repository = usePaymentsRepository();
@@ -79,6 +80,11 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
     await fetchByTravels([travelId]);
   }
 
+  /**
+   * Loads the payments and account configs of some travels, replacing what the store had
+   * for them.
+   * @throws Re-throws repository errors (the message is also in `error`)
+   */
   async function fetchByTravels(travelIds: string[]): Promise<void> {
     if (travelIds.length === 0)
       return;
@@ -100,7 +106,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
+      throw e;
     }
     finally {
       loading.value = false;
@@ -123,26 +130,30 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
+      throw e;
     }
     finally {
       loading.value = false;
     }
   }
 
-  async function addPayment(data: PaymentFormData): Promise<Payment | { error: string }> {
+  /**
+   * Records a traveler's payment after checking it against their balance.
+   * @returns The saved payment
+   * @throws {Error} With the validation message, or re-throws repository errors
+   */
+  async function addPayment(data: PaymentFormData): Promise<Payment> {
     // Validate traveler has an account config (enrolled in travel)
     const config = getAccountConfig.value(data.travelerId, data.travelId);
-    if (!config) {
-      return { error: 'El viajero no tiene una cuenta configurada para este viaje.' };
-    }
+    if (!config)
+      throw new Error('El viajero no tiene una cuenta configurada para este viaje.');
 
     const existingPayments = getPaymentsByTravelerAndTravel.value(data.travelerId, data.travelId);
     const { balance, appliedPrice } = calculatePaymentSummary(config, existingPayments);
     const validationError = validatePaymentAmount(data.amount, balance, appliedPrice);
-    if (validationError) {
-      return { error: validationError };
-    }
+    if (validationError)
+      throw new Error(validationError);
 
     loading.value = true;
     error.value = null;
@@ -153,15 +164,15 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       return payment;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value ?? 'Error desconocido' };
+      error.value = toErrorMessage(e);
+      throw e;
     }
     finally {
       loading.value = false;
     }
   }
 
-  async function updatePayment(id: string, data: PaymentUpdateData): Promise<Payment | undefined> {
+  async function updatePayment(id: string, data: PaymentUpdateData): Promise<Payment> {
     loading.value = true;
     error.value = null;
     try {
@@ -175,8 +186,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       return payment;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
+      error.value = toErrorMessage(e);
+      throw e;
     }
     finally {
       loading.value = false;
@@ -193,7 +204,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       payments.value = payments.value.filter(p => p.id !== id);
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
+      throw e;
     }
     finally {
       loading.value = false;
@@ -218,7 +230,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
       }
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
+      throw e;
     }
     finally {
       loading.value = false;

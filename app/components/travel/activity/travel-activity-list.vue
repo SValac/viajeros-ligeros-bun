@@ -4,6 +4,7 @@ import type { TravelActivity } from '~/types/travel';
 import { useEditableList } from '~/composables/use-editable-list';
 import { useFormModal } from '~/composables/use-form-modal';
 import { deleteAction } from '~/utils/actions-column';
+import { toErrorMessage } from '~/utils/error-message';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 
@@ -24,16 +25,19 @@ const toast = useToast();
 const { isOpen: isActivityModalOpen, editing: editingActivity, openNew: openActivityAddModal, openEdit: openEditModal } = useFormModal<TravelActivity>();
 
 const { items: activities, isSaving, upsert, remove } = useEditableList(() => props.activities, async (itinerary) => {
-  const saved = await travelsStore.updateTravel(props.travelId, { itinerary });
-  if (!saved) {
+  try {
+    await travelsStore.updateTravel(props.travelId, { itinerary });
+    return true;
+  }
+  catch (e) {
     toast.add({
       title: 'Error al guardar',
-      description: travelsStore.error ?? 'No se pudo guardar el itinerario',
+      description: toErrorMessage(e, 'No se pudo guardar el itinerario'),
       color: 'error',
       icon: 'i-lucide-alert-circle',
     });
+    return false;
   }
-  return saved;
 });
 
 // Travel duration in days

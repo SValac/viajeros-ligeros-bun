@@ -2,6 +2,7 @@ import type { TravelAccessCode } from '~/types/travel-access';
 
 import { toTravelAccessCodeError } from '~/composables/travel-access/use-travel-access-domain';
 import { useTravelAccessRepository } from '~/composables/travel-access/use-travel-access-repository';
+import { toErrorMessage } from '~/utils/error-message';
 
 export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
   const repository = useTravelAccessRepository();
@@ -31,7 +32,7 @@ export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
       activeCodeByTravel.value[travelId] = await repository.fetchActiveCode(travelId);
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al obtener el código';
+      error.value = toErrorMessage(e, 'Error al obtener el código');
     }
     finally {
       loading.value = false;

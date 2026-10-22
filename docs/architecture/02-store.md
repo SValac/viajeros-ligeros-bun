@@ -24,6 +24,24 @@ Todos los stores aplican el patrón de tres capas:
 | **Repository** | `app/composables/<feature>/use-<feature>-repository.ts` | Acceso a Supabase, mapeo a dominio, lanza errores tal cual |
 | **Store** | `app/stores/use-<feature>-store.ts` | Escrituras (loading/error), estado de cliente, invalidación de queries |
 
+### Action errors
+
+Rule from `docs/features/completed/standardize-store-error-handling.md`, applied to every store
+in shared-components-dedup phase 10:
+
+- An action returns `Promise<T>` (the saved row) or `Promise<void>`, never `boolean`,
+  `{ error }` or `undefined` on failure.
+- It throws on failure: the `catch` stores `toErrorMessage(e, fallback)` (`app/utils/error-message.ts`)
+  in `error` and re-throws. A refusal (validation, a confirmed quotation, a row not found)
+  throws `new Error('<user-facing message>')`. When the store translates the error
+  (`toTravelSaveErrorMessage`, `toRoomAssignmentErrorMessage`) it throws
+  `new Error(message, { cause: e })` so the caller gets the translated text.
+- The caller wraps it in `try/catch` and shows `toErrorMessage(e, '<fallback>')` in its error
+  toast. A loader called on mount or in a watcher catches it too (toast, or `.catch(() => {})`
+  when the data is optional, with a comment why).
+- Exceptions: `use-agency-profile-store.fetchProfile` keeps its error in state (`profile.vue`
+  shows it); `use-travel-media-store` and `use-travel-access-store` show their own toasts.
+
 ---
 
 ## 2.1 Auth Store (`use-auth-store.ts`)

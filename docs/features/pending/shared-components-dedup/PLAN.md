@@ -10,9 +10,10 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (9-13). La 7 puede ir sola.
 
 **Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
-PR (c) (phases 14, 15) as #139. PR (d) (phases 3-6, 16, 17; 17.6 waits for phase 10) open as
-#140. Phase 7 done on branch `feature/shared-components-dedup-phase-7` (based on PR (d)).
-Then (e).
+PR (c) (phases 14, 15) as #139, PR (d) (phases 3-6, 16, 17 except 17.6) as #140, phase 7 as
+#141. PR (e) is split in two: phases 9 and 10 on branch `feature/shared-components-dedup-data`
+(the error contract touches every store, so it ships and gets tested alone); phases 11-13,
+17.6 and the phase 10 follow-ups in the next PR, branched from `main`.
 
 ---
 
@@ -326,7 +327,7 @@ Bus, hospedaje y proveedor tienen el mismo pago (`amount`, `paymentDate`, `payme
   import it from `#components`.
 - Found while testing: the accommodation row actions button had no `aria-label` (fixed).
 
-### Fase 9 — Repetición interna de `use-quotation-store`
+### Fase 9 — Repetición interna de `use-quotation-store` ✅
 
 Sin cambiar lo que exporta el store:
 
@@ -352,7 +353,22 @@ Sin cambiar lo que exporta el store:
   comes back from the server stay in the store. Filter by the quotation's previous provider ids
   instead.
 
-### Fase 10 — Contrato de errores de los stores (`toErrorMessage` + regla de `standardize-store-error-handling`)
+**Done (2026-10-21)** on branch `feature/shared-components-dedup-data` (PR (e)). Notes:
+- `sumBySplit(items, splitType)` lives in the quotation domain and `calculateSeatPrice` uses it
+  too. `split_type` is `NOT NULL` in the three tables, so the `?? 'minimum'` fallback was dead
+  code and went away instead of moving to one place.
+- `_quotation(id)`, `getQuotationByTravel` for the by-travel lookups, `_toggleConfirmed` and
+  `_refreshCosts` (merges `{ id, ...cost }` rows by id).
+- `_runWrite` and `_editableQuotation` went in with phase 10: they are the new contract, and
+  writing them first with the old return shapes would have meant editing ~25 actions twice.
+- Open bug fixed: `hydrateTravel` replaces payments and price adjustments by the ids the store
+  had for the quotation plus the fetched ones, so a provider, hotel or bus deleted elsewhere
+  takes its children along (it also happened to provider, hotel and bus payments, not only
+  the adjustments).
+- Checked in the browser on the seed quotation: the six split sums, `getBusCostPerPerson` and
+  the computed seat price match the old formulas (3015 = stored).
+
+### Fase 10 — Contrato de errores de los stores (`toErrorMessage` + regla de `standardize-store-error-handling`) ✅
 
 `completed/standardize-store-error-handling.md` fijó la regla: nunca `Promise<boolean>`, el
 `catch` siempre relanza. Hoy no se cumple:
@@ -370,6 +386,50 @@ Sin cambiar lo que exporta el store:
   revisarlos uno por uno) o actualizar la regla al estilo que ya domina (`{ error }`). Es la fase
   con más riesgo; va en commits por store y con prueba en el navegador de cada pantalla que
   llama.
+
+**Done (2026-10-21).** Decided: apply the rule as is (throw). The rule now lives in
+`docs/architecture/02-store.md` ("Action errors"). Notes:
+- `toErrorMessage(e, fallback = 'Error desconocido')` in `app/utils/error-message.ts`;
+  `PostgrestError` extends `Error`, so it covers Supabase errors. No `instanceof Error ? …`
+  is left in `app/`.
+- Every store action returns `T` / `void` and throws; refusals throw an `Error` with the same
+  text they used to return. Travel saves and room assignment re-throw the translated message
+  with the original as `cause`.
+- Quotation store: `_runWrite`, `_runRead`, `_editableQuotation`, `_row`, `_replace`.
+  The payable-cost refresh after opt-outs/adjustments swallows its own error on purpose: the
+  write already succeeded and the refetch brings the amounts anyway.
+- Bugs this fixed in the callers: success toasts shown after a failed write (provider detail
+  delete/toggle, traveler payment edit/delete/config, bus delete/toggle in the quotation,
+  quotation provider delete), no feedback at all on failure (provider list, travel bus
+  operators had no message), the provider detail toggle toast said the old state, a failed
+  banner upload after creating a travel was unhandled, and the traveler/travel payment loads
+  failed silently (now a toast).
+- Not changed: `useEditableList` and `useSiteImageActions` (composables that still resolve to
+  `boolean` for their UI). The rest is in "Phase 10 follow-ups" below.
+
+**Phase 10 follow-ups (to fix in PR (e), with 17.6 or before):**
+- [ ] `use-agency-profile-store.fetchProfile` still swallows its error and keeps it in
+  `error`: `profile.vue` shows it, while `the-sidebar.vue` and `travel-form.vue` call it
+  fire-and-forget in `onMounted`. Make it throw like the rest; `profile.vue` keeps an error
+  state (catch it and show the alert from a local ref or the query), the sidebar and the
+  travel form catch it (`.catch(() => {})` if they only need the name/completeness, with a
+  comment, or a toast).
+- [ ] `use-travel-media-store` (fetch/upload/remove) and `use-travel-access-store`
+  (fetch/generate/revoke) call `useToast()` inside the store and swallow the error. Move the
+  toasts to the callers and re-throw, as in the other stores (fits 17.6: the toast helper).
+- [ ] `pages/travels/[id]/edit.vue`: a failed `uploadBanner` before `updateTravel` is still
+  an unhandled rejection (no toast, the form just stays). Not a one-line fix: putting it in
+  the same `try` would treat `data.imageUrl` (still the previous banner) as the unused file
+  and delete the travel's current banner. Catch the upload on its own: error toast, keep the
+  form, don't save and don't touch any file.
+- [ ] Decide: with every store throwing, raw PostgREST/Postgres messages (sometimes in English,
+  e.g. a unique or FK violation) now reach more toasts. Map the common codes (`23505`,
+  `23503`, RLS `42501`, network failure) to Spanish texts in `toErrorMessage` or a sibling
+  helper, keeping the original as `cause`.
+- Checked in the browser: every touched screen loads with no console errors; refusals throw
+  their message (overpay, amount 0, unconfirmed providers, duplicate bus unit, not found);
+  add + delete expense moves the seat price 3015 → 3020 → 3015; provider toggle toast; a
+  simulated 500 on `providers` and on `travels` shows the error toast and keeps the form.
 
 ### Fase 11 — Repositorios: helpers de Supabase
 

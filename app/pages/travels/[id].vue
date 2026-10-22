@@ -4,6 +4,7 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { deleteAction } from '~/utils/actions-column';
+import { toErrorMessage } from '~/utils/error-message';
 import { formatDateRange } from '~/utils/format-date';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
@@ -73,25 +74,26 @@ async function deleteTravel() {
     return;
 
   isDeleting.value = true;
-  const deleted = await travelsStore.deleteTravel(travel.value.id);
-
-  if (deleted) {
-    isDeleteModalOpen.value = false;
+  try {
+    await travelsStore.deleteTravel(travel.value.id);
+  }
+  catch (e) {
+    isDeleting.value = false;
     toast.add({
-      title: 'Viaje eliminado',
-      description: 'El viaje se ha eliminado correctamente',
-      color: 'success',
+      title: 'No se pudo eliminar el viaje',
+      description: toErrorMessage(e, 'Intenta de nuevo'),
+      color: 'error',
     });
-    router.push({ name: 'travels-dashboard' });
     return;
   }
 
-  isDeleting.value = false;
+  isDeleteModalOpen.value = false;
   toast.add({
-    title: 'No se pudo eliminar el viaje',
-    description: travelsStore.error ?? 'Intenta de nuevo',
-    color: 'error',
+    title: 'Viaje eliminado',
+    description: 'El viaje se ha eliminado correctamente',
+    color: 'success',
   });
+  router.push({ name: 'travels-dashboard' });
 }
 </script>
 

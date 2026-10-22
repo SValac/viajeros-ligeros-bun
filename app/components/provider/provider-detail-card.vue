@@ -2,6 +2,7 @@
 import type { Provider, ProviderFormData } from '~/types/provider';
 
 import { deleteAction } from '~/utils/actions-column';
+import { toErrorMessage } from '~/utils/error-message';
 import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 type Props = {
@@ -30,24 +31,29 @@ function cancelEditing() {
 async function handleFormSubmit(data: ProviderFormData) {
   try {
     data.category = props.provider.category;
-    const success = await providerStore.updateProvider(props.provider.id, data);
-    if (success) {
-      toast.add({ title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
-      isEditingProvider.value = false;
-    }
+    await providerStore.updateProvider(props.provider.id, data);
+    toast.add({ title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
+    isEditingProvider.value = false;
   }
-  catch {
-    toast.add({ title: 'Error', description: 'Ocurrió un error al guardar el proveedor', color: 'error' });
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'Ocurrió un error al guardar el proveedor'), color: 'error' });
   }
 }
 
 async function handleToggleStatus() {
-  await providerStore.toggleProviderStatus(props.provider.id);
-  toast.add({
-    title: 'Estado actualizado',
-    description: `${props.provider.name} ahora está ${!props.provider.active ? 'activo' : 'inactivo'}`,
-    color: 'primary',
-  });
+  // Read before the toggle: the catalog refetch flips `active` on the prop.
+  const nowActive = !props.provider.active;
+  try {
+    await providerStore.toggleProviderStatus(props.provider.id);
+    toast.add({
+      title: 'Estado actualizado',
+      description: `${props.provider.name} ahora está ${nowActive ? 'activo' : 'inactivo'}`,
+      color: 'primary',
+    });
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo cambiar el estado del proveedor'), color: 'error' });
+  }
 }
 
 async function handleDelete() {
@@ -55,9 +61,14 @@ async function handleDelete() {
     title: 'Eliminar proveedor',
     description: `¿Estás seguro de eliminar ${props.provider.name}?`,
   })) {
-    await providerStore.deleteProvider(props.provider.id);
-    toast.add({ title: 'Proveedor eliminado', color: 'warning' });
-    router.push(meta.value.route);
+    try {
+      await providerStore.deleteProvider(props.provider.id);
+      toast.add({ title: 'Proveedor eliminado', color: 'warning' });
+      router.push(meta.value.route);
+    }
+    catch (e) {
+      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el proveedor'), color: 'error' });
+    }
   }
 }
 </script>

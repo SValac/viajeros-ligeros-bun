@@ -4,6 +4,7 @@ import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData } fr
 
 import { matchesProviderSearch } from '~/composables/providers/use-provider-domain';
 import { deleteAction } from '~/utils/actions-column';
+import { toErrorMessage } from '~/utils/error-message';
 
 export function useProviderCategoryList(category: ProviderCategory, detailRoute?: (provider: Provider) => string) {
   const providerStore = useProviderStore();
@@ -79,20 +80,17 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
       data.category = category;
 
       if (editingProvider.value) {
-        const success = await providerStore.updateProvider(editingProvider.value.id, data);
-        if (success) {
-          toast.add({ title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
-          closeModal();
-        }
+        await providerStore.updateProvider(editingProvider.value.id, data);
+        toast.add({ title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
       }
       else {
         await providerStore.addProvider(data);
         toast.add({ title: 'Proveedor creado', description: `${data.name} se creó correctamente`, color: 'primary' });
-        closeModal();
       }
+      closeModal();
     }
-    catch {
-      toast.add({ title: 'Error', description: 'Ocurrió un error al guardar el proveedor', color: 'error' });
+    catch (e) {
+      toast.add({ title: 'Error', description: toErrorMessage(e, 'Ocurrió un error al guardar el proveedor'), color: 'error' });
     }
   }
 
@@ -101,22 +99,28 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
       title: 'Eliminar proveedor',
       description: `¿Estás seguro de eliminar ${provider.name}?`,
     })) {
-      const success = await providerStore.deleteProvider(provider.id);
-      if (success) {
+      try {
+        await providerStore.deleteProvider(provider.id);
         toast.add({ title: 'Proveedor eliminado', description: `${provider.name} se eliminó correctamente`, color: 'warning' });
+      }
+      catch (e) {
+        toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el proveedor'), color: 'error' });
       }
     }
   }
 
   async function handleToggleStatus(provider: Provider) {
-    const success = await providerStore.toggleProviderStatus(provider.id);
-    if (success) {
-      const newStatus = !provider.active;
+    const newStatus = !provider.active;
+    try {
+      await providerStore.toggleProviderStatus(provider.id);
       toast.add({
         title: 'Estado actualizado',
         description: `${provider.name} ahora está ${newStatus ? 'activo' : 'inactivo'}`,
         color: 'primary',
       });
+    }
+    catch (e) {
+      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo cambiar el estado del proveedor'), color: 'error' });
     }
   }
 

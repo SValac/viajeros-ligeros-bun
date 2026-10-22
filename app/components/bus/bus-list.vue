@@ -7,6 +7,7 @@ import type { Bus, BusFormData } from '~/types/bus';
 
 import { useFormModal } from '~/composables/use-form-modal';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
+import { toErrorMessage } from '~/utils/error-message';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -26,23 +27,17 @@ const buses = computed(() => busStore.getAllBusesByProvider(props.providerId));
 async function handleFormSubmit(data: BusFormData) {
   try {
     if (editingBus.value) {
-      const success = await busStore.updateBus(editingBus.value.id, data);
-      if (success) {
-        toast.add({ title: 'Unidad actualizada', color: 'primary' });
-        closeModal();
-      }
-      else {
-        toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo guardar la unidad', color: 'error' });
-      }
+      await busStore.updateBus(editingBus.value.id, data);
+      toast.add({ title: 'Unidad actualizada', color: 'primary' });
     }
     else {
       await busStore.addBus(data);
       toast.add({ title: 'Unidad registrada', color: 'primary' });
-      closeModal();
     }
+    closeModal();
   }
-  catch {
-    toast.add({ title: 'Error', description: 'No se pudo guardar la unidad', color: 'error' });
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo guardar la unidad'), color: 'error' });
   }
 }
 
@@ -53,27 +48,27 @@ async function handleDelete(bus: Bus) {
     title: 'Eliminar unidad',
     description: `¿Estás seguro de eliminar ${label}?`,
   })) {
-    const success = await busStore.deleteBus(bus.id);
-    if (success) {
+    try {
+      await busStore.deleteBus(bus.id);
       toast.add({ title: 'Unidad eliminada', color: 'warning' });
     }
-    else {
-      toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo eliminar la unidad', color: 'error' });
+    catch (e) {
+      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar la unidad'), color: 'error' });
     }
   }
 }
 
 async function handleToggleStatus(bus: Bus) {
-  const success = await busStore.toggleBusStatus(bus.id);
-  if (success) {
+  try {
+    await busStore.toggleBusStatus(bus.id);
     toast.add({
       title: 'Estado actualizado',
       description: `La unidad ahora está ${!bus.active ? 'activa' : 'inactiva'}`,
       color: 'primary',
     });
   }
-  else {
-    toast.add({ title: 'Error', description: busStore.error ?? 'No se pudo cambiar el estado de la unidad', color: 'error' });
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo cambiar el estado de la unidad'), color: 'error' });
   }
 }
 

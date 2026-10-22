@@ -3,6 +3,7 @@ import type { FormSubmitEvent } from '#ui/types';
 
 import { z } from 'zod';
 
+import { toErrorMessage } from '~/utils/error-message';
 import { nameSchema, sanitizeName } from '~/utils/form-validation';
 
 definePageMeta({
@@ -65,7 +66,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     await router.push('/login');
   }
   catch (error) {
-    const message = error instanceof Error ? error.message : 'No pudimos crear tu cuenta. Intenta de nuevo.';
+    const message = toErrorMessage(error, 'No pudimos crear tu cuenta. Intenta de nuevo.');
     submitError.value = message;
     toast.add({
       title: 'Error al registrarte',

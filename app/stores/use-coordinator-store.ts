@@ -3,6 +3,7 @@ import type { Coordinator, CoordinatorFormData, CoordinatorUpdateData } from '~/
 import { toCoordinatorInviteError } from '~/composables/coordinators/use-coordinator-domain';
 import { useCoordinatorRepository } from '~/composables/coordinators/use-coordinator-repository';
 import { coordinatorsCatalogQuery, useCatalogState, useCoordinatorsCatalog } from '~/queries/catalogs';
+import { toErrorMessage } from '~/utils/error-message';
 
 /**
  * Coordinator catalog and its writes.
@@ -55,7 +56,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
       return coordinator;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al agregar coordinador';
+      error.value = toErrorMessage(e, 'Error al agregar coordinador');
       throw e;
     }
     finally {
@@ -79,7 +80,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
       return coordinator;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al actualizar coordinador';
+      error.value = toErrorMessage(e, 'Error al actualizar coordinador');
       throw e;
     }
     finally {
@@ -100,7 +101,7 @@ export const useCoordinatorStore = defineStore('useCoordinatorStore', () => {
       await catalog.refresh();
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al eliminar coordinador';
+      error.value = toErrorMessage(e, 'Error al eliminar coordinador');
       throw e;
     }
     finally {

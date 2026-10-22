@@ -9,6 +9,7 @@ import type { SupplierPayment, SupplierPaymentFields } from '~/types/quotation';
 import { useSupplierPayments } from '~/composables/quotation/use-supplier-payments';
 import { useFormModal } from '~/composables/use-form-modal';
 import { formatCurrency } from '~/utils/currency';
+import { toErrorMessage } from '~/utils/error-message';
 import { formatShortDate } from '~/utils/format-date';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 
@@ -27,21 +28,18 @@ const { payments, paid, pendingBalance, add, update, remove } = useSupplierPayme
 const { isOpen: isFormModalOpen, editing: selectedPayment, openNew: openNewPayment, openEdit: openEditPayment } = useFormModal<SupplierPayment>();
 
 async function handleSubmit(data: SupplierPaymentFields) {
-  if (selectedPayment.value) {
-    const result = await update(selectedPayment.value.id, data);
-    if (result) {
-      toast.add({ title: 'Pago actualizado', color: 'success' });
-    }
+  const editing = selectedPayment.value;
+  try {
+    if (editing)
+      await update(editing.id, data);
+    else
+      await add(data);
   }
-  else {
-    const result = await add(data);
-    if ('error' in result) {
-      toast.add({ title: 'Error', description: result.error, color: 'error' });
-    }
-    else {
-      toast.add({ title: 'Pago registrado', color: 'success' });
-    }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, editing ? 'No se pudo actualizar el pago' : 'No se pudo registrar el pago'), color: 'error' });
+    return;
   }
+  toast.add({ title: editing ? 'Pago actualizado' : 'Pago registrado', color: 'success' });
   isFormModalOpen.value = false;
   selectedPayment.value = null;
 }
@@ -54,8 +52,13 @@ async function handleDelete(payment: SupplierPayment) {
     return;
   }
 
-  await remove(payment.id);
-  toast.add({ title: 'Pago eliminado', color: 'warning' });
+  try {
+    await remove(payment.id);
+    toast.add({ title: 'Pago eliminado', color: 'warning' });
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el pago'), color: 'error' });
+  }
 }
 
 const columns: TableColumn<SupplierPayment>[] = [
