@@ -235,17 +235,3 @@ export function bannerImageWarning(width: number, height: number): string | null
     return `La imagen mide ${width}×${height} px y puede verse borrosa a todo lo ancho. Se recomiendan ${BANNER_IMAGE_WIDTH}×${BANNER_IMAGE_HEIGHT} px.`;
   return null;
 }
-
-/**
- * Extracts the storage path (`{uid}/logo-123.png`) from a profile image's public URL,
- * so the previous file can be removed when the image changes.
- * @param publicUrl - Public URL stored in `agency_profiles` (logo, favicon, share image or banner)
- * @returns The object path inside the bucket, or `null` if the URL is not from it
- */
-export function getSiteImageStoragePath(publicUrl: string | null): string | null {
-  if (!publicUrl)
-    return null;
-  const marker = `/${AGENCY_LOGOS_BUCKET}/`;
-  const index = publicUrl.indexOf(marker);
-  return index === -1 ? null : decodeURIComponent(publicUrl.slice(index + marker.length));
-}

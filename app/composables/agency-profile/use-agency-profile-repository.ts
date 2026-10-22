@@ -2,6 +2,7 @@ import type { AgencyProfile, AgencyProfileUpdateData, AgencySiteImageField, Coun
 import type { TablesUpdate } from '~/types/database.types';
 
 import { AGENCY_LOGOS_BUCKET, SITE_IMAGE_RULES } from '~/composables/agency-profile/use-agency-profile-domain';
+import { removeStorageFile, uploadPublicFile } from '~/utils/storage';
 
 /**
  * Data access layer for `agency_profiles`, the `country_states` catalog and the
@@ -147,17 +148,8 @@ export function useAgencyProfileRepository() {
     const extension = rule.mimeExtensions[file.type] ?? 'png';
     const path = `${userId}/${rule.prefix}-${Date.now()}.${extension}`;
 
-    const { error } = await supabase.storage
-      .from(AGENCY_LOGOS_BUCKET)
-      .upload(path, file, { contentType: file.type });
-    if (error)
-      throw error;
-
-    const { data } = supabase.storage
-      .from(AGENCY_LOGOS_BUCKET)
-      .getPublicUrl(path);
-
-    return { path, publicUrl: data.publicUrl };
+    const publicUrl = await uploadPublicFile(supabase, AGENCY_LOGOS_BUCKET, path, file, { contentType: file.type });
+    return { path, publicUrl };
   }
 
   /**
@@ -166,11 +158,7 @@ export function useAgencyProfileRepository() {
    * @throws {StorageError} on Supabase failure
    */
   async function removeImage(path: string): Promise<void> {
-    const { error } = await supabase.storage
-      .from(AGENCY_LOGOS_BUCKET)
-      .remove([path]);
-    if (error)
-      throw error;
+    await removeStorageFile(supabase, AGENCY_LOGOS_BUCKET, path);
   }
 
   return { fetchMine, update, fetchStates, uploadImage, removeImage };

@@ -10,6 +10,7 @@ import { calculatePaymentSummary, validatePaymentAmount } from '~/composables/pa
 import { usePaymentsRepository } from '~/composables/payments/use-payments-repository';
 import { paymentKeys } from '~/queries/payments';
 import { toErrorMessage } from '~/utils/error-message';
+import { replaceWhere } from '~/utils/replace-where';
 
 export const usePaymentStore = defineStore('usePaymentStore', () => {
   const repository = usePaymentsRepository();
@@ -99,11 +100,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
 
       const ids = new Set(travelIds);
 
-      const otherPayments = payments.value.filter(p => !ids.has(p.travelId));
-      payments.value = [...otherPayments, ...fetchedPayments];
-
-      const otherConfigs = accountConfigs.value.filter(c => !ids.has(c.travelId));
-      accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
+      payments.value = replaceWhere(payments.value, p => ids.has(p.travelId), fetchedPayments);
+      accountConfigs.value = replaceWhere(accountConfigs.value, c => ids.has(c.travelId), fetchedConfigs);
     }
     catch (e) {
       error.value = toErrorMessage(e);
@@ -123,11 +121,8 @@ export const usePaymentStore = defineStore('usePaymentStore', () => {
         repository.fetchConfigsByTraveler(travelerId),
       ]);
 
-      const otherPayments = payments.value.filter(p => p.travelerId !== travelerId);
-      payments.value = [...otherPayments, ...fetchedPayments];
-
-      const otherConfigs = accountConfigs.value.filter(c => c.travelerId !== travelerId);
-      accountConfigs.value = [...otherConfigs, ...fetchedConfigs];
+      payments.value = replaceWhere(payments.value, p => p.travelerId === travelerId, fetchedPayments);
+      accountConfigs.value = replaceWhere(accountConfigs.value, c => c.travelerId === travelerId, fetchedConfigs);
     }
     catch (e) {
       error.value = toErrorMessage(e);

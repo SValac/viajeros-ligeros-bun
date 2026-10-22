@@ -44,6 +44,7 @@ import { formatCurrency } from '~/utils/currency';
 import { toErrorMessage } from '~/utils/error-message';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 import { getPaymentStatus } from '~/utils/payment-status';
+import { replaceWhere } from '~/utils/replace-where';
 
 // What a supplier payment slice needs to know about one kind of payment (provider,
 // accommodation or bus): where its payments and parents live, how a payment points to its
@@ -183,7 +184,7 @@ export const useQuotationStore = defineStore('quotation', () => {
      */
     function replaceForParents(parentIds: string[], fetched: P[] = []): void {
       const ids = new Set(parentIds);
-      payments.value = [...payments.value.filter(p => !ids.has(parentIdOf(p))), ...fetched];
+      payments.value = replaceWhere(payments.value, p => ids.has(parentIdOf(p)), fetched);
     }
 
     return { getPayments, getPaid, getPendingBalance, getOverpayment, getStatus, getTotalPendingBalance, add, update, remove, replaceForParents };
@@ -901,22 +902,23 @@ export const useQuotationStore = defineStore('quotation', () => {
       expenses,
     } = result;
     const quotationId = quotation.id;
+    const inQuotation = (row: { quotationId: string }) => row.quotationId === quotationId;
     // Children are replaced by the ids the store had too, not only the fetched ones: a
     // provider, hotel or bus deleted elsewhere must take its payments and adjustments along.
     const idsBefore = (rows: { id: string; quotationId: string }[], fetched: { id: string }[]) =>
-      [...rows.filter(r => r.quotationId === quotationId).map(r => r.id), ...fetched.map(r => r.id)];
+      [...rows.filter(inQuotation).map(r => r.id), ...fetched.map(r => r.id)];
     const providerIds = new Set(idsBefore(quotationProviders.value, providers));
 
-    quotations.value = [...quotations.value.filter(c => c.travelId !== travelId), quotation];
+    quotations.value = replaceWhere(quotations.value, c => c.travelId === travelId, [quotation]);
     providerPaymentSlice.replaceForParents([...providerIds], fetchedProviderPayments);
-    providerPriceAdjustments.value = [...providerPriceAdjustments.value.filter(a => !providerIds.has(a.quotationProviderId)), ...providerAdjustments];
-    quotationProviders.value = [...quotationProviders.value.filter(p => p.quotationId !== quotationId), ...providers];
+    providerPriceAdjustments.value = replaceWhere(providerPriceAdjustments.value, a => providerIds.has(a.quotationProviderId), providerAdjustments);
+    quotationProviders.value = replaceWhere(quotationProviders.value, inQuotation, providers);
     accommodationPaymentSlice.replaceForParents(idsBefore(quotationAccommodations.value, accommodations), fetchedAccommodationPayments);
-    quotationAccommodations.value = [...quotationAccommodations.value.filter(h => h.quotationId !== quotationId), ...accommodations];
-    quotationPublicPrices.value = [...quotationPublicPrices.value.filter(p => p.quotationId !== quotationId), ...publicPrices];
+    quotationAccommodations.value = replaceWhere(quotationAccommodations.value, inQuotation, accommodations);
+    quotationPublicPrices.value = replaceWhere(quotationPublicPrices.value, inQuotation, publicPrices);
     busPaymentSlice.replaceForParents(idsBefore(quotationBuses.value, buses), fetchedBusPayments);
-    quotationBuses.value = [...quotationBuses.value.filter(b => b.quotationId !== quotationId), ...buses];
-    quotationExpenses.value = [...quotationExpenses.value.filter(g => g.quotationId !== quotationId), ...expenses];
+    quotationBuses.value = replaceWhere(quotationBuses.value, inQuotation, buses);
+    quotationExpenses.value = replaceWhere(quotationExpenses.value, inQuotation, expenses);
   }
 
   /**
@@ -1083,10 +1085,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   async function fetchProviderOptOuts(travelId: string): Promise<void> {
     await _runRead(async () => {
       const optOuts = await repository.fetchProviderOptOuts(travelId);
-      providerOptOuts.value = [
-        ...providerOptOuts.value.filter(o => o.travelId !== travelId),
-        ...optOuts,
-      ];
+      providerOptOuts.value = replaceWhere(providerOptOuts.value, o => o.travelId === travelId, optOuts);
     });
   }
 
@@ -1134,10 +1133,7 @@ export const useQuotationStore = defineStore('quotation', () => {
     await _runWrite(async () => {
       const provider = _row(quotationProviders.value, quotationProviderId, 'Proveedor no encontrado');
       const saved = await repository.saveProviderAdjustments(quotationProviderId, drafts);
-      providerPriceAdjustments.value = [
-        ...providerPriceAdjustments.value.filter(a => a.quotationProviderId !== quotationProviderId),
-        ...saved,
-      ];
+      providerPriceAdjustments.value = replaceWhere(providerPriceAdjustments.value, a => a.quotationProviderId === quotationProviderId, saved);
       // A deleted adjustment puts its travelers back on the base price (in the DB by cascade).
       const savedIds = new Set(saved.map(a => a.id));
       travelerPriceAdjustments.value = travelerPriceAdjustments.value.filter(a =>
@@ -1152,10 +1148,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   async function fetchTravelerAdjustments(travelId: string): Promise<void> {
     await _runRead(async () => {
       const choices = await repository.fetchTravelerAdjustments(travelId);
-      travelerPriceAdjustments.value = [
-        ...travelerPriceAdjustments.value.filter(a => a.travelId !== travelId),
-        ...choices,
-      ];
+      travelerPriceAdjustments.value = replaceWhere(travelerPriceAdjustments.value, a => a.travelId === travelId, choices);
     });
   }
 
@@ -1172,14 +1165,11 @@ export const useQuotationStore = defineStore('quotation', () => {
   ): Promise<void> {
     await _runWrite(async () => {
       await repository.setTravelerAdjustment(quotationProviderId, travelId, travelerIds, adjustmentId);
-      travelerPriceAdjustments.value = [
-        ...travelerPriceAdjustments.value.filter(a =>
-          !(a.quotationProviderId === quotationProviderId && travelerIds.includes(a.travelerId)),
-        ),
-        ...(adjustmentId
-          ? travelerIds.map(travelerId => ({ quotationProviderId, travelerId, travelId, adjustmentId }))
-          : []),
-      ];
+      travelerPriceAdjustments.value = replaceWhere(
+        travelerPriceAdjustments.value,
+        a => a.quotationProviderId === quotationProviderId && travelerIds.includes(a.travelerId),
+        adjustmentId ? travelerIds.map(travelerId => ({ quotationProviderId, travelerId, travelId, adjustmentId })) : [],
+      );
       await _refreshPayableCostsAfterWrite(travelId);
     });
   }

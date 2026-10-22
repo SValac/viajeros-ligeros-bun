@@ -9,6 +9,7 @@ import BusSeatMap from '~/components/bus/bus-seat-map.vue';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { filterTravelers, getRepresentativeNames, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { useActionToast } from '~/composables/use-action-toast';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryWithLoadState } from '~/queries/load-state';
@@ -30,6 +31,7 @@ const providerStore = useProviderStore();
 const quotationStore = useQuotationStore();
 const confirmDelete = useConfirmDelete();
 const toast = useToast();
+const { runWithToast } = useActionToast();
 
 type TravelerActionItem = {
   label: string;
@@ -446,11 +448,10 @@ async function handleDelete(traveler: Traveler) {
     title: 'Eliminar viajero',
     description: `¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`,
   })) {
-    try {
-      await travelerStore.deleteTraveler(traveler.id);
-    }
-    catch (e) {
-      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el viajero'), color: 'error' });
+    if (!(await runWithToast(() => travelerStore.deleteTraveler(traveler.id), {
+      error: 'Error',
+      errorFallback: 'No se pudo eliminar el viajero',
+    }))) {
       return;
     }
     if (seatChangeContext.value?.travelerId === traveler.id) {

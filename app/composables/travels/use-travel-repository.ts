@@ -3,7 +3,13 @@ import type { QueryData } from '@supabase/supabase-js';
 import type { Tables, TablesUpdate } from '~/types/database.types';
 import type { TravelAccommodation, TravelActivity, TravelBus, TravelBusInsert, TravelFormData, TravelService, TravelStats, TravelStatus, TravelSummary, TravelSummaryFilters, TravelUpdateData } from '~/types/travel';
 
+import { deleteById } from '~/utils/delete-by-id';
+import { mapTravelAccommodationToInsert, mapTravelBusToInsert, mapTravelServiceToInsert } from '~/utils/mappers/travel-mappers';
+
 import { validateAndMapItinerary } from './use-travel-domain';
+
+// Child tables a travel edit replaces whole.
+type TravelChildTable = 'travel_activities' | 'travel_services' | 'travel_buses' | 'travel_accommodations';
 
 /**
  * Data access layer for the `travels` table and its related sub-tables.
@@ -245,14 +251,7 @@ export function useTravelRepository() {
   async function insertServices(travelId: string, services: TravelService[]): Promise<TravelService[]> {
     const { data, error } = await supabase
       .from('travel_services')
-      .insert(
-        services.map(s => ({
-          travel_id: travelId,
-          name: s.name,
-          description: s.description ?? null,
-          included: s.included,
-        })),
-      )
+      .insert(services.map(s => mapTravelServiceToInsert(travelId, s)))
       .select();
 
     if (error)
@@ -271,21 +270,7 @@ export function useTravelRepository() {
   async function insertBuses(travelId: string, buses: TravelBus[]): Promise<TravelBus[]> {
     const { data, error } = await supabase
       .from('travel_buses')
-      .insert(
-        buses.map(b => ({
-          travel_id: travelId,
-          bus_id: b.busId ?? null,
-          provider_id: b.providerId,
-          model: b.model ?? null,
-          brand: b.brand ?? null,
-          year: b.year ?? null,
-          operator1_name: b.operator1Name,
-          operator1_phone: b.operator1Phone,
-          operator2_name: b.operator2Name ?? null,
-          operator2_phone: b.operator2Phone ?? null,
-          seat_count: b.seatCount,
-        })),
-      )
+      .insert(buses.map(b => mapTravelBusToInsert(travelId, b)))
       .select();
 
     if (error)
@@ -351,16 +336,7 @@ export function useTravelRepository() {
   ): Promise<TravelAccommodation[]> {
     const { data, error } = await supabase
       .from('travel_accommodations')
-      .insert(
-        accommodations.map(a => ({
-          travel_id: travelId,
-          provider_id: a.providerId,
-          hotel_room_type_id: a.hotelRoomTypeId ?? null,
-          max_occupancy: a.maxOccupancy,
-          room_number: a.roomNumber ?? null,
-          floor: a.floor ?? null,
-        })),
-      )
+      .insert(accommodations.map(a => mapTravelAccommodationToInsert(travelId, a)))
       .select();
 
     if (error)
@@ -465,16 +441,7 @@ export function useTravelRepository() {
     if ((count ?? 0) > 0)
       throw new Error('La habitación tiene viajeros asignados. Sácalos antes de eliminarla.');
 
-    const { data, error } = await supabase
-      .from('travel_accommodations')
-      .delete()
-      .eq('id', id)
-      .select('id');
-
-    if (error)
-      throw error;
-    if (data.length === 0)
-      throw new Error('No se pudo eliminar la habitación.');
+    await deleteById(supabase, 'travel_accommodations', id, 'No se pudo eliminar la habitación.');
   }
 
   /**
@@ -524,63 +491,42 @@ export function useTravelRepository() {
   }
 
   /**
-   * Replaces all itinerary activities for a travel (delete then insert).
-   * If `activities` is empty, only the delete runs and returns `[]`.
+   * Replaces all the rows a travel has in one child table (delete then insert). With no
+   * `items` only the delete runs.
+   * @param table - The child table
    * @param travelId - UUID of the parent travel
-   * @param activities - New activities to insert after deletion
-   * @returns The newly inserted activities sorted by day
+   * @param items - New rows to insert after deletion
+   * @param insert - Inserts them (one of the `insert*` above)
+   * @returns The inserted rows mapped to domain objects, or `[]`
    * @throws {PostgrestError} on Supabase failure
    */
-  async function replaceActivities(travelId: string, activities: TravelActivity[]): Promise<TravelActivity[]> {
-    await removeActivities(travelId);
-    if (activities.length === 0)
+  async function replaceChildren<TIn, TOut>(
+    table: TravelChildTable,
+    travelId: string,
+    items: TIn[],
+    insert: (travelId: string, items: TIn[]) => Promise<TOut[]>,
+  ): Promise<TOut[]> {
+    await deleteByTravel(table, travelId);
+    if (items.length === 0)
       return [];
-    return insertActivities(travelId, activities);
+    return insert(travelId, items);
   }
 
-  /**
-   * Replaces all services for a travel (delete then insert).
-   * If `services` is empty, only the delete runs and returns `[]`.
-   * @param travelId - UUID of the parent travel
-   * @param services - New services to insert after deletion
-   * @returns The newly inserted services mapped to domain objects
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function replaceServices(travelId: string, services: TravelService[]): Promise<TravelService[]> {
-    await removeServices(travelId);
-    if (services.length === 0)
-      return [];
-    return insertServices(travelId, services);
+  /** Replaces the itinerary activities (returned sorted by day). */
+  function replaceActivities(travelId: string, activities: TravelActivity[]): Promise<TravelActivity[]> {
+    return replaceChildren('travel_activities', travelId, activities, insertActivities);
   }
 
-  /**
-   * Replaces all buses for a travel (delete then insert).
-   * If `buses` is empty, only the delete runs and returns `[]`.
-   * @param travelId - UUID of the parent travel
-   * @param buses - New buses to insert after deletion
-   * @returns The newly inserted buses mapped to domain objects
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function replaceBuses(travelId: string, buses: TravelBus[]): Promise<TravelBus[]> {
-    await removeBuses(travelId);
-    if (buses.length === 0)
-      return [];
-    return insertBuses(travelId, buses);
+  function replaceServices(travelId: string, services: TravelService[]): Promise<TravelService[]> {
+    return replaceChildren('travel_services', travelId, services, insertServices);
   }
 
-  /**
-   * Replaces all accommodations for a travel (delete then insert).
-   * If `accommodations` is empty, only the delete runs and returns `[]`.
-   * @param travelId - UUID of the parent travel
-   * @param accommodations - New accommodations to insert after deletion
-   * @returns The newly inserted accommodations mapped to domain objects
-   * @throws {PostgrestError} on Supabase failure
-   */
-  async function replaceAccommodations(travelId: string, accommodations: TravelAccommodation[]): Promise<TravelAccommodation[]> {
-    await removeAccommodations(travelId);
-    if (accommodations.length === 0)
-      return [];
-    return insertAccommodations(travelId, accommodations);
+  function replaceBuses(travelId: string, buses: TravelBus[]): Promise<TravelBus[]> {
+    return replaceChildren('travel_buses', travelId, buses, insertBuses);
+  }
+
+  function replaceAccommodations(travelId: string, accommodations: TravelAccommodation[]): Promise<TravelAccommodation[]> {
+    return replaceChildren('travel_accommodations', travelId, accommodations, insertAccommodations);
   }
 
   /**
@@ -611,39 +557,10 @@ export function useTravelRepository() {
       await insertCoordinators(travelId, added);
   }
 
-  async function removeActivities(travelId: string): Promise<void> {
+  // Deleting none is fine here: a travel may have no rows in the table yet.
+  async function deleteByTravel(table: TravelChildTable, travelId: string): Promise<void> {
     const { error } = await supabase
-      .from('travel_activities')
-      .delete()
-      .eq('travel_id', travelId);
-
-    if (error)
-      throw error;
-  }
-
-  async function removeServices(travelId: string): Promise<void> {
-    const { error } = await supabase
-      .from('travel_services')
-      .delete()
-      .eq('travel_id', travelId);
-
-    if (error)
-      throw error;
-  }
-
-  async function removeBuses(travelId: string): Promise<void> {
-    const { error } = await supabase
-      .from('travel_buses')
-      .delete()
-      .eq('travel_id', travelId);
-
-    if (error)
-      throw error;
-  }
-
-  async function removeAccommodations(travelId: string): Promise<void> {
-    const { error } = await supabase
-      .from('travel_accommodations')
+      .from(table)
       .delete()
       .eq('travel_id', travelId);
 
@@ -687,19 +604,11 @@ export function useTravelRepository() {
    * Deletes a travel record by ID. Related sub-entities are cascade-deleted by the DB;
    * its Storage files are not (see `useTravelMediaRepository().removeAllForTravel`).
    * @param id - UUID of the travel to delete
-   * @throws {PostgrestError} on Supabase failure, or if RLS filtered the row out (no row deleted)
+   * @throws {PostgrestError} on Supabase failure
+   * @throws {Error} if RLS filtered the row out (no row deleted)
    */
   async function removeTravel(id: string): Promise<void> {
-    // `.select().single()` turns an RLS-blocked delete (0 rows, no error) into an error.
-    const { error } = await supabase
-      .from('travels')
-      .delete()
-      .eq('id', id)
-      .select('id')
-      .single();
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'travels', id, 'No se pudo eliminar el viaje: ya no existe o no tienes permiso.');
   }
 
   return {
