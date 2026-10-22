@@ -18,17 +18,11 @@ const tabs: NavigationMenuItem[] = [
 
 <template>
   <div class="mx-auto max-w-3xl space-y-6">
-    <div class="flex items-center gap-4">
-      <UIcon name="i-lucide-building-2" class="size-10 text-primary" />
-      <div>
-        <h1 class="text-3xl font-bold text-highlighted">
-          Perfil de agencia
-        </h1>
-        <p class="mt-1 text-muted">
-          Estos datos son públicos: aparecen en tu sitio y junto a tus viajes en la web.
-        </p>
-      </div>
-    </div>
+    <PageHeader
+      title="Perfil de agencia"
+      description="Estos datos son públicos: aparecen en tu sitio y junto a tus viajes en la web."
+      icon="i-lucide-building-2"
+    />
 
     <UNavigationMenu
       :items="tabs"

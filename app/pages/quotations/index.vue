@@ -110,15 +110,10 @@ const columns: TableColumn<TravelSummary>[] = [
     @retry="refetch()"
   >
     <div class="space-y-6">
-      <!-- Header -->
-      <div>
-        <h1 class="text-3xl font-bold">
-          Cotizaciones
-        </h1>
-        <p class="text-muted mt-1">
-          Costos de proveedores, hospedaje, autobuses y precios al público por viaje. Uso interno, no se publica en la web.
-        </p>
-      </div>
+      <PageHeader
+        title="Cotizaciones"
+        description="Costos de proveedores, hospedaje, autobuses y precios al público por viaje. Uso interno, no se publica en la web."
+      />
 
       <!-- Stats cards -->
       <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">

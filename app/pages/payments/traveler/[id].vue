@@ -153,10 +153,6 @@ const columns: TableColumn<Payment>[] = [
 // Config modal
 const { isOpen: isConfigModalOpen, editing: editingConfigTravelId, openEdit: openConfigModal, close: closeConfigModal } = useFormModal<string>();
 
-function goToPaymentsIndex() {
-  router.push({ name: 'payments-index' });
-}
-
 function goToTravelPayments(travelId: string) {
   router.push({ name: 'payments-travel', params: { id: travelId } });
 }
@@ -209,24 +205,12 @@ watch(travelerTravelIds, (ids) => {
     @retry="refetch()"
   >
     <div v-if="traveler" class="space-y-6">
-      <!-- Header -->
-      <div class="flex items-center gap-3">
-        <UButton
-          icon="i-lucide-arrow-left"
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          @click="goToPaymentsIndex"
-        />
-        <div>
-          <h1 class="text-3xl font-bold">
-            {{ travelerName }}
-          </h1>
-          <p class="text-muted mt-0.5">
-            Historial de pagos
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        :title="travelerName"
+        description="Historial de pagos"
+        :to="{ name: 'payments-index' }"
+        back-label="Volver a pagos"
+      />
 
       <!-- Filters -->
       <div class="flex flex-wrap gap-3">

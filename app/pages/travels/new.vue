@@ -48,23 +48,12 @@ function handleCancel() {
 <template>
   <div class="h-full overflow-auto">
     <div class="max-w-6xl mx-auto p-6 space-y-6">
-      <div class="flex items-center gap-3">
-        <UButton
-          icon="i-lucide-arrow-left"
-          variant="ghost"
-          color="neutral"
-          aria-label="Volver a viajes"
-          :to="{ name: 'travels-dashboard' }"
-        />
-        <div>
-          <h1 class="text-2xl font-bold">
-            Nuevo viaje
-          </h1>
-          <p class="text-sm text-muted">
-            Datos generales del viaje. El itinerario, los servicios y la galería se agregan después, en sus pestañas.
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title="Nuevo viaje"
+        description="Datos generales del viaje. El itinerario, los servicios y la galería se agregan después, en sus pestañas."
+        :to="{ name: 'travels-dashboard' }"
+        back-label="Volver a viajes"
+      />
 
       <TravelForm
         @submit="handleSubmit"

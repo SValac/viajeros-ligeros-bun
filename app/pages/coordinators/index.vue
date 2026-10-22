@@ -136,26 +136,22 @@ const columns: TableColumn<Coordinator>[] = [
 
 <template>
   <div class="space-y-6">
-    <div class="flex flex-wrap justify-between items-center gap-4">
-      <div class="flex items-center gap-4">
-        <UIcon name="i-lucide-user-cog" class="w-10 h-10 text-violet-500" />
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-            Coordinadores
-          </h1>
-          <p class="text-gray-500 dark:text-gray-400 mt-1">
-            {{ pluralize(coordinatorStore.allCoordinators.length, 'coordinador registrado', 'coordinadores registrados') }}
-          </p>
-        </div>
-      </div>
-      <UButton
-        icon="i-lucide-plus"
-        size="lg"
-        @click="openCreateModal"
-      >
-        Nuevo Coordinador
-      </UButton>
-    </div>
+    <PageHeader
+      title="Coordinadores"
+      :description="pluralize(coordinatorStore.allCoordinators.length, 'coordinador registrado', 'coordinadores registrados')"
+      icon="i-lucide-user-cog"
+      icon-class="text-violet-500"
+    >
+      <template #actions>
+        <UButton
+          icon="i-lucide-plus"
+          size="lg"
+          @click="openCreateModal"
+        >
+          Nuevo Coordinador
+        </UButton>
+      </template>
+    </PageHeader>
 
     <UInput
       v-model="searchTerm"

@@ -19,33 +19,22 @@ useRedirectIfMissing({ status, data: travel }, {
 
 <template>
   <div v-if="travel" class="space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-2">
+    <PageHeader
+      :title="`Pagos — ${travel.label}`"
+      description="Gestión de pagos de viajeros inscritos"
+      :to="{ name: 'payments-index' }"
+      back-label="Volver a pagos"
+    >
+      <template #actions>
         <UButton
-          icon="i-lucide-arrow-left"
-          variant="ghost"
+          icon="i-lucide-map"
+          label="Ver viaje"
+          variant="outline"
           color="neutral"
-          size="sm"
-          aria-label="Volver a pagos"
-          :to="{ name: 'payments-index' }"
+          :to="{ name: 'travel-detail', params: { id: travelId } }"
         />
-        <div>
-          <h1 class="text-2xl font-bold">
-            Pagos — {{ travel.label }}
-          </h1>
-          <p class="text-sm text-muted">
-            Gestión de pagos de viajeros inscritos
-          </p>
-        </div>
-      </div>
-      <UButton
-        icon="i-lucide-map"
-        label="Ver viaje"
-        variant="outline"
-        color="neutral"
-        :to="{ name: 'travel-detail', params: { id: travelId } }"
-      />
-    </div>
+      </template>
+    </PageHeader>
 
     <TravelPaymentsPanel :travel-id="travelId" />
   </div>

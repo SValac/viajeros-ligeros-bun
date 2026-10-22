@@ -175,30 +175,27 @@ const columns: TableColumn<TravelSummary>[] = [
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-wrap justify-between items-center gap-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-          Gestión de Viajes
-        </h1>
-        <p class="text-gray-500 dark:text-gray-400 mt-1">
-          Administra todos los viajes de la agencia
-        </p>
-      </div>
-      <UCheckboxGroup
-        v-model="statuses"
-        :items="statusItems"
-        legend="Estatus del viaje"
-        orientation="horizontal"
-      />
-      <UButton
-        icon="i-lucide-plus"
-        size="lg"
-        @click="navigateToCreate"
-      >
-        Nuevo Viaje
-      </UButton>
-    </div>
+    <PageHeader
+      title="Gestión de Viajes"
+      description="Administra todos los viajes de la agencia"
+    >
+      <template #actions>
+        <UCheckboxGroup
+          v-model="statuses"
+          :items="statusItems"
+          legend="Estatus del viaje"
+          orientation="horizontal"
+          class="mr-2"
+        />
+        <UButton
+          icon="i-lucide-plus"
+          size="lg"
+          @click="navigateToCreate"
+        >
+          Nuevo Viaje
+        </UButton>
+      </template>
+    </PageHeader>
 
     <!-- Stats -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

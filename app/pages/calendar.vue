@@ -147,12 +147,9 @@ watch(selectedTravel, (travel) => {
   <div class="h-full overflow-auto">
     <div class="mx-auto max-w-7xl space-y-6 p-6">
       <!-- Header -->
-      <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-bold text-highlighted">
-            Calendario de viajes
-          </h1>
-          <ul class="mt-2 flex flex-wrap gap-1.5" aria-label="Leyenda: estatus de los viajes y días festivos">
+      <PageHeader title="Calendario de viajes">
+        <template #description>
+          <ul class="mt-1 flex flex-wrap gap-1.5" aria-label="Leyenda: estatus de los viajes y días festivos">
             <li v-for="status in visibleStatuses" :key="status">
               <TravelStatusBadge :status="status" size="sm" />
             </li>
@@ -178,9 +175,8 @@ watch(selectedTravel, (travel) => {
               </li>
             </template>
           </ul>
-        </div>
-
-        <div class="flex items-center gap-2">
+        </template>
+        <template #actions>
           <TravelCalendarFilters
             v-model:statuses="selectedStatuses"
             v-model:show-cancelled="showCancelled"
@@ -193,8 +189,8 @@ watch(selectedTravel, (travel) => {
             color="neutral"
             @click="goToToday"
           />
-        </div>
-      </div>
+        </template>
+      </PageHeader>
 
       <LoadState
         v-bind="loadState"

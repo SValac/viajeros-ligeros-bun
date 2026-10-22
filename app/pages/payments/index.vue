@@ -146,15 +146,10 @@ const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ?
 
 <template>
   <div class="space-y-6">
-    <!-- Header -->
-    <div>
-      <h1 class="text-3xl font-bold text-gray-900 dark:text-white">
-        Gestión de Pagos
-      </h1>
-      <p class="text-gray-500 dark:text-gray-400 mt-1">
-        Seguimiento de abonos y saldos por viaje
-      </p>
-    </div>
+    <PageHeader
+      title="Gestión de Pagos"
+      description="Seguimiento de abonos y saldos por viaje"
+    />
 
     <!-- Stats cards: active travels only -->
     <p class="text-sm text-muted -mb-2">

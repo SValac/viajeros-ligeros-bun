@@ -45,24 +45,11 @@ function handleCancel() {
 
 <template>
   <div class="max-w-3xl mx-auto space-y-6">
-    <!-- Header -->
-    <div class="flex items-center gap-3">
-      <UButton
-        icon="i-lucide-arrow-left"
-        variant="ghost"
-        color="neutral"
-        size="sm"
-        :to="route"
-      />
-      <div>
-        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
-          {{ title }}
-        </h1>
-        <p class="text-sm text-gray-500 dark:text-gray-400">
-          {{ description }}
-        </p>
-      </div>
-    </div>
+    <PageHeader
+      :title="title"
+      :description="description"
+      :to="route"
+    />
 
     <!-- Form -->
     <UCard>
