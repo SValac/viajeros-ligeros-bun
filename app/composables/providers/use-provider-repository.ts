@@ -1,6 +1,8 @@
 import type { Json, TablesUpdate } from '~/types/database.types';
 import type { Provider, ProviderFormData, ProviderUpdateData } from '~/types/provider';
 
+import { deleteById } from '~/utils/delete-by-id';
+
 /**
  * Data access layer for the `providers` table.
  * Each function performs a single Supabase operation and either returns domain data
@@ -93,13 +95,7 @@ export function useProviderRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('providers')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'providers', id);
   };
 
   return { fetchAll, insert, update, remove };

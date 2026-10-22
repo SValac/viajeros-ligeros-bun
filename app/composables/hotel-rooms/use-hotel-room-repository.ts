@@ -1,5 +1,7 @@
 import type { HotelRoomData, HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
+import { deleteById } from '~/utils/delete-by-id';
+
 /**
  * Data access layer for the `hotel_rooms` and `hotel_room_types` tables.
  * Each function performs a single Supabase operation and either returns domain data
@@ -137,14 +139,7 @@ export function useHotelRoomRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function removeRoomType(roomTypeId: string): Promise<void> {
-    const { error } = await supabase
-      .from('hotel_room_types')
-      .delete()
-      .eq('id', roomTypeId);
-
-    if (error) {
-      throw error;
-    }
+    await deleteById(supabase, 'hotel_room_types', roomTypeId);
   }
 
   return {

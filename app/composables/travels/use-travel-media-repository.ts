@@ -1,6 +1,8 @@
 import type { Tables } from '~/types/database.types';
 import type { TravelMedia, TravelMediaType } from '~/types/travel-media';
 
+import { deleteById } from '~/utils/delete-by-id';
+
 function mapRowToDomain(row: Tables<'travel_media'>): TravelMedia {
   return {
     id: row.id,
@@ -71,13 +73,7 @@ export function useTravelMediaRepository() {
     if (storageError)
       throw storageError;
 
-    const { error: dbError } = await supabase
-      .from('travel_media')
-      .delete()
-      .eq('id', id);
-
-    if (dbError)
-      throw dbError;
+    await deleteById(supabase, 'travel_media', id);
   }
 
   function getThumbnailUrl(storagePath: string): string {
