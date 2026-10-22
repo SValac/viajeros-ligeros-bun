@@ -8,6 +8,7 @@ import { quotationKeys } from '~/queries/quotations';
 import { travelerKeys } from '~/queries/travelers';
 import { travelKeys } from '~/queries/travels';
 import { TravelerSeatChangeError } from '~/types/traveler';
+import { toErrorMessage } from '~/utils/error-message';
 
 /**
  * Traveler writes. Reads go through `travelersByTravelQuery` / `travelerDetailQuery`;
@@ -42,7 +43,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       return traveler;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
       // return the error up the call stack so the UI can react to it (e.g. show a toast)
       throw e;
     }
@@ -67,7 +68,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       return traveler;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
       throw e;
     }
     finally {
@@ -79,6 +80,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
    * Unlinks all companions before deleting the traveler.
    * Required because the DB does not cascade `representative_id` on traveler delete.
    * @param id - UUID of the traveler to delete
+   * @throws Re-throws repository errors so the caller can react
    */
   async function deleteTraveler(id: string): Promise<void> {
     loading.value = true;
@@ -97,7 +99,8 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       queryCache.invalidateQueries({ key: quotationKeys.root });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
+      throw e;
     }
     finally {
       loading.value = false;
@@ -161,7 +164,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       queryCache.invalidateQueries({ key: travelerKeys.root });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
       throw e;
     }
     finally {
@@ -183,7 +186,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       queryCache.invalidateQueries({ key: travelerKeys.root });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
       throw e;
     }
     finally {
@@ -195,7 +198,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
    * Assigns a traveler to a room.
    * @param travelerId - UUID of the traveler to assign
    * @param accommodation - The room to assign the traveler to
-   * @throws Re-throws repository errors so the caller can react; `error` holds a user-facing message
+   * @throws {Error} With a user-facing message (also in `error`); the repository error is its `cause`
    */
   async function assignTravelerToRoom(
     travelerId: string,
@@ -209,7 +212,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
     }
     catch (e) {
       error.value = toRoomAssignmentErrorMessage(e);
-      throw e;
+      throw new Error(error.value, { cause: e });
     }
     finally {
       loading.value = false;
@@ -230,7 +233,7 @@ export const useTravelerStore = defineStore('useTravelerStore', () => {
       queryCache.invalidateQueries({ key: travelerKeys.root });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      error.value = toErrorMessage(e);
       throw e;
     }
     finally {

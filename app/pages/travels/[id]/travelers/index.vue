@@ -14,6 +14,7 @@ import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
+import { toErrorMessage } from '~/utils/error-message';
 import { groupNameCell } from '~/utils/table-cells';
 import { formatTravelBusLabel } from '~/utils/travel-bus';
 import { formatTravelerName } from '~/utils/traveler-labels';
@@ -362,7 +363,7 @@ async function handleSeatDestinationSelected(payload: SeatSelectionPayload) {
     toast.add({
       title: 'Error al cambiar asiento',
       // The store throws a TravelerSeatChangeError, already translated by toTravelerSeatChangeError
-      description: error instanceof Error ? error.message : 'No se pudo completar el cambio de asiento.',
+      description: toErrorMessage(error, 'No se pudo completar el cambio de asiento.'),
       color: 'error',
     });
   }
@@ -445,7 +446,13 @@ async function handleDelete(traveler: Traveler) {
     title: 'Eliminar viajero',
     description: `¿Estás seguro de eliminar a ${formatTravelerName(traveler)}?`,
   })) {
-    await travelerStore.deleteTraveler(traveler.id);
+    try {
+      await travelerStore.deleteTraveler(traveler.id);
+    }
+    catch (e) {
+      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el viajero'), color: 'error' });
+      return;
+    }
     if (seatChangeContext.value?.travelerId === traveler.id) {
       clearSeatChangeState();
     }
