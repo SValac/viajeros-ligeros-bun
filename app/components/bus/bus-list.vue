@@ -175,7 +175,7 @@ const columns: TableColumn<Bus>[] = [
         <!-- Empty state -->
         <EmptyState
           v-if="buses.length === 0"
-          section="buses"
+          section="busUnits"
           :actions="[{ label: 'Agregar unidad', icon: 'i-lucide-plus', onClick: openCreateModal }]"
         />
 

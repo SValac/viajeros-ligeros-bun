@@ -9,6 +9,7 @@ import { useQuotationContext } from '~/composables/quotation/use-quotation-conte
 import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
+import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
 
 type Props = {
   quotationId: string;
@@ -156,6 +157,7 @@ const columns: TableColumn<QuotationBus>[] = [
     <EmptyState
       v-else
       section="buses"
+      :description="readonly ? CONFIRMED_QUOTATION_EMPTY_DESCRIPTION : undefined"
       :actions="readonly ? undefined : [{ label: 'Agregar autobús', icon: 'i-lucide-plus', onClick: () => $emit('add') }]"
     />
   </UCard>

@@ -2,8 +2,8 @@
 /**
  * Spinner, then error + Reintentar, then the slot: for screens that read a query or a catalog
  * store. Until the data loads, an empty list or a missing record would be a lie. A failed
- * refetch with data already loaded keeps the slot. For a Pinia Colada query, get the props from
- * `useQueryLoadState`.
+ * refetch with data already loaded keeps the slot, with a warning and Reintentar above it.
+ * For a Pinia Colada query, get the props from `useQueryLoadState`.
  */
 const props = defineProps<{
   isLoaded: boolean;
@@ -14,19 +14,37 @@ const props = defineProps<{
   fill?: boolean;
 }>();
 
-defineEmits<{
+const emit = defineEmits<{
   retry: [];
 }>();
 
 const hasError = computed(() => !props.isLoaded && !!props.loadError);
+// What is on screen is the last load that worked; a refetch failed after it
+const isStale = computed(() => props.isLoaded && !!props.loadError);
 // The verb agrees with the label's article: "No se pudieron cargar los…" / "No se pudo cargar la…"
-const errorMessage = computed(() => /^(?:los|las) /.test(props.label)
+const isPlural = computed(() => /^(?:los|las) /.test(props.label));
+const errorMessage = computed(() => isPlural.value
   ? `No se pudieron cargar ${props.label}`
   : `No se pudo cargar ${props.label}`);
+const staleMessage = computed(() => isPlural.value
+  ? `No se pudieron actualizar ${props.label}`
+  : `No se pudo actualizar ${props.label}`);
 </script>
 
 <template>
-  <slot v-if="isLoaded" />
+  <template v-if="isLoaded">
+    <UAlert
+      v-if="isStale"
+      :title="staleMessage"
+      description="Se muestra lo último que se cargó."
+      color="warning"
+      variant="subtle"
+      icon="i-lucide-triangle-alert"
+      :actions="[{ label: 'Reintentar', icon: 'i-lucide-refresh-cw', color: 'warning', variant: 'outline', onClick: () => emit('retry') }]"
+      class="mb-4"
+    />
+    <slot />
+  </template>
   <div
     v-else-if="hasError"
     class="flex flex-col items-center justify-center gap-4"
@@ -38,7 +56,7 @@ const errorMessage = computed(() => /^(?:los|las) /.test(props.label)
     <UButton
       label="Reintentar"
       icon="i-lucide-refresh-cw"
-      @click="$emit('retry')"
+      @click="emit('retry')"
     />
   </div>
   <div
