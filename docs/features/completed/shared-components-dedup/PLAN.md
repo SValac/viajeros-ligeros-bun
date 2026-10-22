@@ -421,7 +421,8 @@ Sin cambiar lo que exporta el store:
   `Error`s, so `toTravelSaveErrorMessage` never matched `agency_profile_incomplete` (the
   "complete your profile to publish" text never showed); it, `toRoomAssignmentErrorMessage`,
   the auth sign-in/sign-up mappers and three repository errors passed raw text through.
-- Also: the gallery delete button got an `aria-label`.
+- Also: the gallery delete button got an `aria-label` and, as the user asked, the same
+  confirmation dialog as every other delete (it removed the file right away).
 
 ### Fase 11 — Repositorios: helpers de Supabase ✅
 
