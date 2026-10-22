@@ -142,9 +142,8 @@ function onSubmit(event: FormSubmitEvent<z.output<typeof schema>>) {
         <HotelBedConfigurationInput
           v-for="(bed, i) in state.beds"
           :key="i"
-          :model-value="bed"
+          v-model="state.beds[i]!"
           :removable="state.beds.length > 1"
-          @update:model-value="(val) => state.beds[i] = val"
           @remove="removeBed(i)"
         />
         <UButton

@@ -5,15 +5,12 @@ import { matchesProviderSearch } from '~/composables/providers/use-provider-doma
 import { PROVIDER_CATEGORY_LIST, PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 type Props = {
-  modelValue?: string;
   excludeCategories?: ProviderCategory[];
 };
 
-const { modelValue, excludeCategories = [] } = defineProps<Props>();
+const { excludeCategories = [] } = defineProps<Props>();
 
-const emit = defineEmits<{
-  'update:modelValue': [value: string | undefined];
-}>();
+const providerId = defineModel<string | undefined>();
 
 // Store
 const providerStore = useProviderStore();
@@ -22,7 +19,6 @@ const toast = useToast();
 // Local state
 const isAddModalOpen = ref(false);
 const selectedCategory = ref<ProviderCategory | undefined>(undefined);
-const selectedProviderId = ref(modelValue);
 const searchTerm = shallowRef('');
 
 // Category options
@@ -68,16 +64,12 @@ function handleCategoryChange(value: string | null | undefined) {
   selectedCategory.value = (value as ProviderCategory) || undefined;
 
   // Clear the selected provider when the category changes
-  if (selectedProviderId.value) {
-    selectedProviderId.value = undefined;
-    emit('update:modelValue', undefined);
-  }
+  if (providerId.value)
+    providerId.value = undefined;
 }
 
 function handleProviderChange(value: string | null | undefined) {
-  const newValue = value || undefined;
-  selectedProviderId.value = newValue;
-  emit('update:modelValue', newValue);
+  providerId.value = value || undefined;
 }
 
 function openAddModal() {
@@ -99,21 +91,15 @@ async function handleProviderSubmit(data: ProviderFormData) {
   });
 
   // Automatically select the new provider
-  selectedProviderId.value = newProvider.id;
-  emit('update:modelValue', newProvider.id);
+  providerId.value = newProvider.id;
 
   isAddModalOpen.value = false;
 }
 
-// Watch to sync with the external prop
-watch(() => modelValue, (newValue) => {
-  selectedProviderId.value = newValue;
-});
-
 // Category of the selected provider. It watches the catalog, not just the mount:
 // providers load on demand and can arrive later.
 watch(
-  () => (modelValue ? providerStore.getProviderById(modelValue)?.category : undefined),
+  () => (providerId.value ? providerStore.getProviderById(providerId.value)?.category : undefined),
   (category) => {
     if (category)
       selectedCategory.value = category;
@@ -143,7 +129,7 @@ watch(
       <div class="flex-1 min-w-0">
         <USelectMenu
           v-model:search-term="searchTerm"
-          :model-value="selectedProviderId"
+          :model-value="providerId"
           :items="providerOptions"
           value-key="value"
           ignore-filter
