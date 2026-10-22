@@ -1,6 +1,7 @@
 import type { HotelRoomData, HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 
 import { deleteById } from '~/utils/delete-by-id';
+import { mapHotelRoomTypeToRow } from '~/utils/mappers/hotel-room-mappers';
 
 /**
  * Data access layer for the `hotel_rooms` and `hotel_room_types` tables.
@@ -83,15 +84,7 @@ export function useHotelRoomRepository() {
   async function insertRoomType(roomId: string, data: HotelRoomTypeFormData, costPerPerson: number): Promise<HotelRoomType> {
     const { data: row, error } = await supabase
       .from('hotel_room_types')
-      .insert({
-        hotel_room_id: roomId,
-        max_occupancy: data.maxOccupancy,
-        room_count: data.roomCount,
-        beds: data.beds,
-        price_per_night: data.pricePerNight,
-        cost_per_person: costPerPerson,
-        additional_details: data.additionalDetails ?? null,
-      })
+      .insert({ hotel_room_id: roomId, ...mapHotelRoomTypeToRow(data, costPerPerson) })
       .select()
       .single();
 
@@ -114,14 +107,7 @@ export function useHotelRoomRepository() {
   async function updateRoomType(roomTypeId: string, data: HotelRoomTypeFormData, costPerPerson: number): Promise<HotelRoomType> {
     const { data: row, error } = await supabase
       .from('hotel_room_types')
-      .update({
-        max_occupancy: data.maxOccupancy,
-        room_count: data.roomCount,
-        beds: data.beds,
-        price_per_night: data.pricePerNight,
-        cost_per_person: costPerPerson,
-        additional_details: data.additionalDetails ?? null,
-      })
+      .update(mapHotelRoomTypeToRow(data, costPerPerson))
       .eq('id', roomTypeId)
       .select()
       .single();
