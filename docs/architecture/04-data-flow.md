@@ -159,7 +159,10 @@ en selects por toda la app), la primera vez que una pantalla usa su store. Cada 
   reemplaza cuando la página tiene su propio contenedor (`travels/[id]`, `quotations/[id]`).
 - **`<NuxtLoadingIndicator>`** (`app/app.vue`): barra de progreso arriba mientras una navegación
   espera (la primera visita a una página baja su JS). No sale si la navegación tarda menos de 200 ms
-  (`throttle`). Los datos no la afectan: `useQuery` no bloquea la navegación, eso lo cubren los
+  (`throttle`). `app/plugins/loading-indicator.client.ts` la termina cuando el router confirma la
+  navegación: Nuxt la termina recién cuando se dibuja el `<NuxtPage>` más profundo, y
+  `travels/[id]`, `quotations/[id]` y `profile` montan el suyo después de cargar sus datos (o
+  nunca, en un viaje sin cotización), así que la barra se quedaba. La espera de datos la cubren los
   skeletons.
 - **`useQueryLoadState(query)`** (`app/queries/load-state.ts`) da sus props desde un `useQuery`:
   `<LoadState v-bind="travelersLoad" label="los viajeros" @retry="refetchTravelers()">`.
