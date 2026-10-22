@@ -431,7 +431,7 @@ Sin cambiar lo que exporta el store:
   add + delete expense moves the seat price 3015 → 3020 → 3015; provider toggle toast; a
   simulated 500 on `providers` and on `travels` shows the error toast and keeps the form.
 
-### Fase 11 — Repositorios: helpers de Supabase
+### Fase 11 — Repositorios: helpers de Supabase ✅
 
 - `delete().eq('id', id)` + `if (error) throw` está ~15 veces (bus, provider, coordinator,
   traveler, payments, hotel room types, quotation ×8, travel media). Solo `removeTravel` y
@@ -447,6 +447,27 @@ Sin cambiar lo que exporta el store:
 - Los repositorios de catálogo (`bus`, `provider`, `coordinator`) tienen la misma forma
   `fetchAll / insert / update / remove`; con los helpers de arriba quedan cortos. No hace falta
   una fábrica genérica.
+
+**Done (2026-10-22)** on branch `feature/shared-components-dedup-repositories`. Notes:
+- `deleteById(supabase, table, id, notFound?)` in `app/utils/delete-by-id.ts`: deletes with
+  `.select('id')` and throws `notFound` when no row came back. Used by the 15 single-row
+  deletes plus `removeTravel` and `deleteEmptyAccommodation` (which had their own checks).
+- The returned id costs no permission: per the Postgres `CREATE POLICY` docs, a `DELETE` whose
+  `WHERE` reads a column (our `.eq('id', …)`) already applies the SELECT policy, and a row
+  that fails it is silently skipped. So `RETURNING` can't create false errors, it only makes
+  the 0 rows visible.
+- `insertOne` / `updateOne` skipped: supabase-js can't resolve `Insert`/`Row` for a generic
+  table (`RejectExcessProperties`, `SelectQueryError`), not without casts.
+- `use-travel-repository`: `deleteByTravel(table, travelId)` (0 rows is fine there) and
+  `replaceChildren(table, travelId, items, insert)` behind the four `replace*`.
+- Not changed: deletes by filter (opt-outs, traveler adjustments, accommodation details,
+  coordinator links) where deleting nothing is valid, and the multi-row
+  `deleteUnoccupiedAccommodations` / removed price adjustments (`.in('id', ids)`), which could
+  compare the returned count with `ids.length` the same way. `use-travel-media-repository.remove`
+  still deletes the file before the row: a blocked row delete now throws, but the file is gone.
+- Checked in the browser: delete expense and bus payment OK; deleting a public price, a
+  catalog bus or a travel that no longer exists now throws "No se pudo eliminar…" (it used to
+  resolve as a success); re-saving the seed travel's itinerary and services keeps them the same.
 
 ### Fase 12 — Storage y perfil de agencia
 
