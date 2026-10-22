@@ -26,10 +26,8 @@ const expenses = computed(() => quotationStore.getExpensesByQuotation(quotationI
 const expensesTotal = computed(() => quotationStore.getExpensesTotal(quotationId));
 const totalPerSeat = computed(() => expenses.value.reduce((sum, g) => sum + getCostPerSeat(g), 0));
 
-// What an expense adds to the price of each seat: its total over the "Dividir entre" divisor.
 function getCostPerSeat(expense: QuotationExpense): number {
-  const divisor = quotationStore.getCostDivisor(quotationId, expense.splitType, coordinatorCount.value);
-  return divisor > 0 ? expense.totalCost / divisor : 0;
+  return quotationStore.getExpenseCostPerPerson(expense.id, coordinatorCount.value);
 }
 
 const { isOpen: isFormOpen, editing: selectedExpense, openNew, openEdit } = useFormModal<QuotationExpense>();
