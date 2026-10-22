@@ -157,6 +157,10 @@ en selects por toda la app), la primera vez que una pantalla usa su store. Cada 
   (`panel` por defecto; `lines` es `panel` sin card, para dentro de una card que ya existe) y
   `:stats="3 | 4"` para las StatCards de arriba. El slot `#loading` lo
   reemplaza cuando la página tiene su propio contenedor (`travels/[id]`, `quotations/[id]`).
+- **`<NuxtLoadingIndicator>`** (`app/app.vue`): barra de progreso arriba mientras una navegación
+  espera (la primera visita a una página baja su JS). No sale si la navegación tarda menos de 200 ms
+  (`throttle`). Los datos no la afectan: `useQuery` no bloquea la navegación, eso lo cubren los
+  skeletons.
 - **`useQueryLoadState(query)`** (`app/queries/load-state.ts`) da sus props desde un `useQuery`:
   `<LoadState v-bind="travelersLoad" label="los viajeros" @retry="refetchTravelers()">`.
   `isLoaded` es `data !== undefined` (`null` = "no hay" o "no existe" también es respuesta: el slot
