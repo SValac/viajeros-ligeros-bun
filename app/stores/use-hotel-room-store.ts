@@ -5,6 +5,7 @@ import type { HotelRoomType, HotelRoomTypeFormData } from '~/types/hotel-room';
 import { validateTotalRoomsUpdate } from '~/composables/hotel-rooms/use-hotel-room-domain';
 import { useHotelRoomRepository } from '~/composables/hotel-rooms/use-hotel-room-repository';
 import { hotelRoomsCatalogQuery, useCatalogState, useHotelRoomsCatalog } from '~/queries/catalogs';
+import { toErrorMessage } from '~/utils/error-message';
 import { calculateCostPerPerson, calculateTotalRoomsUsed } from '~/utils/hotel-room-helpers';
 
 /**
@@ -87,7 +88,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
       await catalog.refresh();
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al inicializar datos de habitaciones';
+      error.value = toErrorMessage(e, 'Error al inicializar datos de habitaciones');
       throw e;
     }
     finally {
@@ -100,31 +101,26 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
    * Validates that the new total is not less than currently used rooms
    * @param {string} providerId - The provider ID
    * @param {number} total - The new total number of rooms
-   * @returns {Promise<boolean>} True if update succeeded, false otherwise
+   * @throws {Error} With the validation message, or re-throws repository errors
    */
-  async function updateTotalRooms(providerId: string, total: number): Promise<boolean> {
+  async function updateTotalRooms(providerId: string, total: number): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
       const roomData = (await catalog.ensureFresh()).find(hrd => hrd.providerId === providerId);
       const validationError = validateTotalRoomsUpdate(total, calculateTotalRoomsUsed(roomData?.roomTypes ?? []));
-      if (validationError) {
-        error.value = validationError;
-        return false;
-      }
+      if (validationError)
+        throw new Error(validationError);
 
-      if (!roomData) {
-        error.value = 'Proveedor no encontrado';
-        return false;
-      }
+      if (!roomData)
+        throw new Error('Proveedor no encontrado');
 
       await repository.updateRoomTotal(roomData.id, total);
       await catalog.refresh();
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al actualizar el total de habitaciones';
-      return false;
+      error.value = toErrorMessage(e, 'Error al actualizar el total de habitaciones');
+      throw e;
     }
     finally {
       loading.value = false;
@@ -153,7 +149,7 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
       return roomType;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al agregar tipo de habitación';
+      error.value = toErrorMessage(e, 'Error al agregar tipo de habitación');
       throw e;
     }
     finally {
@@ -166,20 +162,19 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
    * Recalculates cost per person based on the updated data
    * @param {string} roomTypeId - The room type ID to update
    * @param {HotelRoomTypeFormData} data - The updated room type data
-   * @returns {Promise<boolean>} True if update succeeded, false otherwise
+   * @throws Re-throws repository errors
    */
-  async function updateRoomType(roomTypeId: string, data: HotelRoomTypeFormData): Promise<boolean> {
+  async function updateRoomType(roomTypeId: string, data: HotelRoomTypeFormData): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
       const costPerPerson = calculateCostPerPerson(data.pricePerNight, data.maxOccupancy);
       await repository.updateRoomType(roomTypeId, data, costPerPerson);
       await catalog.refresh();
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al actualizar tipo de habitación';
-      return false;
+      error.value = toErrorMessage(e, 'Error al actualizar tipo de habitación');
+      throw e;
     }
     finally {
       loading.value = false;
@@ -189,19 +184,18 @@ export const useHotelRoomStore = defineStore('hotel-room', () => {
   /**
    * Deletes a room type from a provider's configuration
    * @param {string} roomTypeId - The room type ID to delete
-   * @returns {Promise<boolean>} True if deletion succeeded, false otherwise
+   * @throws Re-throws repository errors
    */
-  async function deleteRoomType(roomTypeId: string): Promise<boolean> {
+  async function deleteRoomType(roomTypeId: string): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
       await repository.removeRoomType(roomTypeId);
       await catalog.refresh();
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al eliminar tipo de habitación';
-      return false;
+      error.value = toErrorMessage(e, 'Error al eliminar tipo de habitación');
+      throw e;
     }
     finally {
       loading.value = false;
