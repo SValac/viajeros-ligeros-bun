@@ -494,7 +494,7 @@ Sin cambiar lo que exporta el store:
 - Checked in the browser: upload + remove of a favicon (profile back to `null`, file gone),
   a gallery image and a banner; `saveSeo`; the profile tabs, gallery and edit load clean.
 
-### Fase 13 — Piezas chicas de datos
+### Fase 13 — Piezas chicas de datos ✅
 
 - Orden de pagos por fecha descendente: 4 veces (`use-payment-store` y 3 en cotización) →
   `sortByDateDesc`.
@@ -509,6 +509,22 @@ Sin cambiar lo que exporta el store:
   `mapProviderToInsert` → reutilizar el mapper.
 - `use-travel-repository`: los `insert` de services, buses y accommodations mapean en línea →
   moverlos a `utils/mappers/travel-mappers.ts` como los demás; `mapRowToDomain` de travel media también.
+
+**Done (2026-10-22).** Notes:
+- `sortByDateDesc` skipped: only one copy is left (the supplier payment slice); phase 8 removed
+  the others and the payment store doesn't sort.
+- `replaceWhere(list, belongs, items)` in `app/utils/replace-where.ts`: payment store loads,
+  `hydrateTravel`, the supplier payment slice, opt-outs and both adjustment lists.
+- `mapQuotationAccommodationDetailRowToDomain` sets `costPerPerson` with `calculateCostPerPerson`.
+- `mapHotelRoomTypeToRow` (insert/update), `mapProviderLocationToRow` / `mapProviderContactToRow`
+  (insert/update), and `mapTravelServiceToInsert` / `mapTravelBusToInsert` /
+  `mapTravelAccommodationToInsert` / `mapTravelMediaRowToDomain` in the mappers. New mapper
+  exports are imported explicitly (a new export of an auto-imported file isn't seen by a
+  running `nuxt dev`).
+- Checked in the browser: rehydrating the seed quotation keeps every count; detail cost per
+  person unchanged; re-saving a provider's location/contact and a room type keeps them the
+  same; services, buses and a room inserted on a throwaway travel (then deleted) match the
+  seed's; a gallery upload maps the same as its fetch.
 
 ## Tercera pasada: páginas y componentes leídos a mano (2026-10-13)
 
