@@ -1,6 +1,7 @@
 import type { TravelMedia, TravelMediaType } from '~/types/travel-media';
 
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
+import { toErrorMessage } from '~/utils/error-message';
 
 export const useTravelMediaStore = defineStore('useTravelMediaStore', () => {
   const repository = useTravelMediaRepository();
@@ -23,7 +24,7 @@ export const useTravelMediaStore = defineStore('useTravelMediaStore', () => {
       mediaByTravel.value[travelId] = await repository.fetchByTravel(travelId);
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al cargar la galería';
+      error.value = toErrorMessage(e, 'Error al cargar la galería');
     }
   }
 
@@ -39,7 +40,7 @@ export const useTravelMediaStore = defineStore('useTravelMediaStore', () => {
       toast.add({ title: 'Archivo subido', color: 'success', icon: 'i-lucide-check' });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al subir archivo';
+      error.value = toErrorMessage(e, 'Error al subir archivo');
       toast.add({ title: 'Error al subir', description: error.value ?? undefined, color: 'error', icon: 'i-lucide-x' });
     }
     finally {
@@ -55,7 +56,7 @@ export const useTravelMediaStore = defineStore('useTravelMediaStore', () => {
       toast.add({ title: 'Archivo eliminado', color: 'success', icon: 'i-lucide-trash-2' });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al eliminar archivo';
+      error.value = toErrorMessage(e, 'Error al eliminar archivo');
       toast.add({ title: 'Error al eliminar', description: error.value ?? undefined, color: 'error', icon: 'i-lucide-x' });
     }
   }

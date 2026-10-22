@@ -3,6 +3,7 @@ import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { travelDetailQuery } from '~/queries/travels';
+import { toErrorMessage } from '~/utils/error-message';
 import { sanitizeName } from '~/utils/form-validation';
 
 type Props = {
@@ -103,17 +104,17 @@ async function saveOperators(bus: QuotationBus) {
     toast.add({ title: 'Teléfono incompleto', description: 'Revisa el teléfono de los operadores.', color: 'error' });
     return;
   }
-  const ok = await travelsStore.updateTravelBus(travelId, travelBus.id, {
-    operator1Name: draft.operator1Name,
-    operator1Phone: draft.operator1Phone,
-    operator2Name: draft.operator2Name || undefined,
-    operator2Phone: draft.operator2Phone || undefined,
-  });
-  if (ok) {
+  try {
+    await travelsStore.updateTravelBus(travelId, travelBus.id, {
+      operator1Name: draft.operator1Name,
+      operator1Phone: draft.operator1Phone,
+      operator2Name: draft.operator2Name || undefined,
+      operator2Phone: draft.operator2Phone || undefined,
+    });
     toast.add({ title: 'Operadores guardados', color: 'success', icon: 'i-lucide-check-circle' });
   }
-  else {
-    toast.add({ title: 'Error al guardar operadores', color: 'error', icon: 'i-lucide-alert-circle' });
+  catch (e) {
+    toast.add({ title: 'Error al guardar operadores', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error', icon: 'i-lucide-alert-circle' });
   }
 }
 
@@ -161,11 +162,13 @@ function getCoordinatorName(id: string): string {
 
 async function onCoordinatorsChange(busId: string, selected: string[]) {
   const capped = selected.slice(0, 2) as [] | [string] | [string, string];
-  const updated = await quotationStore.updateBusQuotation(busId, { coordinatorIds: capped });
-  if (!updated) {
+  try {
+    await quotationStore.updateBusQuotation(busId, { coordinatorIds: capped });
+  }
+  catch (e) {
     toast.add({
       title: 'No se pudieron guardar los coordinadores',
-      description: quotationStore.error ?? 'Intenta de nuevo',
+      description: toErrorMessage(e, 'Intenta de nuevo'),
       color: 'error',
       icon: 'i-lucide-alert-circle',
     });

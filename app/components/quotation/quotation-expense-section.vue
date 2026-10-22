@@ -10,6 +10,7 @@ import { useFormModal } from '~/composables/use-form-modal';
 import { deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
+import { toErrorMessage } from '~/utils/error-message';
 
 type Props = {
   quotationId: string;
@@ -34,11 +35,13 @@ function getCostPerSeat(expense: QuotationExpense): number {
 const { isOpen: isFormOpen, editing: selectedExpense, openNew, openEdit } = useFormModal<QuotationExpense>();
 
 async function handleSubmit(data: QuotationExpenseFormData) {
-  const result = selectedExpense.value
-    ? await quotationStore.updateExpense(selectedExpense.value.id, data)
-    : await quotationStore.addExpense(data);
-  if ('error' in result) {
-    toast.add({ title: 'No se pudo guardar el gasto', description: result.error, color: 'error' });
+  try {
+    await (selectedExpense.value
+      ? quotationStore.updateExpense(selectedExpense.value.id, data)
+      : quotationStore.addExpense(data));
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo guardar el gasto', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
     return;
   }
   toast.add({ title: selectedExpense.value ? 'Gasto actualizado' : 'Gasto agregado', color: 'success' });
@@ -54,11 +57,13 @@ async function handleDelete(expense: QuotationExpense) {
     return;
   }
 
-  const deleted = await quotationStore.deleteExpense(expense.id);
-  if (deleted)
+  try {
+    await quotationStore.deleteExpense(expense.id);
     toast.add({ title: 'Gasto eliminado', color: 'warning' });
-  else
-    toast.add({ title: 'No se pudo eliminar el gasto', description: quotationStore.error ?? undefined, color: 'error' });
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo eliminar el gasto', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
 }
 
 function getActions(expense: QuotationExpense) {

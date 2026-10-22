@@ -2,6 +2,7 @@
 import type { TravelFormData } from '~/types/travel';
 
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
+import { toErrorMessage } from '~/utils/error-message';
 
 const router = useRouter();
 const travelsStore = useTravelsStore();
@@ -14,19 +15,30 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   try {
     newTravel = await travelsStore.addTravel(data);
   }
-  catch {
+  catch (e) {
     toast.add({
       title: 'Error al crear el viaje',
-      description: travelsStore.error ?? 'No se pudo crear el viaje',
+      description: toErrorMessage(e, 'No se pudo crear el viaje'),
       color: 'error',
       icon: 'i-lucide-alert-circle',
     });
     return;
   }
 
+  // The travel exists: a banner that fails to save doesn't stop it, it can be set from Editar.
   if (bannerFile) {
-    const imageUrl = await uploadBanner(newTravel.id, bannerFile);
-    await travelsStore.updateTravel(newTravel.id, { imageUrl });
+    try {
+      const imageUrl = await uploadBanner(newTravel.id, bannerFile);
+      await travelsStore.updateTravel(newTravel.id, { imageUrl });
+    }
+    catch {
+      toast.add({
+        title: 'Viaje creado sin portada',
+        description: 'No se pudo guardar la imagen de portada. Súbela de nuevo desde Editar.',
+        color: 'warning',
+        icon: 'i-lucide-triangle-alert',
+      });
+    }
   }
 
   toast.add({

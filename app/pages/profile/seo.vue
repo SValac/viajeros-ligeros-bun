@@ -7,6 +7,7 @@ import {
   siteImageHint,
 } from '~/composables/agency-profile/use-agency-profile-domain';
 import { useSiteImageActions } from '~/composables/agency-profile/use-site-image-actions';
+import { toErrorMessage } from '~/utils/error-message';
 
 definePageMeta({
   name: 'profile-seo',
@@ -26,17 +27,19 @@ const shareWarning = computed(() =>
 );
 
 async function handleSubmit(data: AgencySeoFormData) {
-  const success = await agencyProfileStore.saveSeo(data);
-  if (success) {
-    toast.add({ title: 'SEO guardado', color: 'success', icon: 'i-lucide-check-circle' });
+  try {
+    await agencyProfileStore.saveSeo(data);
+  }
+  catch (e) {
+    toast.add({
+      title: 'No se pudo guardar el SEO',
+      description: toErrorMessage(e, 'Intenta de nuevo'),
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
     return;
   }
-  toast.add({
-    title: 'No se pudo guardar el SEO',
-    description: agencyProfileStore.error ?? undefined,
-    color: 'error',
-    icon: 'i-lucide-alert-circle',
-  });
+  toast.add({ title: 'SEO guardado', color: 'success', icon: 'i-lucide-check-circle' });
 }
 
 const { selectImage, removeImage } = useSiteImageActions();

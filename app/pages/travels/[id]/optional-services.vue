@@ -7,6 +7,7 @@ import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
+import { toErrorMessage } from '~/utils/error-message';
 
 definePageMeta({
   name: 'travel-optional-services',
@@ -77,10 +78,15 @@ const savingServiceId = shallowRef<string | null>(null);
 watch(travelId, async (id) => {
   if (!id)
     return;
-  await Promise.all([
-    quotationStore.fetchProviderOptOuts(id),
-    quotationStore.fetchTravelerAdjustments(id),
-  ]);
+  try {
+    await Promise.all([
+      quotationStore.fetchProviderOptOuts(id),
+      quotationStore.fetchTravelerAdjustments(id),
+    ]);
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo cargar quién toma cada servicio', description: toErrorMessage(e, 'Recarga la página'), color: 'error' });
+  }
 }, { immediate: true });
 
 async function onAdjust(travelerIds: string[], adjustmentId: string | null) {
@@ -89,11 +95,15 @@ async function onAdjust(travelerIds: string[], adjustmentId: string | null) {
     return;
 
   savingServiceId.value = service.id;
-  const error = await quotationStore.setTravelerAdjustment(service.id, travelId.value, travelerIds, adjustmentId);
-  savingServiceId.value = null;
-
-  if (error)
-    toast.add({ title: 'No se pudo guardar el precio', description: error, color: 'error' });
+  try {
+    await quotationStore.setTravelerAdjustment(service.id, travelId.value, travelerIds, adjustmentId);
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo guardar el precio', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
+  finally {
+    savingServiceId.value = null;
+  }
 }
 
 async function onChange(travelerIds: string[], takes: boolean) {
@@ -102,11 +112,15 @@ async function onChange(travelerIds: string[], takes: boolean) {
     return;
 
   savingServiceId.value = service.id;
-  const error = await quotationStore.setServiceTakers(service.id, travelId.value, travelerIds, takes);
-  savingServiceId.value = null;
-
-  if (error)
-    toast.add({ title: 'No se pudo guardar', description: error, color: 'error' });
+  try {
+    await quotationStore.setServiceTakers(service.id, travelId.value, travelerIds, takes);
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo guardar', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
+  finally {
+    savingServiceId.value = null;
+  }
 }
 </script>
 

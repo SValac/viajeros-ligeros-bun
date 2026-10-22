@@ -1,3 +1,5 @@
+import { toErrorMessage } from '~/utils/error-message';
+
 // Module-level singleton state — prevents duplicate script injection when
 // multiple components call loadGoogleMaps() before the first one resolves.
 const loading = ref(false);
@@ -57,7 +59,7 @@ export function useGoogleMaps() {
       error.value = null;
     }
     catch (err) {
-      const message = err instanceof Error ? err.message : 'Error desconocido al cargar Google Maps';
+      const message = toErrorMessage(err, 'Error desconocido al cargar Google Maps');
       error.value = message;
       console.error('❌ useGoogleMaps:', message);
       loaded.value = false;

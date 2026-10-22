@@ -13,6 +13,7 @@ import { useFormModal } from '~/composables/use-form-modal';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
+import { toErrorMessage } from '~/utils/error-message';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 import { pluralize } from '~/utils/pluralize';
@@ -97,9 +98,11 @@ function closeAdjustments() {
 async function handleAdjustmentsSave() {
   if (!adjustmentsProvider.value || invalidAdjustments.value)
     return;
-  const error = await quotationStore.saveProviderAdjustments(adjustmentsProvider.value.id, adjustmentsDraft.value);
-  if (error) {
-    toast.add({ title: 'Error', description: error, color: 'error' });
+  try {
+    await quotationStore.saveProviderAdjustments(adjustmentsProvider.value.id, adjustmentsDraft.value);
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudieron guardar los precios por tipo'), color: 'error' });
     return;
   }
   toast.add({ title: 'Precios por tipo guardados', color: 'success' });
@@ -115,9 +118,11 @@ function openCourtesy(provider: QuotationProvider) {
 async function handleCourtesySubmit(coordinatorsCourtesy: boolean) {
   if (!courtesyProvider.value)
     return;
-  const result = await quotationStore.updateProviderCourtesy(courtesyProvider.value.id, coordinatorsCourtesy);
-  if ('error' in result) {
-    toast.add({ title: 'Error', description: result.error, color: 'error' });
+  try {
+    await quotationStore.updateProviderCourtesy(courtesyProvider.value.id, coordinatorsCourtesy);
+  }
+  catch (e) {
+    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo actualizar la cortesía'), color: 'error' });
     return;
   }
   toast.add({ title: 'Cortesía actualizada', color: 'success' });
@@ -132,32 +137,27 @@ function openHistory(provider: QuotationProvider) {
 }
 
 async function handleProviderSubmit(data: QuotationProviderFormData, adjustments: ProviderPriceAdjustmentDraft[]) {
-  let saved: QuotationProvider | undefined;
-  if (selectedProvider.value) {
-    saved = await quotationStore.updateQuotationProvider(selectedProvider.value.id, data);
-    if (saved) {
-      toast.add({ title: 'Proveedor actualizado', color: 'success' });
-    }
-    else {
-      toast.add({ title: 'No se pudo actualizar el proveedor', description: quotationStore.error ?? undefined, color: 'error' });
-      return;
-    }
+  const editing = selectedProvider.value;
+  let saved: QuotationProvider;
+  try {
+    saved = editing
+      ? await quotationStore.updateQuotationProvider(editing.id, data)
+      : await quotationStore.addQuotationProvider(data);
   }
-  else {
-    const result = await quotationStore.addQuotationProvider(data);
-    if ('error' in result) {
-      toast.add({ title: 'Error', description: result.error, color: 'error' });
-    }
-    else {
-      saved = result;
-      toast.add({ title: 'Proveedor agregado', color: 'success' });
-    }
+  catch (e) {
+    toast.add({ title: editing ? 'No se pudo actualizar el proveedor' : 'No se pudo agregar el proveedor', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+    return;
   }
+  toast.add({ title: editing ? 'Proveedor actualizado' : 'Proveedor agregado', color: 'success' });
+
   // Adjustments go separately; for a total cost any existing ones are deleted.
-  if (saved && (adjustments.length > 0 || quotationStore.getAdjustmentsByProvider(saved.id).length > 0)) {
-    const error = await quotationStore.saveProviderAdjustments(saved.id, adjustments);
-    if (error)
-      toast.add({ title: 'No se guardaron los precios por tipo', description: error, color: 'error' });
+  if (adjustments.length > 0 || quotationStore.getAdjustmentsByProvider(saved.id).length > 0) {
+    try {
+      await quotationStore.saveProviderAdjustments(saved.id, adjustments);
+    }
+    catch (e) {
+      toast.add({ title: 'No se guardaron los precios por tipo', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+    }
   }
   isProviderFormOpen.value = false;
   selectedProvider.value = null;
@@ -166,7 +166,12 @@ async function handleProviderSubmit(data: QuotationProviderFormData, adjustments
 async function handleToggleConfirmed(provider: QuotationProvider) {
   if (readonly)
     return;
-  await quotationStore.toggleProviderConfirmed(provider.id);
+  try {
+    await quotationStore.toggleProviderConfirmed(provider.id);
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo actualizar el proveedor', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
 }
 
 async function handleDelete(provider: QuotationProvider) {
@@ -177,8 +182,13 @@ async function handleDelete(provider: QuotationProvider) {
     return;
   }
 
-  await quotationStore.deleteQuotationProvider(provider.id);
-  toast.add({ title: 'Proveedor eliminado', color: 'warning' });
+  try {
+    await quotationStore.deleteQuotationProvider(provider.id);
+    toast.add({ title: 'Proveedor eliminado', color: 'warning' });
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo eliminar el proveedor', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
 }
 
 const supplierTable = useSupplierTable<QuotationProvider>('provider');

@@ -11,8 +11,9 @@ type SupplierPaymentApi = {
   pendingBalance: (parentId: string) => number;
   status: (parentId: string) => PaymentStatus;
   overpayment: (parentId: string) => number;
-  add: (parentId: string, data: SupplierPaymentFields) => Promise<SupplierPayment | { error: string }>;
-  update: (paymentId: string, data: SupplierPaymentFields) => Promise<SupplierPayment | undefined>;
+  // They throw an Error with a user-facing message when the write fails or is refused.
+  add: (parentId: string, data: SupplierPaymentFields) => Promise<SupplierPayment>;
+  update: (paymentId: string, data: SupplierPaymentFields) => Promise<SupplierPayment>;
   remove: (paymentId: string) => Promise<void>;
 };
 

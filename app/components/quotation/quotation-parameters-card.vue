@@ -4,6 +4,7 @@ import type { Traveler } from '~/types/traveler';
 
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
+import { toErrorMessage } from '~/utils/error-message';
 import { sanitizeText } from '~/utils/form-validation';
 import { pluralize } from '~/utils/pluralize';
 
@@ -85,7 +86,7 @@ async function saveParameters() {
     catch (e) {
       toast.add({
         title: 'No se pudieron revisar los coordinadores',
-        description: e instanceof Error ? e.message : undefined,
+        description: toErrorMessage(e, 'Intenta de nuevo'),
         color: 'error',
       });
       return;
@@ -101,20 +102,18 @@ async function saveParameters() {
   try {
     if (removesSeats)
       await travelerStore.clearCoordinatorSeats(quotation.travelId);
-    const updated = await quotationStore.updateQuotation(quotation.id, {
+    await quotationStore.updateQuotation(quotation.id, {
       minimumSeatTarget: paramsState.minimumSeatTarget,
       coordinatorsTakeSeats: paramsState.coordinatorsTakeSeats,
       notes: paramsState.notes,
     });
-    if (!updated)
-      throw new Error(quotationStore.error ?? 'No se pudieron guardar los parámetros');
     isEditingParameters.value = false;
     toast.add({ title: 'Parámetros actualizados', color: 'success' });
   }
   catch (e) {
     toast.add({
       title: 'Error al guardar',
-      description: e instanceof Error ? e.message : undefined,
+      description: toErrorMessage(e, 'No se pudieron guardar los parámetros'),
       color: 'error',
     });
   }

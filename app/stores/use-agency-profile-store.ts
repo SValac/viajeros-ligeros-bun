@@ -19,6 +19,7 @@ import {
 import { useAgencyProfileRepository } from '~/composables/agency-profile/use-agency-profile-repository';
 import { mapSeoFormToUpdate } from '~/composables/agency-profile/use-agency-seo-domain';
 import { serializeHomePage } from '~/composables/agency-profile/use-home-page-domain';
+import { toErrorMessage } from '~/utils/error-message';
 
 /**
  * Cache and orchestrator for the signed-in user's agency profile and the state catalog.
@@ -68,7 +69,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
       states.value = loadedStates;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al cargar el perfil de la agencia';
+      error.value = toErrorMessage(e, 'Error al cargar el perfil de la agencia');
     }
     finally {
       loading.value = false;
@@ -78,18 +79,17 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   /**
    * Normalizes and saves the profile form.
    * @param form - Validated form data
-   * @returns `true` on success; on failure the message is stored in `error`
+   * @throws Re-throws the error (its message is also stored in `error`)
    */
-  async function saveProfile(form: AgencyProfileFormData): Promise<boolean> {
+  async function saveProfile(form: AgencyProfileFormData): Promise<void> {
     saving.value = true;
     error.value = null;
     try {
       profile.value = await repository.update(mapFormToUpdate(form));
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al guardar el perfil';
-      return false;
+      error.value = toErrorMessage(e, 'Error al guardar el perfil');
+      throw e;
     }
     finally {
       saving.value = false;
@@ -100,18 +100,17 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
    * Saves the "Nosotros" page (serialized to the stored JSON). `null` removes the page
    * from the agency's site.
    * @param page - Validated editor state, or `null`
-   * @returns `true` on success; on failure the message is stored in `error`
+   * @throws Re-throws the error (its message is also stored in `error`)
    */
-  async function saveAboutPage(page: AboutPage | null): Promise<boolean> {
+  async function saveAboutPage(page: AboutPage | null): Promise<void> {
     saving.value = true;
     error.value = null;
     try {
       profile.value = await repository.update({ aboutPage: serializeAboutPage(page) });
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al guardar la página Nosotros';
-      return false;
+      error.value = toErrorMessage(e, 'Error al guardar la página Nosotros');
+      throw e;
     }
     finally {
       saving.value = false;
@@ -122,18 +121,17 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
    * Saves the home page (serialized to the stored JSON). `null` restores the site's
    * default home.
    * @param page - Validated editor state, or `null`
-   * @returns `true` on success; on failure the message is stored in `error`
+   * @throws Re-throws the error (its message is also stored in `error`)
    */
-  async function saveHomePage(page: HomePage | null): Promise<boolean> {
+  async function saveHomePage(page: HomePage | null): Promise<void> {
     saving.value = true;
     error.value = null;
     try {
       profile.value = await repository.update({ homePage: serializeHomePage(page) });
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al guardar la página principal';
-      return false;
+      error.value = toErrorMessage(e, 'Error al guardar la página principal');
+      throw e;
     }
     finally {
       saving.value = false;
@@ -144,18 +142,17 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
    * Saves the texts of the "SEO y redes" tab. Empty texts are saved as `null`, so the
    * site falls back to its defaults.
    * @param form - Validated form data
-   * @returns `true` on success; on failure the message is stored in `error`
+   * @throws Re-throws the error (its message is also stored in `error`)
    */
-  async function saveSeo(form: AgencySeoFormData): Promise<boolean> {
+  async function saveSeo(form: AgencySeoFormData): Promise<void> {
     saving.value = true;
     error.value = null;
     try {
       profile.value = await repository.update(mapSeoFormToUpdate(form));
-      return true;
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error al guardar el SEO';
-      return false;
+      error.value = toErrorMessage(e, 'Error al guardar el SEO');
+      throw e;
     }
     finally {
       saving.value = false;
@@ -170,16 +167,16 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
    * already live); it only leaves an orphan behind.
    * @param field - Profile image field to replace
    * @param file - Image picked by the user
-   * @returns `true` on success; on failure the message is stored in `error`
+   * @throws Re-throws the error (its message is also stored in `error`)
    */
-  async function changeSiteImage(field: AgencySiteImageField, file: File): Promise<boolean> {
+  async function changeSiteImage(field: AgencySiteImageField, file: File): Promise<void> {
     uploadingImage.value = field;
     error.value = null;
     const validationError = await validateSiteImageFile(field, file);
     if (validationError) {
       error.value = validationError;
       uploadingImage.value = null;
-      return false;
+      throw new Error(validationError);
     }
 
     const previousPath = getSiteImageStoragePath(profile.value?.[field] ?? null);
@@ -192,23 +189,22 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
     catch (e) {
       if (uploadedPath)
         await repository.removeImage(uploadedPath).catch(() => {});
-      error.value = e instanceof Error ? e.message : `Error al subir ${SITE_IMAGE_RULES[field].noun.toLowerCase()}`;
+      error.value = toErrorMessage(e, `Error al subir ${SITE_IMAGE_RULES[field].noun.toLowerCase()}`);
       uploadingImage.value = null;
-      return false;
+      throw e;
     }
 
     if (previousPath)
       await repository.removeImage(previousPath).catch(() => {});
     uploadingImage.value = null;
-    return true;
   }
 
   /**
    * Clears a profile image from the profile, then removes its file.
    * @param field - Profile image field to clear
-   * @returns `true` on success; on failure the message is stored in `error`
+   * @throws Re-throws the error (its message is also stored in `error`)
    */
-  async function removeSiteImage(field: AgencySiteImageField): Promise<boolean> {
+  async function removeSiteImage(field: AgencySiteImageField): Promise<void> {
     uploadingImage.value = field;
     error.value = null;
     const previousPath = getSiteImageStoragePath(profile.value?.[field] ?? null);
@@ -216,15 +212,14 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
       profile.value = await repository.update({ [field]: null });
     }
     catch (e) {
-      error.value = e instanceof Error ? e.message : `Error al quitar ${SITE_IMAGE_RULES[field].noun.toLowerCase()}`;
+      error.value = toErrorMessage(e, `Error al quitar ${SITE_IMAGE_RULES[field].noun.toLowerCase()}`);
       uploadingImage.value = null;
-      return false;
+      throw e;
     }
 
     if (previousPath)
       await repository.removeImage(previousPath).catch(() => {});
     uploadingImage.value = null;
-    return true;
   }
 
   return {

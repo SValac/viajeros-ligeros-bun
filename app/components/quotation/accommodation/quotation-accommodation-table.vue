@@ -11,6 +11,7 @@ import { useSupplierTable } from '~/composables/quotation/use-supplier-table';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
+import { toErrorMessage } from '~/utils/error-message';
 
 type Props = {
   quotationId: string;
@@ -104,7 +105,7 @@ function getRowActions(accommodation: QuotationAccommodation) {
         icon: 'i-lucide-pencil',
         onSelect: () => openEdit(accommodation),
       },
-      supplierTable.confirmAction(accommodation, a => quotationStore.toggleAccommodationConfirmed(a.id)),
+      supplierTable.confirmAction(accommodation, handleToggleConfirmed),
     ],
     [
       deleteAction(() => deleteAccommodation(accommodation)),
@@ -171,15 +172,16 @@ async function saveEdit() {
     return;
   }
 
-  const updated = await quotationStore.updateQuotationAccommodation(editingAccommodation.value.id, {
-    nightCount: editFormState.nightCount,
-    details: editFormState.details.map(d => ({ ...d, id: d.id ?? crypto.randomUUID() })),
-  });
-
-  if ('error' in updated) {
+  try {
+    await quotationStore.updateQuotationAccommodation(editingAccommodation.value.id, {
+      nightCount: editFormState.nightCount,
+      details: editFormState.details.map(d => ({ ...d, id: d.id ?? crypto.randomUUID() })),
+    });
+  }
+  catch (e) {
     toast.add({
       title: 'No se pudo actualizar el hospedaje',
-      description: updated.error,
+      description: toErrorMessage(e, 'Intenta de nuevo'),
       color: 'error',
     });
     return;
@@ -207,11 +209,13 @@ async function deleteAccommodation(accommodation: QuotationAccommodation) {
     return;
   }
 
-  const error = await quotationStore.deleteQuotationAccommodation(accommodation.id);
-  if (error) {
+  try {
+    await quotationStore.deleteQuotationAccommodation(accommodation.id);
+  }
+  catch (e) {
     toast.add({
       title: 'No se pudo eliminar el hospedaje',
-      description: error,
+      description: toErrorMessage(e, 'Intenta de nuevo'),
       color: 'error',
     });
     return;
@@ -220,6 +224,15 @@ async function deleteAccommodation(accommodation: QuotationAccommodation) {
     title: 'Hospedaje eliminado',
     color: 'success',
   });
+}
+
+async function handleToggleConfirmed(accommodation: QuotationAccommodation) {
+  try {
+    await quotationStore.toggleAccommodationConfirmed(accommodation.id);
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo actualizar el hospedaje', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  }
 }
 </script>
 

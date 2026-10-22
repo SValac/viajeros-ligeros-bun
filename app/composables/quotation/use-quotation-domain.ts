@@ -1,4 +1,4 @@
-import type { ProviderPriceAdjustment, Quotation, QuotationAccommodation, QuotationBus, QuotationExpense, QuotationProvider } from '~/types/quotation';
+import type { CostSplitType, ProviderPriceAdjustment, Quotation, QuotationAccommodation, QuotationBus, QuotationExpense, QuotationProvider } from '~/types/quotation';
 import type { TravelAccommodation } from '~/types/travel';
 
 /**
@@ -87,6 +87,18 @@ export function countServiceTakers(provider: Pick<QuotationProvider, 'unitCost' 
 }
 
 /**
+ * Sum of the total costs split among the given seats ("Dividir entre").
+ * @param items - Providers, buses or expenses of one quotation
+ * @param splitType - Which split to add up
+ * @returns The sum of `totalCost` of the items with that split
+ */
+export function sumBySplit(items: { totalCost: number; splitType: CostSplitType }[], splitType: CostSplitType): number {
+  return items
+    .filter(item => item.splitType === splitType)
+    .reduce((sum, item) => sum + item.totalCost, 0);
+}
+
+/**
  * Cost of a provider with the bus full: per-person ones are their unit cost × the sellable
  * seats; the rest, their total. Used for the trip's cost and projected profit.
  * @param provider - The quotation provider
@@ -122,16 +134,9 @@ export function calculateSeatPrice(
   buses: Pick<QuotationBus, 'totalCost' | 'splitType'>[],
   expenses: Pick<QuotationExpense, 'totalCost' | 'splitType'>[],
 ): number {
-  const totalProviders = providers.filter(p => !isPerPersonProvider(p));
-  const minCost = totalProviders.filter(p => (p.splitType ?? 'minimum') === 'minimum').reduce((acc, p) => acc + p.totalCost, 0);
-  const occupiedCost = totalProviders.filter(p => (p.splitType ?? 'minimum') === 'total').reduce((acc, p) => acc + p.totalCost, 0);
-  const minBusesCost = buses.filter(b => (b.splitType ?? 'minimum') === 'minimum').reduce((acc, b) => acc + (b.totalCost ?? 0), 0);
-  const busesTotalCost = buses.filter(b => (b.splitType ?? 'minimum') === 'total').reduce((acc, b) => acc + (b.totalCost ?? 0), 0);
-  const minExpensesCost = expenses.filter(e => e.splitType === 'minimum').reduce((acc, e) => acc + e.totalCost, 0);
-  const expensesTotalCost = expenses.filter(e => e.splitType === 'total').reduce((acc, e) => acc + e.totalCost, 0);
-
-  const minPart = seats.minimumSeatTarget > 0 ? (minCost + minBusesCost + minExpensesCost) / seats.minimumSeatTarget : 0;
-  const occupiedPart = seats.sellableSeats > 0 ? (occupiedCost + busesTotalCost + expensesTotalCost) / seats.sellableSeats : 0;
+  const splitCosts = [...providers.filter(p => !isPerPersonProvider(p)), ...buses, ...expenses];
+  const minPart = seats.minimumSeatTarget > 0 ? sumBySplit(splitCosts, 'minimum') / seats.minimumSeatTarget : 0;
+  const occupiedPart = seats.sellableSeats > 0 ? sumBySplit(splitCosts, 'total') / seats.sellableSeats : 0;
   const perPersonPart = providers.filter(isPerPersonProvider).reduce((acc, p) => acc + (p.unitCost ?? 0), 0);
 
   if (minPart === 0 && occupiedPart === 0 && perPersonPart === 0) {
