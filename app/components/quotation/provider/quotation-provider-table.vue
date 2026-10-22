@@ -7,7 +7,7 @@ import type { PaymentStatus } from '~/types/payment';
 import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProviderFormData } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
-import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { calculateProviderQuotedCost, countServiceTakers, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
 import { useFormModal } from '~/composables/use-form-modal';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
@@ -80,11 +80,6 @@ function isProviderInactive(providerId: string): boolean {
 // Cost with a full bus: for a per-person service, cost × sellable seats.
 function getQuotedCost(provider: QuotationProvider): number {
   return calculateProviderQuotedCost(provider, quotationStore.getSellableSeats(provider.quotationId, coordinatorCount.value));
-}
-
-// How many travelers count for the payment of a per-person service.
-function getTakersCount(provider: QuotationProvider): number {
-  return provider.unitCost ? Math.round(provider.payableCost / provider.unitCost) : 0;
 }
 
 function openAdjustments(provider: QuotationProvider) {
@@ -300,7 +295,7 @@ const columns: TableColumn<QuotationProvider>[] = [
           ? h(resolveComponent('ULink'), {
               to: { name: 'travel-optional-services', params: { id: travelId.value } },
               class: 'text-xs text-primary whitespace-nowrap',
-            }, () => `${getTakersCount(provider)} lo toman`)
+            }, () => `${countServiceTakers(provider)} lo toman`)
           : null,
       ]);
     },

@@ -2,7 +2,7 @@
 import type { OptionalServiceListItem } from '~/components/travel/travel-optional-service-list.vue';
 import type { QuotationProvider } from '~/types/quotation';
 
-import { isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
+import { countServiceTakers, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useQueryLoadState } from '~/queries/load-state';
@@ -39,7 +39,7 @@ const listItems = computed<OptionalServiceListItem[]>(() => services.value.map(s
   id: s.id,
   label: s.serviceDescription,
   providerName: providerStore.getProviderName(s.providerId),
-  takers: s.unitCost ? Math.round(s.payableCost / s.unitCost) : 0,
+  takers: countServiceTakers(s),
   payableCost: s.payableCost,
   overpaid: quotationStore.getProviderOverpayment(s.id) > 0,
 })));
@@ -148,6 +148,8 @@ async function onChange(travelerIds: string[], takes: boolean) {
               :occupants="occupants"
               :opted-out="quotationStore.getOptOutsByProvider(selectedService.id)"
               :paid="quotationStore.getPaidByProvider(selectedService.id)"
+              :pending="quotationStore.getPendingBalanceByProvider(selectedService.id)"
+              :overpaid="quotationStore.getProviderOverpayment(selectedService.id)"
               :sellable-seats="sellableSeats"
               :adjustments="selectedAdjustments"
               :adjustment-by-traveler="selectedAdjustmentByTraveler"

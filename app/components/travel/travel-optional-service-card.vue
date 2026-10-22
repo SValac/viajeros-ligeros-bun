@@ -17,6 +17,8 @@ type Props = {
   /** Ids of the travelers who don't take it. */
   optedOut: Set<string>;
   paid: number;
+  pending: number;
+  overpaid: number;
   /** For the reference cost with a full bus. */
   sellableSeats: number;
   /** The service's prices by type of person (Niño -10%...). */
@@ -26,7 +28,7 @@ type Props = {
   busy?: boolean;
 };
 
-const { service, occupants, optedOut, paid, sellableSeats, adjustments = [], adjustmentByTraveler = new Map(), busy = false } = defineProps<Props>();
+const { service, occupants, optedOut, paid, pending, overpaid, sellableSeats, adjustments = [], adjustmentByTraveler = new Map(), busy = false } = defineProps<Props>();
 
 const emit = defineEmits<{
   change: [travelerIds: string[], takes: boolean];
@@ -67,9 +69,6 @@ const breakdown = computed(() => {
     .map(([price, count]) => `${count} × ${formatCurrency(price)}`)
     .join(' + ');
 });
-
-const pending = computed(() => Math.max(0, service.payableCost - paid));
-const overpaid = computed(() => Math.max(0, paid - service.payableCost));
 
 const allTake = computed(() => takers.value.length === selectable.value.length);
 const noneTake = computed(() => takers.value.length === 0);
