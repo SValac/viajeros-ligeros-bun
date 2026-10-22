@@ -96,8 +96,10 @@ async function deleteTravel() {
 </script>
 
 <template>
+  <!-- `null` = it doesn't exist: keep the spinner while useRedirectIfMissing leaves, not a blank page -->
   <LoadState
     v-bind="loadState"
+    :is-loaded="!!travel"
     label="el viaje"
     fill
     @retry="refetch()"

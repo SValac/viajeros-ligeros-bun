@@ -12,6 +12,7 @@ import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/u
 import { useFormModal } from '~/composables/use-form-modal';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
+import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 import { pluralize } from '~/utils/pluralize';
@@ -367,6 +368,7 @@ const columns: TableColumn<QuotationProvider>[] = [
     <EmptyState
       v-else
       section="services"
+      :description="readonly ? CONFIRMED_QUOTATION_EMPTY_DESCRIPTION : undefined"
       :actions="readonly ? undefined : [{ label: 'Agregar proveedor', icon: 'i-lucide-plus', onClick: openNewProvider }]"
     />
   </div>
