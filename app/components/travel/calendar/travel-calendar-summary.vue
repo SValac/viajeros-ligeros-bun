@@ -160,5 +160,9 @@ const highlights = computed(() => travel.value?.highlights.slice(0, MAX_HIGHLIGH
         </div>
       </template>
     </UCard>
+    <!-- `null`: the travel was deleted (or RLS hides it) since the calendar loaded -->
+    <UCard v-else>
+      <EmptyState section="missingTravel" compact />
+    </UCard>
   </LoadState>
 </template>

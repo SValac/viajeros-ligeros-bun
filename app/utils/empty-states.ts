@@ -15,6 +15,12 @@ export const EMPTY_STATES = {
     title: 'Todavía no hay viajes',
     description: 'Crea un viaje para cotizarlo, inscribir viajeros y registrar sus pagos.',
   },
+  // A travel picked by id (a link, the calendar) that no longer exists
+  missingTravel: {
+    icon: 'i-lucide-map-pin-off',
+    title: 'Este viaje ya no existe',
+    description: 'Se borró o ya no tienes acceso. Elige otro viaje.',
+  },
   quotation: {
     icon: 'i-lucide-calculator',
     title: 'Este viaje no tiene cotización',

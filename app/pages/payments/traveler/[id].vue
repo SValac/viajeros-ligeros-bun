@@ -199,8 +199,10 @@ watch(travelerTravelIds, (ids) => {
 </script>
 
 <template>
+  <!-- `null` = it doesn't exist: keep the spinner while useRedirectIfMissing leaves, not a blank page -->
   <LoadState
     v-bind="travelerLoad"
+    :is-loaded="!!traveler"
     label="el viajero"
     @retry="refetch()"
   >
