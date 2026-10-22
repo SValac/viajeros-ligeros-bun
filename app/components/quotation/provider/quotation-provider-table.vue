@@ -9,6 +9,7 @@ import type { ProviderPriceAdjustmentDraft, QuotationProvider, QuotationProvider
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { calculateProviderQuotedCost, countServiceTakers, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
+import { useActionToast } from '~/composables/use-action-toast';
 import { useFormModal } from '~/composables/use-form-modal';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
@@ -28,6 +29,7 @@ const { quotationId, readonly = false } = defineProps<Props>();
 const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const toast = useToast();
+const { runWithToast } = useActionToast();
 const confirmDelete = useConfirmDelete();
 
 // Derived data
@@ -98,11 +100,11 @@ function closeAdjustments() {
 async function handleAdjustmentsSave() {
   if (!adjustmentsProvider.value || invalidAdjustments.value)
     return;
-  try {
-    await quotationStore.saveProviderAdjustments(adjustmentsProvider.value.id, adjustmentsDraft.value);
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudieron guardar los precios por tipo'), color: 'error' });
+  const providerId = adjustmentsProvider.value.id;
+  if (!(await runWithToast(() => quotationStore.saveProviderAdjustments(providerId, adjustmentsDraft.value), {
+    error: 'Error',
+    errorFallback: 'No se pudieron guardar los precios por tipo',
+  }))) {
     return;
   }
   toast.add({ title: 'Precios por tipo guardados', color: 'success' });
@@ -118,11 +120,11 @@ function openCourtesy(provider: QuotationProvider) {
 async function handleCourtesySubmit(coordinatorsCourtesy: boolean) {
   if (!courtesyProvider.value)
     return;
-  try {
-    await quotationStore.updateProviderCourtesy(courtesyProvider.value.id, coordinatorsCourtesy);
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo actualizar la cortesía'), color: 'error' });
+  const providerId = courtesyProvider.value.id;
+  if (!(await runWithToast(() => quotationStore.updateProviderCourtesy(providerId, coordinatorsCourtesy), {
+    error: 'Error',
+    errorFallback: 'No se pudo actualizar la cortesía',
+  }))) {
     return;
   }
   toast.add({ title: 'Cortesía actualizada', color: 'success' });
@@ -152,12 +154,9 @@ async function handleProviderSubmit(data: QuotationProviderFormData, adjustments
 
   // Adjustments go separately; for a total cost any existing ones are deleted.
   if (adjustments.length > 0 || quotationStore.getAdjustmentsByProvider(saved.id).length > 0) {
-    try {
-      await quotationStore.saveProviderAdjustments(saved.id, adjustments);
-    }
-    catch (e) {
-      toast.add({ title: 'No se guardaron los precios por tipo', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
-    }
+    await runWithToast(() => quotationStore.saveProviderAdjustments(saved.id, adjustments), {
+      error: 'No se guardaron los precios por tipo',
+    });
   }
   isProviderFormOpen.value = false;
   selectedProvider.value = null;
@@ -166,12 +165,9 @@ async function handleProviderSubmit(data: QuotationProviderFormData, adjustments
 async function handleToggleConfirmed(provider: QuotationProvider) {
   if (readonly)
     return;
-  try {
-    await quotationStore.toggleProviderConfirmed(provider.id);
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo actualizar el proveedor', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
-  }
+  await runWithToast(() => quotationStore.toggleProviderConfirmed(provider.id), {
+    error: 'No se pudo actualizar el proveedor',
+  });
 }
 
 async function handleDelete(provider: QuotationProvider) {
@@ -182,13 +178,10 @@ async function handleDelete(provider: QuotationProvider) {
     return;
   }
 
-  try {
-    await quotationStore.deleteQuotationProvider(provider.id);
-    toast.add({ title: 'Proveedor eliminado', color: 'warning' });
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo eliminar el proveedor', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
-  }
+  await runWithToast(() => quotationStore.deleteQuotationProvider(provider.id), {
+    success: { title: 'Proveedor eliminado', color: 'warning' },
+    error: 'No se pudo eliminar el proveedor',
+  });
 }
 
 const supplierTable = useSupplierTable<QuotationProvider>('provider');

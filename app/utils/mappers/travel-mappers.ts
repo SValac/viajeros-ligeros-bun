@@ -1,5 +1,6 @@
-import type { Tables } from '~/types/database.types';
+import type { Tables, TablesInsert } from '~/types/database.types';
 import type { Travel, TravelAccommodation, TravelActivity, TravelBus, TravelFormData, TravelService } from '~/types/travel';
+import type { TravelMedia, TravelMediaType } from '~/types/travel-media';
 
 export function mapTravelRowToDomain(
   row: Tables<'travels'> & {
@@ -100,6 +101,58 @@ export function mapTravelAccommodationRowToDomain(row: Tables<'travel_accommodat
     floor: row.floor ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+export function mapTravelServiceToInsert(travelId: string, service: TravelService): TablesInsert<'travel_services'> {
+  return {
+    travel_id: travelId,
+    name: service.name,
+    description: service.description ?? null,
+    included: service.included,
+  };
+}
+
+export function mapTravelBusToInsert(travelId: string, bus: TravelBus): TablesInsert<'travel_buses'> {
+  return {
+    travel_id: travelId,
+    bus_id: bus.busId ?? null,
+    provider_id: bus.providerId,
+    model: bus.model ?? null,
+    brand: bus.brand ?? null,
+    year: bus.year ?? null,
+    operator1_name: bus.operator1Name,
+    operator1_phone: bus.operator1Phone,
+    operator2_name: bus.operator2Name ?? null,
+    operator2_phone: bus.operator2Phone ?? null,
+    seat_count: bus.seatCount,
+  };
+}
+
+export function mapTravelAccommodationToInsert(
+  travelId: string,
+  accommodation: Pick<TravelAccommodation, 'providerId' | 'hotelRoomTypeId' | 'maxOccupancy' | 'roomNumber' | 'floor'>,
+): TablesInsert<'travel_accommodations'> {
+  return {
+    travel_id: travelId,
+    provider_id: accommodation.providerId,
+    hotel_room_type_id: accommodation.hotelRoomTypeId ?? null,
+    max_occupancy: accommodation.maxOccupancy,
+    room_number: accommodation.roomNumber ?? null,
+    floor: accommodation.floor ?? null,
+  };
+}
+
+export function mapTravelMediaRowToDomain(row: Tables<'travel_media'>): TravelMedia {
+  return {
+    id: row.id,
+    travelId: row.travel_id,
+    storagePath: row.storage_path,
+    publicUrl: row.public_url,
+    mediaType: row.media_type as TravelMediaType,
+    caption: row.caption,
+    displayOrder: row.display_order,
+    createdAt: row.created_at,
   };
 }
 

@@ -3,6 +3,8 @@ import { FunctionsHttpError } from '@supabase/supabase-js';
 import type { Coordinator, CoordinatorFormData, CoordinatorUpdateData } from '~/types/coordinator';
 import type { TablesUpdate } from '~/types/database.types';
 
+import { deleteById } from '~/utils/delete-by-id';
+
 /**
  * Data access layer for the `coordinators` table.
  * Each function performs a single Supabase operation and either returns domain data
@@ -84,13 +86,7 @@ export function useCoordinatorRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('coordinators')
-      .delete()
-      .eq('id', id);
-
-    if (error)
-      throw error;
+    await deleteById(supabase, 'coordinators', id);
   };
 
   async function invite(coordinatorId: string): Promise<void> {

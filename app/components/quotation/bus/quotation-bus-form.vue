@@ -5,9 +5,9 @@ import type { Bus } from '~/types/bus';
 import type { QuotationBus, QuotationBusStatus } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
+import { useActionToast } from '~/composables/use-action-toast';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { travelDetailQuery } from '~/queries/travels';
-import { toErrorMessage } from '~/utils/error-message';
 import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } from '~/utils/form-validation';
 import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 import { COST_SPLIT_OPTIONS } from '~/utils/quotation-labels';
@@ -32,6 +32,7 @@ const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const busStore = useBusStore();
 const toast = useToast();
+const { runWithToast } = useActionToast();
 
 const isEditing = computed(() => !!props.bus);
 
@@ -197,14 +198,13 @@ async function handleSubmit() {
     return;
   }
 
-  try {
-    await quotationStore.addBusQuotation({
-      quotationId: props.quotationId,
-      ...data,
-    });
-  }
-  catch (e) {
-    toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo agregar el autobús'), color: 'error' });
+  if (!(await runWithToast(() => quotationStore.addBusQuotation({
+    quotationId: props.quotationId,
+    ...data,
+  }), {
+    error: 'Error',
+    errorFallback: 'No se pudo agregar el autobús',
+  }))) {
     return;
   }
 
@@ -244,11 +244,9 @@ async function submitEdit(bus: QuotationBus, data: BusSchema) {
     return;
   }
 
-  try {
-    await quotationStore.updateBusQuotation(bus.id, data);
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo actualizar el autobús', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
+  if (!(await runWithToast(() => quotationStore.updateBusQuotation(bus.id, data), {
+    error: 'No se pudo actualizar el autobús',
+  }))) {
     return;
   }
 

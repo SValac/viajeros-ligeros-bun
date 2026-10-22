@@ -7,10 +7,10 @@ import type { QuotationBus } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { paymentMethodColumn, useSupplierTable } from '~/composables/quotation/use-supplier-table';
+import { useActionToast } from '~/composables/use-action-toast';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
-import { toErrorMessage } from '~/utils/error-message';
 
 type Props = {
   quotationId: string;
@@ -28,7 +28,7 @@ defineEmits<Emits>();
 const quotationStore = useQuotationStore();
 const { coordinatorCount } = useQuotationContext(() => quotationId);
 const providerStore = useProviderStore();
-const toast = useToast();
+const { runWithToast } = useActionToast();
 const confirmDelete = useConfirmDelete();
 
 const buses = computed(() => quotationStore.getBusesByQuotation(quotationId));
@@ -51,12 +51,9 @@ function openDetails(bus: QuotationBus) {
 async function handleToggleConfirmed(bus: QuotationBus) {
   if (readonly)
     return;
-  try {
-    await quotationStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed });
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo actualizar el autobús', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
-  }
+  await runWithToast(() => quotationStore.updateBusQuotation(bus.id, { confirmed: !bus.confirmed }), {
+    error: 'No se pudo actualizar el autobús',
+  });
 }
 
 async function handleDelete(bus: QuotationBus) {
@@ -67,13 +64,10 @@ async function handleDelete(bus: QuotationBus) {
     return;
   }
 
-  try {
-    await quotationStore.deleteBusQuotation(bus.id);
-    toast.add({ title: 'Autobús eliminado', color: 'warning' });
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo eliminar el autobús', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
-  }
+  await runWithToast(() => quotationStore.deleteBusQuotation(bus.id), {
+    success: { title: 'Autobús eliminado', color: 'warning' },
+    error: 'No se pudo eliminar el autobús',
+  });
 }
 
 const supplierTable = useSupplierTable<QuotationBus>('bus');

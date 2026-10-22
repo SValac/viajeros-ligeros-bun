@@ -1,6 +1,8 @@
 import type { Bus, BusFormData, BusUpdateData } from '~/types/bus';
 import type { TablesUpdate } from '~/types/database.types';
 
+import { deleteById } from '~/utils/delete-by-id';
+
 /**
  * Data access layer for the `buses` table.
  * Each function performs a single Supabase operation and either returns domain data
@@ -83,14 +85,7 @@ export function useBusRepository() {
    * @throws {PostgrestError} on Supabase failure
    */
   async function remove(id: string): Promise<void> {
-    const { error } = await supabase
-      .from('buses')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      throw error;
-    }
+    await deleteById(supabase, 'buses', id);
   };
 
   return { fetchAll, insert, update, remove };

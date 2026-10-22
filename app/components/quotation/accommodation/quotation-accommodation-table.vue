@@ -8,10 +8,10 @@ import type { QuotationAccommodation, QuotationAccommodationDetailFormData } fro
 
 import { useQuotationRoomCounts } from '~/composables/quotation/use-quotation-room-counts';
 import { useSupplierTable } from '~/composables/quotation/use-supplier-table';
+import { useActionToast } from '~/composables/use-action-toast';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
-import { toErrorMessage } from '~/utils/error-message';
 
 type Props = {
   quotationId: string;
@@ -26,6 +26,7 @@ const quotationStore = useQuotationStore();
 const providerStore = useProviderStore();
 const hotelRoomStore = useHotelRoomStore();
 const toast = useToast();
+const { runWithToast } = useActionToast();
 const confirmDelete = useConfirmDelete();
 
 // Rooms the travel holds per hotel room type: they're added on the travel's rooms page.
@@ -172,18 +173,13 @@ async function saveEdit() {
     return;
   }
 
-  try {
-    await quotationStore.updateQuotationAccommodation(editingAccommodation.value.id, {
-      nightCount: editFormState.nightCount,
-      details: editFormState.details.map(d => ({ ...d, id: d.id ?? crypto.randomUUID() })),
-    });
-  }
-  catch (e) {
-    toast.add({
-      title: 'No se pudo actualizar el hospedaje',
-      description: toErrorMessage(e, 'Intenta de nuevo'),
-      color: 'error',
-    });
+  const accommodationId = editingAccommodation.value.id;
+  if (!(await runWithToast(() => quotationStore.updateQuotationAccommodation(accommodationId, {
+    nightCount: editFormState.nightCount,
+    details: editFormState.details.map(d => ({ ...d, id: d.id ?? crypto.randomUUID() })),
+  }), {
+    error: 'No se pudo actualizar el hospedaje',
+  }))) {
     return;
   }
 
@@ -209,15 +205,9 @@ async function deleteAccommodation(accommodation: QuotationAccommodation) {
     return;
   }
 
-  try {
-    await quotationStore.deleteQuotationAccommodation(accommodation.id);
-  }
-  catch (e) {
-    toast.add({
-      title: 'No se pudo eliminar el hospedaje',
-      description: toErrorMessage(e, 'Intenta de nuevo'),
-      color: 'error',
-    });
+  if (!(await runWithToast(() => quotationStore.deleteQuotationAccommodation(accommodation.id), {
+    error: 'No se pudo eliminar el hospedaje',
+  }))) {
     return;
   }
   toast.add({
@@ -227,12 +217,9 @@ async function deleteAccommodation(accommodation: QuotationAccommodation) {
 }
 
 async function handleToggleConfirmed(accommodation: QuotationAccommodation) {
-  try {
-    await quotationStore.toggleAccommodationConfirmed(accommodation.id);
-  }
-  catch (e) {
-    toast.add({ title: 'No se pudo actualizar el hospedaje', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
-  }
+  await runWithToast(() => quotationStore.toggleAccommodationConfirmed(accommodation.id), {
+    error: 'No se pudo actualizar el hospedaje',
+  });
 }
 </script>
 

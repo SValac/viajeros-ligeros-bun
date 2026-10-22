@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import type { TravelFormData } from '~/types/travel';
 
-import { getGalleryStoragePath } from '~/composables/travels/use-travel-domain';
+import { TRAVEL_GALLERY_BUCKET } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { toErrorMessage } from '~/utils/error-message';
+import { storagePathFromPublicUrl } from '~/utils/storage';
 
 // General data only (name, dates, coordinators, status, public site, banner, notes). The
 // itinerary, services and gallery are edited in their own tabs. The "not found" redirect
@@ -60,7 +61,7 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   else if (!success && bannerFile)
     unusedBannerUrl = data.imageUrl;
 
-  const unusedBannerPath = getGalleryStoragePath(unusedBannerUrl);
+  const unusedBannerPath = storagePathFromPublicUrl(unusedBannerUrl, TRAVEL_GALLERY_BUCKET);
   if (unusedBannerPath)
     await removeFile(unusedBannerPath).catch(() => {});
 

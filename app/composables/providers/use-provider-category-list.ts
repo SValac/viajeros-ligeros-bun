@@ -3,12 +3,12 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData } from '~/types/provider';
 
 import { matchesProviderSearch } from '~/composables/providers/use-provider-domain';
+import { useActionToast } from '~/composables/use-action-toast';
 import { deleteAction } from '~/utils/actions-column';
-import { toErrorMessage } from '~/utils/error-message';
 
 export function useProviderCategoryList(category: ProviderCategory, detailRoute?: (provider: Provider) => string) {
   const providerStore = useProviderStore();
-  const toast = useToast();
+  const { runWithToast } = useActionToast();
   const router = useRouter();
   const confirmDelete = useConfirmDelete();
 
@@ -76,21 +76,16 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
   }
 
   async function handleFormSubmit(data: ProviderFormData) {
-    try {
-      data.category = category;
-
-      if (editingProvider.value) {
-        await providerStore.updateProvider(editingProvider.value.id, data);
-        toast.add({ title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' });
-      }
-      else {
-        await providerStore.addProvider(data);
-        toast.add({ title: 'Proveedor creado', description: `${data.name} se creó correctamente`, color: 'primary' });
-      }
+    data.category = category;
+    const editing = editingProvider.value;
+    if (await runWithToast(() => (editing ? providerStore.updateProvider(editing.id, data) : providerStore.addProvider(data)), {
+      success: editing
+        ? { title: 'Proveedor actualizado', description: `${data.name} se actualizó correctamente`, color: 'primary' }
+        : { title: 'Proveedor creado', description: `${data.name} se creó correctamente`, color: 'primary' },
+      error: 'Error',
+      errorFallback: 'Ocurrió un error al guardar el proveedor',
+    })) {
       closeModal();
-    }
-    catch (e) {
-      toast.add({ title: 'Error', description: toErrorMessage(e, 'Ocurrió un error al guardar el proveedor'), color: 'error' });
     }
   }
 
@@ -99,29 +94,25 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
       title: 'Eliminar proveedor',
       description: `¿Estás seguro de eliminar ${provider.name}?`,
     })) {
-      try {
-        await providerStore.deleteProvider(provider.id);
-        toast.add({ title: 'Proveedor eliminado', description: `${provider.name} se eliminó correctamente`, color: 'warning' });
-      }
-      catch (e) {
-        toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el proveedor'), color: 'error' });
-      }
+      await runWithToast(() => providerStore.deleteProvider(provider.id), {
+        success: { title: 'Proveedor eliminado', description: `${provider.name} se eliminó correctamente`, color: 'warning' },
+        error: 'Error',
+        errorFallback: 'No se pudo eliminar el proveedor',
+      });
     }
   }
 
   async function handleToggleStatus(provider: Provider) {
     const newStatus = !provider.active;
-    try {
-      await providerStore.toggleProviderStatus(provider.id);
-      toast.add({
+    await runWithToast(() => providerStore.toggleProviderStatus(provider.id), {
+      success: {
         title: 'Estado actualizado',
         description: `${provider.name} ahora está ${newStatus ? 'activo' : 'inactivo'}`,
         color: 'primary',
-      });
-    }
-    catch (e) {
-      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo cambiar el estado del proveedor'), color: 'error' });
-    }
+      },
+      error: 'Error',
+      errorFallback: 'No se pudo cambiar el estado del proveedor',
+    });
   }
 
   function getRowActions(provider: Provider): DropdownMenuItem[][] {
