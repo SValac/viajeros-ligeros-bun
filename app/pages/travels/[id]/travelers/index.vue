@@ -7,7 +7,7 @@ import type { Traveler, TravelerFilters, TravelerFormData, TravelerSeatChangeErr
 
 import BusSeatMap from '~/components/bus/bus-seat-map.vue';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
-import { filterTravelers, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { filterTravelers, getRepresentativeNames, groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useValidTab } from '~/composables/use-valid-tab';
@@ -163,13 +163,11 @@ function getOccupantsByBus(busId: string): Traveler[] {
   return occupantsOfTravel.value.filter(t => t.travelBusId === busId);
 }
 
+// Companion id → representative's name, also when they ride different buses.
+const representativeNames = computed(() => getRepresentativeNames(occupantsOfTravel.value));
+
 function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
   const travelersByBus = getOccupantsByBus(busId);
-  const representativeById = new Map(
-    travelersByBus
-      .filter(t => t.isRepresentative)
-      .map(t => [t.id, formatTravelerName(t)]),
-  );
 
   return travelersByBus
     .map((t) => {
@@ -181,9 +179,7 @@ function getOccupiedSeatsByBus(busId: string): OccupiedSeat[] {
         boardingPoint: t.boardingPoint,
         isRepresentative: t.isRepresentative,
         isCoordinator: t.kind === 'coordinator',
-        representativeName: t.representativeId
-          ? representativeById.get(t.representativeId)
-          : undefined,
+        representativeName: representativeNames.value[t.id],
         menuItems: t.kind === 'coordinator' ? getCoordinatorSeatActions(t) : getRowActions(t),
       };
     })

@@ -3,6 +3,7 @@ import type { ProviderPriceAdjustment, QuotationProvider } from '~/types/quotati
 import type { Traveler } from '~/types/traveler';
 
 import { calculateAdjustedUnitCost, formatPriceAdjustment } from '~/composables/quotation/use-quotation-domain';
+import { listTravelersByGroup } from '~/composables/travelers/use-traveler-domain';
 import { formatCurrency } from '~/utils/currency';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
@@ -73,10 +74,6 @@ const overpaid = computed(() => Math.max(0, paid - service.payableCost));
 const allTake = computed(() => takers.value.length === selectable.value.length);
 const noneTake = computed(() => takers.value.length === 0);
 
-function byName(a: Traveler, b: Traveler): number {
-  return formatTravelerName(a).localeCompare(formatTravelerName(b), 'es');
-}
-
 type Row = {
   traveler: Traveler;
   /** Companions only: who they come with. */
@@ -88,9 +85,7 @@ type Row = {
 // Those who come with the same representative go together: the representative and then their
 // companions, by representative name. Coordinators at the end.
 const rows = computed<Row[]>(() => {
-  const travelers = occupants.filter(t => t.kind === 'traveler');
-  const byId = new Map(travelers.map(t => [t.id, t]));
-  const toRow = (traveler: Traveler, representative?: Traveler): Row => {
+  const toRow = ({ traveler, representative }: { traveler: Traveler; representative?: Traveler }): Row => {
     const courtesy = isCourtesy(traveler);
     return {
       traveler,
@@ -100,14 +95,11 @@ const rows = computed<Row[]>(() => {
     };
   };
 
-  const leads = travelers.filter(t => !t.representativeId || !byId.has(t.representativeId)).sort(byName);
-  const result = leads.flatMap(lead => [
-    toRow(lead),
-    ...travelers.filter(t => t.representativeId === lead.id).sort(byName).map(t => toRow(t, lead)),
-  ]);
-
-  const coordinators = occupants.filter(t => t.kind === 'coordinator').sort(byName);
-  return [...result, ...coordinators.map(t => toRow(t))];
+  return [
+    ...listTravelersByGroup(occupants.filter(t => t.kind === 'traveler')),
+    // Coordinators have no representative: by name, at the end
+    ...listTravelersByGroup(occupants.filter(t => t.kind === 'coordinator')),
+  ].map(toRow);
 });
 
 function setAll(takes: boolean) {

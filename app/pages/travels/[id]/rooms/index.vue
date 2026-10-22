@@ -6,7 +6,7 @@ import type { Traveler } from '~/types/traveler';
 import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { roomTypeKey } from '~/composables/quotation/use-quotation-domain';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
-import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { getRepresentativeNames, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
@@ -138,16 +138,7 @@ const hotelGroups = computed((): HotelGroup[] => {
 });
 
 // Companion id → representative's full name, for the group shown on each room card.
-const representativeNames = computed(() => {
-  const byId = new Map(travelersOfTravel.value.map(t => [t.id, t]));
-  const names: Record<string, string> = {};
-  for (const traveler of travelersOfTravel.value) {
-    const representative = traveler.representativeId ? byId.get(traveler.representativeId) : undefined;
-    if (representative)
-      names[traveler.id] = formatTravelerName(representative);
-  }
-  return names;
-});
+const representativeNames = computed(() => getRepresentativeNames(travelersOfTravel.value));
 
 // A traveler needs one room in every hotel of the travel.
 function hasRoomInHotel(travelerId: string, providerId: string): boolean {

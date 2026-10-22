@@ -8,7 +8,7 @@ import type { Traveler, TravelerWithChildren } from '~/types/traveler';
 
 import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation';
-import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { groupTravelersByRepresentative, selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
 import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
@@ -52,38 +52,14 @@ const enrolledTravelers = computed(() =>
 const statusFilter = ref<PaymentStatus | 'all'>('all');
 const statusFilterOptions = getPaymentStatusFilterOptions('traveler');
 
-const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() => {
-  // Group ALL enrolled travelers by representativeId to preserve the tree structure.
-  // Filtering by status applies only to which representative rows are shown at root level.
-  const all = enrolledTravelers.value;
-  const grouped = Object.groupBy(all, t => t.representativeId ?? '');
-  const companionIds = new Set(
-    all.filter(t => t.representativeId).map(t => t.id),
-  );
-
-  const result: TravelerWithChildren[] = [];
-
-  for (const t of all) {
-    // Companions are embedded as children — skip them as root rows.
-    if (companionIds.has(t.id))
-      continue;
-
-    // Apply status filter at the representative level.
-    if (statusFilter.value !== 'all') {
-      const summary = paymentStore.getTravelerPaymentSummary(t.id, travelId.value);
-      if (summary.status !== statusFilter.value)
-        continue;
-    }
-
-    const children = grouped[t.id];
-    result.push({
-      ...t,
-      children: children && children.length > 0 ? children : undefined,
-    });
-  }
-
-  return result;
-});
+// Grouped first so companions stay under their representative; the status filter only picks
+// which root rows show.
+const groupedFilteredTravelers = computed<TravelerWithChildren[]>(() =>
+  groupTravelersByRepresentative(enrolledTravelers.value).filter(t =>
+    statusFilter.value === 'all'
+    || paymentStore.getTravelerPaymentSummary(t.id, travelId.value).status === statusFilter.value,
+  ),
+);
 
 const expanded = useExpandedGroups(groupedFilteredTravelers);
 
