@@ -265,7 +265,9 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   actionsColumn(getRowActions),
 ];
 
-useTravelPayments(travelId);
+const { loadState: paymentsLoad, refetch: refetchPayments } = useTravelPayments(travelId);
+// The figures keep "$0" instead of a skeleton that never ends when the payments fail
+const paymentsLoading = computed(() => !paymentsLoad.isLoaded && !paymentsLoad.loadError);
 </script>
 
 <template>
@@ -276,17 +278,20 @@ useTravelPayments(travelId);
         label="Total esperado"
         icon="i-lucide-wallet"
         :value="formatCurrency(cashSummary.totalExpected)"
+        :loading="paymentsLoading"
       />
       <StatCard
         label="Total recaudado"
         icon="i-lucide-trending-up"
         :value="formatCurrency(cashSummary.totalCollected)"
+        :loading="paymentsLoading"
       />
       <StatCard
         label="Saldo por cobrar"
         icon="i-lucide-clock"
         :value="formatCurrency(cashSummary.balance)"
         :value-class="cashSummary.balance > 0 ? 'text-warning' : 'text-success'"
+        :loading="paymentsLoading"
       />
     </div>
 
@@ -307,30 +312,39 @@ useTravelPayments(travelId);
       <LoadState
         v-bind="travelersLoad"
         label="los viajeros"
+        skeleton="table"
         @retry="refetchTravelers()"
       >
-        <template v-if="groupedFilteredTravelers.length === 0">
-          <EmptyState v-if="enrolledTravelers.length === 0" section="travelers" />
-          <EmptyState
+        <!-- Without the payments, every balance would read $0 -->
+        <LoadState
+          v-bind="paymentsLoad"
+          label="los pagos"
+          skeleton="table"
+          @retry="refetchPayments()"
+        >
+          <template v-if="groupedFilteredTravelers.length === 0">
+            <EmptyState v-if="enrolledTravelers.length === 0" section="travelers" />
+            <EmptyState
+              v-else
+              section="noResults"
+              :actions="[{ label: 'Limpiar filtros', icon: 'i-lucide-filter-x', color: 'neutral', variant: 'outline', onClick: clearStatusFilter }]"
+            />
+          </template>
+          <UTable
             v-else
-            section="noResults"
-            :actions="[{ label: 'Limpiar filtros', icon: 'i-lucide-filter-x', color: 'neutral', variant: 'outline', onClick: clearStatusFilter }]"
+            v-model:expanded="expanded"
+            :columns="columns"
+            :data="groupedFilteredTravelers"
+            :get-row-id="(row) => row.id"
+            :get-sub-rows="(row) => row.children"
+            :ui="{
+              base: 'border-separate border-spacing-0',
+              tbody: '[&>tr]:last:[&>td]:border-b-0',
+              tr: 'group',
+              td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
+            }"
           />
-        </template>
-        <UTable
-          v-else
-          v-model:expanded="expanded"
-          :columns="columns"
-          :data="groupedFilteredTravelers"
-          :get-row-id="(row) => row.id"
-          :get-sub-rows="(row) => row.children"
-          :ui="{
-            base: 'border-separate border-spacing-0',
-            tbody: '[&>tr]:last:[&>td]:border-b-0',
-            tr: 'group',
-            td: 'empty:p-0 group-has-[td:not(:empty)]:border-b border-default',
-          }"
-        />
+        </LoadState>
       </LoadState>
     </UCard>
 

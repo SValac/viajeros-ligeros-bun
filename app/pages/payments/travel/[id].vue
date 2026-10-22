@@ -19,11 +19,12 @@ useRedirectIfMissing({ status, data: travel }, {
 </script>
 
 <template>
-  <!-- `null` = it doesn't exist: keep the spinner while useRedirectIfMissing leaves, not a blank page -->
+  <!-- `null` = it doesn't exist: keep the skeleton while useRedirectIfMissing leaves, not a blank page -->
   <LoadState
     v-bind="travelLoad"
     :is-loaded="!!travel"
     label="el viaje"
+    skeleton="detail"
     @retry="refetch()"
   >
     <div v-if="travel" class="space-y-6">

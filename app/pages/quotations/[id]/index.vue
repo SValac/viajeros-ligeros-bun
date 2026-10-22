@@ -12,11 +12,11 @@ const { travelId, quotation } = useQuotationRoute();
 
 // Rendered by app/pages/quotations/[id].vue only when the quotation exists.
 const loadedQuotation = computed(() => quotation.value!);
-const travelersCollected = computed(() =>
-  paymentStore.getTravelCashSummary(travelId.value).totalCollected,
-);
-
-useTravelPayments(travelId);
+const { loadState: paymentsLoad } = useTravelPayments(travelId);
+// `undefined` (a skeleton) until the payments arrive; if they fail, the $0 stays with its toast
+const travelersCollected = computed(() => (paymentsLoad.isLoaded || paymentsLoad.loadError
+  ? paymentStore.getTravelCashSummary(travelId.value).totalCollected
+  : undefined));
 </script>
 
 <template>

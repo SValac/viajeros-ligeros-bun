@@ -98,7 +98,7 @@ async function deleteTravel() {
 </script>
 
 <template>
-  <!-- `null` = it doesn't exist: keep the spinner while useRedirectIfMissing leaves, not a blank page -->
+  <!-- `null` = it doesn't exist: keep the skeleton while useRedirectIfMissing leaves, not a blank page -->
   <LoadState
     v-bind="loadState"
     :is-loaded="!!travel"
@@ -106,6 +106,12 @@ async function deleteTravel() {
     fill
     @retry="refetch()"
   >
+    <!-- Lined up with the page's own container below -->
+    <template #loading>
+      <div class="max-w-6xl mx-auto p-6">
+        <LoadSkeleton variant="detail" label="el viaje" />
+      </div>
+    </template>
     <div v-if="travel" class="h-full overflow-auto">
       <div class="max-w-6xl mx-auto p-6 space-y-6">
         <PageHeader

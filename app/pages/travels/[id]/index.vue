@@ -14,13 +14,19 @@ const quotationStore = useQuotationStore();
 const { travelId, travel } = useTravelRoute();
 
 // The seat figures live in the quotation (they drive its seat price)
-const { quotation } = useTravelQuotation(travelId);
+const { quotation, load: quotationLoad } = useTravelQuotation(travelId);
 
 const coordinators = computed(() =>
   coordinatorStore.getCoordinatorsByIds(travel.value?.coordinatorIds ?? []),
 );
 
-type Detail = { icon: string; label: string; value: string };
+// Skeletons until they arrive; a failed load falls back to "—" / "Sin coordinadores"
+const quotationLoading = computed(() => !quotationLoad.isLoaded && !quotationLoad.loadError);
+const coordinatorsLoading = computed(() =>
+  (travel.value?.coordinatorIds.length ?? 0) > 0 && !coordinatorStore.isLoaded && !coordinatorStore.loadError,
+);
+
+type Detail = { icon: string; label: string; value: string; loading?: boolean };
 
 // From the quotation; "—" when there's no quotation yet or the value is 0 (not set)
 function seats(n: number | undefined): string {
@@ -37,9 +43,9 @@ const details = computed<Detail[]>(() => {
     { icon: 'i-lucide-calendar-check', label: 'Regreso', value: formatDate(t.endDate) },
     { icon: 'i-lucide-clock', label: 'Duración', value: pluralize(getTravelDurationDays(t), 'día') },
     { icon: 'i-lucide-map-pin', label: 'Sale desde', value: t.departureFrom || '—' },
-    { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(quotation.value?.minimumSeatTarget) },
-    { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(quotation.value?.totalSeats) },
-    { icon: 'i-lucide-ticket', label: 'Asientos vendibles', value: seats(quotation.value && quotationStore.getSellableSeats(quotation.value.id, t.coordinatorIds.length)) },
+    { icon: 'i-lucide-armchair', label: 'Meta mínima de asientos', value: seats(quotation.value?.minimumSeatTarget), loading: quotationLoading.value },
+    { icon: 'i-lucide-bus', label: 'Capacidad total', value: seats(quotation.value?.totalSeats), loading: quotationLoading.value },
+    { icon: 'i-lucide-ticket', label: 'Asientos vendibles', value: seats(quotation.value && quotationStore.getSellableSeats(quotation.value.id, t.coordinatorIds.length)), loading: quotationLoading.value },
     { icon: 'i-lucide-star', label: 'Destacado en la web', value: t.featured ? 'Sí' : 'No' },
   ];
 });
@@ -106,7 +112,10 @@ const details = computed<Detail[]>(() => {
               {{ detail.label }}
             </dt>
             <dd class="text-right font-medium">
-              {{ detail.value }}
+              <USkeleton v-if="detail.loading" class="ml-auto h-4 w-20" />
+              <template v-else>
+                {{ detail.value }}
+              </template>
             </dd>
           </div>
         </dl>
@@ -119,7 +128,14 @@ const details = computed<Detail[]>(() => {
           </h2>
         </template>
 
-        <ul v-if="coordinators.length > 0" class="space-y-2">
+        <div v-if="coordinatorsLoading" class="space-y-2">
+          <USkeleton
+            v-for="id in travel.coordinatorIds"
+            :key="id"
+            class="h-5 w-40"
+          />
+        </div>
+        <ul v-else-if="coordinators.length > 0" class="space-y-2">
           <li
             v-for="coordinator in coordinators"
             :key="coordinator.id"

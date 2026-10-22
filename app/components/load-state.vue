@@ -1,18 +1,26 @@
 <script setup lang="ts">
+import type { LoadSkeletonVariant } from '~/components/load-skeleton.vue';
+
 /**
- * Spinner, then error + Reintentar, then the slot: for screens that read a query or a catalog
+ * Skeleton, then error + Reintentar, then the slot: for screens that read a query or a catalog
  * store. Until the data loads, an empty list or a missing record would be a lie. A failed
  * refetch with data already loaded keeps the slot, with a warning and Reintentar above it.
  * For a Pinia Colada query, get the props from `useQueryLoadState`.
  */
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   isLoaded: boolean;
   loadError: unknown;
   /** What failed to load, with its article: "los proveedores", "la cotización". */
   label: string;
-  /** Center the spinner and the error in the full height (a whole page) instead of padding. */
+  /** Center the error in the full height (a whole page) instead of padding. */
   fill?: boolean;
-}>();
+  /** The `LoadSkeleton` preset shaped like the slot. The `#loading` slot replaces it. */
+  skeleton?: LoadSkeletonVariant;
+  /** StatCards at the top of the slot (see `LoadSkeleton`). */
+  stats?: 3 | 4;
+}>(), {
+  skeleton: 'panel',
+});
 
 const emit = defineEmits<{
   retry: [];
@@ -59,11 +67,11 @@ const staleMessage = computed(() => isPlural.value
       @click="emit('retry')"
     />
   </div>
-  <div
-    v-else
-    class="flex items-center justify-center"
-    :class="fill ? 'h-full' : 'py-12'"
-  >
-    <UIcon name="i-lucide-loader-circle" class="size-8 animate-spin text-muted" />
-  </div>
+  <slot v-else name="loading">
+    <LoadSkeleton
+      :variant="skeleton"
+      :stats="stats"
+      :label="label"
+    />
+  </slot>
 </template>

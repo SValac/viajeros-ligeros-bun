@@ -107,6 +107,7 @@ async function handleDelete(rt: HotelRoomType) {
       :is-loaded="store.isLoaded"
       :load-error="store.loadError"
       label="las habitaciones"
+      skeleton="cards"
       @retry="store.refetch()"
     >
       <div class="space-y-6">

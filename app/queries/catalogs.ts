@@ -84,7 +84,7 @@ export function useCatalogState<T>(
   const loadState = useQueryLoadState(query);
   /** `false` until the first load resolves: an empty `items` before that is not "no records". */
   const isLoaded = computed(() => loadState.isLoaded);
-  /** The last load's error, hidden while a retry runs so the screen shows the spinner again. */
+  /** The last load's error, hidden while a retry runs so the screen shows the skeleton again. */
   const loadError = computed(() => loadState.loadError);
 
   /** Retries the load (e.g. from an error state's "Reintentar"). */
