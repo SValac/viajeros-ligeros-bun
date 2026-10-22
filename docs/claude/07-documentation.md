@@ -58,6 +58,7 @@ a PLAN + phase docs, or a series of related docs, gets its own folder
 - `shared-load-states/PLAN.md` — `LoadState` (carga y error con Reintentar) y `EmptyState` (un vacío por sección) compartidos por todas las pantallas
 - `components-by-domain/PLAN.md` — Componentes agrupados por dominio con la convención de nombres de Nuxt
 - `english-names/PLAN.md` — Archivos, identificadores y comentarios en inglés (los textos de la UI siguen en español)
+- `shared-components-dedup/PLAN.md` — Código duplicado a componentes, composables y utils compartidos; un solo contrato de errores en los stores (lanzan, `toErrorMessage`, `runWithToast`)
 
 ---
 

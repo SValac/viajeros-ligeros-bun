@@ -5,6 +5,7 @@ import type { TravelStatus } from '~/types/travel';
 
 import { buildWhatsAppShareUrl } from '~/composables/travel-access/use-travel-access-domain';
 import { selectPayingTravelers } from '~/composables/travelers/use-traveler-domain';
+import { useActionToast } from '~/composables/use-action-toast';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatDate } from '~/utils/format-date';
 import { formatTravelerName } from '~/utils/traveler-labels';
@@ -18,6 +19,7 @@ const props = defineProps<{
 type CardState = | 'not-eligible' | 'no-code' | 'active-hidden' | 'active-revealed';
 
 const travelAccessStore = useTravelAccessStore();
+const { runWithToast } = useActionToast();
 const { copy, copied } = useClipboard();
 const showRegenerateModal = shallowRef(false);
 
@@ -47,11 +49,17 @@ const showRevokeAndRegenerateButtons = computed(() => cardState.value === 'activ
 const displayCopyIcon = computed(() => copied.value ? 'i-lucide-check' : 'i-lucide-copy');
 
 async function generateCode() {
-  await travelAccessStore.generateCode(props.travelId);
+  await runWithToast(() => travelAccessStore.generateCode(props.travelId), {
+    success: { title: 'Código generado', color: 'success', icon: 'i-lucide-check' },
+    error: 'Error al generar código',
+  });
 }
 
 async function revokeCode() {
-  await travelAccessStore.revokeCode(props.travelId);
+  await runWithToast(() => travelAccessStore.revokeCode(props.travelId), {
+    success: { title: 'Código revocado', color: 'success', icon: 'i-lucide-trash-2' },
+    error: 'Error al eliminar',
+  });
 }
 
 function showModal() {
@@ -79,8 +87,12 @@ function sendCode(phone: string, code: string | null, travelLabel: string) {
   window.open(buildWhatsAppShareUrl(phone, code, travelLabel), '_blank');
 }
 
+// A failed load would look like "no code yet": say so instead.
 onMounted(async () => {
-  await travelAccessStore.fetchActiveCode(props.travelId);
+  await runWithToast(() => travelAccessStore.fetchActiveCode(props.travelId), {
+    error: 'No se pudo cargar el código de acceso',
+    errorFallback: 'Recarga la página',
+  });
 });
 </script>
 

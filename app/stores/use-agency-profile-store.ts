@@ -51,10 +51,10 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
 
   // Actions
   /**
-   * Loads the profile and the state catalog. Errors are stored in `error`,
-   * not propagated.
+   * Loads the profile and the state catalog.
    * @param options - `force` reloads even if the profile is already cached
    * @param options.force - Reload even when the profile is already cached
+   * @throws Re-throws the error (its message is also stored in `error`)
    */
   async function fetchProfile({ force = false }: { force?: boolean } = {}): Promise<void> {
     if (profile.value && !force)
@@ -72,6 +72,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
     }
     catch (e) {
       error.value = toErrorMessage(e, 'Error al cargar el perfil de la agencia');
+      throw e;
     }
     finally {
       loading.value = false;

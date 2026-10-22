@@ -747,7 +747,7 @@ export function useQuotationRepository() {
       .single();
 
     if (travelBusErr)
-      throw new Error(`No se pudo crear el autobús en el viaje: ${travelBusErr.message}`);
+      throw new Error('No se pudo crear el autobús en el viaje.', { cause: travelBusErr });
 
     return { quotationBus, travelBusRow };
   }
@@ -806,7 +806,7 @@ export function useQuotationRepository() {
         .eq('quotation_bus_id', id);
 
       if (travelBusErr)
-        throw new Error(`No se pudo sincronizar el autobús del viaje: ${travelBusErr.message}`);
+        throw new Error('No se pudo sincronizar el autobús del viaje.', { cause: travelBusErr });
     }
 
     return updated;
@@ -895,7 +895,7 @@ export function useQuotationRepository() {
       .delete()
       .in('id', ids);
     if (error)
-      throw new Error(`No se pudo eliminar habitaciones: ${error.message}`);
+      throw new Error('No se pudieron eliminar las habitaciones.', { cause: error });
   }
 
   return {

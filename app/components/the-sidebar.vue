@@ -9,7 +9,8 @@ const route = useRoute();
 
 // Logo and name come from the agency profile (/profile); without them (or without a profile, e.g. a coordinator) the app's ones stay
 const agencyProfileStore = useAgencyProfileStore();
-onMounted(() => agencyProfileStore.fetchProfile());
+// A failed load is ignored: the sidebar just keeps the app's logo and name.
+onMounted(() => agencyProfileStore.fetchProfile().catch(() => {}));
 
 const items = computed<NavigationMenuItem[]>(() => [{
   label: 'Viajes',
