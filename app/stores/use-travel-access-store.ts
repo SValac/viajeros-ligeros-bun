@@ -6,7 +6,6 @@ import { toErrorMessage } from '~/utils/error-message';
 
 export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
   const repository = useTravelAccessRepository();
-  const toast = useToast();
 
   // State
   const activeCodeByTravel = ref<Record<string, TravelAccessCode | null>>({});
@@ -33,6 +32,7 @@ export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
     }
     catch (e) {
       error.value = toErrorMessage(e, 'Error al obtener el código');
+      throw e;
     }
     finally {
       loading.value = false;
@@ -46,12 +46,10 @@ export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
       const response = await repository.generate(travelId);
       activeCodeByTravel.value[travelId] = response;
       revealedCodeByTravel.value[travelId] = response.code;
-
-      toast.add({ title: 'Código generado', color: 'success', icon: 'i-lucide-check' });
     }
     catch (e) {
       error.value = toTravelAccessCodeError(e).message;
-      toast.add({ title: 'Error al generar código', description: error.value ?? undefined, color: 'error', icon: 'i-lucide-x' });
+      throw new Error(error.value, { cause: e });
     }
     finally {
       loading.value = false;
@@ -65,12 +63,10 @@ export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
       await repository.revoke(travelId);
       activeCodeByTravel.value[travelId] = null;
       revealedCodeByTravel.value[travelId] = null;
-
-      toast.add({ title: 'Código revocado', color: 'success', icon: 'i-lucide-trash-2' });
     }
     catch (e) {
       error.value = toTravelAccessCodeError(e).message;
-      toast.add({ title: 'Error al eliminar', description: error.value ?? undefined, color: 'error', icon: 'i-lucide-x' });
+      throw new Error(error.value, { cause: e });
     }
     finally {
       loading.value = false;

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import type { TravelMedia } from '~/types/travel-media';
 
+import { useActionToast } from '~/composables/use-action-toast';
+
 const props = defineProps<{
   media: TravelMedia[];
   editable?: boolean;
@@ -8,6 +10,8 @@ const props = defineProps<{
 }>();
 
 const store = useTravelMediaStore();
+const { runWithToast } = useActionToast();
+const confirmDelete = useConfirmDelete();
 
 const lightboxOpen = ref(false);
 const lightboxIndex = ref(0);
@@ -28,8 +32,19 @@ watch(lightboxOpen, (open) => {
   }
 });
 
-async function confirmDelete(item: TravelMedia) {
-  await store.removeMedia(item.id, item.storagePath, props.travelId);
+async function handleDelete(item: TravelMedia) {
+  const kind = item.mediaType === 'video' ? 'este video' : 'esta foto';
+  if (!(await confirmDelete({
+    title: 'Eliminar archivo',
+    description: `¿Estás seguro de eliminar ${kind} de la galería? Esta acción no se puede deshacer.`,
+  }))) {
+    return;
+  }
+
+  await runWithToast(() => store.removeMedia(item.id, item.storagePath, props.travelId), {
+    success: { title: 'Archivo eliminado', color: 'success', icon: 'i-lucide-trash-2' },
+    error: 'Error al eliminar',
+  });
   if (lightboxOpen.value && props.media.length === 0) {
     lightboxOpen.value = false;
   }
@@ -75,7 +90,8 @@ async function confirmDelete(item: TravelMedia) {
             color="error"
             variant="solid"
             size="xs"
-            @click.stop="confirmDelete(item)"
+            aria-label="Eliminar archivo"
+            @click.stop="handleDelete(item)"
           />
         </div>
       </div>

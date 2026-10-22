@@ -1,6 +1,7 @@
 import type { Traveler, TravelerFilters, TravelerSeatChangeResult, TravelerWithChildren } from '~/types/traveler';
 
 import { TravelerSeatChangeError } from '~/types/traveler';
+import { toErrorMessage } from '~/utils/error-message';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
 /**
@@ -169,10 +170,8 @@ export function toRoomAssignmentErrorMessage(error: unknown): string {
       return 'La habitación ya está llena.';
     if (code === '23505')
       return 'El viajero ya tiene una habitación en este hotel.';
-    if (message)
-      return message;
   }
-  return 'Error al asignar la habitación';
+  return toErrorMessage(error, 'Error al asignar la habitación');
 }
 
 /**

@@ -34,8 +34,21 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   const previousBannerUrl = travel.value?.imageUrl;
   const previousCoordinatorIds = [...(travel.value?.coordinatorIds ?? [])];
 
+  // On its own: in the save's try, `data.imageUrl` (still the current banner) would be taken
+  // for the unused upload below and deleted.
   if (bannerFile) {
-    data.imageUrl = await uploadBanner(travelId.value, bannerFile);
+    try {
+      data.imageUrl = await uploadBanner(travelId.value, bannerFile);
+    }
+    catch (e) {
+      toast.add({
+        title: 'No se pudo subir la portada',
+        description: toErrorMessage(e, 'Intenta de nuevo'),
+        color: 'error',
+        icon: 'i-lucide-alert-circle',
+      });
+      return;
+    }
   }
 
   // The form carries buses, itinerary and services forward only to satisfy the TravelFormData

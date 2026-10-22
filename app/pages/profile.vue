@@ -1,11 +1,22 @@
 <script setup lang="ts">
 import type { NavigationMenuItem } from '@nuxt/ui';
 
+import { toErrorMessage } from '~/utils/error-message';
+
 // Parent of the profile tabs (app/pages/profile/*). Loads the profile once and renders
 // the active tab only after it is available, since each tab's form initializes from it.
 const agencyProfileStore = useAgencyProfileStore();
+// Its own ref, not the store's `error`: a failed save in a tab would overwrite that one.
+const loadError = shallowRef<string | null>(null);
 
-onMounted(() => agencyProfileStore.fetchProfile({ force: true }));
+onMounted(async () => {
+  try {
+    await agencyProfileStore.fetchProfile({ force: true });
+  }
+  catch (e) {
+    loadError.value = toErrorMessage(e, 'Intenta de nuevo');
+  }
+});
 
 // To add a tab: create app/pages/profile/<name>.vue and add its entry here.
 const tabs: NavigationMenuItem[] = [
@@ -41,7 +52,7 @@ const tabs: NavigationMenuItem[] = [
     <UAlert
       v-else-if="!agencyProfileStore.profile"
       title="No se pudo cargar el perfil"
-      :description="agencyProfileStore.error ?? undefined"
+      :description="loadError ?? undefined"
       color="error"
       variant="subtle"
       icon="i-lucide-alert-circle"

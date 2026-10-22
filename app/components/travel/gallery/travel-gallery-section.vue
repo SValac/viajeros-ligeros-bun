@@ -1,19 +1,23 @@
 <script setup lang="ts">
+import { useActionToast } from '~/composables/use-action-toast';
+
 const props = defineProps<{
   travelId: string;
 }>();
 
 const store = useTravelMediaStore();
+const { runWithToast } = useActionToast();
 
 const media = computed(() => store.getMediaByTravel(props.travelId));
 
-onMounted(async () => {
-  await store.fetchForTravel(props.travelId);
-});
-
-async function onUploaded() {
-  await store.fetchForTravel(props.travelId);
+async function loadMedia() {
+  await runWithToast(() => store.fetchForTravel(props.travelId), {
+    error: 'No se pudo cargar la galería',
+    errorFallback: 'Recarga la página',
+  });
 }
+
+onMounted(loadMedia);
 </script>
 
 <template>
@@ -26,7 +30,7 @@ async function onUploaded() {
     <USeparator />
     <TravelGalleryUpload
       :travel-id="travelId"
-      @uploaded="onUploaded"
+      @uploaded="loadMedia"
     />
   </div>
 </template>
