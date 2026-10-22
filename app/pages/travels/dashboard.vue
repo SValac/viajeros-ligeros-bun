@@ -7,8 +7,9 @@ import type { TravelStatus, TravelSummary } from '~/types/travel';
 
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery, travelStatsQuery } from '~/queries/travels';
-import { actionsColumn } from '~/utils/actions-column';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatDateRange } from '~/utils/format-date';
+import { travelLinkCell } from '~/utils/table-cells';
 import { getTravelStatusLabel, TRAVEL_STATUSES } from '~/utils/travel-status';
 
 const PAGE_SIZE = 20;
@@ -115,12 +116,7 @@ function getRowActions(travel: TravelSummary): DropdownMenuItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(travel),
-      },
+      deleteAction(() => handleDelete(travel)),
     ],
   ];
 }
@@ -130,14 +126,7 @@ const columns: TableColumn<TravelSummary>[] = [
   {
     accessorKey: 'label',
     header: 'Nombre',
-    cell: ({ row }) =>
-      h(resolveComponent('NuxtLink'), {
-        to: `/travels/${row.original.id}`,
-        class: 'flex items-center gap-2 hover:text-primary transition-colors group',
-      }, () => [
-        h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
-        h('span', { class: 'font-medium' }, row.getValue('label')),
-      ]),
+    cell: ({ row }) => travelLinkCell({ name: 'travel-detail', params: { id: row.original.id } }, row.original.label),
   },
   {
     accessorKey: 'coordinatorIds',

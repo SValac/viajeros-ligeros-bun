@@ -2,6 +2,7 @@
 import type { TravelActivity } from '~/types/travel';
 
 import { useFormModal } from '~/composables/use-form-modal';
+import { deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 
@@ -140,12 +141,7 @@ function getActivityActions(activity: TravelActivity) {
       icon: 'i-lucide-pencil',
       onSelect: () => openEditModal(activity),
     },
-    {
-      label: 'Eliminar',
-      icon: 'i-lucide-trash-2',
-      color: 'error' as const,
-      onSelect: () => deleteActivity(activity),
-    },
+    deleteAction(() => deleteActivity(activity)),
   ];
 }
 </script>

@@ -30,3 +30,13 @@ export function actionsColumn<T>(
     })),
   };
 }
+
+/**
+ * The "Eliminar" item of an actions menu, with the same icon and color on every screen.
+ * @param onSelect - What deleting the row does (usually asks for confirmation first)
+ * @param label - Menu text when the screen needs a longer one ("Eliminar viaje")
+ * @returns The dropdown item
+ */
+export function deleteAction(onSelect: () => void, label = 'Eliminar') {
+  return { label, icon: 'i-lucide-trash-2', color: 'error' as const, onSelect };
+}

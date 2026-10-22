@@ -9,6 +9,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { travelListQuery } from '~/queries/travels';
 import { formatDateRange } from '~/utils/format-date';
 import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
+import { travelLinkCell } from '~/utils/table-cells';
 
 definePageMeta({
   name: 'quotations-index',
@@ -44,13 +45,7 @@ const columns: TableColumn<TravelSummary>[] = [
   {
     id: 'label',
     header: 'Viaje',
-    cell: ({ row }) => h(resolveComponent('NuxtLink'), {
-      to: { name: 'quotation-detail', params: { id: row.original.id } },
-      class: 'flex items-center gap-2 hover:text-primary transition-colors group',
-    }, () => [
-      h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
-      h('span', { class: 'font-medium' }, row.original.label),
-    ]),
+    cell: ({ row }) => travelLinkCell({ name: 'quotation-detail', params: { id: row.original.id } }, row.original.label),
   },
   {
     id: 'dates',

@@ -4,6 +4,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import type { TravelService } from '~/types/travel';
 
 import { useFormModal } from '~/composables/use-form-modal';
+import { deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 
 // Public "qué incluye" list of a travel, shown on the web. Emits the whole list on every
@@ -92,12 +93,7 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(service),
-      },
+      deleteAction(() => handleDelete(service)),
     ],
   ];
 }

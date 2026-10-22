@@ -9,6 +9,7 @@ import { useQueryLoadState } from '~/queries/load-state';
 import { travelPaymentTotalsQuery } from '~/queries/payments';
 import { travelListQuery } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
+import { travelLinkCell } from '~/utils/table-cells';
 
 definePageMeta({
   name: 'payments-index',
@@ -77,13 +78,7 @@ const columns: TableColumn<TravelSummaryRow>[] = [
   {
     id: 'label',
     header: 'Nombre',
-    cell: ({ row }) => h(resolveComponent('NuxtLink'), {
-      to: { name: 'payments-travel', params: { id: row.original.travel.id } },
-      class: 'flex items-center gap-2 hover:text-primary transition-colors group',
-    }, () => [
-      h(resolveComponent('UIcon'), { name: 'i-lucide-tag', class: 'w-4 h-4 text-muted group-hover:text-primary' }),
-      h('span', { class: 'font-medium' }, row.original.travel.label),
-    ]),
+    cell: ({ row }) => travelLinkCell({ name: 'payments-travel', params: { id: row.original.travel.id } }, row.original.travel.label),
   },
   {
     id: 'status',

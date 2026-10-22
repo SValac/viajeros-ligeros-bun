@@ -9,7 +9,7 @@ import type { QuotationPublicPrice, QuotationPublicPriceFormData, QuotationPubli
 import { useTravelPayments } from '~/composables/payments/use-travel-payments';
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { travelersByTravelQuery } from '~/queries/travelers';
-import { actionsColumn } from '~/utils/actions-column';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 import { pluralize } from '~/utils/pluralize';
@@ -351,12 +351,7 @@ function getRowActions(price: QuotationPublicPrice) {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error' as const,
-        onSelect: () => deletePrice(price),
-      },
+      deleteAction(() => deletePrice(price)),
     ],
   ];
 }

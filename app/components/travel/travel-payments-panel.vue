@@ -16,6 +16,7 @@ import { travelDetailQuery } from '~/queries/travels';
 import { actionsColumn } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
+import { groupNameCell } from '~/utils/table-cells';
 import { formatTravelerName, getTravelerTypeLabel } from '~/utils/traveler-labels';
 
 // Payments of a travel's travelers: cash summary, account configs and payments. Used by the
@@ -183,34 +184,10 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'name',
     header: 'Nombre',
-    cell: ({ row }) => {
-      const depth = row.depth;
-      const traveler = row.original;
-      const name = formatTravelerName(traveler);
-      const link = h(resolveComponent('NuxtLink'), {
-        to: { name: 'payments-traveler', params: { id: traveler.id } },
-        class: 'font-medium hover:text-primary transition-colors',
-      }, () => name);
-
-      if (row.getCanExpand()) {
-        return h('div', { class: 'flex items-center gap-1' }, [
-          h('button', {
-            onClick: row.getToggleExpandedHandler(),
-            class: 'text-muted hover:text-default',
-          }, [
-            h(resolveComponent('UIcon'), {
-              name: row.getIsExpanded() ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right',
-              class: 'w-4 h-4',
-            }),
-          ]),
-          link,
-        ]);
-      }
-
-      return h('div', {
-        style: `padding-left: ${depth * 1.5 + 0.75}rem`,
-      }, [link]);
-    },
+    cell: ({ row }) => groupNameCell(row, h(resolveComponent('NuxtLink'), {
+      to: { name: 'payments-traveler', params: { id: row.original.id } },
+      class: 'font-medium hover:text-primary transition-colors',
+    }, () => formatTravelerName(row.original))),
   },
   {
     id: 'travelerType',

@@ -3,6 +3,7 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 import type { Provider, ProviderCategory, ProviderFilters, ProviderFormData } from '~/types/provider';
 
 import { matchesProviderSearch } from '~/composables/providers/use-provider-domain';
+import { deleteAction } from '~/utils/actions-column';
 
 export function useProviderCategoryList(category: ProviderCategory, detailRoute?: (provider: Provider) => string) {
   const providerStore = useProviderStore();
@@ -146,12 +147,7 @@ export function useProviderCategoryList(category: ProviderCategory, detailRoute?
     return [
       primary,
       [
-        {
-          label: 'Eliminar',
-          icon: 'i-lucide-trash-2',
-          color: 'error',
-          onSelect: () => handleDelete(provider),
-        },
+        deleteAction(() => handleDelete(provider)),
       ],
     ];
   }

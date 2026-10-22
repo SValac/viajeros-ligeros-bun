@@ -7,6 +7,7 @@ import type { QuotationExpense, QuotationExpenseFormData } from '~/types/quotati
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { useFormModal } from '~/composables/use-form-modal';
+import { deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 
 type Props = {
@@ -64,7 +65,7 @@ async function handleDelete(expense: QuotationExpense) {
 function getActions(expense: QuotationExpense) {
   return [
     [{ label: 'Editar', icon: 'i-lucide-pencil', onSelect: () => openEdit(expense) }],
-    [{ label: 'Eliminar', icon: 'i-lucide-trash-2', color: 'error' as const, onSelect: () => handleDelete(expense) }],
+    [deleteAction(() => handleDelete(expense))],
   ];
 }
 

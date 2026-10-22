@@ -10,7 +10,7 @@ import { useQuotationContext } from '~/composables/quotation/use-quotation-conte
 import { calculateProviderQuotedCost, getPriceAdjustmentError, isPerPersonProvider } from '~/composables/quotation/use-quotation-domain';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
 import { useFormModal } from '~/composables/use-form-modal';
-import { actionsColumn } from '~/utils/actions-column';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentStatusFilterOptions } from '~/utils/payment-status';
 import { getPaymentTypeLabel, PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
@@ -237,12 +237,7 @@ function getProviderActions(provider: QuotationProvider) {
   ];
 
   const destructiveActions = [
-    {
-      label: 'Eliminar',
-      icon: 'i-lucide-trash-2',
-      color: 'error' as const,
-      onSelect: () => handleDelete(provider),
-    },
+    deleteAction(() => handleDelete(provider)),
   ];
 
   return [paymentActions, writeActions, destructiveActions];

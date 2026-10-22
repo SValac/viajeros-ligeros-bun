@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Provider, ProviderFormData } from '~/types/provider';
 
+import { deleteAction } from '~/utils/actions-column';
 import { PROVIDER_CATEGORY_META } from '~/utils/provider-categories';
 
 type Props = {
@@ -109,12 +110,7 @@ async function handleDelete() {
               },
             ],
             [
-              {
-                label: 'Eliminar',
-                icon: 'i-lucide-trash-2',
-                color: 'error',
-                onSelect: handleDelete,
-              },
+              deleteAction(handleDelete),
             ],
           ]"
         >

@@ -6,7 +6,7 @@ import { h } from 'vue';
 import type { Coordinator, CoordinatorFormData } from '~/types/coordinator';
 
 import { useFormModal } from '~/composables/use-form-modal';
-import { actionsColumn } from '~/utils/actions-column';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 import { matchesSearch } from '~/utils/search';
 
@@ -77,12 +77,7 @@ function getRowActions(coordinator: Coordinator): DropdownMenuItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(coordinator),
-      },
+      deleteAction(() => handleDelete(coordinator)),
     ],
   ];
 }

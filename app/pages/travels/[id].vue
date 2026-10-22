@@ -3,6 +3,7 @@ import type { DropdownMenuItem, NavigationMenuItem } from '@nuxt/ui';
 
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
+import { deleteAction } from '~/utils/actions-column';
 import { formatDateRange } from '~/utils/format-date';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
@@ -56,12 +57,7 @@ const tabs = computed<NavigationMenuItem[]>(() => {
 });
 
 const moreActions = computed<DropdownMenuItem[][]>(() => [[
-  {
-    label: 'Eliminar viaje',
-    icon: 'i-lucide-trash-2',
-    color: 'error',
-    onSelect: openDeleteModal,
-  },
+  deleteAction(openDeleteModal, 'Eliminar viaje'),
 ]]);
 
 function openDeleteModal() {

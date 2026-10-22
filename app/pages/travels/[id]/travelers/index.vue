@@ -13,7 +13,8 @@ import { useExpandedGroups } from '~/composables/use-expanded-groups';
 import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
-import { actionsColumn } from '~/utils/actions-column';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
+import { groupNameCell } from '~/utils/table-cells';
 import { formatTravelBusLabel } from '~/utils/travel-bus';
 import { formatTravelerName } from '~/utils/traveler-labels';
 
@@ -584,12 +585,7 @@ function getRowActions(traveler: Traveler): TravelerActionItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(traveler),
-      },
+      deleteAction(() => handleDelete(traveler)),
     ],
   ];
 }
@@ -598,32 +594,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
   {
     id: 'fullName',
     header: 'Nombre',
-    cell: ({ row }) => {
-      const t = row.original;
-      const depth = row.depth;
-      const canExpand = row.getCanExpand();
-
-      const nameNode = h('span', { class: 'font-medium' }, formatTravelerName(t));
-
-      if (canExpand) {
-        const isExpanded = row.getIsExpanded();
-        const toggleIcon = isExpanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right';
-        const toggleBtn = h(
-          resolveComponent('UButton'),
-          {
-            icon: toggleIcon,
-            variant: 'ghost',
-            color: 'neutral',
-            size: 'xs',
-            class: 'mr-1',
-            onClick: row.getToggleExpandedHandler(),
-          },
-        );
-        return h('div', { class: 'flex items-center', style: `padding-left: ${depth * 1.5}rem` }, [toggleBtn, nameNode]);
-      }
-
-      return h('div', { class: 'flex items-center', style: `padding-left: ${depth * 1.5 + 0.75}rem` }, [nameNode]);
-    },
+    cell: ({ row }) => groupNameCell(row, h('span', { class: 'font-medium' }, formatTravelerName(row.original))),
   },
   {
     accessorKey: 'travelBusId',

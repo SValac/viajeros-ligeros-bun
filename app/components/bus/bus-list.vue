@@ -6,7 +6,7 @@ import { h } from 'vue';
 import type { Bus, BusFormData } from '~/types/bus';
 
 import { useFormModal } from '~/composables/use-form-modal';
-import { actionsColumn } from '~/utils/actions-column';
+import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 
 type Props = {
@@ -92,12 +92,7 @@ function getRowActions(bus: Bus): DropdownMenuItem[][] {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error',
-        onSelect: () => handleDelete(bus),
-      },
+      deleteAction(() => handleDelete(bus)),
     ],
   ];
 }

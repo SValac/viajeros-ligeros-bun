@@ -7,6 +7,7 @@ import type { QuotationBus } from '~/types/quotation';
 
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
 import { useSupplierPaymentColumns } from '~/composables/quotation/use-supplier-payment-columns';
+import { deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { getPaymentTypeLabel } from '~/utils/payment-type';
 
@@ -98,12 +99,7 @@ function getBusActions(bus: QuotationBus) {
       },
     ],
     [
-      {
-        label: 'Eliminar',
-        icon: 'i-lucide-trash-2',
-        color: 'error' as const,
-        onSelect: () => handleDelete(bus),
-      },
+      deleteAction(() => handleDelete(bus)),
     ],
   ];
 }
