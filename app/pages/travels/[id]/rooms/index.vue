@@ -12,6 +12,7 @@ import { useValidTab } from '~/composables/use-valid-tab';
 import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { formatCurrency } from '~/utils/currency';
+import { toErrorMessage } from '~/utils/error-message';
 import { pluralize } from '~/utils/pluralize';
 import { formatTravelerName, getTravelerRole, TRAVELER_ROLE_ICONS } from '~/utils/traveler-labels';
 
@@ -289,8 +290,8 @@ async function assignTraveler(traveler: Traveler): Promise<void> {
     isAddModalOpen.value = false;
     addingToAccommodation.value = null;
   }
-  catch {
-    toast.add({ title: 'Error al asignar viajero', description: travelerStore.error ?? undefined, color: 'error' });
+  catch (e) {
+    toast.add({ title: 'Error al asignar viajero', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
   }
 }
 
@@ -310,27 +311,34 @@ async function addRoom(providerId: string, group: RoomTypeGroup): Promise<void> 
   if (!group.roomTypeId || !group.maxOccupancy)
     return;
   addingRoomKey.value = group.key;
-  const ok = await travelStore.addTravelRooms(travelId.value, {
-    providerId,
-    hotelRoomTypeId: group.roomTypeId,
-    maxOccupancy: group.maxOccupancy,
-  });
-  addingRoomKey.value = null;
-  if (!ok) {
-    toast.add({ title: 'Error al agregar la habitación', description: travelStore.error ?? undefined, color: 'error' });
+  try {
+    await travelStore.addTravelRooms(travelId.value, {
+      providerId,
+      hotelRoomTypeId: group.roomTypeId,
+      maxOccupancy: group.maxOccupancy,
+    });
+  }
+  catch (e) {
+    toast.add({ title: 'Error al agregar la habitación', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
     return;
   }
-  await quotationStore.refreshAccommodationCosts(travelId.value);
+  finally {
+    addingRoomKey.value = null;
+  }
+  // The room is saved: the quotation refetch the store started brings the cost if this fails.
+  await quotationStore.refreshAccommodationCosts(travelId.value).catch(() => {});
   toast.add({ title: 'Habitación agregada', color: 'success' });
 }
 
 async function deleteRoom(roomId: string): Promise<void> {
-  const ok = await travelStore.deleteTravelRoom(travelId.value, roomId);
-  if (!ok) {
-    toast.add({ title: 'No se pudo eliminar la habitación', description: travelStore.error ?? undefined, color: 'error' });
+  try {
+    await travelStore.deleteTravelRoom(travelId.value, roomId);
+  }
+  catch (e) {
+    toast.add({ title: 'No se pudo eliminar la habitación', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
     return;
   }
-  await quotationStore.refreshAccommodationCosts(travelId.value);
+  await quotationStore.refreshAccommodationCosts(travelId.value).catch(() => {});
   toast.add({ title: 'Habitación eliminada', color: 'success' });
 }
 
@@ -338,12 +346,12 @@ async function updateAccommodation(
   accommodation: TravelAccommodation,
   data: { roomNumber?: string | null; floor?: number | null },
 ): Promise<void> {
-  const ok = await travelStore.updateTravelAccommodation(travelId.value, accommodation.id, data);
-  if (ok) {
+  try {
+    await travelStore.updateTravelAccommodation(travelId.value, accommodation.id, data);
     toast.add({ title: 'Habitación actualizada', color: 'success' });
   }
-  else {
-    toast.add({ title: 'Error al actualizar habitación', color: 'error' });
+  catch (e) {
+    toast.add({ title: 'Error al actualizar habitación', description: toErrorMessage(e, 'Intenta de nuevo'), color: 'error' });
   }
 }
 </script>

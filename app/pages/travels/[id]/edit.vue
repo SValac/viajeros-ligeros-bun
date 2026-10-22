@@ -4,6 +4,7 @@ import type { TravelFormData } from '~/types/travel';
 import { getGalleryStoragePath } from '~/composables/travels/use-travel-domain';
 import { useTravelMediaRepository } from '~/composables/travels/use-travel-media-repository';
 import { useTravelRoute } from '~/composables/travels/use-travel-route';
+import { toErrorMessage } from '~/utils/error-message';
 
 // General data only (name, dates, coordinators, status, public site, banner, notes). The
 // itinerary, services and gallery are edited in their own tabs. The "not found" redirect
@@ -41,7 +42,14 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   // lists with the copy the form had when it opened. For buses that also unassigns every
   // traveler's bus/seat (ON DELETE SET NULL on travelers.travel_bus_id).
   const { buses: _buses, itinerary: _itinerary, services: _services, ...updateData } = data;
-  const success = await travelsStore.updateTravel(travelId.value, updateData);
+  let saveErrorMessage: string | null = null;
+  try {
+    await travelsStore.updateTravel(travelId.value, updateData);
+  }
+  catch (e) {
+    saveErrorMessage = toErrorMessage(e, 'No se pudo actualizar el viaje');
+  }
+  const success = saveErrorMessage === null;
 
   // Remove the banner file the travel no longer points to: the previous one if it was
   // replaced or removed, or the new upload if the update failed. A failure here is not an
@@ -60,8 +68,10 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   // already invalidated the travelers query), and when the quotation counts coordinators as
   // passengers it changes the sellable seats, so the seat price is recomputed.
   if (success && !sameIds(previousCoordinatorIds, data.coordinatorIds)) {
-    const priceSynced = await quotationStore.syncSeatPriceForTravel(travelId.value);
-    if (!priceSynced) {
+    try {
+      await quotationStore.syncSeatPriceForTravel(travelId.value);
+    }
+    catch {
       toast.add({
         title: 'Precio por asiento sin recalcular',
         description: 'El viaje se guardó, pero no se pudo recalcular el precio por asiento. Guarda de nuevo los parámetros de la cotización para actualizarlo.',
@@ -83,7 +93,7 @@ async function handleSubmit(data: TravelFormData, bannerFile: File | null) {
   else {
     toast.add({
       title: 'Error al actualizar',
-      description: travelsStore.error ?? 'No se pudo actualizar el viaje',
+      description: saveErrorMessage ?? undefined,
       color: 'error',
       icon: 'i-lucide-alert-circle',
     });
