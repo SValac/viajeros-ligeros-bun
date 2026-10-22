@@ -55,23 +55,14 @@ const nameInput = useSanitizedModel(() => state.value.name, v => state.value.nam
 const descriptionInput = useSanitizedModel(() => state.value.description ?? '', v => state.value.description = v, sanitizeText);
 
 // Handlers
-const isSubmitting = ref(false);
+function onSubmit(event: FormSubmitEvent<Schema>) {
+  const serviceData: Omit<TravelService, 'id'> = {
+    name: event.data.name,
+    description: event.data.description || undefined,
+    included: event.data.included,
+  };
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
-  isSubmitting.value = true;
-
-  try {
-    const serviceData: Omit<TravelService, 'id'> = {
-      name: event.data.name,
-      description: event.data.description || undefined,
-      included: event.data.included,
-    };
-
-    emit('submit', serviceData);
-  }
-  finally {
-    isSubmitting.value = false;
-  }
+  emit('submit', serviceData);
 }
 
 function onCancel() {
@@ -124,22 +115,9 @@ function onCancel() {
     </UFormField>
 
     <!-- Action buttons -->
-    <div class="flex justify-end gap-3 pt-4">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="outline"
-        @click="onCancel"
-      >
-        Cancelar
-      </UButton>
-      <UButton
-        type="submit"
-        color="primary"
-        :loading="isSubmitting"
-      >
-        {{ service ? 'Actualizar' : 'Agregar' }} Servicio
-      </UButton>
-    </div>
+    <FormActions
+      :submit-label="service ? 'Actualizar servicio' : 'Registrar servicio'"
+      @cancel="onCancel"
+    />
   </UForm>
 </template>

@@ -70,6 +70,8 @@ async function persistActivities(nextActivities: TravelActivity[]): Promise<bool
   return true;
 }
 
+const isSaving = shallowRef(false);
+
 async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
   let nextActivities = [...activities.value];
 
@@ -92,7 +94,10 @@ async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
     nextActivities = [...nextActivities, newActivity];
   }
 
-  const saved = await persistActivities(nextActivities);
+  isSaving.value = true;
+  const saved = await persistActivities(nextActivities).finally(() => {
+    isSaving.value = false;
+  });
   if (!saved)
     return;
 
@@ -198,6 +203,7 @@ function getActivityActions(activity: TravelActivity) {
         <TravelActivityForm
           :activity="editingActivity"
           :max-day="travelDuration"
+          :loading="isSaving"
           @submit="handleSubmit"
           @cancel="isActivityModalOpen = false"
         />

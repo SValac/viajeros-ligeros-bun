@@ -415,6 +415,8 @@ function isSeatAlreadyTakenError(error: unknown): boolean {
     && dbError?.constraint === 'travelers_unique_travel_bus_seat';
 }
 
+const isSaving = shallowRef(false);
+
 async function handleFormSubmit(data: TravelerFormData) {
   const takenSeatTraveler = findTravelerBySeat(data, editingTraveler.value?.id);
   if (takenSeatTraveler) {
@@ -426,6 +428,7 @@ async function handleFormSubmit(data: TravelerFormData) {
     return;
   }
 
+  isSaving.value = true;
   try {
     if (editingTraveler.value) {
       await travelerStore.updateTraveler(editingTraveler.value.id, data);
@@ -461,6 +464,9 @@ async function handleFormSubmit(data: TravelerFormData) {
       description: 'Ocurrió un error al guardar el viajero',
       color: 'error',
     });
+  }
+  finally {
+    isSaving.value = false;
   }
 }
 
@@ -879,6 +885,7 @@ const columns: TableColumn<TravelerWithChildren>[] = [
           :available-buses="allBuses"
           :available-travelers="travelersOfTravel"
           :locked-travel-id="travelId"
+          :loading="isSaving"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />

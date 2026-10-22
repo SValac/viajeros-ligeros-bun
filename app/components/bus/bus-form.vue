@@ -50,7 +50,6 @@ const state = ref<Schema>({
 // Sanitized proxies: filter out invalid characters while the user types
 const brandInput = useSanitizedModel(() => state.value.brand ?? '', v => state.value.brand = v, sanitizeBusinessName);
 const modelInput = useSanitizedModel(() => state.value.model ?? '', v => state.value.model = v, sanitizeBusinessName);
-
 function onSubmit(event: FormSubmitEvent<Schema>) {
   const formData: BusFormData = {
     brand: event.data.brand || undefined,
@@ -136,21 +135,9 @@ function onCancel() {
     </UFormField>
 
     <!-- Buttons -->
-    <div class="flex justify-end gap-3 pt-4">
-      <UButton
-        type="button"
-        color="neutral"
-        variant="outline"
-        @click="onCancel"
-      >
-        Cancelar
-      </UButton>
-      <UButton
-        type="submit"
-        color="primary"
-      >
-        {{ bus ? 'Actualizar' : 'Registrar' }} Unidad
-      </UButton>
-    </div>
+    <FormActions
+      :submit-label="bus ? 'Actualizar unidad' : 'Registrar unidad'"
+      @cancel="onCancel"
+    />
   </UForm>
 </template>

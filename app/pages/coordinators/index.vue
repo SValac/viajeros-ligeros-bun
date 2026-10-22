@@ -28,7 +28,10 @@ function clearSearch() {
   searchTerm.value = '';
 }
 
+const isSaving = shallowRef(false);
+
 async function handleFormSubmit(data: CoordinatorFormData) {
+  isSaving.value = true;
   try {
     if (editingCoordinator.value) {
       await coordinatorStore.updateCoordinator(editingCoordinator.value.id, data);
@@ -42,6 +45,9 @@ async function handleFormSubmit(data: CoordinatorFormData) {
   }
   catch {
     toast.add({ title: 'Error', description: 'Ocurrió un error al guardar el coordinador', color: 'error' });
+  }
+  finally {
+    isSaving.value = false;
   }
 }
 
@@ -202,6 +208,7 @@ const columns: TableColumn<Coordinator>[] = [
       <template #body>
         <CoordinatorForm
           :coordinator="editingCoordinator"
+          :loading="isSaving"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />
