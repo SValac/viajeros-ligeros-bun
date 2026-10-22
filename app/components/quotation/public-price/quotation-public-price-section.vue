@@ -12,6 +12,7 @@ import { travelersByTravelQuery } from '~/queries/travelers';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
 import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
+import { toErrorMessage } from '~/utils/error-message';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 import { pluralize } from '~/utils/pluralize';
 import { formatTravelerName } from '~/utils/traveler-labels';
@@ -65,16 +66,19 @@ const savingVisibilityField = shallowRef<PublicVisibilityField | null>(null);
 // stay editable once the quotation is confirmed. The DB hides the fields in the RPC.
 async function setPublicVisibility(field: PublicVisibilityField, value: boolean) {
   savingVisibilityField.value = field;
-  const updated = await quotationStore.updateQuotation(props.quotationId, { [field]: value });
-  savingVisibilityField.value = null;
-
-  if (!updated) {
+  try {
+    await quotationStore.updateQuotation(props.quotationId, { [field]: value });
+  }
+  catch (e) {
     toast.add({
       title: 'No se pudo guardar',
-      description: quotationStore.error ?? 'Intenta de nuevo',
+      description: toErrorMessage(e, 'Intenta de nuevo'),
       color: 'error',
     });
     return;
+  }
+  finally {
+    savingVisibilityField.value = null;
   }
 
   toast.add({
@@ -275,8 +279,13 @@ async function confirmWarning() {
       isFormModalOpen.value = false;
   }
   else if (warningAction.value === 'delete') {
-    await quotationStore.deletePublicPrice(price.id);
-    toast.add({ title: 'Precio eliminado', color: 'success' });
+    try {
+      await quotationStore.deletePublicPrice(price.id);
+      toast.add({ title: 'Precio eliminado', color: 'success' });
+    }
+    catch (e) {
+      toast.add({ title: 'Error', description: toErrorMessage(e, 'No se pudo eliminar el precio'), color: 'error' });
+    }
   }
   isWarningLoading.value = false;
   isWarningOpen.value = false;
@@ -284,12 +293,13 @@ async function confirmWarning() {
 }
 
 async function updatePrice(id: string, data: QuotationPublicPriceFormData): Promise<boolean> {
-  const updated = await quotationStore.updatePublicPrice(id, data);
-
-  if (!updated) {
+  try {
+    await quotationStore.updatePublicPrice(id, data);
+  }
+  catch (e) {
     toast.add({
       title: 'Error',
-      description: 'No se pudo actualizar el precio',
+      description: toErrorMessage(e, 'No se pudo actualizar el precio'),
       color: 'error',
     });
     return false;
@@ -316,12 +326,13 @@ async function savePrice(data: QuotationPublicPriceFormData) {
   }
   else {
     // Create
-    const response = await quotationStore.addPublicPrice(data);
-
-    if ('error' in response) {
+    try {
+      await quotationStore.addPublicPrice(data);
+    }
+    catch (e) {
       toast.add({
         title: 'Error',
-        description: response.error,
+        description: toErrorMessage(e, 'No se pudo agregar el precio'),
         color: 'error',
       });
       return;

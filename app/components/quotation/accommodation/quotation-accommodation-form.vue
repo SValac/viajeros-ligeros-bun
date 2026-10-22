@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import type { QuotationAccommodationFormData } from '~/types/quotation';
 
+import { toErrorMessage } from '~/utils/error-message';
 import { PAYMENT_TYPE_OPTIONS } from '~/utils/payment-type';
 
 type Props = {
@@ -91,11 +92,13 @@ async function handleSubmit() {
     return;
   }
 
-  const response = await quotationStore.addQuotationAccommodation(result.data as QuotationAccommodationFormData);
-  if ('error' in response) {
+  try {
+    await quotationStore.addQuotationAccommodation(result.data as QuotationAccommodationFormData);
+  }
+  catch (e) {
     toast.add({
       title: 'Error',
-      description: response.error,
+      description: toErrorMessage(e, 'No se pudo agregar el hospedaje'),
       color: 'error',
     });
     return;

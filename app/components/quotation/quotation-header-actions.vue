@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useQuotationContext } from '~/composables/quotation/use-quotation-context';
+import { toErrorMessage } from '~/utils/error-message';
 import { getQuotationStatusColor, getQuotationStatusLabel } from '~/utils/quotation-labels';
 
 type Props = {
@@ -39,26 +40,32 @@ function closeReopenModal() {
 
 async function reopenQuotation() {
   isReopening.value = true;
-  const result = await quotationStore.reopenQuotation(quotationId);
-  isReopening.value = false;
-  isReopenModalOpen.value = false;
-
-  if (result.success)
+  try {
+    await quotationStore.reopenQuotation(quotationId);
     toast.add({ title: 'Cotización reabierta', description: 'Vuelve a estar en borrador', color: 'success' });
-  else
-    toast.add({ title: 'Error al reabrir', description: result.error, color: 'error' });
+  }
+  catch (e) {
+    toast.add({ title: 'Error al reabrir', description: toErrorMessage(e, 'No se pudo reabrir la cotización'), color: 'error' });
+  }
+  finally {
+    isReopening.value = false;
+    isReopenModalOpen.value = false;
+  }
 }
 
 async function confirmQuotation() {
   isConfirming.value = true;
-  const result = await quotationStore.confirmQuotation(quotationId);
-  isConfirming.value = false;
-  isConfirmModalOpen.value = false;
-
-  if (result.success)
+  try {
+    await quotationStore.confirmQuotation(quotationId);
     toast.add({ title: 'Cotización confirmada', color: 'success' });
-  else
-    toast.add({ title: 'Error al confirmar', description: result.error, color: 'error' });
+  }
+  catch (e) {
+    toast.add({ title: 'Error al confirmar', description: toErrorMessage(e, 'No se pudo confirmar la cotización'), color: 'error' });
+  }
+  finally {
+    isConfirming.value = false;
+    isConfirmModalOpen.value = false;
+  }
 }
 </script>
 

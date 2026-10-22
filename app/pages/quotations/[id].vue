@@ -8,6 +8,7 @@ import { useTravelQuotation } from '~/composables/quotation/use-travel-quotation
 import { useRedirectIfMissing } from '~/composables/use-redirect-if-missing';
 import { useQueryWithLoadState } from '~/queries/load-state';
 import { travelDetailQuery } from '~/queries/travels';
+import { toErrorMessage } from '~/utils/error-message';
 import { sanitizeText, textSchema } from '~/utils/form-validation';
 
 // Parent of the quotation tabs (app/pages/quotations/[id]/*). Shows the
@@ -100,7 +101,7 @@ async function handleCreateQuotation() {
   catch (e) {
     toast.add({
       title: 'Error',
-      description: e instanceof Error ? e.message : 'No se pudo crear la cotización',
+      description: toErrorMessage(e, 'No se pudo crear la cotización'),
       color: 'error',
     });
   }

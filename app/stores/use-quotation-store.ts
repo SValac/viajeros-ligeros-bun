@@ -41,6 +41,7 @@ import { useQuotationRepository } from '~/composables/quotation/use-quotation-re
 import { quotationByTravelQuery, quotationKeys } from '~/queries/quotations';
 import { travelDetailQuery, travelKeys } from '~/queries/travels';
 import { formatCurrency } from '~/utils/currency';
+import { toErrorMessage } from '~/utils/error-message';
 import { formatBedConfiguration } from '~/utils/hotel-room-helpers';
 import { getPaymentStatus } from '~/utils/payment-status';
 
@@ -60,9 +61,10 @@ type SupplierPaymentSliceOptions<P extends SupplierPayment, F extends SupplierPa
 
 export const useQuotationStore = defineStore('quotation', () => {
   const queryCache = useQueryCache();
-  // Every write invalidates `quotationKeys.root` in its `finally`, even when it failed halfway
-  // (e.g. saved but the seat price couldn't be recomputed): the active quotation query
-  // refetches and copies the server's state back into the store.
+  // Every write goes through `_runWrite`, which invalidates `quotationKeys.root` in its
+  // `finally`, even when it failed halfway (e.g. saved but the seat price couldn't be
+  // recomputed): the active quotation query refetches and copies the server's state back.
+  // Actions return their result or throw an `Error` with a user-facing message.
   const repository = useQuotationRepository();
 
   // State
@@ -138,74 +140,40 @@ export const useQuotationStore = defineStore('quotation', () => {
         .reduce((sum, p) => sum + getPendingBalance.value(p.id), 0);
     });
 
-    async function add(data: F): Promise<P | { error: string }> {
-      const parentId = parentIdOf(data);
-      if (!findParent(parentId))
-        return { error: options.notFound };
+    async function add(data: F): Promise<P> {
+      return _runWrite(async () => {
+        const parentId = parentIdOf(data);
+        if (!findParent(parentId))
+          throw new Error(options.notFound);
 
-      if (data.amount <= 0)
-        return { error: 'El monto debe ser mayor a 0' };
+        if (data.amount <= 0)
+          throw new Error('El monto debe ser mayor a 0');
 
-      const pendingBalance = getPendingBalance.value(parentId);
-      if (data.amount > pendingBalance)
-        return { error: `El monto no puede superar el saldo pendiente (${formatCurrency(pendingBalance)})` };
+        const pendingBalance = getPendingBalance.value(parentId);
+        if (data.amount > pendingBalance)
+          throw new Error(`El monto no puede superar el saldo pendiente (${formatCurrency(pendingBalance)})`);
 
-      loading.value = true;
-      error.value = null;
-      try {
         const newPayment = await options.insert(data);
         payments.value.push(newPayment);
         return newPayment;
-      }
-      catch (e) {
-        error.value = e instanceof Error ? e.message : 'Error desconocido';
-        return { error: error.value };
-      }
-      finally {
-        queryCache.invalidateQueries({ key: quotationKeys.root });
-        loading.value = false;
-      }
+      });
     }
 
-    async function update(id: string, data: Partial<F>): Promise<P | undefined> {
-      const index = payments.value.findIndex(p => p.id === id);
-      if (index === -1)
-        return undefined;
-
-      loading.value = true;
-      error.value = null;
-      try {
+    async function update(id: string, data: Partial<F>): Promise<P> {
+      return _runWrite(async () => {
+        _row(payments.value, id, 'Pago no encontrado');
         const updated = await options.update(id, data);
-        payments.value[index] = updated;
+        _replace(payments, updated);
         return updated;
-      }
-      catch (e) {
-        error.value = e instanceof Error ? e.message : 'Error desconocido';
-        return undefined;
-      }
-      finally {
-        queryCache.invalidateQueries({ key: quotationKeys.root });
-        loading.value = false;
-      }
+      });
     }
 
     async function remove(id: string): Promise<void> {
-      if (!payments.value.some(p => p.id === id))
-        return;
-
-      loading.value = true;
-      error.value = null;
-      try {
+      await _runWrite(async () => {
+        _row(payments.value, id, 'Pago no encontrado');
         await options.remove(id);
         payments.value = payments.value.filter(p => p.id !== id);
-      }
-      catch (e) {
-        error.value = e instanceof Error ? e.message : 'Error desconocido';
-      }
-      finally {
-        queryCache.invalidateQueries({ key: quotationKeys.root });
-        loading.value = false;
-      }
+      });
     }
 
     /**
@@ -715,29 +683,104 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   /**
+   * Runs a write with `loading` and `error` around it, and invalidates the quotation queries
+   * after it even when it failed halfway (see the note at the top).
+   * @param fn - The write; it throws to refuse (e.g. a confirmed quotation)
+   * @returns What `fn` returns
+   * @throws Re-throws `fn`'s error; its message is also in `error`
+   */
+  async function _runWrite<T>(fn: () => Promise<T>): Promise<T> {
+    loading.value = true;
+    error.value = null;
+    try {
+      return await fn();
+    }
+    catch (e) {
+      error.value = toErrorMessage(e);
+      throw e;
+    }
+    finally {
+      queryCache.invalidateQueries({ key: quotationKeys.root });
+      loading.value = false;
+    }
+  }
+
+  /**
+   * Runs a read that fills part of the store.
+   * @param fn - The read
+   * @throws Re-throws `fn`'s error; its message is also in `error`
+   */
+  async function _runRead(fn: () => Promise<void>): Promise<void> {
+    try {
+      await fn();
+    }
+    catch (e) {
+      error.value = toErrorMessage(e);
+      throw e;
+    }
+  }
+
+  /**
+   * The quotation, if it can still be changed.
+   * @param id - UUID of the quotation
+   * @returns The quotation
+   * @throws {Error} When it isn't loaded or it's confirmed
+   */
+  function _editableQuotation(id: string): Quotation {
+    const quotation = _quotation(id);
+    if (!quotation)
+      throw new Error('Cotización no encontrada');
+    if (quotation.status === 'confirmed')
+      throw new Error('No se puede modificar una cotización confirmada');
+    return quotation;
+  }
+
+  /**
+   * A row of the store by id.
+   * @param rows - Where to look
+   * @param id - The row's id
+   * @param notFound - Message when it isn't there
+   * @returns The row
+   * @throws {Error} With `notFound`
+   */
+  function _row<T extends { id: string }>(rows: T[], id: string, notFound: string): T {
+    const row = rows.find(r => r.id === id);
+    if (!row)
+      throw new Error(notFound);
+    return row;
+  }
+
+  // Looked up by id after the write: a refetch may have replaced the list meanwhile.
+  function _replace<T extends { id: string }>(list: Ref<T[]>, row: T): void {
+    const index = list.value.findIndex(r => r.id === row.id);
+    if (index !== -1)
+      list.value[index] = row;
+  }
+
+  /**
    * Rooms the travel would keep for hotel room types the quotation no longer lists once
    * `nextAccommodations` is saved. They'd cost nothing, so they're deleted after the save;
    * while any of them has someone in it the change is refused instead.
    * @param quotationId - The quotation being changed
    * @param nextAccommodations - The quotation's hotels as they'll be after the change
-   * @returns The empty rooms to delete, or an error when some are occupied
+   * @returns The empty rooms to delete
+   * @throws {Error} When some of them are occupied, or the travel can't be read
    */
   async function _findRoomsToDrop(
     quotationId: string,
     nextAccommodations: Pick<QuotationAccommodation, 'providerId' | 'details'>[],
-  ): Promise<TravelAccommodation[] | { error: string }> {
+  ): Promise<TravelAccommodation[]> {
     const quotation = _quotation(quotationId);
     if (!quotation)
       return [];
 
     // The rooms decide what gets deleted, so they come fresh from the server: `fetch`
-    // ignores `staleTime` (`refresh` wouldn't). A failed request throws and the caller's
-    // catch aborts the change before anything is written.
+    // ignores `staleTime` (`refresh` wouldn't). A failed request throws and aborts the
+    // change before anything is written.
     const travelEntry = queryCache.ensure(travelDetailQuery(quotation.travelId));
     const { data } = await queryCache.fetch(travelEntry);
-    if (!data) {
-      return { error: 'No se encontró el viaje de esta cotización. Recarga la página e intenta de nuevo.' };
-    }
+    if (!data)
+      throw new Error('No se encontró el viaje de esta cotización. Recarga la página e intenta de nuevo.');
 
     const rooms = findRoomsOutsideQuotation(
       nextAccommodations,
@@ -748,11 +791,8 @@ export const useQuotationStore = defineStore('quotation', () => {
 
     const occupiedIds = await repository.getOccupiedAccommodationIds(quotation.travelId);
     const occupied = rooms.filter(room => occupiedIds.has(room.id)).length;
-    if (occupied > 0) {
-      return {
-        error: `${occupied} habitación(es) de lo que quitaste tienen viajeros. Sácalos en la pestaña Habitaciones del viaje y vuelve a intentarlo.`,
-      };
-    }
+    if (occupied > 0)
+      throw new Error(`${occupied} habitación(es) de lo que quitaste tienen viajeros. Sácalos en la pestaña Habitaciones del viaje y vuelve a intentarlo.`);
     return rooms;
   }
 
@@ -772,6 +812,7 @@ export const useQuotationStore = defineStore('quotation', () => {
    * @param travelId - The travel whose quotation is refreshed
    * @param list - The store rows that get the costs
    * @param fetchCosts - Reads the costs of a quotation's rows
+   * @throws Re-throws repository errors
    */
   async function _refreshCosts<T extends { id: string }>(
     travelId: string,
@@ -782,49 +823,38 @@ export const useQuotationStore = defineStore('quotation', () => {
     if (!quotation)
       return;
 
-    try {
+    await _runRead(async () => {
       const costs = new Map((await fetchCosts(quotation.id)).map(c => [c.id, c]));
       list.value = list.value.map((row) => {
         const cost = costs.get(row.id);
         return cost ? { ...row, ...cost } : row;
       });
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
+    });
   }
 
   /**
    * Flips the "confirmed" check of a provider or hotel of a draft quotation.
    * @param list - The store rows the item lives in
    * @param id - UUID of the provider or hotel
+   * @param notFound - Message when it isn't in the store
    * @param write - Saves the new value
+   * @throws {Error} When it isn't found or the quotation is confirmed, or re-throws the write's
    */
   async function _toggleConfirmed<T extends { id: string; quotationId: string; confirmed: boolean }>(
     list: Ref<T[]>,
     id: string,
+    notFound: string,
     write: (id: string, confirmed: boolean) => Promise<void>,
   ): Promise<void> {
-    const item = list.value.find(row => row.id === id);
-    if (!item || _quotation(item.quotationId)?.status === 'confirmed')
-      return;
-
-    loading.value = true;
-    error.value = null;
-    try {
+    await _runWrite(async () => {
+      const item = _row(list.value, id, notFound);
+      _editableQuotation(item.quotationId);
       await write(id, !item.confirmed);
       // Looked up again: a refetch may have replaced the list while saving.
       const index = list.value.findIndex(row => row.id === id);
       if (index !== -1)
         list.value[index] = { ...list.value[index]!, confirmed: !item.confirmed };
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   // Actions
@@ -896,16 +926,16 @@ export const useQuotationStore = defineStore('quotation', () => {
    * @param travelId - UUID of the travel
    * @param options - Fetch options
    * @param options.force - Ignore `staleTime` and always ask the server
+   * @throws Re-throws the request's error; its message is also in `error`
    */
   async function fetchByTravel(travelId: string, options?: { force?: boolean }): Promise<void> {
     loading.value = true;
     error.value = null;
     try {
-      const entry = queryCache.ensure(quotationByTravelQuery(travelId));
-      await (options?.force ? queryCache.fetch(entry) : queryCache.refresh(entry));
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
+      await _runRead(async () => {
+        const entry = queryCache.ensure(quotationByTravelQuery(travelId));
+        await (options?.force ? queryCache.fetch(entry) : queryCache.refresh(entry));
+      });
     }
     finally {
       loading.value = false;
@@ -916,22 +946,15 @@ export const useQuotationStore = defineStore('quotation', () => {
    * Recalculates the seat price of a travel's quotation. Call it after the travel's
    * coordinators change: when they take seats, the sellable seats change with them.
    * @param travelId - UUID of the travel
-   * @returns `false` when the price couldn't be recomputed (the error is in `error`)
+   * @throws When the quotation can't be loaded or the price recomputed (message in `error`)
    */
-  async function syncSeatPriceForTravel(travelId: string): Promise<boolean> {
+  async function syncSeatPriceForTravel(travelId: string): Promise<void> {
     await fetchByTravel(travelId, { force: true });
     const quotation = getQuotationByTravel.value(travelId);
     if (!quotation?.coordinatorsTakeSeats)
-      return true;
+      return;
 
-    try {
-      await _syncSeatPrice(quotation.id);
-      return true;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return false;
-    }
+    await _runRead(() => _syncSeatPrice(quotation.id));
   }
 
   async function createQuotation(data: QuotationFormData): Promise<Quotation> {
@@ -939,54 +962,25 @@ export const useQuotationStore = defineStore('quotation', () => {
     if (existing)
       return existing;
 
-    loading.value = true;
-    error.value = null;
-    try {
+    return _runWrite(async () => {
       const quotation = await repository.insertQuotation(data);
       quotations.value.push(quotation);
       return quotation;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      throw e;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
-  async function updateQuotation(id: string, data: Partial<QuotationFormData>): Promise<Quotation | undefined> {
-    const index = quotations.value.findIndex(c => c.id === id);
-    if (index === -1) {
-      error.value = 'Cotización no encontrada';
-      return undefined;
-    }
-
-    const existing = quotations.value[index];
-    if (!existing)
-      return undefined;
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function updateQuotation(id: string, data: Partial<QuotationFormData>): Promise<Quotation> {
+    return _runWrite(async () => {
+      _row(quotations.value, id, 'Cotización no encontrada');
       const updated = await repository.updateQuotation(id, data);
-      quotations.value[index] = updated;
+      _replace(quotations, updated);
 
       if ('minimumSeatTarget' in data || 'coordinatorsTakeSeats' in data) {
         await _syncSeatPrice(id);
       }
 
       return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   /**
@@ -994,114 +988,55 @@ export const useQuotationStore = defineStore('quotation', () => {
    * It doesn't touch the travel's services: those are the public list shown on the web,
    * edited on their own, while the quotation's providers are internal costs.
    * @param id - UUID of the quotation to confirm
-   * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
+   * @throws {Error} With a user-facing message when it can't be confirmed
    */
-  async function confirmQuotation(id: string): Promise<{ success: boolean; error?: string }> {
-    const quotation = _quotation(id);
-    if (!quotation)
-      return { success: false, error: 'Cotización no encontrada' };
-
-    if (!canConfirm.value(id)) {
-      return { success: false, error: 'Todos los proveedores deben estar confirmados' };
-    }
-
-    const updated = await updateQuotation(id, { status: 'confirmed' });
-    if (!updated)
-      return { success: false, error: error.value ?? 'No se pudo confirmar la cotización' };
-    return { success: true };
+  async function confirmQuotation(id: string): Promise<void> {
+    _row(quotations.value, id, 'Cotización no encontrada');
+    if (!canConfirm.value(id))
+      throw new Error('Todos los proveedores deben estar confirmados');
+    await updateQuotation(id, { status: 'confirmed' });
   }
 
   /**
    * Sends a confirmed quotation back to draft so its providers, lodging and buses can be
    * edited again. Payments are unaffected (they're allowed in both states).
    * @param id - UUID of the quotation to reopen
-   * @returns `{ success: true }`, or `{ success: false, error }` with a user-facing message
+   * @throws {Error} With a user-facing message when it can't be reopened
    */
-  async function reopenQuotation(id: string): Promise<{ success: boolean; error?: string }> {
-    const quotation = _quotation(id);
-    if (!quotation)
-      return { success: false, error: 'Cotización no encontrada' };
-    if (quotation.status !== 'confirmed')
-      return { success: true };
-
-    const updated = await updateQuotation(id, { status: 'draft' });
-    if (!updated)
-      return { success: false, error: error.value ?? 'No se pudo reabrir la cotización' };
-    return { success: true };
+  async function reopenQuotation(id: string): Promise<void> {
+    if (_row(quotations.value, id, 'Cotización no encontrada').status !== 'confirmed')
+      return;
+    await updateQuotation(id, { status: 'draft' });
   }
 
-  async function addQuotationProvider(data: QuotationProviderFormData): Promise<QuotationProvider | { error: string }> {
-    const quotation = _quotation(data.quotationId);
-    if (!quotation)
-      return { error: 'Cotización no encontrada' };
-    if (quotation.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function addQuotationProvider(data: QuotationProviderFormData): Promise<QuotationProvider> {
+    return _runWrite(async () => {
+      _editableQuotation(data.quotationId);
       const newProvider = await repository.insertProvider(data);
       quotationProviders.value.push(newProvider);
       await _syncSeatPrice(data.quotationId);
       return newProvider;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   async function updateQuotationProvider(
     id: string,
     data: Partial<QuotationProviderFormData>,
-  ): Promise<QuotationProvider | undefined> {
-    const index = quotationProviders.value.findIndex(p => p.id === id);
-    if (index === -1)
-      return undefined;
-
-    const existing = quotationProviders.value[index];
-    if (!existing)
-      return undefined;
-
-    const quotation = _quotation(existing.quotationId);
-    if (quotation?.status === 'confirmed')
-      return undefined;
-
-    loading.value = true;
-    error.value = null;
-    try {
+  ): Promise<QuotationProvider> {
+    return _runWrite(async () => {
+      const existing = _row(quotationProviders.value, id, 'Proveedor no encontrado');
+      _editableQuotation(existing.quotationId);
       const updated = await repository.updateProvider(id, data);
-      quotationProviders.value[index] = updated;
+      _replace(quotationProviders, updated);
       await _syncSeatPrice(existing.quotationId);
       return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   async function deleteQuotationProvider(id: string): Promise<void> {
-    const provider = quotationProviders.value.find(p => p.id === id);
-    if (!provider)
-      return;
-
-    const quotation = _quotation(provider.quotationId);
-    if (quotation?.status === 'confirmed')
-      return;
-
-    const quotationId = provider.quotationId;
-    loading.value = true;
-    error.value = null;
-    try {
+    await _runWrite(async () => {
+      const { quotationId } = _row(quotationProviders.value, id, 'Proveedor no encontrado');
+      _editableQuotation(quotationId);
       await repository.deleteProvider(id);
 
       quotationProviders.value = quotationProviders.value.filter(p => p.id !== id);
@@ -1109,14 +1044,7 @@ export const useQuotationStore = defineStore('quotation', () => {
       providerPriceAdjustments.value = providerPriceAdjustments.value.filter(a => a.quotationProviderId !== id);
       travelerPriceAdjustments.value = travelerPriceAdjustments.value.filter(a => a.quotationProviderId !== id);
       await _syncSeatPrice(quotationId);
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   /**
@@ -1126,29 +1054,15 @@ export const useQuotationStore = defineStore('quotation', () => {
   async function updateProviderCourtesy(
     id: string,
     coordinatorsCourtesy: boolean,
-  ): Promise<QuotationProvider | { error: string }> {
-    const index = quotationProviders.value.findIndex(p => p.id === id);
-    const existing = quotationProviders.value[index];
-    if (!existing)
-      return { error: 'Proveedor no encontrado' };
-    if (!isPerPersonProvider(existing))
-      return { error: 'Solo un servicio cobrado por persona puede dar cortesía' };
-
-    loading.value = true;
-    error.value = null;
-    try {
+  ): Promise<QuotationProvider> {
+    return _runWrite(async () => {
+      const existing = _row(quotationProviders.value, id, 'Proveedor no encontrado');
+      if (!isPerPersonProvider(existing))
+        throw new Error('Solo un servicio cobrado por persona puede dar cortesía');
       const updated = await repository.updateProviderCourtesy(id, coordinatorsCourtesy);
-      quotationProviders.value[index] = updated;
+      _replace(quotationProviders, updated);
       return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   /**
@@ -1160,37 +1074,39 @@ export const useQuotationStore = defineStore('quotation', () => {
     await _refreshCosts(travelId, quotationProviders, repository.fetchProviderPayableCosts);
   }
 
+  // What's owed after a write that changes it. The refetch every write triggers brings it too,
+  // so a failure here isn't the write's: this only shows the new amounts sooner.
+  async function _refreshPayableCostsAfterWrite(travelId: string): Promise<void> {
+    await refreshProviderPayableCosts(travelId).catch(() => {});
+  }
+
   async function fetchProviderOptOuts(travelId: string): Promise<void> {
-    try {
+    await _runRead(async () => {
       const optOuts = await repository.fetchProviderOptOuts(travelId);
       providerOptOuts.value = [
         ...providerOptOuts.value.filter(o => o.travelId !== travelId),
         ...optOuts,
       ];
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
+    });
   }
 
   /**
    * Sets whether some travelers take an optional service and refreshes what is owed.
    * Allowed on a confirmed quotation, like the rooms.
-   * @returns An error message, or null if everything went well
+   * @throws Re-throws repository errors
    */
   async function setServiceTakers(
     quotationProviderId: string,
     travelId: string,
     travelerIds: string[],
     takes: boolean,
-  ): Promise<string | null> {
+  ): Promise<void> {
     const optedOut = getOptOutsByProvider.value(quotationProviderId);
     const changed = travelerIds.filter(id => optedOut.has(id) === takes);
     if (changed.length === 0)
-      return null;
+      return;
 
-    error.value = null;
-    try {
+    await _runWrite(async () => {
       if (takes) {
         await repository.deleteProviderOptOuts(quotationProviderId, changed);
         providerOptOuts.value = providerOptOuts.value.filter(o =>
@@ -1202,34 +1118,21 @@ export const useQuotationStore = defineStore('quotation', () => {
         await repository.insertProviderOptOuts(added);
         providerOptOuts.value.push(...added);
       }
-      await refreshProviderPayableCosts(travelId);
-      return null;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return error.value;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-    }
+      await _refreshPayableCostsAfterWrite(travelId);
+    });
   }
 
   /**
    * Saves the price adjustments of a per-person service and refreshes what is owed.
    * Allowed on a confirmed quotation because they don't change the seat price.
-   * @returns An error message, or null if everything went well
+   * @throws {Error} When the provider isn't loaded, or re-throws repository errors
    */
   async function saveProviderAdjustments(
     quotationProviderId: string,
     drafts: ProviderPriceAdjustmentDraft[],
-  ): Promise<string | null> {
-    const provider = quotationProviders.value.find(p => p.id === quotationProviderId);
-    if (!provider)
-      return 'Proveedor no encontrado';
-    const quotation = _quotation(provider.quotationId);
-
-    error.value = null;
-    try {
+  ): Promise<void> {
+    await _runWrite(async () => {
+      const provider = _row(quotationProviders.value, quotationProviderId, 'Proveedor no encontrado');
       const saved = await repository.saveProviderAdjustments(quotationProviderId, drafts);
       providerPriceAdjustments.value = [
         ...providerPriceAdjustments.value.filter(a => a.quotationProviderId !== quotationProviderId),
@@ -1240,45 +1143,34 @@ export const useQuotationStore = defineStore('quotation', () => {
       travelerPriceAdjustments.value = travelerPriceAdjustments.value.filter(a =>
         a.quotationProviderId !== quotationProviderId || savedIds.has(a.adjustmentId),
       );
+      const quotation = _quotation(provider.quotationId);
       if (quotation)
-        await refreshProviderPayableCosts(quotation.travelId);
-      return null;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return error.value;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-    }
+        await _refreshPayableCostsAfterWrite(quotation.travelId);
+    });
   }
 
   async function fetchTravelerAdjustments(travelId: string): Promise<void> {
-    try {
+    await _runRead(async () => {
       const choices = await repository.fetchTravelerAdjustments(travelId);
       travelerPriceAdjustments.value = [
         ...travelerPriceAdjustments.value.filter(a => a.travelId !== travelId),
         ...choices,
       ];
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
+    });
   }
 
   /**
    * Picks the adjustment some travelers pay in a service (null = base price) and refreshes
    * what is owed to the provider.
-   * @returns An error message, or null if everything went well
+   * @throws Re-throws repository errors
    */
   async function setTravelerAdjustment(
     quotationProviderId: string,
     travelId: string,
     travelerIds: string[],
     adjustmentId: string | null,
-  ): Promise<string | null> {
-    error.value = null;
-    try {
+  ): Promise<void> {
+    await _runWrite(async () => {
       await repository.setTravelerAdjustment(quotationProviderId, travelId, travelerIds, adjustmentId);
       travelerPriceAdjustments.value = [
         ...travelerPriceAdjustments.value.filter(a =>
@@ -1288,20 +1180,12 @@ export const useQuotationStore = defineStore('quotation', () => {
           ? travelerIds.map(travelerId => ({ quotationProviderId, travelerId, travelId, adjustmentId }))
           : []),
       ];
-      await refreshProviderPayableCosts(travelId);
-      return null;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return error.value;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-    }
+      await _refreshPayableCostsAfterWrite(travelId);
+    });
   }
 
   async function toggleProviderConfirmed(id: string): Promise<void> {
-    await _toggleConfirmed(quotationProviders, id, repository.toggleProviderConfirmed);
+    await _toggleConfirmed(quotationProviders, id, 'Proveedor no encontrado', repository.toggleProviderConfirmed);
   }
 
   // Provider payment actions: built by createSupplierPaymentSlice.
@@ -1321,92 +1205,49 @@ export const useQuotationStore = defineStore('quotation', () => {
   // Accommodation Actions
   // ============================================================================
 
-  async function addQuotationAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation | { error: string }> {
-    const quotation = _quotation(data.quotationId);
-    if (!quotation)
-      return { error: 'Cotización no encontrada' };
-    if (quotation.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function addQuotationAccommodation(data: QuotationAccommodationFormData): Promise<QuotationAccommodation> {
+    return _runWrite(async () => {
+      _editableQuotation(data.quotationId);
       // No rooms are created here: they're added on the travel's rooms page.
       const newAccommodation = await repository.insertAccommodation(data);
       quotationAccommodations.value.push(newAccommodation);
       await _syncSeatPrice(data.quotationId);
       return newAccommodation;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   async function updateQuotationAccommodation(
     id: string,
     data: Partial<QuotationAccommodationFormData>,
-  ): Promise<QuotationAccommodation | { error: string }> {
-    const index = quotationAccommodations.value.findIndex(h => h.id === id);
-    const existing = quotationAccommodations.value[index];
-    if (!existing)
-      return { error: 'Hospedaje no encontrado' };
+  ): Promise<QuotationAccommodation> {
+    return _runWrite(async () => {
+      const existing = _row(quotationAccommodations.value, id, 'Hospedaje no encontrado');
+      _editableQuotation(existing.quotationId);
 
-    const quotation = _quotation(existing.quotationId);
-    if (quotation?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
-    loading.value = true;
-    error.value = null;
-    try {
       const next = getAccommodationsByQuotation.value(existing.quotationId)
         .map(h => (h.id === id ? { ...h, details: data.details ?? h.details } : h));
       const roomsToDrop = await _findRoomsToDrop(existing.quotationId, next);
-      if ('error' in roomsToDrop)
-        return roomsToDrop;
 
       const updated = await repository.updateAccommodation(id, data, existing.details);
-      quotationAccommodations.value[index] = updated;
+      _replace(quotationAccommodations, updated);
       await _deleteRooms(existing.quotationId, roomsToDrop);
       await _syncSeatPrice(existing.quotationId);
       return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   /**
    * Removes a hotel from the quotation, along with its empty rooms on the travel.
    * Refused while any of its rooms has someone in it.
-   * @returns An error message, or `null` when it was deleted
+   * @throws {Error} With a user-facing message when it's refused, or re-throws repository errors
    */
-  async function deleteQuotationAccommodation(id: string): Promise<string | null> {
-    const accommodation = quotationAccommodations.value.find(h => h.id === id);
-    if (!accommodation)
-      return 'Hospedaje no encontrado';
+  async function deleteQuotationAccommodation(id: string): Promise<void> {
+    await _runWrite(async () => {
+      const { quotationId } = _row(quotationAccommodations.value, id, 'Hospedaje no encontrado');
+      _editableQuotation(quotationId);
 
-    const quotation = _quotation(accommodation.quotationId);
-    if (quotation?.status === 'confirmed')
-      return 'No se puede modificar una cotización confirmada';
-
-    const quotationId = accommodation.quotationId;
-    loading.value = true;
-    error.value = null;
-    try {
       const next = getAccommodationsByQuotation.value(quotationId).filter(h => h.id !== id);
       const roomsToDrop = await _findRoomsToDrop(quotationId, next);
-      if ('error' in roomsToDrop)
-        return roomsToDrop.error;
 
       await repository.deleteAccommodation(id);
 
@@ -1414,16 +1255,7 @@ export const useQuotationStore = defineStore('quotation', () => {
       accommodationPaymentSlice.replaceForParents([id]);
       await _deleteRooms(quotationId, roomsToDrop);
       await _syncSeatPrice(quotationId);
-      return null;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return error.value;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   /**
@@ -1436,7 +1268,7 @@ export const useQuotationStore = defineStore('quotation', () => {
   }
 
   async function toggleAccommodationConfirmed(id: string): Promise<void> {
-    await _toggleConfirmed(quotationAccommodations, id, repository.toggleConfirmAccommodation);
+    await _toggleConfirmed(quotationAccommodations, id, 'Hospedaje no encontrado', repository.toggleConfirmAccommodation);
   }
 
   // Accommodation payment actions: built by createSupplierPaymentSlice.
@@ -1448,68 +1280,29 @@ export const useQuotationStore = defineStore('quotation', () => {
   // Public Price Actions
   // ============================================================================
 
-  async function addPublicPrice(data: QuotationPublicPriceFormData): Promise<QuotationPublicPrice | { error: string }> {
-    const quotation = _quotation(data.quotationId);
-    if (!quotation)
-      return { error: 'Cotización no encontrada' };
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function addPublicPrice(data: QuotationPublicPriceFormData): Promise<QuotationPublicPrice> {
+    return _runWrite(async () => {
+      _row(quotations.value, data.quotationId, 'Cotización no encontrada');
       const newPrice = await repository.insertPublicPrice(data);
       quotationPublicPrices.value.push(newPrice);
       return newPrice;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
-  async function updatePublicPrice(id: string, data: Partial<QuotationPublicPriceFormData>): Promise<QuotationPublicPrice | undefined> {
-    const index = quotationPublicPrices.value.findIndex(p => p.id === id);
-    if (index === -1)
-      return undefined;
-
-    const existing = quotationPublicPrices.value[index];
-    if (!existing)
-      return undefined;
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function updatePublicPrice(id: string, data: Partial<QuotationPublicPriceFormData>): Promise<QuotationPublicPrice> {
+    return _runWrite(async () => {
+      _row(quotationPublicPrices.value, id, 'Precio no encontrado');
       const updated = await repository.updatePublicPrice(id, data);
-      quotationPublicPrices.value[index] = updated;
+      _replace(quotationPublicPrices, updated);
       return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   async function deletePublicPrice(id: string): Promise<void> {
-    loading.value = true;
-    error.value = null;
-    try {
+    await _runWrite(async () => {
       await repository.deletePublicPrice(id);
       quotationPublicPrices.value = quotationPublicPrices.value.filter(p => p.id !== id);
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   // ============================================================================
@@ -1517,12 +1310,9 @@ export const useQuotationStore = defineStore('quotation', () => {
   // ============================================================================
 
   async function fetchExpenseCategories(): Promise<void> {
-    try {
+    await _runRead(async () => {
       expenseCategories.value = await repository.fetchExpenseCategories();
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
+    });
   }
 
   function _rememberCategory(category: string): void {
@@ -1530,110 +1320,55 @@ export const useQuotationStore = defineStore('quotation', () => {
       expenseCategories.value = [...expenseCategories.value, category];
   }
 
-  async function addExpense(data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
-    const quotation = _quotation(data.quotationId);
-    if (!quotation)
-      return { error: 'Cotización no encontrada' };
-    if (quotation.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function addExpense(data: QuotationExpenseFormData): Promise<QuotationExpense> {
+    return _runWrite(async () => {
+      _editableQuotation(data.quotationId);
       const expense = await repository.insertExpense(data);
       quotationExpenses.value.push(expense);
       _rememberCategory(expense.category);
       await _syncSeatPrice(data.quotationId);
       return expense;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
-  async function updateExpense(id: string, data: QuotationExpenseFormData): Promise<QuotationExpense | { error: string }> {
-    const index = quotationExpenses.value.findIndex(g => g.id === id);
-    const existing = quotationExpenses.value[index];
-    if (!existing)
-      return { error: 'Gasto no encontrado' };
-
-    const quotation = _quotation(existing.quotationId);
-    if (quotation?.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function updateExpense(id: string, data: QuotationExpenseFormData): Promise<QuotationExpense> {
+    return _runWrite(async () => {
+      const existing = _row(quotationExpenses.value, id, 'Gasto no encontrado');
+      _editableQuotation(existing.quotationId);
       const expense = await repository.updateExpense(id, data);
-      quotationExpenses.value[index] = expense;
+      _replace(quotationExpenses, expense);
       _rememberCategory(expense.category);
       await _syncSeatPrice(existing.quotationId);
       return expense;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
-  async function deleteExpense(id: string): Promise<boolean> {
-    const expense = quotationExpenses.value.find(g => g.id === id);
-    if (!expense)
-      return false;
-
-    const quotation = _quotation(expense.quotationId);
-    if (quotation?.status === 'confirmed')
-      return false;
-
-    loading.value = true;
-    error.value = null;
-    try {
+  async function deleteExpense(id: string): Promise<void> {
+    await _runWrite(async () => {
+      const { quotationId } = _row(quotationExpenses.value, id, 'Gasto no encontrado');
+      _editableQuotation(quotationId);
       await repository.deleteExpense(id);
       quotationExpenses.value = quotationExpenses.value.filter(g => g.id !== id);
-      await _syncSeatPrice(expense.quotationId);
-      return true;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return false;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+      await _syncSeatPrice(quotationId);
+    });
   }
 
   // ============================================================================
   // Reserved Bus Actions
   // ============================================================================
 
-  async function addBusQuotation(data: QuotationBusFormData): Promise<QuotationBus | { error: string }> {
-    const quotation = _quotation(data.quotationId);
-    if (!quotation)
-      return { error: 'Cotización no encontrada' };
-    if (quotation.status === 'confirmed')
-      return { error: 'No se puede modificar una cotización confirmada' };
+  async function addBusQuotation(data: QuotationBusFormData): Promise<QuotationBus> {
+    return _runWrite(async () => {
+      const quotation = _editableQuotation(data.quotationId);
 
-    const duplicate = quotationBuses.value.find(
-      b => b.quotationId === data.quotationId
-        && b.providerId === data.providerId
-        && b.unitNumber === data.unitNumber,
-    );
-    if (duplicate)
-      return { error: 'Este número de unidad ya existe para este proveedor en la cotización' };
+      const duplicate = quotationBuses.value.find(
+        b => b.quotationId === data.quotationId
+          && b.providerId === data.providerId
+          && b.unitNumber === data.unitNumber,
+      );
+      if (duplicate)
+        throw new Error('Este número de unidad ya existe para este proveedor en la cotización');
 
-    loading.value = true;
-    error.value = null;
-    try {
       const { quotationBus: newBus } = await repository.insertBus(data, quotation.travelId);
       // The repository also creates the linked travel_bus; refetching the travel detail
       // brings it (and the new total_seats) to the traveler bus options and operators.
@@ -1641,40 +1376,20 @@ export const useQuotationStore = defineStore('quotation', () => {
       quotationBuses.value.push(newBus);
       await _syncSeatPrice(data.quotationId);
       return newBus;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return { error: error.value };
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
-  async function updateBusQuotation(id: string, data: Partial<QuotationBusFormData>): Promise<QuotationBus | undefined> {
-    const index = quotationBuses.value.findIndex(b => b.id === id);
-    if (index === -1)
-      return undefined;
+  async function updateBusQuotation(id: string, data: Partial<QuotationBusFormData>): Promise<QuotationBus> {
+    return _runWrite(async () => {
+      const existing = _row(quotationBuses.value, id, 'Autobús no encontrado');
 
-    const existing = quotationBuses.value[index];
-    if (!existing)
-      return undefined;
+      // Confirmed quotations lock the bus structure and costs, but coordinators are assigned
+      // on the travel side at any time, so a coordinator-only change still goes through.
+      const onlyCoordinators = Object.keys(data).every(key => key === 'coordinatorIds');
+      const quotation = onlyCoordinators ? _quotation(existing.quotationId) : _editableQuotation(existing.quotationId);
 
-    // Confirmed quotations lock the bus structure and costs, but coordinators are assigned
-    // on the travel side at any time, so a coordinator-only change still goes through.
-    const quotation = _quotation(existing.quotationId);
-    const onlyCoordinators = Object.keys(data).every(key => key === 'coordinatorIds');
-    if (quotation?.status === 'confirmed' && !onlyCoordinators) {
-      error.value = 'No se puede modificar una cotización confirmada';
-      return undefined;
-    }
-
-    loading.value = true;
-    error.value = null;
-    try {
       const updated = await repository.updateBus(id, data);
-      quotationBuses.value[index] = updated;
+      _replace(quotationBuses, updated);
 
       // travel_buses is the operational projection coordinators see; the repository call
       // above keeps it in sync, and refetching the travel detail brings the new provider,
@@ -1685,30 +1400,13 @@ export const useQuotationStore = defineStore('quotation', () => {
 
       await _syncSeatPrice(existing.quotationId);
       return updated;
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-      return undefined;
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   async function deleteBusQuotation(id: string): Promise<void> {
-    const bus = quotationBuses.value.find(b => b.id === id);
-    if (!bus)
-      return;
-
-    const quotation = _quotation(bus.quotationId);
-    if (quotation?.status === 'confirmed')
-      return;
-
-    const quotationId = bus.quotationId;
-    loading.value = true;
-    error.value = null;
-    try {
+    await _runWrite(async () => {
+      const { quotationId } = _row(quotationBuses.value, id, 'Autobús no encontrado');
+      const quotation = _editableQuotation(quotationId);
       await repository.deleteBus(id);
 
       quotationBuses.value = quotationBuses.value.filter(b => b.id !== id);
@@ -1716,18 +1414,9 @@ export const useQuotationStore = defineStore('quotation', () => {
       // The linked travel_bus is deleted by CASCADE in the DB (quotation_bus_id FK ON DELETE CASCADE)
       // and travelers.travel_bus_id is cleared by ON DELETE SET NULL. Refetching the travel
       // detail removes it from the travelers' bus options.
-      if (quotation) {
-        queryCache.invalidateQueries({ key: travelKeys.detail(quotation.travelId), exact: true });
-      }
+      queryCache.invalidateQueries({ key: travelKeys.detail(quotation.travelId), exact: true });
       await _syncSeatPrice(quotationId);
-    }
-    catch (e) {
-      error.value = e instanceof Error ? e.message : 'Error desconocido';
-    }
-    finally {
-      queryCache.invalidateQueries({ key: quotationKeys.root });
-      loading.value = false;
-    }
+    });
   }
 
   // Bus payment actions: built by createSupplierPaymentSlice.
