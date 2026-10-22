@@ -50,7 +50,7 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 | `travel-coordinators-card.vue` | Coordinadores y sus asientos |
 | `travel-optional-service-card.vue` / `-list.vue` | Servicios cobrados por persona |
 | `travel-payments-panel.vue` | Pagos de los viajeros de un viaje |
-| `travel-service-form.vue` / `-list.vue` / `travel-services-editor.vue` | Servicios incluidos |
+| `travel-service-form.vue` / `-list.vue` | Servicios incluidos (la lista guarda cada cambio con `useEditableList`) |
 | `activity/travel-activity-*.vue` | Itinerario: lista, card y formulario de actividad |
 | `calendar/travel-calendar*.vue` | Calendario de viajes: calendario, filtros, lista y resumen |
 | `gallery/travel-gallery-*.vue` | Galería: sección, subida y visor |

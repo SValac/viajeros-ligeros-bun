@@ -1,35 +1,40 @@
 <script setup lang="ts">
 import type { TravelActivity } from '~/types/travel';
 
+import { useEditableList } from '~/composables/use-editable-list';
 import { useFormModal } from '~/composables/use-form-modal';
 import { deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 import { getTravelDurationDays } from '~/utils/travel-calendar';
 
-// Props
+// Itinerary of a travel. Each change is saved right away.
 type Props = {
-  modelValue: TravelActivity[];
+  activities: TravelActivity[];
   startDate: string;
   endDate: string;
-  travelId?: string;
+  travelId: string;
 };
 
 const props = defineProps<Props>();
 
-// Emits
-const emit = defineEmits<{
-  'update:modelValue': [activities: TravelActivity[]];
-}>();
-
 const travelsStore = useTravelsStore();
 const confirmDelete = useConfirmDelete();
+const toast = useToast();
 
-// Local state
-const activities = ref<TravelActivity[]>([...props.modelValue]);
 const { isOpen: isActivityModalOpen, editing: editingActivity, openNew: openActivityAddModal, openEdit: openEditModal } = useFormModal<TravelActivity>();
 
-// Toast for feedback
-const toast = useToast();
+const { items: activities, isSaving, upsert, remove } = useEditableList(() => props.activities, async (itinerary) => {
+  const saved = await travelsStore.updateTravel(props.travelId, { itinerary });
+  if (!saved) {
+    toast.add({
+      title: 'Error al guardar',
+      description: travelsStore.error ?? 'No se pudo guardar el itinerario',
+      color: 'error',
+      icon: 'i-lucide-alert-circle',
+    });
+  }
+  return saved;
+});
 
 // Travel duration in days
 const travelDuration = computed(() => {
@@ -43,63 +48,8 @@ const sortedActivities = computed(() => {
   return [...activities.value].sort((a, b) => a.day - b.day);
 });
 
-// Handlers
-async function persistActivities(nextActivities: TravelActivity[]): Promise<boolean> {
-  if (!props.travelId) {
-    activities.value = nextActivities;
-    emit('update:modelValue', activities.value);
-    return true;
-  }
-
-  const previousActivities = [...activities.value];
-  activities.value = nextActivities;
-  emit('update:modelValue', activities.value);
-
-  const saved = await travelsStore.updateTravel(props.travelId, { itinerary: nextActivities });
-  if (!saved) {
-    activities.value = previousActivities;
-    emit('update:modelValue', activities.value);
-    toast.add({
-      title: 'Error al guardar',
-      description: travelsStore.error ?? 'No se pudo guardar el itinerario',
-      color: 'error',
-      icon: 'i-lucide-alert-circle',
-    });
-    return false;
-  }
-
-  return true;
-}
-
-const isSaving = shallowRef(false);
-
 async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
-  let nextActivities = [...activities.value];
-
-  if (editingActivity.value) {
-    // Edit an existing activity
-    const index = activities.value.findIndex(a => a.id === editingActivity.value!.id);
-    if (index !== -1) {
-      nextActivities[index] = {
-        ...activityData,
-        id: editingActivity.value.id,
-      };
-    }
-  }
-  else {
-    // Add a new activity
-    const newActivity: TravelActivity = {
-      ...activityData,
-      id: crypto.randomUUID(),
-    };
-    nextActivities = [...nextActivities, newActivity];
-  }
-
-  isSaving.value = true;
-  const saved = await persistActivities(nextActivities).finally(() => {
-    isSaving.value = false;
-  });
-  if (!saved)
+  if (!(await upsert(activityData, editingActivity.value)))
     return;
 
   toast.add({
@@ -111,15 +61,14 @@ async function handleSubmit(activityData: Omit<TravelActivity, 'id'>) {
 }
 
 async function deleteActivity(activity: TravelActivity) {
-  if (await confirmDelete({
+  if (!(await confirmDelete({
     title: 'Eliminar actividad',
     description: `¿Estás seguro de eliminar la actividad "${activity.title}"?`,
-  })) {
-    const nextActivities = activities.value.filter(a => a.id !== activity.id);
-    const saved = await persistActivities(nextActivities);
-    if (!saved)
-      return;
+  }))) {
+    return;
+  }
 
+  if (await remove(activity.id)) {
     toast.add({
       title: 'Actividad eliminada',
       color: 'success',
@@ -127,11 +76,6 @@ async function deleteActivity(activity: TravelActivity) {
     });
   }
 }
-
-// Sync with the prop when it changes from outside
-watch(() => props.modelValue, (newVal) => {
-  activities.value = [...newVal];
-}, { deep: true });
 
 // Actions per activity
 function getActivityActions(activity: TravelActivity) {
@@ -179,6 +123,7 @@ function getActivityActions(activity: TravelActivity) {
               variant="ghost"
               color="neutral"
               size="sm"
+              :aria-label="`Acciones de ${activity.title}`"
             />
           </UDropdownMenu>
         </template>

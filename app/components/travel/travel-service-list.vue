@@ -3,29 +3,32 @@ import type { DropdownMenuItem } from '@nuxt/ui';
 
 import type { TravelService } from '~/types/travel';
 
+import { useEditableList } from '~/composables/use-editable-list';
 import { useFormModal } from '~/composables/use-form-modal';
 import { deleteAction } from '~/utils/actions-column';
 import { pluralize } from '~/utils/pluralize';
 
-// Public "qué incluye" list of a travel, shown on the web. Emits the whole list on every
-// change; the parent persists it and reports the result (so there's a single toast).
+// Public "qué incluye" list of a travel, shown on the web. Each change is saved right away.
 type Props = {
-  modelValue: TravelService[];
-  editable?: boolean;
+  services: TravelService[];
+  travelId: string;
 };
 
-const props = withDefaults(defineProps<Props>(), {
-  editable: true,
-});
+const props = defineProps<Props>();
 
-const emit = defineEmits<{
-  'update:modelValue': [services: TravelService[]];
-}>();
-
+const travelsStore = useTravelsStore();
 const confirmDelete = useConfirmDelete();
+const toast = useToast();
 
-const services = ref<TravelService[]>([...props.modelValue]);
 const { isOpen: isServiceModalOpen, editing: editingService, openNew: openServiceAddModal, openEdit: openEditModal } = useFormModal<TravelService>();
+
+const { items: services, isSaving, upsert, patch, remove } = useEditableList(() => props.services, async (services) => {
+  const saved = await travelsStore.updateTravel(props.travelId, { services });
+  toast.add(saved
+    ? { title: 'Servicios guardados', color: 'success', icon: 'i-lucide-check-circle' }
+    : { title: 'Error al guardar servicios', description: travelsStore.error ?? undefined, color: 'error', icon: 'i-lucide-alert-circle' });
+  return saved;
+});
 
 // Included ones first, each group keeping its order
 const sortedServices = computed(() => [
@@ -36,34 +39,17 @@ const sortedServices = computed(() => [
 const includedCount = computed(() => services.value.filter(s => s.included).length);
 const notIncludedCount = computed(() => services.value.length - includedCount.value);
 
-watch(() => props.modelValue, (newVal) => {
-  services.value = [...newVal];
-}, { deep: true });
-
-function emitServices() {
-  emit('update:modelValue', services.value);
-}
-
 function closeServiceModal() {
   isServiceModalOpen.value = false;
 }
 
-function handleSubmit(serviceData: Omit<TravelService, 'id'>) {
-  const editing = editingService.value;
-  if (editing) {
-    services.value = services.value.map(s => (s.id === editing.id ? { ...serviceData, id: editing.id } : s));
-  }
-  else {
-    services.value = [...services.value, { ...serviceData, id: crypto.randomUUID() }];
-  }
-
-  emitServices();
-  isServiceModalOpen.value = false;
+async function handleSubmit(serviceData: Omit<TravelService, 'id'>) {
+  if (await upsert(serviceData, editingService.value))
+    isServiceModalOpen.value = false;
 }
 
 function toggleIncluded(service: TravelService) {
-  services.value = services.value.map(s => (s.id === service.id ? { ...s, included: !s.included } : s));
-  emitServices();
+  patch(service.id, { included: !service.included });
 }
 
 async function handleDelete(service: TravelService) {
@@ -74,8 +60,7 @@ async function handleDelete(service: TravelService) {
     return;
   }
 
-  services.value = services.value.filter(s => s.id !== service.id);
-  emitServices();
+  await remove(service.id);
 }
 
 function getServiceActions(service: TravelService): DropdownMenuItem[][] {
@@ -117,7 +102,6 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
           />
         </div>
         <UButton
-          v-if="editable"
           icon="i-lucide-plus"
           size="sm"
           label="Agregar servicio"
@@ -145,7 +129,7 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
             {{ service.description }}
           </p>
         </div>
-        <UDropdownMenu v-if="editable" :items="getServiceActions(service)">
+        <UDropdownMenu :items="getServiceActions(service)">
           <UButton
             icon="i-lucide-ellipsis-vertical"
             variant="ghost"
@@ -167,6 +151,7 @@ function getServiceActions(service: TravelService): DropdownMenuItem[][] {
       <template #body>
         <TravelServiceForm
           :service="editingService"
+          :loading="isSaving"
           @submit="handleSubmit"
           @cancel="closeServiceModal"
         />

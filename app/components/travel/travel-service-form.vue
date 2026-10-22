@@ -10,9 +10,11 @@ import { businessNameSchema, sanitizeBusinessName, sanitizeText, textSchema } fr
 // Props
 type Props = {
   service?: TravelService | null;
+  // The parent is saving the submitted data
+  loading?: boolean;
 };
 
-const { service = null } = defineProps<Props>();
+const { service = null, loading = false } = defineProps<Props>();
 
 // Emits
 const emit = defineEmits<{
@@ -117,6 +119,7 @@ function onCancel() {
     <!-- Action buttons -->
     <FormActions
       :submit-label="service ? 'Actualizar servicio' : 'Registrar servicio'"
+      :loading="loading"
       @cancel="onCancel"
     />
   </UForm>
