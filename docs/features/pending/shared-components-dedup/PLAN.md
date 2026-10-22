@@ -469,7 +469,7 @@ Sin cambiar lo que exporta el store:
   catalog bus or a travel that no longer exists now throws "No se pudo eliminar…" (it used to
   resolve as a success); re-saving the seed travel's itinerary and services keeps them the same.
 
-### Fase 12 — Storage y perfil de agencia
+### Fase 12 — Storage y perfil de agencia ✅
 
 - Subir archivo + `getPublicUrl` está 3 veces (`use-travel-media-repository` `upload` y
   `uploadBanner`, `use-agency-profile-repository` `uploadImage`); borrar un archivo 3 veces
@@ -479,6 +479,20 @@ Sin cambiar lo que exporta el store:
   misma función con otro bucket → `storagePathFromPublicUrl(url, bucket)`.
 - `use-agency-profile-store.ts`: `saveProfile`, `saveAboutPage`, `saveHomePage`, `saveSeo` son
   iguales salvo el `update` y el mensaje → un `_save(update, message)`.
+
+**Done (2026-10-22).** Notes:
+- `app/utils/storage.ts`: `uploadPublicFile(supabase, bucket, path, file, { contentType })`
+  (returns the public URL), `removeStorageFile`, `storagePathFromPublicUrl(url, bucket)` and
+  `fileExtension(file)`. `TRAVEL_GALLERY_BUCKET` sits next to `AGENCY_LOGOS_BUCKET`.
+- `getGalleryStoragePath` and `getSiteImageStoragePath` are gone (callers pass the bucket).
+- `fileExtension` fixes a name with no dot: `split('.').pop()` returned the whole name as the
+  extension; now it's `bin`.
+- `use-agency-profile-store`: the four `save*` go through `_save(update, fallback)`.
+- `removeStorageFile` keeps the old behavior: Storage leaves out files RLS won't let the user
+  remove with no error, and it doesn't check that (a missing file would then block deleting
+  a gallery row). `removeAllForTravel` still compares the count itself.
+- Checked in the browser: upload + remove of a favicon (profile back to `null`, file gone),
+  a gallery image and a banner; `saveSeo`; the profile tabs, gallery and edit load clean.
 
 ### Fase 13 — Piezas chicas de datos
 
