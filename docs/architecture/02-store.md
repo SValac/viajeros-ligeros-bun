@@ -36,11 +36,18 @@ in shared-components-dedup phase 10:
   throws `new Error('<user-facing message>')`. When the store translates the error
   (`toTravelSaveErrorMessage`, `toRoomAssignmentErrorMessage`) it throws
   `new Error(message, { cause: e })` so the caller gets the translated text.
-- The caller wraps it in `try/catch` and shows `toErrorMessage(e, '<fallback>')` in its error
-  toast. A loader called on mount or in a watcher catches it too (toast, or `.catch(() => {})`
-  when the data is optional, with a comment why).
-- Exceptions: `use-agency-profile-store.fetchProfile` keeps its error in state (`profile.vue`
-  shows it); `use-travel-media-store` and `use-travel-access-store` show their own toasts.
+- Stores never toast: the caller does, with `useActionToast().runWithToast(action, { success,
+  error })` (`app/composables/use-action-toast.ts`), or a `try/catch` and
+  `toErrorMessage(e, '<fallback>')` when it needs a `finally` or the action's result. A loader
+  called on mount or in a watcher catches it too (toast, or `.catch(() => {})` when the data is
+  optional, with a comment why).
+- `toErrorMessage` shows our own `Error`s as they are. Supabase errors (PostgREST returns a plain
+  `{ code, message, details, hint }` object, not an `Error`), Storage/Auth/Edge Function errors
+  and runtime `TypeError`s etc. show their raw text only in development (`import.meta.dev`); in
+  production they get a Spanish text for the common codes (23505, 23503, 42501, expired
+  session, no network) or the fallback, since the raw text can name tables and constraints.
+  So never put a Supabase `error.message` inside our own message: throw
+  `new Error('<text>', { cause: error })` instead (development appends the cause).
 
 ---
 

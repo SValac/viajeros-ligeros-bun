@@ -9,11 +9,10 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 (1, 2, 8), (c) utils y composables (14, 15), (d) componentes (3-6, 16, 17), (e) datos
 (9-13). La 7 puede ir sola.
 
-**Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
+**Status:** Done (2026-10-22). PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
 PR (c) (phases 14, 15) as #139, PR (d) (phases 3-6, 16, 17 except 17.6) as #140, phase 7 as
-#141, phases 9-10 as #142. Phases 11-13 and 17.6 on branch
-`feature/shared-components-dedup-repositories`. Left for one last PR: the phase 10 follow-ups
-(then move this plan to `completed/` inside it).
+#141, phases 9-10 as #142, phases 11-13 and 17.6 as #143. The phase 10 follow-ups closed it in
+the last PR, on branch `feature/shared-components-dedup-followups`.
 
 ---
 
@@ -407,29 +406,22 @@ Sin cambiar lo que exporta el store:
 - Not changed: `useEditableList` and `useSiteImageActions` (composables that still resolve to
   `boolean` for their UI). The rest is in "Phase 10 follow-ups" below.
 
-**Phase 10 follow-ups (to fix in PR (e), with 17.6 or before):**
-- [ ] `use-agency-profile-store.fetchProfile` still swallows its error and keeps it in
-  `error`: `profile.vue` shows it, while `the-sidebar.vue` and `travel-form.vue` call it
-  fire-and-forget in `onMounted`. Make it throw like the rest; `profile.vue` keeps an error
-  state (catch it and show the alert from a local ref or the query), the sidebar and the
-  travel form catch it (`.catch(() => {})` if they only need the name/completeness, with a
-  comment, or a toast).
-- [ ] `use-travel-media-store` (fetch/upload/remove) and `use-travel-access-store`
-  (fetch/generate/revoke) call `useToast()` inside the store and swallow the error. Move the
-  toasts to the callers and re-throw, as in the other stores (fits 17.6: the toast helper).
-- [ ] `pages/travels/[id]/edit.vue`: a failed `uploadBanner` before `updateTravel` is still
-  an unhandled rejection (no toast, the form just stays). Not a one-line fix: putting it in
-  the same `try` would treat `data.imageUrl` (still the previous banner) as the unused file
-  and delete the travel's current banner. Catch the upload on its own: error toast, keep the
-  form, don't save and don't touch any file.
-- [ ] Decide: with every store throwing, raw PostgREST/Postgres messages (sometimes in English,
-  e.g. a unique or FK violation) now reach more toasts. Map the common codes (`23505`,
-  `23503`, RLS `42501`, network failure) to Spanish texts in `toErrorMessage` or a sibling
-  helper, keeping the original as `cause`.
-- Checked in the browser: every touched screen loads with no console errors; refusals throw
-  their message (overpay, amount 0, unconfirmed providers, duplicate bus unit, not found);
-  add + delete expense moves the seat price 3015 → 3020 → 3015; provider toggle toast; a
-  simulated 500 on `providers` and on `travels` shows the error toast and keeps the form.
+**Phase 10 follow-ups: done (2026-10-22)** on branch `feature/shared-components-dedup-followups`:
+- [x] `fetchProfile` throws. The sidebar and the travel form ignore a failed load on purpose
+  (with a comment); `profile.vue` shows it from its own ref, so a failed save in a tab can't
+  overwrite it.
+- [x] The travel media and access code stores no longer toast; their components do, with
+  `runWithToast`. Fixed on the way: files that fail to upload stay in the list to retry (they
+  were dropped), and a failed access code load shows a toast (it looked like "no code yet").
+- [x] `edit.vue`: a failed banner upload shows an error toast and saves nothing, so the
+  current banner is never touched.
+- [x] Raw Supabase messages: decided with the user to show them only in development (they can
+  name tables, columns and constraints). See `toErrorMessage` and "Action errors" in
+  `docs/architecture/02-store.md`. Found on the way: PostgREST errors are plain objects, not
+  `Error`s, so `toTravelSaveErrorMessage` never matched `agency_profile_incomplete` (the
+  "complete your profile to publish" text never showed); it, `toRoomAssignmentErrorMessage`,
+  the auth sign-in/sign-up mappers and three repository errors passed raw text through.
+- Also: the gallery delete button got an `aria-label`.
 
 ### Fase 11 — Repositorios: helpers de Supabase ✅
 
