@@ -8,6 +8,8 @@ const locale = extendLocale(es, { code: 'es-MX' });
 
 <template>
   <UApp :locale="locale">
+    <!-- Bar at the top while a navigation waits (first visit to a page loads its JS); hidden under 200 ms -->
+    <NuxtLoadingIndicator color="var(--ui-primary)" />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>
