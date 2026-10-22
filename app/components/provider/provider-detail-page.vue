@@ -27,6 +27,7 @@ const route = computed(() => PROVIDER_CATEGORY_META[category].route);
     :is-loaded="providerStore.isLoaded"
     :load-error="providerStore.loadError"
     label="los proveedores"
+    skeleton="detail"
     @retry="providerStore.refetch()"
   >
     <div v-if="provider" class="space-y-6">

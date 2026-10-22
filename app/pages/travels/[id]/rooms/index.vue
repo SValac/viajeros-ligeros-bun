@@ -361,11 +361,15 @@ async function updateAccommodation(
       <LoadState
         v-bind="travelersLoad"
         label="los viajeros"
+        skeleton="cards"
+        :stats="3"
         @retry="refetchTravelers()"
       >
         <LoadState
           v-bind="quotationLoad"
           label="la cotización"
+          skeleton="cards"
+          :stats="3"
           @retry="refetchQuotation()"
         >
           <!-- Stats -->

@@ -154,6 +154,7 @@ const columns = computed<TableColumn<Provider>[]>(() => [
         :is-loaded="providerStore.isLoaded"
         :load-error="providerStore.loadError"
         label="los proveedores"
+        skeleton="table"
         @retry="providerStore.refetch()"
       >
         <template v-if="providers.length === 0">

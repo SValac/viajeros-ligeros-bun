@@ -99,6 +99,8 @@ const columns: TableColumn<TravelSummary>[] = [
   <LoadState
     v-bind="travelsLoad"
     label="los viajes"
+    skeleton="table"
+    :stats="4"
     fill
     @retry="refetch()"
   >
