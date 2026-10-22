@@ -31,6 +31,10 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 | `unsaved-changes-modal.vue` | Confirmación al salir con cambios sin guardar |
 | `confirm-delete-modal.vue` | Confirmación de borrado (se abre con `useConfirmDelete`) |
 | `stat-card.vue` | Tarjeta de cifra: etiqueta, ícono, valor y slot de detalle |
+| `page-header.vue` | Título de la pantalla: descripción, volver, ícono, badge y acciones |
+| `password-input.vue` | Input de contraseña con mostrar/ocultar |
+| `form-actions.vue` | Botones Cancelar + enviar al pie de un formulario |
+| `image-upload.vue` | Elegir imagen con vista previa (el padre la sube) |
 | `the-sidebar.vue` | Navegación principal lateral |
 | `user-menu.vue` | Menú de cuenta de usuario |
 | `logo.vue` | Logo de la marca |
@@ -121,7 +125,7 @@ Nuxt arma el nombre del componente con la ruta de carpetas + el nombre del archi
 | `agency-profile-form.vue` / `agency-brand-preview.vue` / `agency-color-input.vue` | Datos y marca |
 | `agency-seo-form.vue` / `agency-seo-preview.vue` | SEO |
 | `agency-about-page-editor.vue` | Editor de la página "Nosotros" |
-| `agency-image-upload.vue` / `agency-icon-picker.vue` | Imagen e icono |
+| `agency-icon-picker.vue` | Icono |
 | `home/agency-home-*.vue` | Página de inicio: editor y campos de bloque |
 | `page/agency-page-*.vue` | Páginas del sitio: formulario (`AgencyPageForm`, recibe el editor en su slot), secciones editables, card, items y modal de confirmación |
 

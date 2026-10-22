@@ -60,7 +60,7 @@ async function handleBannerRemove() {
       variant="subtle"
     >
       <div class="space-y-4">
-        <AgencyImageUpload
+        <ImageUpload
           :image-url="profile.bannerImageUrl"
           label="banner"
           :accept="siteImageAccept('bannerImageUrl')"
