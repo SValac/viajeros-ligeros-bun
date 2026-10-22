@@ -113,3 +113,34 @@ mobile width only gets CSS fixes if something overflows.
 - Error → Reintentar on `/coordinators` (500, then a held request): the error goes away and the
   skeleton shows.
 - `grep -rn "animate-spin\|loader-circle" app` is empty.
+
+## Navigation speed and the remaining gaps (2026-10-22, second pass)
+
+The user felt a delay when moving between screens and tabs, and asked whether Nuxt holds the
+navigation until the next screen loads.
+
+- **Nuxt's blocking:** per the docs (Data fetching), Nuxt uses `<Suspense>` to hold the navigation
+  while an awaited `useAsyncData` / `useFetch` resolves, and the `lazy` option or not awaiting
+  skips it. This app uses neither. It loads with Pinia Colada's `useQuery`, which never
+  suspends, and no page or layout has a top-level `await`. So there is no blocking option to turn
+  off.
+- **What a navigation does wait for (measured):**
+  - Route guards, including `auth.global` (`getSession`): 2–13 ms.
+  - Vue rendering the new page: 36–83 ms in dev.
+  - The page's JS chunk, the first time only. Production build served locally: about 50–130 ms
+    once `NuxtLink`'s visibility prefetch has fetched it. If the user clicks right after a page
+    loads, it took about 2.9 s, because that prefetch requests ~40 chunks at once. Over local
+    HTTP/1.1 (6 connections) the clicked tab's chunk queues behind them. Vercel serves HTTP/2,
+    which has no such queue.
+  - In `bun run dev`, Vite compiles each page the first time it's visited, so first visits feel
+    slower than in production.
+- **Screens that showed a wrong state while loading, now with a skeleton:**
+  - travel summary: seat figures and coordinators;
+  - access code card (it said "no code yet"), with a new `lines` preset;
+  - gallery (it said "no photos");
+  - travel payments tab, quotation summary "Cobrado a viajeros" and the traveler payments page:
+    they read $0 until the payments arrived. `useTravelPayments` now returns `loadState` +
+    `refetch`.
+- Not changed: the travel rooms page shows each traveler's price description once the payments
+  arrive (no figure reads wrong before that). The public prices section only uses payments for
+  names in a warning modal.

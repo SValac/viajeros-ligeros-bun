@@ -153,8 +153,9 @@ en selects por toda la app), la primera vez que una pantalla usa su store. Cada 
   datos ya cargados, se queda el contenido. `label` lleva el artículo ("los viajeros", "la
   cotización") y el verbo concuerda solo. `fill` centra el error en toda la altura (páginas completas).
 - **`LoadSkeleton`** (`app/components/load-skeleton.vue`): el skeleton de `LoadState`, con un preset por
-  tipo de contenido y no uno por pantalla: `skeleton="table" | "cards" | "detail" | "panel" | "form"`
-  (`panel` por defecto) y `:stats="3 | 4"` para las StatCards de arriba. El slot `#loading` lo
+  tipo de contenido y no uno por pantalla: `skeleton="table" | "cards" | "detail" | "panel" | "lines" | "form"`
+  (`panel` por defecto; `lines` es `panel` sin card, para dentro de una card que ya existe) y
+  `:stats="3 | 4"` para las StatCards de arriba. El slot `#loading` lo
   reemplaza cuando la página tiene su propio contenedor (`travels/[id]`, `quotations/[id]`).
 - **`useQueryLoadState(query)`** (`app/queries/load-state.ts`) da sus props desde un `useQuery`:
   `<LoadState v-bind="travelersLoad" label="los viajeros" @retry="refetchTravelers()">`.
