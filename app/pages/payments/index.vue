@@ -199,7 +199,7 @@ const balanceClass = computed(() => (globalStats.value?.totalBalance ?? 0) > 0 ?
         >
           <EmptyState
             v-if="pageRows.length === 0"
-            section="payments"
+            section="payableTravels"
             :actions="[{ label: 'Ir a Viajes', icon: 'i-lucide-map', onClick: goToTravelsDashboard }]"
           />
 

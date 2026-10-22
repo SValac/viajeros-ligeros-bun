@@ -11,6 +11,7 @@ import { useQuotationContext } from '~/composables/quotation/use-quotation-conte
 import { travelersByTravelQuery } from '~/queries/travelers';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
+import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
 import { sanitizeBusinessName, sanitizeText } from '~/utils/form-validation';
 import { pluralize } from '~/utils/pluralize';
 import { formatTravelerName } from '~/utils/traveler-labels';
@@ -574,7 +575,8 @@ const columns = computed<TableColumn<QuotationPublicPrice>[]>(() => {
         <!-- No prices added -->
         <EmptyState
           v-else
-          section="prices"
+          section="salePrices"
+          :description="props.readonly ? CONFIRMED_QUOTATION_EMPTY_DESCRIPTION : undefined"
           compact
         />
       </div>

@@ -163,7 +163,7 @@ async function handleDelete(rt: HotelRoomType) {
         <!-- Empty state -->
         <EmptyState
           v-if="roomTypes.length === 0"
-          section="lodging"
+          section="roomTypes"
           :actions="[{ label: 'Agregar tipo de habitación', icon: 'i-lucide-plus', onClick: openCreateForm }]"
         />
 

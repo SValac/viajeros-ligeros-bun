@@ -30,6 +30,12 @@ export const EMPTY_STATES = {
     title: 'Sin pagos registrados',
     description: 'Los pagos aparecen aquí cuando se registran.',
   },
+  // /payments lists travels, not payments: it is empty while no travel can take payments yet
+  payableTravels: {
+    icon: 'i-lucide-map',
+    title: 'No hay viajes publicados',
+    description: 'Los pagos de los viajeros se registran en los viajes publicados, en curso o completados.',
+  },
   providers: {
     icon: 'i-lucide-handshake',
     title: 'Todavía no hay proveedores',
@@ -45,10 +51,22 @@ export const EMPTY_STATES = {
     title: 'Todavía no hay autobuses',
     description: 'Agrega autobuses para repartir los asientos entre los viajeros.',
   },
+  // A bus agency's units in the provider catalog (the travel's buses are `buses`)
+  busUnits: {
+    icon: 'i-lucide-bus',
+    title: 'Esta agencia no tiene unidades',
+    description: 'Agrega sus unidades para apartarlas en las cotizaciones.',
+  },
   lodging: {
     icon: 'i-lucide-bed-double',
     title: 'Todavía no hay hospedaje',
     description: 'Agrega hoteles y tipos de habitación para repartir a los viajeros.',
+  },
+  // A hotel's room types in the provider catalog (the travel's lodging is `lodging`)
+  roomTypes: {
+    icon: 'i-lucide-bed-double',
+    title: 'Este hotel no tiene tipos de habitación',
+    description: 'Agrega sus tipos de habitación para cotizar el hospedaje de los viajes.',
   },
   services: {
     icon: 'i-lucide-package',
@@ -64,6 +82,11 @@ export const EMPTY_STATES = {
     icon: 'i-lucide-tag',
     title: 'Todavía no hay precios',
     description: 'Los precios de referencia salen de los proveedores y el hospedaje; con ellos se definen los precios al público.',
+  },
+  salePrices: {
+    icon: 'i-lucide-tag',
+    title: 'Todavía no hay precios de venta',
+    description: 'Agrega uno, o parte de un precio de referencia con «Usar como plantilla».',
   },
   gallery: {
     icon: 'i-lucide-images',
@@ -83,3 +106,6 @@ export const EMPTY_STATES = {
 } satisfies Record<string, EmptyStateContent>;
 
 export type EmptyStateSection = keyof typeof EMPTY_STATES;
+
+/** Description for the lists of a confirmed quotation, where "Agrega…" has no button. */
+export const CONFIRMED_QUOTATION_EMPTY_DESCRIPTION = 'La cotización está confirmada: ya no se agregan elementos.';

@@ -10,6 +10,7 @@ import { useQuotationRoomCounts } from '~/composables/quotation/use-quotation-ro
 import { useSupplierTable } from '~/composables/quotation/use-supplier-table';
 import { actionsColumn, deleteAction } from '~/utils/actions-column';
 import { formatCurrency } from '~/utils/currency';
+import { CONFIRMED_QUOTATION_EMPTY_DESCRIPTION } from '~/utils/empty-states';
 
 type Props = {
   quotationId: string;
@@ -232,7 +233,11 @@ async function deleteAccommodation(accommodation: QuotationAccommodation) {
     />
 
     <!-- No accommodations -->
-    <EmptyState v-else section="lodging" />
+    <EmptyState
+      v-else
+      section="lodging"
+      :description="props.readonly ? CONFIRMED_QUOTATION_EMPTY_DESCRIPTION : undefined"
+    />
 
     <!-- Edit modal -->
     <UModal
