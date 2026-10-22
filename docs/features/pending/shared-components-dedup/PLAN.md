@@ -11,8 +11,9 @@ Partir en varios PR: (a) bugs sueltos de las tres pasadas, (b) pagos de punta a 
 
 **Status:** In progress. PR (b) (phases 1, 2, 8) merged as #137, PR (a) (loose bugs) as #138,
 PR (c) (phases 14, 15) as #139, PR (d) (phases 3-6, 16, 17 except 17.6) as #140, phase 7 as
-#141. PR (e) on branch `feature/shared-components-dedup-data`: phases 9 and 10 done; 11-13
-and 17.6 left.
+#141. PR (e) is split in two: phases 9 and 10 on branch `feature/shared-components-dedup-data`
+(the error contract touches every store, so it ships and gets tested alone); phases 11-13,
+17.6 and the phase 10 follow-ups in the next PR, branched from `main`.
 
 ---
 
