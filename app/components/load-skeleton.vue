@@ -1,5 +1,5 @@
 <script setup lang="ts">
-export type LoadSkeletonVariant = 'table' | 'cards' | 'detail' | 'panel' | 'form';
+export type LoadSkeletonVariant = 'table' | 'cards' | 'detail' | 'panel' | 'lines' | 'form';
 
 /**
  * Gray shapes of what is loading, shown by `LoadState` and by screens that wait on a store. One
@@ -112,7 +112,8 @@ const statusText = computed(() => (label ? `Cargando ${label}…` : 'Cargando…
         </div>
       </UCard>
 
-      <UCard v-else>
+      <!-- `panel` is these lines in a card; `lines` goes bare, inside a card the screen already has -->
+      <component :is="variant === 'lines' ? 'div' : UCard" v-else>
         <div class="space-y-3">
           <USkeleton class="h-5 w-1/3" />
           <USkeleton
@@ -122,7 +123,7 @@ const statusText = computed(() => (label ? `Cargando ${label}…` : 'Cargando…
             :class="width"
           />
         </div>
-      </UCard>
+      </component>
     </div>
   </div>
 </template>
