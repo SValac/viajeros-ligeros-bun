@@ -160,6 +160,7 @@ const columns: TableColumn<Coordinator>[] = [
         :is-loaded="coordinatorStore.isLoaded"
         :load-error="coordinatorStore.loadError"
         label="los coordinadores"
+        skeleton="table"
         @retry="coordinatorStore.refetch()"
       >
         <EmptyState

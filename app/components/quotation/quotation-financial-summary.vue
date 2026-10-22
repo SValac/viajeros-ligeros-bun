@@ -4,7 +4,8 @@ import { formatCurrency } from '~/utils/currency';
 
 type Props = {
   quotationId: string;
-  travelersCollected: number;
+  /** `undefined` while the payments load. */
+  travelersCollected?: number;
 };
 
 const { quotationId, travelersCollected } = defineProps<Props>();
@@ -164,7 +165,8 @@ function balanceColor(balance: number): string {
         <StatCard
           label="Cobrado a viajeros"
           icon="i-lucide-users"
-          :value="formatCurrency(travelersCollected)"
+          :value="formatCurrency(travelersCollected ?? 0)"
+          :loading="travelersCollected === undefined"
         />
         <StatCard
           label="Por pagar a proveedores"

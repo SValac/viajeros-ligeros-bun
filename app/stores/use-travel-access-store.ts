@@ -22,6 +22,11 @@ export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
     return (travelId: string) => revealedCodeByTravel.value[travelId] ?? null;
   });
 
+  /** `false` until the travel's first fetch resolves: `getActiveCode` is `null` before that too. */
+  const isActiveCodeLoaded = computed(() => {
+    return (travelId: string) => travelId in activeCodeByTravel.value;
+  });
+
   // Actions
   async function fetchActiveCode(travelId: string) {
     error.value = null;
@@ -80,6 +85,7 @@ export const useTravelAccessStore = defineStore('useTravelAccessStore', () => {
     error,
     getActiveCode,
     getRevealedCode,
+    isActiveCodeLoaded,
     fetchActiveCode,
     generateCode,
     revokeCode,

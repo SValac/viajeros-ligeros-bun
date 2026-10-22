@@ -202,13 +202,24 @@ const editMaxAmount = computed(() => {
   return editingSummary.value.balance + editingPayment.value.amount;
 });
 
-onMounted(async () => {
-  await runWithToast(() => paymentStore.fetchByTraveler(travelerId.value), {
-    error: 'No se pudieron cargar los pagos',
-    errorFallback: 'Recarga la página',
-  });
+// Until they load, every travel would read "Sin pagos registrados" and $0
+const paymentsLoaded = shallowRef(false);
+const paymentsLoadError = shallowRef<unknown>(null);
+
+async function loadPayments() {
+  paymentsLoadError.value = null;
+  try {
+    await paymentStore.fetchByTraveler(travelerId.value);
+    paymentsLoaded.value = true;
+  }
+  catch (e) {
+    paymentsLoadError.value = e;
+    return;
+  }
   await ensureQuotationsLoaded(travelerTravelIds.value);
-});
+}
+
+onMounted(loadPayments);
 
 watch(travelerTravelIds, (ids) => {
   void ensureQuotationsLoaded(ids);
@@ -216,11 +227,12 @@ watch(travelerTravelIds, (ids) => {
 </script>
 
 <template>
-  <!-- `null` = it doesn't exist: keep the spinner while useRedirectIfMissing leaves, not a blank page -->
+  <!-- `null` = it doesn't exist: keep the skeleton while useRedirectIfMissing leaves, not a blank page -->
   <LoadState
     v-bind="travelerLoad"
     :is-loaded="!!traveler"
     label="el viajero"
+    skeleton="detail"
     @retry="refetch()"
   >
     <div v-if="traveler" class="space-y-6">
@@ -261,65 +273,72 @@ watch(travelerTravelIds, (ids) => {
         </UButton>
       </div>
 
-      <!-- Per-travel sections -->
-      <template v-for="id in travelerTravelIds" :key="id">
-        <template v-if="travelFilter === 'all' || travelFilter === id">
-          <div class="space-y-3">
-            <div class="flex items-center justify-between">
-              <h2 class="text-xl font-semibold flex items-center gap-2">
-                <UIcon name="i-lucide-map-pin" class="w-5 h-5 text-primary" />
-                {{ getTravelName(id) }}
-              </h2>
-              <div class="flex items-center gap-2">
-                <UButton
-                  size="sm"
-                  variant="ghost"
-                  color="neutral"
-                  icon="i-lucide-settings"
-                  @click="openConfigModal(id)"
-                >
-                  Configurar cuenta
-                </UButton>
-                <UButton
-                  size="sm"
-                  variant="outline"
-                  icon="i-lucide-credit-card"
-                  @click="goToTravelPayments(id)"
-                >
-                  Ver pagos del viaje
-                </UButton>
+      <LoadState
+        :is-loaded="paymentsLoaded"
+        :load-error="paymentsLoadError"
+        label="los pagos"
+        @retry="loadPayments"
+      >
+        <!-- Per-travel sections -->
+        <template v-for="id in travelerTravelIds" :key="id">
+          <template v-if="travelFilter === 'all' || travelFilter === id">
+            <div class="space-y-3">
+              <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold flex items-center gap-2">
+                  <UIcon name="i-lucide-map-pin" class="w-5 h-5 text-primary" />
+                  {{ getTravelName(id) }}
+                </h2>
+                <div class="flex items-center gap-2">
+                  <UButton
+                    size="sm"
+                    variant="ghost"
+                    color="neutral"
+                    icon="i-lucide-settings"
+                    @click="openConfigModal(id)"
+                  >
+                    Configurar cuenta
+                  </UButton>
+                  <UButton
+                    size="sm"
+                    variant="outline"
+                    icon="i-lucide-credit-card"
+                    @click="goToTravelPayments(id)"
+                  >
+                    Ver pagos del viaje
+                  </UButton>
+                </div>
               </div>
-            </div>
 
-            <!-- Summary card -->
-            <PaymentSummaryCard
-              :summary="paymentStore.getTravelerPaymentSummary(travelerId, id)"
-              :traveler-name="travelerName"
-            />
-
-            <!-- Payment history -->
-            <UCard>
-              <template #header>
-                <span class="text-sm font-medium text-muted">Historial de pagos</span>
-              </template>
-              <div
-                v-if="filteredPayments.filter((p: Payment) => p.travelId === id).length === 0"
-                class="text-center py-8 text-muted"
-              >
-                Sin pagos registrados para este viaje
-              </div>
-              <UTable
-                v-else
-                :columns="columns"
-                :data="filteredPayments.filter((p: Payment) => p.travelId === id)"
+              <!-- Summary card -->
+              <PaymentSummaryCard
+                :summary="paymentStore.getTravelerPaymentSummary(travelerId, id)"
+                :traveler-name="travelerName"
               />
-            </UCard>
-          </div>
-        </template>
-      </template>
 
-      <!-- Empty state -->
-      <EmptyState v-if="travelerTravelIds.length === 0" section="payments" />
+              <!-- Payment history -->
+              <UCard>
+                <template #header>
+                  <span class="text-sm font-medium text-muted">Historial de pagos</span>
+                </template>
+                <div
+                  v-if="filteredPayments.filter((p: Payment) => p.travelId === id).length === 0"
+                  class="text-center py-8 text-muted"
+                >
+                  Sin pagos registrados para este viaje
+                </div>
+                <UTable
+                  v-else
+                  :columns="columns"
+                  :data="filteredPayments.filter((p: Payment) => p.travelId === id)"
+                />
+              </UCard>
+            </div>
+          </template>
+        </template>
+
+        <!-- Empty state -->
+        <EmptyState v-if="travelerTravelIds.length === 0" section="payments" />
+      </LoadState>
 
       <!-- Account Config Modal -->
       <UModal

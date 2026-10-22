@@ -148,15 +148,20 @@ en selects por toda la app), la primera vez que una pantalla usa su store. Cada 
 
 ### Estados de carga, error y vacío
 
-- **`LoadState`** (`app/components/load-state.vue`): spinner → error + "Reintentar" → slot. Antes de
+- **`LoadState`** (`app/components/load-state.vue`): skeleton → error + "Reintentar" → slot. Antes de
   la primera carga, una lista vacía o un registro faltante serían mentira; si falla un refetch con
   datos ya cargados, se queda el contenido. `label` lleva el artículo ("los viajeros", "la
-  cotización") y el verbo concuerda solo. `fill` centra en toda la altura (páginas completas).
+  cotización") y el verbo concuerda solo. `fill` centra el error en toda la altura (páginas completas).
+- **`LoadSkeleton`** (`app/components/load-skeleton.vue`): el skeleton de `LoadState`, con un preset por
+  tipo de contenido y no uno por pantalla: `skeleton="table" | "cards" | "detail" | "panel" | "lines" | "form"`
+  (`panel` por defecto; `lines` es `panel` sin card, para dentro de una card que ya existe) y
+  `:stats="3 | 4"` para las StatCards de arriba. El slot `#loading` lo
+  reemplaza cuando la página tiene su propio contenedor (`travels/[id]`, `quotations/[id]`).
 - **`useQueryLoadState(query)`** (`app/queries/load-state.ts`) da sus props desde un `useQuery`:
   `<LoadState v-bind="travelersLoad" label="los viajeros" @retry="refetchTravelers()">`.
   `isLoaded` es `data !== undefined` (`null` = "no hay" o "no existe" también es respuesta: el slot
   necesita su propio `v-if`). `loadError` se oculta mientras corre el reintento, para que vuelva el
-  spinner (en Colada, `status` sigue en `'error'` durante el reintento). Los catálogos usan la
+  skeleton (en Colada, `status` sigue en `'error'` durante el reintento). Los catálogos usan la
   misma regla.
 - Dos queries en una pantalla: dos `LoadState` anidados, cada uno con su mensaje y reintento. Una
   query desactivada sin datos (p. ej. totales de una página sin viajes) nunca carga: se le pasa

@@ -155,6 +155,7 @@ const columns: TableColumn<Bus>[] = [
         :is-loaded="busStore.isLoaded"
         :load-error="busStore.loadError"
         label="las unidades"
+        skeleton="table"
         @retry="busStore.refetch()"
       >
         <!-- Empty state -->

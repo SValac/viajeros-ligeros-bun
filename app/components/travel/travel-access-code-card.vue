@@ -87,13 +87,21 @@ function sendCode(phone: string, code: string | null, travelLabel: string) {
   window.open(buildWhatsAppShareUrl(phone, code, travelLabel), '_blank');
 }
 
-// A failed load would look like "no code yet": say so instead.
-onMounted(async () => {
-  await runWithToast(() => travelAccessStore.fetchActiveCode(props.travelId), {
-    error: 'No se pudo cargar el código de acceso',
-    errorFallback: 'Recarga la página',
-  });
-});
+const isCodeLoaded = computed(() => travelAccessStore.isActiveCodeLoaded(props.travelId));
+const codeLoadError = shallowRef<unknown>(null);
+
+// Until it loads, "no code yet" would be a lie: skeleton, or the error with Reintentar
+async function loadCode() {
+  codeLoadError.value = null;
+  try {
+    await travelAccessStore.fetchActiveCode(props.travelId);
+  }
+  catch (e) {
+    codeLoadError.value = e;
+  }
+}
+
+onMounted(loadCode);
 </script>
 
 <template>
@@ -111,6 +119,16 @@ onMounted(async () => {
           icon="i-lucide-lock"
           title="Código no disponible todavía"
           description="El código de acceso se habilita cuando el viaje está publicado o en curso, para que los viajeros puedan consultar su itinerario desde la app."
+        />
+
+        <!-- No slot: it only shows the skeleton or the error until the code loads -->
+        <LoadState
+          v-else-if="!isCodeLoaded"
+          :is-loaded="false"
+          :load-error="codeLoadError"
+          label="el código de acceso"
+          skeleton="lines"
+          @retry="loadCode"
         />
 
         <UEmpty

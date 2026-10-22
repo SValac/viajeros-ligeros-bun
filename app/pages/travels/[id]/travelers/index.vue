@@ -655,6 +655,8 @@ const columns: TableColumn<TravelerWithChildren>[] = [
     <LoadState
       v-bind="travelersLoad"
       label="los viajeros"
+      skeleton="table"
+      :stats="3"
       @retry="refetchTravelers()"
     >
       <!-- Stats -->
