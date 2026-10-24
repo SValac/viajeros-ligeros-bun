@@ -1,6 +1,6 @@
 # Agency privacy notice (aviso de privacidad)
 
-**Status:** in progress (branch `feature/agency-privacy-notice`)
+**Status:** completed (branch `feature/agency-privacy-notice`). Migration applied to local, stage/QA and prod on 2026-10-24.
 
 The public site loads the Meta Pixel (web PR #28), so it needs a privacy notice (LFPDPPP and Meta's terms). The agency edits it in the CRM, in a new "Aviso de privacidad" tab of the agency profile. The web renders `/aviso-de-privacidad` and the footer link.
 
@@ -39,4 +39,4 @@ The public site loads the Meta Pixel (web PR #28), so it needs a privacy notice 
 
 - No reuse of `PageSection` (about/home): a notice needs longer texts and more sections than the cap of 8.
 - Generic sections with no fields per topic. Card payments and online bookings will be added later as more sections, without changing the contract.
-- The example template is just a starting point and the UI says so. It is not legal advice.
+- The example template is the web's draft (`viajeros-ligeros-web/docs/aviso-de-privacidad-borrador.md`). It describes the site as it works today: no forms, WhatsApp, Meta Pixel, Vercel/Supabase. It is just a starting point and the UI says so. It is not legal advice.
