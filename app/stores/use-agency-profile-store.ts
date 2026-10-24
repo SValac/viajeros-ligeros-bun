@@ -7,6 +7,7 @@ import type {
   AgencySiteImageField,
   CountryState,
   HomePage,
+  PrivacyNotice,
 } from '~/types/agency-profile';
 
 import { serializeAboutPage } from '~/composables/agency-profile/use-about-page-domain';
@@ -20,6 +21,7 @@ import {
 import { useAgencyProfileRepository } from '~/composables/agency-profile/use-agency-profile-repository';
 import { mapSeoFormToUpdate } from '~/composables/agency-profile/use-agency-seo-domain';
 import { serializeHomePage } from '~/composables/agency-profile/use-home-page-domain';
+import { serializePrivacyNotice } from '~/composables/agency-profile/use-privacy-notice-domain';
 import { toErrorMessage } from '~/utils/error-message';
 import { storagePathFromPublicUrl } from '~/utils/storage';
 
@@ -127,6 +129,15 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
   }
 
   /**
+   * Saves the privacy notice (serialized to the stored JSON). `null` removes the notice
+   * from the agency's site.
+   * @param notice - Validated editor state, or `null`
+   */
+  function savePrivacyNotice(notice: PrivacyNotice | null): Promise<void> {
+    return _save({ privacyNotice: serializePrivacyNotice(notice) }, 'Error al guardar el aviso de privacidad');
+  }
+
+  /**
    * Saves the texts of the "SEO y redes" tab. Empty texts are saved as `null`, so the
    * site falls back to its defaults.
    * @param form - Validated form data
@@ -214,6 +225,7 @@ export const useAgencyProfileStore = defineStore('useAgencyProfileStore', () => 
     saveProfile,
     saveAboutPage,
     saveHomePage,
+    savePrivacyNotice,
     saveSeo,
     changeSiteImage,
     removeSiteImage,

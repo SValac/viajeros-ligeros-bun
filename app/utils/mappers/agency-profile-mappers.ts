@@ -3,6 +3,7 @@ import type { Tables } from '~/types/database.types';
 
 import { toAboutPage } from '~/composables/agency-profile/use-about-page-domain';
 import { toHomePage } from '~/composables/agency-profile/use-home-page-domain';
+import { toPrivacyNotice } from '~/composables/agency-profile/use-privacy-notice-domain';
 
 export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): AgencyProfile {
   return {
@@ -23,6 +24,7 @@ export function mapAgencyProfileRowToDomain(row: Tables<'agency_profiles'>): Age
     tiktokUrl: row.tiktok_url,
     aboutPage: toAboutPage(row.about_page),
     homePage: toHomePage(row.home_page),
+    privacyNotice: toPrivacyNotice(row.privacy_notice),
     faviconUrl: row.favicon_url,
     seoTitle: row.seo_title,
     seoDescription: row.seo_description,

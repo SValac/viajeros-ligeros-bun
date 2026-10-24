@@ -91,6 +91,7 @@ export type Database = {
           logo_url: string | null
           phone: string | null
           primary_color: string | null
+          privacy_notice: Json | null
           secondary_color: string | null
           seo_description: string | null
           seo_title: string | null
@@ -117,6 +118,7 @@ export type Database = {
           logo_url?: string | null
           phone?: string | null
           primary_color?: string | null
+          privacy_notice?: Json | null
           secondary_color?: string | null
           seo_description?: string | null
           seo_title?: string | null
@@ -143,6 +145,7 @@ export type Database = {
           logo_url?: string | null
           phone?: string | null
           primary_color?: string | null
+          privacy_notice?: Json | null
           secondary_color?: string | null
           seo_description?: string | null
           seo_title?: string | null
@@ -1686,6 +1689,10 @@ export type Database = {
         Args: { p_travel_id: string }
         Returns: Json
       }
+      get_public_agency_privacy_notice: {
+        Args: { p_agency_id: string }
+        Returns: Json
+      }
       get_public_agency_profile: {
         Args: { p_agency_id: string }
         Returns: {
@@ -1696,6 +1703,7 @@ export type Database = {
           country_code: string
           facebook_url: string
           favicon_url: string
+          has_privacy_notice: boolean
           home_page: Json
           instagram_url: string
           logo_url: string
