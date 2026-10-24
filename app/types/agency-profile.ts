@@ -18,6 +18,7 @@ export type AgencyProfile = {
   tiktokUrl: string | null;
   aboutPage: AboutPage | null;
   homePage: HomePage | null;
+  privacyNotice: PrivacyNotice | null;
   faviconUrl: string | null;
   seoTitle: string | null;
   seoDescription: string | null;
@@ -48,6 +49,7 @@ export type AgencyProfileUpdateData = Partial<Omit<AgencyProfileFormData, 'tagli
   tagline?: string | null;
   aboutPage?: Json | null;
   homePage?: Json | null;
+  privacyNotice?: Json | null;
   contactEmail?: string | null;
   instagramUrl?: string | null;
   facebookUrl?: string | null;
@@ -141,4 +143,23 @@ export type HomePage = {
   };
   sections: PageSection[];
   cta: PageTextBlock;
+};
+
+// Privacy notice ("aviso de privacidad") of the agency's site. `null` on the profile = the
+// site has no notice. Plain-text sections: a body splits into paragraphs on line breaks
+// and lines starting with "- " are bullets (see use-privacy-notice-domain.ts).
+export type PrivacyNoticeSection = {
+  title: string;
+  body: string;
+};
+
+export type PrivacyNotice = {
+  responsible: {
+    legalName: string;
+    address: string;
+    arcoEmail: string;
+  };
+  /** Last update shown on the notice, `YYYY-MM-DD`. */
+  updatedOn: string;
+  sections: PrivacyNoticeSection[];
 };

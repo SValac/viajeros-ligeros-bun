@@ -24,6 +24,7 @@ const tabs: NavigationMenuItem[] = [
   { label: 'Página principal', icon: 'i-lucide-house', to: { name: 'profile-home' } },
   { label: 'Nosotros', icon: 'i-lucide-users', to: { name: 'profile-about' } },
   { label: 'SEO y redes', icon: 'i-lucide-search', to: { name: 'profile-seo' } },
+  { label: 'Aviso de privacidad', icon: 'i-lucide-shield-check', to: { name: 'profile-privacy' } },
 ];
 </script>
 

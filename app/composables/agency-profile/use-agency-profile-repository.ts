@@ -91,6 +91,8 @@ export function useAgencyProfileRepository() {
       update.about_page = data.aboutPage;
     if (data.homePage !== undefined)
       update.home_page = data.homePage;
+    if (data.privacyNotice !== undefined)
+      update.privacy_notice = data.privacyNotice;
     if (data.faviconUrl !== undefined)
       update.favicon_url = data.faviconUrl;
     if (data.seoTitle !== undefined)

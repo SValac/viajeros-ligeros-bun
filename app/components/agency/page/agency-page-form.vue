@@ -7,9 +7,10 @@ import { z } from 'zod';
 
 import type { Json } from '~/types/database.types';
 
-// Form of an optional site page ("Nosotros", "Página principal"): keeps a local copy of the
-// page, guards unsaved changes and emits the page to save. The editor goes in the default
-// slot, bound to `state.page` with `path` as its form path (`<slot>` reserves `name`).
+// Form of an optional site page ("Nosotros", "Página principal", "Aviso de privacidad"):
+// keeps a local copy of the page, guards unsaved changes and emits the page to save. The
+// editor goes in the default slot, bound to `state.page` with `path` as its form path
+// (`<slot>` reserves `name`).
 
 type Props = {
   /** The saved page; `null` when the agency has none. */
